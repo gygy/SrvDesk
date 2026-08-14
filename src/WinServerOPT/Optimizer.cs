@@ -36,7 +36,7 @@ internal static class Optimizer
         var type = key.GetValue("InstallationType") as string ?? "";
         var name = key.GetValue("ProductName") as string ?? "";
         return type.Equals("Server", StringComparison.OrdinalIgnoreCase)
-            || name.Contains("Windows Server", StringComparison.OrdinalIgnoreCase);
+            || name.IndexOf("Windows Server", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     public static State Read()
