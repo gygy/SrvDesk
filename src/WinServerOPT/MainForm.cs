@@ -2,20 +2,20 @@ namespace WinOpt;
 
 internal sealed class MainForm : Form
 {
-    private readonly SettingRow _cpu = Row("CPU 资源分配", "后台服务优先", "程序优先");
-    private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略", "开启");
-    private readonly SettingRow _uac = Row("用户账户控制 UAC", "启用", "禁用");
-    private readonly SettingRow _ie = Row("IE 增强安全配置", "开启", "关闭");
-    private readonly SettingRow _thisPc = Row("桌面「此电脑」图标", "不显示", "显示");
-    private readonly SettingRow _taskbar = Row("任务栏按钮", "标准大小", "小按钮");
-    private readonly SettingRow _confirmDel = Row("删除确认对话框", "不提示", "显示确认");
-    private readonly SettingRow _audio = Row("音频服务", "不启动", "启动");
-    private readonly SettingRow _svrMgr = Row("登录时服务管理器", "自动打开", "不打开");
-    private readonly SettingRow _azure = Row("Azure Arc 托盘", "允许启动", "禁止启动");
-    private readonly SettingRow _pwd = Row("密码复杂性要求", "必须符合", "不要求");
-    private readonly SettingRow _shutdownLogon = Row("未登录时关机", "不允许", "允许");
-    private readonly SettingRow _shutdownReason = Row("关机事件跟踪", "显示", "关闭");
-    private readonly SettingRow _noCad = Row("Ctrl+Alt+Del 登录", "需要按键", "无需按键");
+    private readonly SettingRow _cpu = Row("CPU资源分配程序优先", "后台服务优先");
+    private readonly SettingRow _dep = Row("数据执行保护DEP（T）", "按系统策略");
+    private readonly SettingRow _uac = Row("禁用用户账户控制UAC", "启用");
+    private readonly SettingRow _ie = Row("关闭IE增强安全配置", "开启");
+    private readonly SettingRow _thisPc = Row("桌面此电脑图标", "不显示");
+    private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小");
+    private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示");
+    private readonly SettingRow _audio = Row("启动音频服务", "不启动");
+    private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开");
+    private readonly SettingRow _azure = Row("禁止启动Azure Arc", "允许启动");
+    private readonly SettingRow _pwd = Row("禁用密码符合复杂性要求", "必须符合");
+    private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许");
+    private readonly SettingRow _shutdownReason = Row("关闭显示事件跟踪程序", "显示");
+    private readonly SettingRow _noCad = Row("无需Ctrl+Alt+Del登录", "需要按键");
 
     private readonly ListBox _menu = new();
     private readonly TabControl _tabs = new();
@@ -163,14 +163,14 @@ internal sealed class MainForm : Form
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top;
         _status.ForeColor = TextMute;
         _status.Text = Optimizer.IsWindowsServer()
-            ? "每项可在「系统默认」与「推荐」之间选择。推荐面向个人日常使用，默认对应 Server 常见出厂行为。"
+            ? "勾选表示采用推荐设置。右侧「系统默认值」仅供对照，不需要选择。"
             : "当前系统可能不是 Windows Server。本工具面向 Server 日常使用优化。";
 
-        var allRec = GhostButton("全部推荐", 548, 22, 92, () => SetAll(true));
-        var allDef = GhostButton("全部默认", 648, 22, 92, () => SetAll(false));
+        var allOn = GhostButton("全部选择", 548, 22, 92, () => SetAll(true));
+        var allOff = GhostButton("全部取消", 648, 22, 92, () => SetAll(false));
         var about = GhostButton("关于", 748, 22, 72, ShowAbout);
-        allRec.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        allDef.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        allOn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        allOff.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         about.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
         _apply.Text = "一键优化";
@@ -186,7 +186,7 @@ internal sealed class MainForm : Form
         _apply.MouseEnter += (_, _) => _apply.BackColor = NavySoft;
         _apply.MouseLeave += (_, _) => _apply.BackColor = Navy;
 
-        bottom.Controls.AddRange([rule, _status, allRec, allDef, about, _apply]);
+        bottom.Controls.AddRange([rule, _status, allOn, allOff, about, _apply]);
         return bottom;
     }
 
@@ -249,7 +249,7 @@ internal sealed class MainForm : Form
         };
         var hintLabel = new Label
         {
-            Text = hint + "  每项左侧为系统默认，右侧为推荐。",
+            Text = hint + "  勾选采用推荐；右侧为系统默认值，仅展示。",
             AutoSize = false,
             ForeColor = TextMute,
             Location = new Point(20, 12),
@@ -273,9 +273,8 @@ internal sealed class MainForm : Form
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
-        card.Controls.Add(ColHeader("配置项", 16, 220, TextMain));
-        card.Controls.Add(ColHeader("系统默认", 250, 230, TextMute));
-        card.Controls.Add(ColHeader("推荐", 500, 240, Gold));
+        card.Controls.Add(ColHeader("推荐设置", 16, 420, TextMain));
+        card.Controls.Add(ColHeader("系统默认值", 500, 240, TextMute));
         var headLine = new Panel
         {
             BackColor = Line,
@@ -321,43 +320,43 @@ internal sealed class MainForm : Form
 
     private void Bind(Optimizer.State s)
     {
-        _cpu.Recommended = s.CpuProgramPriority;
-        _dep.Recommended = s.Dep;
-        _uac.Recommended = s.DisableUac;
-        _ie.Recommended = s.DisableIeEsc;
-        _thisPc.Recommended = s.ShowThisPcIcon;
-        _taskbar.Recommended = s.SmallTaskbar;
-        _confirmDel.Recommended = s.ConfirmDelete;
-        _audio.Recommended = s.EnableAudio;
-        _svrMgr.Recommended = s.SkipServerManager;
-        _azure.Recommended = s.DisableAzureArc;
-        _pwd.Recommended = s.DisablePasswordComplexity;
-        _shutdownLogon.Recommended = s.ShutdownWithoutLogon;
-        _shutdownReason.Recommended = s.DisableShutdownReason;
-        _noCad.Recommended = s.DisableCad;
+        _cpu.Checked = s.CpuProgramPriority;
+        _dep.Checked = s.Dep;
+        _uac.Checked = s.DisableUac;
+        _ie.Checked = s.DisableIeEsc;
+        _thisPc.Checked = s.ShowThisPcIcon;
+        _taskbar.Checked = s.SmallTaskbar;
+        _confirmDel.Checked = s.ConfirmDelete;
+        _audio.Checked = s.EnableAudio;
+        _svrMgr.Checked = s.SkipServerManager;
+        _azure.Checked = s.DisableAzureArc;
+        _pwd.Checked = s.DisablePasswordComplexity;
+        _shutdownLogon.Checked = s.ShutdownWithoutLogon;
+        _shutdownReason.Checked = s.DisableShutdownReason;
+        _noCad.Checked = s.DisableCad;
     }
 
     private Optimizer.State CaptureState() => new()
     {
-        CpuProgramPriority = _cpu.Recommended,
-        Dep = _dep.Recommended,
-        DisableUac = _uac.Recommended,
-        DisableIeEsc = _ie.Recommended,
-        ShowThisPcIcon = _thisPc.Recommended,
-        SmallTaskbar = _taskbar.Recommended,
-        ConfirmDelete = _confirmDel.Recommended,
-        EnableAudio = _audio.Recommended,
-        SkipServerManager = _svrMgr.Recommended,
-        DisableAzureArc = _azure.Recommended,
-        DisablePasswordComplexity = _pwd.Recommended,
-        ShutdownWithoutLogon = _shutdownLogon.Recommended,
-        DisableShutdownReason = _shutdownReason.Recommended,
-        DisableCad = _noCad.Recommended,
+        CpuProgramPriority = _cpu.Checked,
+        Dep = _dep.Checked,
+        DisableUac = _uac.Checked,
+        DisableIeEsc = _ie.Checked,
+        ShowThisPcIcon = _thisPc.Checked,
+        SmallTaskbar = _taskbar.Checked,
+        ConfirmDelete = _confirmDel.Checked,
+        EnableAudio = _audio.Checked,
+        SkipServerManager = _svrMgr.Checked,
+        DisableAzureArc = _azure.Checked,
+        DisablePasswordComplexity = _pwd.Checked,
+        ShutdownWithoutLogon = _shutdownLogon.Checked,
+        DisableShutdownReason = _shutdownReason.Checked,
+        DisableCad = _noCad.Checked,
     };
 
-    private void SetAll(bool recommended)
+    private void SetAll(bool on)
     {
-        foreach (var row in AllRows) row.Recommended = recommended;
+        foreach (var row in AllRows) row.Checked = on;
     }
 
     private void Apply()
@@ -371,7 +370,7 @@ internal sealed class MainForm : Form
             var errors = Optimizer.Apply(CaptureState());
             LoadState();
             _status.Text = errors.Count == 0
-                ? "已按所选的默认/推荐项应用。部分项目可能需要注销或重启后生效。"
+                ? "已按勾选项应用推荐设置；未勾选的项已恢复为系统默认。部分项目可能需要注销或重启后生效。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors);
         }
         catch (Exception ex)
@@ -388,14 +387,14 @@ internal sealed class MainForm : Form
     private static void ShowAbout()
     {
         MessageBox.Show(
-            "Windows Server 日常使用优化工具。\r\n「系统默认」对应 Server 常见出厂行为，「推荐」面向个人日常使用。",
+            "Windows Server 日常使用优化工具。\r\n勾选采用推荐设置；右侧「系统默认值」仅供对照。未勾选的项在应用时恢复为系统默认。",
             "关于 Win一键优化",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
     }
 
-    private static SettingRow Row(string name, string defaultText, string recommendText) =>
-        new(name, defaultText, recommendText);
+    private static SettingRow Row(string recommend, string systemDefault) =>
+        new(recommend, systemDefault);
 
     private static Button GhostButton(string text, int x, int y, int w, Action click)
     {
@@ -416,45 +415,33 @@ internal sealed class MainForm : Form
 
     private sealed class SettingRow
     {
-        private readonly RadioButton _def;
-        private readonly RadioButton _rec;
-        private readonly Label _name;
+        private readonly CheckBox _check;
+        private readonly Label _def;
 
-        public SettingRow(string name, string defaultText, string recommendText)
+        public SettingRow(string recommend, string systemDefault)
         {
-            _name = new Label
+            _check = new CheckBox
             {
-                Text = name,
+                Text = recommend,
                 AutoSize = false,
-                Size = new Size(220, 22),
+                Size = new Size(460, 22),
                 ForeColor = TextMain,
-                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.White,
             };
-            _def = new RadioButton
+            _def = new Label
             {
-                Text = defaultText,
-                AutoSize = true,
+                Text = systemDefault,
+                AutoSize = false,
+                Size = new Size(240, 22),
                 ForeColor = TextMute,
-                BackColor = Color.White,
-            };
-            _rec = new RadioButton
-            {
-                Text = recommendText,
-                AutoSize = true,
-                ForeColor = Navy,
-                BackColor = Color.White,
-                Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
             };
         }
 
-        public bool Recommended
+        public bool Checked
         {
-            get => _rec.Checked;
-            set
-            {
-                _rec.Checked = value;
-                _def.Checked = !value;
-            }
+            get => _check.Checked;
+            set => _check.Checked = value;
         }
 
         public void Mount(Control parent, int y, int h)
@@ -467,12 +454,10 @@ internal sealed class MainForm : Form
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             };
             var mid = (h - 22) / 2;
-            _name.Location = new Point(16, mid);
-            _def.Location = new Point(250, mid);
-            _rec.Location = new Point(500, mid);
-            wrap.Controls.Add(_name);
+            _check.Location = new Point(16, mid);
+            _def.Location = new Point(500, mid);
+            wrap.Controls.Add(_check);
             wrap.Controls.Add(_def);
-            wrap.Controls.Add(_rec);
             parent.Controls.Add(wrap);
         }
     }
