@@ -103,7 +103,7 @@ internal static class AutologonHelper
     private static string NormalizeDomain(string domain)
     {
         var d = domain.Trim();
-        if (d is "" or "." or ".\")
+        if (d.Length == 0 || d == "." || d == ".\\")
             return Environment.UserDomainName;
         return d;
     }

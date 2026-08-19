@@ -61,6 +61,12 @@ internal static class Optimizer
         public bool DisableShutdownReason;
         public bool DisableCad;
 
+        public bool EnableAutologon;
+        public string AutologonDomain = "";
+        public string AutologonUser = "";
+        public string AutologonPassword = "";
+        public bool AutologonUpdatePassword = true;
+
         // 竞品高频：性能/安全加固（Dism++、VDOT、WPD）
         public bool LongPathsEnabled;
         public bool DisableFastStartup;
@@ -145,6 +151,8 @@ internal static class Optimizer
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
+
+            EnableAutologon = AutologonHelper.Read().Enabled,
 
             LongPathsEnabled = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", 1),
             DisableFastStartup = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0),
@@ -255,6 +263,24 @@ internal static class Optimizer
         Try(errors, "关机事件跟踪", () => SetShutdownReason(!s.DisableShutdownReason));
         Try(errors, "Ctrl+Alt+Del", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", s.DisableCad ? 1 : 0));
+
+        Try(errors, "自动登录", () =>
+        {
+            if (s.EnableAutologon)
+            {
+                AutologonHelper.Enable(new AutologonSettings
+                {
+                    Domain = s.AutologonDomain,
+                    Username = s.AutologonUser,
+                    Password = s.AutologonPassword,
+                    UpdatePassword = s.AutologonUpdatePassword,
+                });
+            }
+            else
+            {
+                AutologonHelper.Disable();
+            }
+        });
 
         Try(errors, "长路径支持", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", s.LongPathsEnabled ? 1 : 0));

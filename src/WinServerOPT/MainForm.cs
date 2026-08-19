@@ -65,6 +65,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许", SettingCatalog.ShutdownWithoutLogon);
     private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示", SettingCatalog.DisableShutdownReason);
     private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键", SettingCatalog.DisableCad);
+    private readonly SettingRow _autologon = Row("启用 Windows 自动登录（Autologon）", "未启用", SettingCatalog.EnableAutologon);
+    private AutologonSettings? _autologonSettings;
 
     private readonly Panel _helpPanel = new();
     private readonly Label _helpTitle = new();
@@ -108,7 +110,7 @@ internal sealed class MainForm : Form
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
         _svrMgr, _azure, _installer, _wia,
-        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad
+        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon
     ];
 
     public MainForm()
@@ -136,7 +138,7 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
         _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia]));
-        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad]));
+        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon]));
 
         var header = BuildHeader();
         var sidebar = BuildSidebar();
@@ -242,9 +244,13 @@ internal sealed class MainForm : Form
         importBtn.Location = new Point(738, 4);
         importBtn.Size = new Size(64, 30);
 
+        var autologonBtn = ToolButton("Autologon 配置", ConfigureAutologon);
+        autologonBtn.Location = new Point(810, 4);
+        autologonBtn.Size = new Size(112, 30);
+
         _toolBar.Controls.AddRange([
             searchLabel, _searchBox, _hideIncompatible, presetLabel, _presetCombo,
-            loadPreset, exportBtn, importBtn
+            loadPreset, exportBtn, importBtn, autologonBtn
         ]);
     }
 
@@ -303,6 +309,35 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(ex.Message, "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void ConfigureAutologon()
+    {
+        if (!ConfigureAutologonDialog()) return;
+        _autologon.Checked = true;
+        _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用推荐后下次重启生效）";
+    }
+
+    private bool EnsureAutologonReady()
+    {
+        if (!_autologon.Checked) return true;
+        if (_autologonSettings is not null) return true;
+        return ConfigureAutologonDialog();
+    }
+
+    private bool ConfigureAutologonDialog()
+    {
+        var status = AutologonHelper.Read();
+        var initial = AutologonHelper.FromStatus(status);
+        using var dlg = new AutologonDialog(initial, status.Enabled);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+        _autologonSettings = dlg.Settings;
+        return true;
+    }
+
+    private void RefreshAutologonDisplay()
+    {
+        _autologon.SetSystemDefault(AutologonHelper.Read().DisplayDefault());
     }
 
     private void ApplySearchFilter()
@@ -802,6 +837,8 @@ internal sealed class MainForm : Form
         _shutdownLogon.Checked = s.ShutdownWithoutLogon;
         _shutdownReason.Checked = s.DisableShutdownReason;
         _noCad.Checked = s.DisableCad;
+        _autologon.Checked = s.EnableAutologon;
+        RefreshAutologonDisplay();
     }
 
     private Optimizer.State CaptureState() => new()
@@ -864,6 +901,11 @@ internal sealed class MainForm : Form
         ShutdownWithoutLogon = _shutdownLogon.Checked,
         DisableShutdownReason = _shutdownReason.Checked,
         DisableCad = _noCad.Checked,
+        EnableAutologon = _autologon.Checked,
+        AutologonDomain = _autologonSettings?.Domain ?? "",
+        AutologonUser = _autologonSettings?.Username ?? "",
+        AutologonPassword = _autologonSettings?.Password ?? "",
+        AutologonUpdatePassword = _autologonSettings?.UpdatePassword ?? true,
     };
 
     private void SetAll(bool on)
@@ -917,9 +959,17 @@ internal sealed class MainForm : Form
         Application.DoEvents();
         try
         {
+            if (!EnsureAutologonReady())
+            {
+                _status.Text = "已取消：启用自动登录需先配置账户。";
+                return;
+            }
+
             var errors = Optimizer.Apply(CaptureState());
             ApplyLog.WriteApply(working, errors);
             LoadState();
+            if (!_autologon.Checked) _autologonSettings = null;
+            RefreshAutologonDisplay();
             _status.Text = errors.Count == 0
                 ? success + " 部分项目需注销或重启后生效。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors);
@@ -1036,6 +1086,8 @@ internal sealed class MainForm : Form
             get => _toggle.Checked;
             set => _toggle.Checked = value;
         }
+
+        public void SetSystemDefault(string text) => _system.Text = text;
 
         public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
         {

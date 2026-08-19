@@ -461,6 +461,14 @@ internal static class SettingCatalog
         "降低防伪造登录界面能力；物理安全可控时可开。",
         "立即生效。");
 
+    public static readonly SettingHelpInfo EnableAutologon = H(
+        "开机后自动登录指定本地/域账户，无需输入密码。",
+        "写入 Winlogon（AutoAdminLogon、DefaultUserName、DefaultDomainName），密码经 LsaStorePrivateData 存入 LSA，与 Sysinternals Autologon 相同。",
+        "个人物理机、开发用 Server 桌面免输密码；重启/断电恢复后直达桌面。",
+        "开启后点击工具栏「Autologon 配置」填写账户；应用推荐时写入。关闭开关并应用可禁用。",
+        "下次重启后生效；启动时按住 Shift 可临时跳过自动登录。",
+        SettingScope.DesktopExperience);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,
