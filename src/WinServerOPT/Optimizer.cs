@@ -157,7 +157,7 @@ internal static class Optimizer
             ShowHiddenFiles = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", 1),
             NoShortcutArrow = IsShortcutArrowRemoved(),
             ExplorerFullPath = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", 1),
-            TaskbarAllIcons = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "EnableAutoTray", 0),
+            TaskbarAllIcons = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableAutoTray", 0),
 
             DisableAnimations = IsAnimationsDisabled(),
             DisableTransparency = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", 0),
@@ -274,7 +274,7 @@ internal static class Optimizer
         Try(errors, "标题栏完整路径", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", s.ExplorerFullPath ? 1 : 0));
         Try(errors, "任务栏全部图标", () =>
-            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "EnableAutoTray", s.TaskbarAllIcons ? 0 : 1));
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableAutoTray", s.TaskbarAllIcons ? 0 : 1));
 
         Try(errors, "窗口动画", () => SetAnimations(!s.DisableAnimations));
         Try(errors, "透明效果", () =>

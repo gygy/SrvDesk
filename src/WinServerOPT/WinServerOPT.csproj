@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="app.ico" LogicalName="WinOpt.app.ico" />
     <EmbeddedResource Include="app.png" LogicalName="WinOpt.app.png" />
   </ItemGroup>
   <Target Name="RemoveAppConfigAfterBuild" AfterTargets="Build">

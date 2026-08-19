@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace WinOpt;
 
 internal sealed class MainForm : Form
@@ -108,7 +106,7 @@ internal sealed class MainForm : Form
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
-        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { /* 设计时 */ }
+        Icon = AppBrand.ApplicationIcon;
 
         _groups.Add(("性能及安全", [
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
@@ -198,19 +196,7 @@ internal sealed class MainForm : Form
         return header;
     }
 
-    private static Image? LoadLogo()
-    {
-        try
-        {
-            var asm = Assembly.GetExecutingAssembly();
-            using var stream = asm.GetManifestResourceStream("WinOpt.app.png");
-            if (stream is not null) return Image.FromStream(stream);
-        }
-        catch { /* ignore */ }
-
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
-        return File.Exists(path) ? Image.FromFile(path) : null;
-    }
+    private static Image? LoadLogo() => AppBrand.LoadLogoImage();
 
     private Panel BuildSidebar()
     {
@@ -610,6 +596,16 @@ internal sealed class MainForm : Form
         DisableWebSearch = _webSearch.Checked,
         DisableFeedback = _feedback.Checked,
         NoLockScreen = _noLockScreen.Checked,
+        ShowHiddenFiles = _hiddenFiles.Checked,
+        NoShortcutArrow = _noArrow.Checked,
+        ExplorerFullPath = _fullPath.Checked,
+        TaskbarAllIcons = _allTrayIcons.Checked,
+        DisableAnimations = _animations.Checked,
+        DisableTransparency = _transparency.Checked,
+        DisableTips = _tips.Checked,
+        DisableAutoplay = _autoplay.Checked,
+        DisableActivityHistory = _activityHist.Checked,
+        DisableStorageSense = _storageSense.Checked,
         EnableRdp = _rdp.Checked,
         RdpGpuAccel = _rdpGpu.Checked,
         RdpHighRefresh = _rdpFps.Checked,
