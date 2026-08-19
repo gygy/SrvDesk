@@ -2,35 +2,37 @@ namespace WinOpt;
 
 internal sealed class MainForm : Form
 {
-    private readonly SettingRow _cpu = Row("CPU资源分配程序优先", "后台服务优先");
-    private readonly SettingRow _dep = Row("数据执行保护DEP（T）", "按系统策略");
-    private readonly SettingRow _uac = Row("禁用用户账户控制UAC", "启用");
-    private readonly SettingRow _ie = Row("关闭IE增强安全配置", "开启");
-    private readonly SettingRow _thisPc = Row("桌面此电脑图标", "不显示");
+    private readonly SettingRow _cpu = Row("CPU 资源分配（程序优先）", "后台服务优先");
+    private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略");
+    private readonly SettingRow _uac = Row("禁用用户账户控制 UAC", "启用");
+    private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启");
+    private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示");
     private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小");
     private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示");
     private readonly SettingRow _audio = Row("启动音频服务", "不启动");
     private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开");
-    private readonly SettingRow _azure = Row("禁止启动Azure Arc", "允许启动");
-    private readonly SettingRow _pwd = Row("禁用密码符合复杂性要求", "必须符合");
+    private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动");
+    private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合");
     private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许");
-    private readonly SettingRow _shutdownReason = Row("关闭显示事件跟踪程序", "显示");
-    private readonly SettingRow _noCad = Row("无需Ctrl+Alt+Del登录", "需要按键");
+    private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示");
+    private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键");
 
-    private readonly ListBox _menu = new();
-    private readonly TabControl _tabs = new();
-    private readonly TabPage[] _pages = new TabPage[4];
+    private readonly Panel _contentHost = new();
     private readonly Label _status = new();
     private readonly Button _apply = new();
+    private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
+    private readonly ListBox _menu = new();
     private int _menuHover = -1;
 
-    private static readonly Color Navy = Color.FromArgb(11, 31, 58);
-    private static readonly Color NavySoft = Color.FromArgb(18, 44, 76);
-    private static readonly Color Gold = Color.FromArgb(201, 162, 39);
-    private static readonly Color Canvas = Color.FromArgb(241, 243, 246);
-    private static readonly Color Line = Color.FromArgb(226, 230, 236);
-    private static readonly Color TextMain = Color.FromArgb(28, 37, 48);
-    private static readonly Color TextMute = Color.FromArgb(107, 118, 132);
+    private static readonly Color NavBg = Color.FromArgb(245, 246, 248);
+    private static readonly Color NavText = Color.FromArgb(51, 51, 51);
+    private static readonly Color NavActive = Color.FromArgb(0, 120, 215);
+    private static readonly Color HeaderGreen = Color.FromArgb(197, 225, 165);
+    private static readonly Color RowAlt = Color.FromArgb(232, 244, 252);
+    private static readonly Color RowLine = Color.FromArgb(220, 228, 236);
+    private static readonly Color GroupBg = Color.FromArgb(238, 242, 246);
+    private static readonly Color TextMain = Color.FromArgb(33, 33, 33);
+    private static readonly Color TextMute = Color.FromArgb(117, 117, 117);
     private static readonly string[] MenuItems =
     [
         "性能及安全",
@@ -49,86 +51,57 @@ internal sealed class MainForm : Form
     {
         Text = "Win一键优化";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1000, 640);
-        ClientSize = new Size(1040, 660);
+        MinimumSize = new Size(980, 620);
+        ClientSize = new Size(1040, 680);
         Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Canvas;
+        BackColor = Color.White;
         ForeColor = TextMain;
 
-        var header = BuildHeader();
+        _groups.Add(("性能及安全", [_cpu, _dep, _uac, _ie]));
+        _groups.Add(("个性化设置", [_thisPc, _taskbar, _confirmDel, _audio]));
+        _groups.Add(("启动项", [_svrMgr, _azure]));
+        _groups.Add(("账户策略", [_pwd, _shutdownLogon, _shutdownReason, _noCad]));
+
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
-        BuildTabs();
+        BuildContent();
 
-        _tabs.Dock = DockStyle.Fill;
         sidebar.Dock = DockStyle.Left;
-        header.Dock = DockStyle.Top;
+        _contentHost.Dock = DockStyle.Fill;
         bottom.Dock = DockStyle.Bottom;
 
-        Controls.Add(_tabs);
+        Controls.Add(_contentHost);
         Controls.Add(sidebar);
         Controls.Add(bottom);
-        Controls.Add(header);
 
         _menu.SelectedIndex = 0;
+        ShowGroup(0);
         Load += (_, _) => LoadState();
-    }
-
-    private Panel BuildHeader()
-    {
-        var header = new Panel
-        {
-            Height = 58,
-            BackColor = Navy,
-            Padding = new Padding(18, 0, 20, 0),
-        };
-        var brand = new Label
-        {
-            Text = "Win一键优化",
-            AutoSize = false,
-            Dock = DockStyle.Left,
-            Width = 220,
-            ForeColor = Color.White,
-            Font = new Font("Microsoft YaHei UI", 13F, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-        var sub = new Label
-        {
-            Text = "Windows Server  系统优化",
-            AutoSize = false,
-            Dock = DockStyle.Right,
-            Width = 220,
-            ForeColor = Color.FromArgb(196, 176, 122),
-            Font = new Font("Microsoft YaHei UI", 9F),
-            TextAlign = ContentAlignment.MiddleRight,
-        };
-        header.Controls.Add(sub);
-        header.Controls.Add(brand);
-        return header;
+        Resize += (_, _) => LayoutContent();
     }
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 196, BackColor = Navy };
+        var sidebar = new Panel { Width = 168, BackColor = NavBg };
         var cap = new Label
         {
-            Text = "  功能导航",
+            Text = "  常用工具",
             Dock = DockStyle.Top,
-            Height = 40,
-            ForeColor = Color.FromArgb(168, 178, 190),
+            Height = 36,
+            ForeColor = TextMute,
             Font = new Font("Microsoft YaHei UI", 8.5F),
             TextAlign = ContentAlignment.MiddleLeft,
         };
         _menu.Dock = DockStyle.Fill;
         _menu.BorderStyle = BorderStyle.None;
-        _menu.BackColor = Navy;
-        _menu.ForeColor = Color.White;
+        _menu.BackColor = NavBg;
+        _menu.ForeColor = NavText;
         _menu.IntegralHeight = false;
         _menu.DrawMode = DrawMode.OwnerDrawFixed;
-        _menu.ItemHeight = 46;
+        _menu.ItemHeight = 40;
         _menu.Items.AddRange(MenuItems);
         _menu.DrawItem += DrawMenuItem;
-        _menu.SelectedIndexChanged += (_, _) => ShowSelectedPage();
+        _menu.SelectedIndexChanged += (_, _) => ShowGroup(_menu.SelectedIndex);
         _menu.MouseMove += (_, e) =>
         {
             var i = _menu.IndexFromPoint(e.Location);
@@ -140,63 +113,186 @@ internal sealed class MainForm : Form
         return sidebar;
     }
 
-    private void BuildTabs()
+    private void BuildContent()
     {
-        _tabs.Padding = new Point(14, 6);
-        _tabs.SizeMode = TabSizeMode.Fixed;
-        _tabs.ItemSize = new Size(132, 34);
-        _tabs.DrawMode = TabDrawMode.OwnerDrawFixed;
-        _tabs.DrawItem += DrawTab;
-        _pages[0] = NewPage("性能及安全", "处理器调度、内存防护、UAC 与 IE 增强安全。", _cpu, _dep, _uac, _ie);
-        _pages[1] = NewPage("个性化设置", "桌面图标、任务栏、删除确认与音频服务。", _thisPc, _taskbar, _confirmDel, _audio);
-        _pages[2] = NewPage("启动项", "登录后的服务管理器与 Azure Arc。", _svrMgr, _azure);
-        _pages[3] = NewPage("账户策略", "密码复杂性、关机行为与安全登录提示。", _pwd, _shutdownLogon, _shutdownReason, _noCad);
+        _contentHost.BackColor = Color.White;
+        _contentHost.Padding = new Padding(0);
+        _contentHost.AutoScroll = true;
+    }
+
+    private void ShowGroup(int index)
+    {
+        if (index < 0 || index >= _groups.Count) return;
+        _contentHost.SuspendLayout();
+        _contentHost.Controls.Clear();
+
+        var wrap = new Panel
+        {
+            Location = new Point(0, 0),
+            Width = Math.Max(760, _contentHost.ClientSize.Width - 20),
+            AutoSize = true,
+            BackColor = Color.White,
+        };
+
+        var header = BuildTableHeader();
+        wrap.Controls.Add(header);
+
+        var group = _groups[index];
+        var section = BuildGroupSection(group.Title, group.Rows);
+        wrap.Controls.Add(section);
+        section.Location = new Point(0, header.Bottom);
+
+        wrap.Height = section.Bottom;
+        _contentHost.Controls.Add(wrap);
+        _contentHost.ResumeLayout(true);
+    }
+
+    private void LayoutContent()
+    {
+        if (_contentHost.Controls.Count == 0) return;
+        if (_contentHost.Controls[0] is Panel wrap)
+            wrap.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
+    }
+
+    private Panel BuildTableHeader()
+    {
+        const int h = 34;
+        var header = new Panel
+        {
+            Location = new Point(0, 0),
+            Height = h,
+            BackColor = HeaderGreen,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        };
+        header.Controls.Add(MakeHeaderLabel("项目", 12, 420));
+        header.Controls.Add(MakeHeaderLabel("当前用户", 440, 160, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统", 620, 160, ContentAlignment.MiddleCenter));
+        header.Resize += (_, _) => header.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
+        header.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
+        return header;
+    }
+
+    private static Label MakeHeaderLabel(string text, int x, int w, ContentAlignment align = ContentAlignment.MiddleLeft) => new()
+    {
+        Text = text,
+        Location = new Point(x, 0),
+        Size = new Size(w, 34),
+        ForeColor = TextMain,
+        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+        TextAlign = align,
+    };
+
+    private Panel BuildGroupSection(string title, SettingRow[] rows)
+    {
+        const int headerH = 32;
+        const int rowH = 36;
+        var expanded = true;
+        var section = new Panel
+        {
+            Location = new Point(0, 0),
+            Width = Math.Max(760, _contentHost.ClientSize.Width - 20),
+            Height = headerH + rows.Length * rowH,
+            BackColor = Color.White,
+        };
+
+        var head = new Panel
+        {
+            Location = new Point(0, 0),
+            Size = new Size(section.Width, headerH),
+            BackColor = GroupBg,
+            Cursor = Cursors.Hand,
+        };
+        var arrow = new Label
+        {
+            Text = "▼",
+            Location = new Point(10, 6),
+            AutoSize = true,
+            ForeColor = TextMute,
+            Font = new Font("Segoe UI Symbol", 8F),
+        };
+        var titleLabel = new Label
+        {
+            Text = title,
+            Location = new Point(28, 0),
+            Size = new Size(section.Width - 40, headerH),
+            ForeColor = TextMain,
+            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        head.Controls.Add(arrow);
+        head.Controls.Add(titleLabel);
+
+        var body = new Panel
+        {
+            Location = new Point(0, headerH),
+            Size = new Size(section.Width, rows.Length * rowH),
+            BackColor = Color.White,
+        };
+
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var bg = i % 2 == 0 ? Color.White : RowAlt;
+            rows[i].Mount(body, i * rowH, rowH, bg, section.Width);
+        }
+
+        void Toggle(object? _, EventArgs __)
+        {
+            expanded = !expanded;
+            arrow.Text = expanded ? "▼" : "▶";
+            body.Visible = expanded;
+            section.Height = expanded ? headerH + rows.Length * rowH : headerH;
+        }
+
+        head.Click += Toggle;
+        arrow.Click += Toggle;
+        titleLabel.Click += Toggle;
+
+        section.Controls.Add(body);
+        section.Controls.Add(head);
+        section.Resize += (_, _) =>
+        {
+            head.Width = section.Width;
+            body.Width = section.Width;
+            titleLabel.Width = section.Width - 40;
+        };
+        return section;
     }
 
     private Panel BuildBottom()
     {
-        var bottom = new Panel { Height = 78, BackColor = Color.White };
-        var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = Line };
+        var bottom = new Panel { Height = 52, BackColor = Color.White };
+        var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = RowLine };
 
         _status.AutoSize = false;
-        _status.SetBounds(20, 14, 500, 50);
-        _status.Anchor = AnchorStyles.Left | AnchorStyles.Top;
+        _status.SetBounds(168, 16, 420, 22);
+        _status.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
         _status.ForeColor = TextMute;
         _status.Text = Optimizer.IsWindowsServer()
-            ? "勾选表示采用推荐设置。右侧「系统默认值」仅供对照，不需要选择。"
-            : "当前系统可能不是 Windows Server。本工具面向 Server 日常使用优化。";
+            ? "中间开关为推荐设置；「系统」列为出厂默认值，仅展示。"
+            : "当前系统可能不是 Windows Server。";
 
-        var allOn = GhostButton("全部选择", 548, 22, 92, () => SetAll(true));
-        var allOff = GhostButton("全部取消", 648, 22, 92, () => SetAll(false));
-        var about = GhostButton("关于", 748, 22, 72, ShowAbout);
+        var allOn = ToolButton("全部选择", 620, 10, 88, () => SetAll(true));
+        var allOff = ToolButton("全部取消", 714, 10, 88, () => SetAll(false));
+        var refresh = ToolButton("刷新", 808, 10, 72, LoadState);
+        var about = ToolButton("关于", 884, 10, 72, ShowAbout);
         allOn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         allOff.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         about.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
         _apply.Text = "一键优化";
-        _apply.SetBounds(832, 18, 116, 40);
+        _apply.SetBounds(962, 8, 68, 34);
         _apply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
-        _apply.BackColor = Navy;
+        _apply.BackColor = NavActive;
         _apply.ForeColor = Color.White;
-        _apply.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
+        _apply.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         _apply.Cursor = Cursors.Hand;
         _apply.Click += (_, _) => Apply();
-        _apply.MouseEnter += (_, _) => _apply.BackColor = NavySoft;
-        _apply.MouseLeave += (_, _) => _apply.BackColor = Navy;
 
-        bottom.Controls.AddRange([rule, _status, allOn, allOff, about, _apply]);
+        bottom.Controls.AddRange([rule, _status, allOn, allOff, refresh, about, _apply]);
         return bottom;
-    }
-
-    private void ShowSelectedPage()
-    {
-        var i = _menu.SelectedIndex;
-        if (i < 0 || i >= _pages.Length || _pages[i] is null) return;
-        if (_tabs.TabPages.Count == 1 && ReferenceEquals(_tabs.TabPages[0], _pages[i])) return;
-        _tabs.TabPages.Clear();
-        _tabs.TabPages.Add(_pages[i]);
     }
 
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
@@ -204,113 +300,16 @@ internal sealed class MainForm : Form
         if (e.Index < 0) return;
         var selected = (e.State & DrawItemState.Selected) != 0;
         var hover = e.Index == _menuHover && !selected;
-        using var back = new SolidBrush(selected ? NavySoft : hover ? Color.FromArgb(16, 38, 68) : Navy);
+        using var back = new SolidBrush(selected ? NavActive : hover ? Color.FromArgb(230, 236, 244) : NavBg);
         e.Graphics.FillRectangle(back, e.Bounds);
-        if (selected)
-        {
-            using var accent = new SolidBrush(Gold);
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 10, 3, e.Bounds.Height - 20);
-        }
         TextRenderer.DrawText(
             e.Graphics,
             MenuItems[e.Index],
-            selected ? new Font(Font, FontStyle.Bold) : Font,
-            new Rectangle(e.Bounds.X + 22, e.Bounds.Y, e.Bounds.Width - 28, e.Bounds.Height),
-            selected ? Color.White : Color.FromArgb(214, 220, 228),
+            Font,
+            new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - 20, e.Bounds.Height),
+            selected ? Color.White : NavText,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }
-
-    private void DrawTab(object sender, DrawItemEventArgs e)
-    {
-        var selected = e.Index == _tabs.SelectedIndex;
-        using var back = new SolidBrush(selected ? Color.White : Canvas);
-        e.Graphics.FillRectangle(back, e.Bounds);
-        if (selected)
-        {
-            using var accent = new SolidBrush(Gold);
-            e.Graphics.FillRectangle(accent, e.Bounds.X + 10, e.Bounds.Bottom - 3, e.Bounds.Width - 20, 3);
-        }
-        var text = e.Index >= 0 && e.Index < _tabs.TabPages.Count ? _tabs.TabPages[e.Index].Text : "";
-        TextRenderer.DrawText(
-            e.Graphics,
-            text,
-            selected ? new Font(Font, FontStyle.Bold) : Font,
-            e.Bounds,
-            selected ? Navy : TextMute,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-    }
-
-    private static TabPage NewPage(string title, string hint, params SettingRow[] rows)
-    {
-        var page = new TabPage(title)
-        {
-            BackColor = Canvas,
-            UseVisualStyleBackColor = false,
-        };
-        var hintLabel = new Label
-        {
-            Text = hint + "  勾选采用推荐；右侧为系统默认值，仅展示。",
-            AutoSize = false,
-            ForeColor = TextMute,
-            Location = new Point(20, 12),
-            Size = new Size(760, 22),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
-        page.Controls.Add(hintLabel);
-
-        const int headerH = 36;
-        const int rowH = 44;
-        var card = new Panel
-        {
-            Location = new Point(20, 40),
-            Size = new Size(760, headerH + rows.Length * rowH),
-            BackColor = Color.White,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Line);
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
-
-        card.Controls.Add(ColHeader("推荐设置", 16, 420, TextMain));
-        card.Controls.Add(ColHeader("系统默认值", 500, 240, TextMute));
-        var headLine = new Panel
-        {
-            BackColor = Line,
-            Location = new Point(0, headerH - 1),
-            Size = new Size(760, 1),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
-        card.Controls.Add(headLine);
-
-        for (var i = 0; i < rows.Length; i++)
-        {
-            var y = headerH + i * rowH;
-            rows[i].Mount(card, y, rowH);
-            if (i < rows.Length - 1)
-            {
-                card.Controls.Add(new Panel
-                {
-                    BackColor = Line,
-                    Location = new Point(16, y + rowH - 1),
-                    Size = new Size(728, 1),
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                });
-            }
-        }
-        page.Controls.Add(card);
-        return page;
-    }
-
-    private static Label ColHeader(string text, int x, int w, Color color) => new()
-    {
-        Text = text,
-        Location = new Point(x, 8),
-        Size = new Size(w, 22),
-        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-        ForeColor = color,
-    };
 
     private void LoadState()
     {
@@ -370,7 +369,7 @@ internal sealed class MainForm : Form
             var errors = Optimizer.Apply(CaptureState());
             LoadState();
             _status.Text = errors.Count == 0
-                ? "已按勾选项应用推荐设置；未勾选的项已恢复为系统默认。部分项目可能需要注销或重启后生效。"
+                ? "已应用。开关开启为推荐设置，关闭则恢复系统默认。部分项目需注销或重启后生效。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors);
         }
         catch (Exception ex)
@@ -387,16 +386,16 @@ internal sealed class MainForm : Form
     private static void ShowAbout()
     {
         MessageBox.Show(
-            "Windows Server 日常使用优化工具。\r\n勾选采用推荐设置；右侧「系统默认值」仅供对照。未勾选的项在应用时恢复为系统默认。",
+            "Windows Server 日常使用优化工具。\r\n中间开关控制是否采用推荐设置；右侧「系统」列为出厂默认值。",
             "关于 Win一键优化",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
     }
 
-    private static SettingRow Row(string recommend, string systemDefault) =>
-        new(recommend, systemDefault);
+    private static SettingRow Row(string item, string systemDefault) =>
+        new(item, systemDefault);
 
-    private static Button GhostButton(string text, int x, int y, int w, Action click)
+    private static Button ToolButton(string text, int x, int y, int w, Action click)
     {
         var b = new Button
         {
@@ -405,59 +404,65 @@ internal sealed class MainForm : Form
             Size = new Size(w, 32),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
-            ForeColor = Navy,
+            ForeColor = TextMain,
             Cursor = Cursors.Hand,
         };
-        b.FlatAppearance.BorderColor = Color.FromArgb(196, 204, 214);
+        b.FlatAppearance.BorderColor = RowLine;
         b.Click += (_, _) => click();
         return b;
     }
 
     private sealed class SettingRow
     {
-        private readonly CheckBox _check;
-        private readonly Label _def;
+        private readonly ToggleSwitch _toggle;
+        private readonly Label _item;
+        private readonly Label _system;
 
-        public SettingRow(string recommend, string systemDefault)
+        public SettingRow(string item, string systemDefault)
         {
-            _check = new CheckBox
+            _item = new Label
             {
-                Text = recommend,
+                Text = item,
                 AutoSize = false,
-                Size = new Size(460, 22),
                 ForeColor = TextMain,
-                BackColor = Color.White,
+                TextAlign = ContentAlignment.MiddleLeft,
             };
-            _def = new Label
+            _toggle = new ToggleSwitch();
+            _system = new Label
             {
                 Text = systemDefault,
                 AutoSize = false,
-                Size = new Size(240, 22),
                 ForeColor = TextMute,
-                TextAlign = ContentAlignment.MiddleLeft,
+                TextAlign = ContentAlignment.MiddleCenter,
             };
         }
 
         public bool Checked
         {
-            get => _check.Checked;
-            set => _check.Checked = value;
+            get => _toggle.Checked;
+            set => _toggle.Checked = value;
         }
 
-        public void Mount(Control parent, int y, int h)
+        public void Mount(Control parent, int y, int h, Color bg, int width)
         {
             var wrap = new Panel
             {
                 Location = new Point(0, y),
-                Size = new Size(parent.Width, h),
-                BackColor = Color.White,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Size = new Size(width, h),
+                BackColor = bg,
             };
-            var mid = (h - 22) / 2;
-            _check.Location = new Point(16, mid);
-            _def.Location = new Point(500, mid);
-            wrap.Controls.Add(_check);
-            wrap.Controls.Add(_def);
+            _item.SetBounds(12, 0, 420, h);
+            _toggle.Location = new Point(484, (h - _toggle.Height) / 2);
+            _system.SetBounds(620, 0, 160, h);
+            wrap.Controls.Add(_item);
+            wrap.Controls.Add(_toggle);
+            wrap.Controls.Add(_system);
+            wrap.Controls.Add(new Panel
+            {
+                BackColor = RowLine,
+                Dock = DockStyle.Bottom,
+                Height = 1,
+            });
             parent.Controls.Add(wrap);
         }
     }
