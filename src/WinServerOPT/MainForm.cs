@@ -90,8 +90,8 @@ internal sealed class MainForm : Form
 
         var logo = new PictureBox
         {
-            Size = new Size(36, 36),
-            Location = new Point(16, 10),
+            Size = new Size(40, 40),
+            Location = new Point(14, 8),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
         };
