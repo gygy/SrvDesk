@@ -120,7 +120,7 @@ internal sealed class MainForm : Form
         Text = "Win一键优化";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(980, 720);
-        ClientSize = new Size(1040, 760);
+        ClientSize = new Size(1080, 760);
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
@@ -230,35 +230,49 @@ internal sealed class MainForm : Form
             Location = new Point(360, 10),
             ForeColor = AppTheme.TextMute,
         };
-        _presetCombo.SetBounds(396, 6, 168, 26);
+        _presetCombo.SetBounds(396, 6, 200, 26);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        _presetCombo.IntegralHeight = false;
         foreach (var p in OptPresets.All) _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0) _presetCombo.SelectedIndex = 0;
+        AdjustPresetComboDropDownWidth();
 
         var loadPreset = ToolButton("载入预设", ApplySelectedPreset);
-        loadPreset.Location = new Point(572, 4);
+        loadPreset.Location = new Point(604, 4);
         loadPreset.Size = new Size(88, 30);
 
         var exportBtn = ToolButton("导出", ExportProfile);
-        exportBtn.Location = new Point(668, 4);
+        exportBtn.Location = new Point(700, 4);
         exportBtn.Size = new Size(64, 30);
 
         var importBtn = ToolButton("导入", ImportProfile);
-        importBtn.Location = new Point(738, 4);
+        importBtn.Location = new Point(770, 4);
         importBtn.Size = new Size(64, 30);
 
         var autologonBtn = ToolButton("Autologon 配置", ConfigureAutologon);
-        autologonBtn.Location = new Point(810, 4);
+        autologonBtn.Location = new Point(842, 4);
         autologonBtn.Size = new Size(112, 30);
 
         var identityBtn = ToolButton("计算机名/工作组", ConfigureComputerIdentity);
-        identityBtn.Location = new Point(928, 4);
+        identityBtn.Location = new Point(960, 4);
         identityBtn.Size = new Size(108, 30);
 
         _toolBar.Controls.AddRange([
             searchLabel, _searchBox, _hideIncompatible, presetLabel, _presetCombo,
             loadPreset, exportBtn, importBtn, autologonBtn, identityBtn
         ]);
+    }
+
+    private void AdjustPresetComboDropDownWidth()
+    {
+        var max = _presetCombo.Width;
+        foreach (OptPresets.PresetInfo preset in _presetCombo.Items)
+        {
+            var w = TextRenderer.MeasureText(preset.Title, _presetCombo.Font).Width + 28;
+            if (w > max) max = w;
+        }
+
+        _presetCombo.DropDownWidth = max;
     }
 
     private void ApplySelectedPreset()
@@ -343,6 +357,12 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(ex.Message, "读取失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void ShowQuickToolsDialog()
+    {
+        using var dlg = new QuickToolsDialog(_systemFacts);
+        dlg.ShowDialog(this);
     }
 
     private bool EnsureAutologonReady()
@@ -739,6 +759,7 @@ internal sealed class MainForm : Form
 
         var allOn = ToolButton("全部推荐", () => SetAll(true));
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
+        var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
         var refresh = ToolButton("刷新", LoadState);
         var about = ToolButton("关于", ShowAboutDialog);
 
@@ -770,7 +791,7 @@ internal sealed class MainForm : Form
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
-        actions.Controls.AddRange([allOn, allOff, refresh, about, _restore, _apply]);
+        actions.Controls.AddRange([allOn, allOff, quickTools, refresh, about, _restore, _apply]);
         bottom.Controls.Add(actions);
         bottom.Controls.Add(_status);
         bottom.Controls.Add(rule);

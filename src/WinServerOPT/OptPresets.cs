@@ -11,6 +11,8 @@ internal static class OptPresets
         public string Title { get; set; } = "";
         public string Description { get; set; } = "";
         public Func<Optimizer.State> Build { get; set; } = () => new Optimizer.State();
+
+        public override string ToString() => Title;
     }
 
     public static IReadOnlyList<PresetInfo> All { get; } = new List<PresetInfo>
