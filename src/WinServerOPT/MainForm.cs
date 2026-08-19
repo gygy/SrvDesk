@@ -2,70 +2,74 @@ namespace WinOpt;
 
 internal sealed class MainForm : Form
 {
-    private readonly SettingRow _cpu = Row("CPU 资源分配（程序优先）", "后台服务优先");
-    private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略");
-    private readonly SettingRow _uac = Row("禁用用户账户控制 UAC", "启用");
-    private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启");
-    private readonly SettingRow _highPerf = Row("高性能电源计划", "平衡");
-    private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启");
-    private readonly SettingRow _noUpdateReboot = Row("更新时不自动重启", "允许重启");
-    private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启");
-    private readonly SettingRow _wuNotify = Row("Windows 更新仅通知下载", "自动安装");
-    private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动");
-    private readonly SettingRow _visualPerf = Row("视觉效果调整为最佳性能", "系统自选");
-    private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启");
-    private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启");
-    private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认");
-    private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启");
-    private readonly SettingRow _longPaths = Row("启用 NTFS 长路径支持", "关闭");
-    private readonly SettingRow _fastStartup = Row("关闭快速启动（稳定双系统）", "开启");
-    private readonly SettingRow _autoMaint = Row("禁用自动维护计划", "开启");
-    private readonly SettingRow _noDriverWu = Row("Windows 更新不含驱动", "含驱动");
-    private readonly SettingRow _smb1 = Row("禁用 SMB 1.0 协议", "允许");
-    private readonly SettingRow _remoteReg = Row("禁用 Remote Registry 服务", "手动");
-    private readonly SettingRow _spooler = Row("禁用打印后台处理（无打印机）", "自动");
+    private readonly SettingRow _cpu = Row("CPU 资源分配（程序优先）", "后台服务优先", SettingCatalog.CpuProgramPriority);
+    private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略", SettingCatalog.Dep);
+    private readonly SettingRow _uac = Row("禁用用户账户控制 UAC", "启用", SettingCatalog.DisableUac);
+    private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启", SettingCatalog.DisableIeEsc);
+    private readonly SettingRow _highPerf = Row("高性能电源计划", "平衡", SettingCatalog.HighPerfPower);
+    private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启", SettingCatalog.DisableTelemetry);
+    private readonly SettingRow _noUpdateReboot = Row("更新时不自动重启", "允许重启", SettingCatalog.NoUpdateReboot);
+    private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启", SettingCatalog.DisableDeliveryOpt);
+    private readonly SettingRow _wuNotify = Row("Windows 更新仅通知下载", "自动安装", SettingCatalog.WuNotifyOnly);
+    private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动", SettingCatalog.DisableSysMain);
+    private readonly SettingRow _visualPerf = Row("视觉效果调整为最佳性能", "系统自选", SettingCatalog.VisualBestPerf);
+    private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启", SettingCatalog.PowerThrottlingOff);
+    private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启", SettingCatalog.DisableHibernate);
+    private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认", SettingCatalog.TcpOptimized);
+    private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启", SettingCatalog.DisableErrorReport);
+    private readonly SettingRow _longPaths = Row("启用 NTFS 长路径支持", "关闭", SettingCatalog.LongPathsEnabled);
+    private readonly SettingRow _fastStartup = Row("关闭快速启动（稳定双系统）", "开启", SettingCatalog.DisableFastStartup);
+    private readonly SettingRow _autoMaint = Row("禁用自动维护计划", "开启", SettingCatalog.DisableAutoMaintenance);
+    private readonly SettingRow _noDriverWu = Row("Windows 更新不含驱动", "含驱动", SettingCatalog.ExcludeDriverUpdates);
+    private readonly SettingRow _smb1 = Row("禁用 SMB 1.0 协议", "允许", SettingCatalog.DisableSmb1);
+    private readonly SettingRow _remoteReg = Row("禁用 Remote Registry 服务", "手动", SettingCatalog.DisableRemoteRegistry);
+    private readonly SettingRow _spooler = Row("禁用打印后台处理（无打印机）", "自动", SettingCatalog.DisablePrintSpooler);
 
-    private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示");
-    private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问");
-    private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小");
-    private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示");
-    private readonly SettingRow _audio = Row("启动音频服务", "不启动");
-    private readonly SettingRow _fileExt = Row("显示已知文件扩展名", "隐藏");
-    private readonly SettingRow _themes = Row("启用主题服务（完整桌面外观）", "手动");
-    private readonly SettingRow _search = Row("启用 Windows 搜索", "手动");
-    private readonly SettingRow _webSearch = Row("关闭开始菜单 Bing 网络搜索", "开启");
-    private readonly SettingRow _feedback = Row("关闭 Windows 体验反馈提示", "开启");
-    private readonly SettingRow _noLockScreen = Row("禁用锁屏界面", "显示");
-    private readonly SettingRow _hiddenFiles = Row("显示隐藏文件", "不显示");
-    private readonly SettingRow _noArrow = Row("隐藏快捷方式小箭头", "显示");
-    private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名");
-    private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏");
+    private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
+    private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
+    private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小", SettingCatalog.SmallTaskbar);
+    private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示", SettingCatalog.ConfirmDelete);
+    private readonly SettingRow _audio = Row("启动音频服务", "不启动", SettingCatalog.EnableAudio);
+    private readonly SettingRow _fileExt = Row("显示已知文件扩展名", "隐藏", SettingCatalog.ShowFileExtensions);
+    private readonly SettingRow _themes = Row("启用主题服务（完整桌面外观）", "手动", SettingCatalog.EnableThemes);
+    private readonly SettingRow _search = Row("启用 Windows 搜索", "手动", SettingCatalog.EnableSearch);
+    private readonly SettingRow _webSearch = Row("关闭开始菜单 Bing 网络搜索", "开启", SettingCatalog.DisableWebSearch);
+    private readonly SettingRow _feedback = Row("关闭 Windows 体验反馈提示", "开启", SettingCatalog.DisableFeedback);
+    private readonly SettingRow _noLockScreen = Row("禁用锁屏界面", "显示", SettingCatalog.NoLockScreen);
+    private readonly SettingRow _hiddenFiles = Row("显示隐藏文件", "不显示", SettingCatalog.ShowHiddenFiles);
+    private readonly SettingRow _noArrow = Row("隐藏快捷方式小箭头", "显示", SettingCatalog.NoShortcutArrow);
+    private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名", SettingCatalog.ExplorerFullPath);
+    private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏", SettingCatalog.TaskbarAllIcons);
 
-    private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启");
-    private readonly SettingRow _transparency = Row("禁用透明效果", "开启");
-    private readonly SettingRow _tips = Row("关闭 Windows 提示与建议", "开启");
-    private readonly SettingRow _autoplay = Row("禁用所有驱动器自动播放", "开启");
-    private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启");
-    private readonly SettingRow _storageSense = Row("禁用存储感知", "开启");
+    private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启", SettingCatalog.DisableAnimations);
+    private readonly SettingRow _transparency = Row("禁用透明效果", "开启", SettingCatalog.DisableTransparency);
+    private readonly SettingRow _tips = Row("关闭 Windows 提示与建议", "开启", SettingCatalog.DisableTips);
+    private readonly SettingRow _autoplay = Row("禁用所有驱动器自动播放", "开启", SettingCatalog.DisableAutoplay);
+    private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启", SettingCatalog.DisableActivityHistory);
+    private readonly SettingRow _storageSense = Row("禁用存储感知", "开启", SettingCatalog.DisableStorageSense);
 
-    private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用");
-    private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭");
-    private readonly SettingRow _rdpFps = Row("RDP 提高远程帧率", "默认");
-    private readonly SettingRow _rdpNla = Row("RDP 关闭 NLA（内网/Linux 客户端）", "开启");
-    private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭");
-    private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启");
+    private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp);
+    private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel);
+    private readonly SettingRow _rdpFps = Row("RDP 提高远程帧率", "默认", SettingCatalog.RdpHighRefresh);
+    private readonly SettingRow _rdpNla = Row("RDP 关闭 NLA（内网/Linux 客户端）", "开启", SettingCatalog.RdpDisableNla);
+    private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭", SettingCatalog.EnableNetworkDiscovery);
+    private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启", SettingCatalog.DisableSmRemoting);
 
-    private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开");
-    private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动");
-    private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动");
-    private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动");
+    private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开", SettingCatalog.SkipServerManager);
+    private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动", SettingCatalog.DisableAzureArc);
+    private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动", SettingCatalog.EnableInstaller);
+    private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动", SettingCatalog.EnableWia);
 
-    private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合");
-    private readonly SettingRow _pwdExpire = Row("密码永不过期", "42 天");
-    private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许");
-    private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示");
-    private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键");
+    private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合", SettingCatalog.DisablePasswordComplexity);
+    private readonly SettingRow _pwdExpire = Row("密码永不过期", "42 天", SettingCatalog.PasswordNeverExpire);
+    private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许", SettingCatalog.ShutdownWithoutLogon);
+    private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示", SettingCatalog.DisableShutdownReason);
+    private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键", SettingCatalog.DisableCad);
 
+    private readonly Panel _helpPanel = new();
+    private readonly Label _helpTitle = new();
+    private readonly Label _helpBody = new();
+    private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
     private readonly Panel _contentHost = new();
     private readonly Label _status = new();
     private readonly Button _apply = new();
@@ -73,6 +77,7 @@ internal sealed class MainForm : Form
     private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
+    private SettingRow? _selectedRow;
 
     private static readonly string[] MenuItems =
     [
@@ -101,8 +106,8 @@ internal sealed class MainForm : Form
     {
         Text = "Win一键优化";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(980, 640);
-        ClientSize = new Size(1040, 700);
+        MinimumSize = new Size(980, 720);
+        ClientSize = new Size(1040, 760);
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
@@ -128,20 +133,25 @@ internal sealed class MainForm : Form
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
         BuildContent();
+        BuildHelpPanel();
 
         header.Dock = DockStyle.Top;
         sidebar.Dock = DockStyle.Left;
         _contentHost.Dock = DockStyle.Fill;
+        _helpPanel.Dock = DockStyle.Bottom;
         bottom.Dock = DockStyle.Bottom;
 
         Controls.Add(_contentHost);
+        Controls.Add(_helpPanel);
         Controls.Add(sidebar);
         Controls.Add(bottom);
         Controls.Add(header);
 
         _menu.SelectedIndex = 0;
+        ShowHelpPlaceholder();
         ShowGroup(0);
         Load += (_, _) => LoadState();
+        FormClosed += (_, _) => _toolTip.Dispose();
         Resize += (_, _) => LayoutContent();
     }
 
@@ -269,6 +279,63 @@ internal sealed class MainForm : Form
         wrap.Height = section.Bottom;
         _contentHost.Controls.Add(wrap);
         _contentHost.ResumeLayout(true);
+        ShowHelpPlaceholder(group.Title);
+    }
+
+    private void BuildHelpPanel()
+    {
+        _helpPanel.Height = 118;
+        _helpPanel.BackColor = AppTheme.PrimaryPale;
+        _helpPanel.Padding = new Padding(16, 8, 16, 8);
+        _helpPanel.Paint += (_, e) =>
+        {
+            using var accent = new SolidBrush(AppTheme.Primary);
+            e.Graphics.FillRectangle(accent, 0, 0, 4, _helpPanel.Height);
+            using var top = new Pen(AppTheme.Border);
+            e.Graphics.DrawLine(top, 0, 0, _helpPanel.Width, 0);
+        };
+
+        _helpTitle.AutoSize = false;
+        _helpTitle.SetBounds(12, 6, 900, 22);
+        _helpTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        _helpTitle.ForeColor = AppTheme.PrimaryDeep;
+        _helpTitle.Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold);
+        _helpTitle.BackColor = Color.Transparent;
+
+        _helpBody.AutoSize = false;
+        _helpBody.SetBounds(12, 30, 900, 78);
+        _helpBody.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+        _helpBody.ForeColor = AppTheme.TextMain;
+        _helpBody.Font = new Font("Microsoft YaHei UI", 8.75F);
+        _helpBody.BackColor = Color.Transparent;
+
+        _helpPanel.Controls.Add(_helpBody);
+        _helpPanel.Controls.Add(_helpTitle);
+        _helpPanel.Resize += (_, _) =>
+        {
+            _helpTitle.Width = _helpPanel.ClientSize.Width - 24;
+            _helpBody.Width = _helpPanel.ClientSize.Width - 24;
+            _helpBody.Height = _helpPanel.ClientSize.Height - 34;
+        };
+    }
+
+    private void ShowHelp(SettingRow row)
+    {
+        _selectedRow?.SetSelected(false);
+        _selectedRow = row;
+        row.SetSelected(true);
+        _helpTitle.Text = row.ItemText;
+        _helpBody.Text = row.Help.FormatDetail();
+    }
+
+    private void ShowHelpPlaceholder(string? groupTitle = null)
+    {
+        _selectedRow?.SetSelected(false);
+        _selectedRow = null;
+        _helpTitle.Text = groupTitle is null ? "设置说明" : $"{groupTitle} · 设置说明";
+        _helpBody.Text =
+            "鼠标悬停项目名称可查看一行摘要。\r\n" +
+            "点击项目名称或右侧 ⓘ 查看完整说明（作用、好处、设置指引与生效方式）。";
     }
 
     private int ContentWidth() =>
@@ -367,7 +434,7 @@ internal sealed class MainForm : Form
         for (var i = 0; i < rows.Length; i++)
         {
             var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
-            rows[i].Mount(body, i * rowH, rowH, bg, section.Width);
+            rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp);
         }
 
         void Toggle(object? _, EventArgs __)
@@ -702,8 +769,8 @@ internal sealed class MainForm : Form
             MessageBoxIcon.Information);
     }
 
-    private static SettingRow Row(string item, string systemDefault) =>
-        new(item, systemDefault);
+    private static SettingRow Row(string item, string systemDefault, SettingHelpInfo help) =>
+        new(item, systemDefault, help);
 
     private static Button ToolButton(string text, Action click)
     {
@@ -729,10 +796,18 @@ internal sealed class MainForm : Form
     {
         private readonly ToggleSwitch _toggle;
         private readonly Label _item;
+        private readonly Label _info;
         private readonly Label _system;
+        private Panel? _wrap;
+        private Color _normalBg;
 
-        public SettingRow(string item, string systemDefault)
+        public string ItemText { get; }
+        public SettingHelpInfo Help { get; }
+
+        public SettingRow(string item, string systemDefault, SettingHelpInfo help)
         {
+            ItemText = item;
+            Help = help;
             _item = new Label
             {
                 Text = item,
@@ -740,6 +815,16 @@ internal sealed class MainForm : Form
                 ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+            };
+            _info = new Label
+            {
+                Text = "ⓘ",
+                AutoSize = true,
+                ForeColor = AppTheme.Primary,
+                Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
             };
             _toggle = new ToggleSwitch();
             _system = new Label
@@ -758,17 +843,43 @@ internal sealed class MainForm : Form
             set => _toggle.Checked = value;
         }
 
-        public void Mount(Control parent, int y, int h, Color bg, int width)
+        public void SetSelected(bool selected)
         {
+            if (_wrap is null) return;
+            _wrap.BackColor = selected ? AppTheme.PrimaryPale : _normalBg;
+            _item.ForeColor = selected ? AppTheme.PrimaryDeep : AppTheme.TextMain;
+        }
+
+        public void Mount(
+            Control parent,
+            int y,
+            int h,
+            Color bg,
+            int width,
+            ToolTip toolTip,
+            Action<SettingRow> onSelectHelp)
+        {
+            _normalBg = bg;
             var wrap = new Panel
             {
                 Location = new Point(0, y),
                 Size = new Size(width, h),
                 BackColor = bg,
             };
-            _item.SetBounds(16, 0, 460, h);
+            _wrap = wrap;
+            _info.SetBounds(16, (h - 18) / 2, 18, 18);
+            _item.SetBounds(36, 0, 384, h);
             _toggle.Location = new Point(500, (h - _toggle.Height) / 2);
             _system.SetBounds(628, 0, 160, h);
+
+            toolTip.SetToolTip(_item, Help.Summary);
+            toolTip.SetToolTip(_info, "点击查看详细说明\n" + Help.Summary);
+
+            void Select(object? _, EventArgs __) => onSelectHelp(this);
+            _item.Click += Select;
+            _info.Click += Select;
+
+            wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             wrap.Controls.Add(_toggle);
             wrap.Controls.Add(_system);
