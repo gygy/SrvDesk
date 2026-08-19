@@ -78,6 +78,15 @@ internal sealed class MainForm : Form
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
     private SettingRow? _selectedRow;
+    private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
+    private readonly Panel _toolBar = new();
+    private readonly TextBox _searchBox = new();
+    private readonly CheckBox _hideIncompatible = new();
+    private readonly ComboBox _presetCombo = new();
+    private SettingRow[] _activeRows = [];
+    private Panel? _activeBody;
+    private Panel? _activeSection;
+    private int _activeGroupIndex;
 
     private static readonly string[] MenuItems =
     [
@@ -132,10 +141,12 @@ internal sealed class MainForm : Form
         var header = BuildHeader();
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
+        BuildToolBar();
         BuildContent();
         BuildHelpPanel();
 
         header.Dock = DockStyle.Top;
+        _toolBar.Dock = DockStyle.Top;
         sidebar.Dock = DockStyle.Left;
         _contentHost.Dock = DockStyle.Fill;
         _helpPanel.Dock = DockStyle.Bottom;
@@ -145,14 +156,171 @@ internal sealed class MainForm : Form
         Controls.Add(_helpPanel);
         Controls.Add(sidebar);
         Controls.Add(bottom);
+        Controls.Add(_toolBar);
         Controls.Add(header);
 
         _menu.SelectedIndex = 0;
         ShowHelpPlaceholder();
         ShowGroup(0);
-        Load += (_, _) => LoadState();
+        Load += (_, _) => InitializeRuntime();
         FormClosed += (_, _) => _toolTip.Dispose();
         Resize += (_, _) => LayoutContent();
+    }
+
+    private void InitializeRuntime()
+    {
+        if (!AdminHelper.IsRunningAsAdministrator())
+        {
+            _status.ForeColor = Color.FromArgb(163, 72, 0);
+            _status.Text = "警告：当前未以管理员运行，应用设置可能失败。请右键「以管理员身份运行」。";
+        }
+        else if (!_systemFacts.IsServer)
+        {
+            _status.ForeColor = AppTheme.ScopeServer;
+            _status.Text = "提示：当前不是 Windows Server（" + _systemFacts.Summary + "）。部分「Server 专属」项可能无效。";
+        }
+        else if (!_systemFacts.HasDesktopExperience)
+        {
+            _status.ForeColor = AppTheme.ScopeServer;
+            _status.Text = "提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。";
+            _hideIncompatible.Checked = true;
+        }
+        else
+        {
+            _status.Text = _systemFacts.Summary + "。开关=推荐；关闭=恢复系统默认。";
+        }
+
+        ApplyLog.Write("启动 " + _systemFacts.Summary);
+        LoadState();
+    }
+
+    private void BuildToolBar()
+    {
+        _toolBar.Height = 40;
+        _toolBar.BackColor = AppTheme.SurfaceCard;
+        _toolBar.Padding = new Padding(188, 6, 12, 6);
+
+        var searchLabel = new Label
+        {
+            Text = "搜索",
+            AutoSize = true,
+            Location = new Point(0, 10),
+            ForeColor = AppTheme.TextMute,
+        };
+        _searchBox.SetBounds(36, 6, 200, 26);
+        _searchBox.BorderStyle = BorderStyle.FixedSingle;
+        _searchBox.ForeColor = AppTheme.TextMain;
+        _searchBox.TextChanged += (_, _) => ApplySearchFilter();
+
+        _hideIncompatible.Text = "隐藏不适用项";
+        _hideIncompatible.AutoSize = true;
+        _hideIncompatible.Location = new Point(246, 8);
+        _hideIncompatible.ForeColor = AppTheme.TextMute;
+        _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
+
+        var presetLabel = new Label
+        {
+            Text = "预设",
+            AutoSize = true,
+            Location = new Point(360, 10),
+            ForeColor = AppTheme.TextMute,
+        };
+        _presetCombo.SetBounds(396, 6, 168, 26);
+        _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        foreach (var p in OptPresets.All) _presetCombo.Items.Add(p);
+        if (_presetCombo.Items.Count > 0) _presetCombo.SelectedIndex = 0;
+
+        var loadPreset = ToolButton("载入预设", ApplySelectedPreset);
+        loadPreset.Location = new Point(572, 4);
+        loadPreset.Size = new Size(88, 30);
+
+        var exportBtn = ToolButton("导出", ExportProfile);
+        exportBtn.Location = new Point(668, 4);
+        exportBtn.Size = new Size(64, 30);
+
+        var importBtn = ToolButton("导入", ImportProfile);
+        importBtn.Location = new Point(738, 4);
+        importBtn.Size = new Size(64, 30);
+
+        _toolBar.Controls.AddRange([
+            searchLabel, _searchBox, _hideIncompatible, presetLabel, _presetCombo,
+            loadPreset, exportBtn, importBtn
+        ]);
+    }
+
+    private void ApplySelectedPreset()
+    {
+        if (_presetCombo.SelectedItem is not OptPresets.PresetInfo preset) return;
+        var answer = MessageBox.Show(
+            $"将载入预设「{preset.Title}」到界面开关（尚未写入系统）。\n\n{preset.Description}\n\n是否继续？",
+            "载入预设",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+        if (answer != DialogResult.Yes) return;
+
+        Bind(preset.Build());
+        _status.Text = $"已载入预设「{preset.Title}」，点击「应用推荐」写入系统。";
+        ApplyLog.Write("载入预设 " + preset.Title);
+    }
+
+    private void ExportProfile()
+    {
+        using var dlg = new SaveFileDialog
+        {
+            Filter = "WinOpt 配置 (*.json)|*.json",
+            FileName = "WinOpt-配置.json",
+            InitialDirectory = ProfileStore.DefaultProfileDir(),
+        };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        try
+        {
+            ProfileStore.Save(dlg.FileName, CaptureState(), "用户导出");
+            _status.Text = "已导出配置：" + dlg.FileName;
+            ApplyLog.Write("导出配置 " + dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "导出失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ImportProfile()
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Filter = "WinOpt 配置 (*.json)|*.json",
+            InitialDirectory = ProfileStore.DefaultProfileDir(),
+        };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        try
+        {
+            var state = ProfileStore.Load(dlg.FileName);
+            Bind(state);
+            _status.Text = "已导入配置到界面：" + dlg.FileName + "（点击「应用推荐」写入）";
+            ApplyLog.Write("导入配置 " + dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ApplySearchFilter()
+    {
+        if (_activeRows.Length == 0 || _activeBody is null || _activeSection is null) return;
+        const int headerH = 34;
+        const int rowH = 44;
+        var query = _searchBox.Text;
+        var hideDe = _hideIncompatible.Checked;
+        var visible = 0;
+        foreach (var row in _activeRows)
+        {
+            var show = row.MatchesFilter(query, _systemFacts, hideDe);
+            row.SetVisible(show);
+            if (show) visible++;
+        }
+        _activeBody.Height = Math.Max(visible, 1) * rowH;
+        _activeSection.Height = headerH + _activeBody.Height;
     }
 
     private Panel BuildHeader()
@@ -252,6 +420,7 @@ internal sealed class MainForm : Form
     private void ShowGroup(int index)
     {
         if (index < 0 || index >= _groups.Count) return;
+        _activeGroupIndex = index;
         _contentHost.SuspendLayout();
         _contentHost.Controls.Clear();
 
@@ -276,10 +445,15 @@ internal sealed class MainForm : Form
         wrap.Controls.Add(section);
         section.Location = new Point(0, header.Bottom);
 
+        _activeRows = group.Rows;
+        _activeSection = section;
+        _activeBody = section.Tag as Panel;
+
         wrap.Height = section.Bottom;
         _contentHost.Controls.Add(wrap);
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(group.Title);
+        ApplySearchFilter();
     }
 
     private void BuildHelpPanel()
@@ -466,6 +640,7 @@ internal sealed class MainForm : Form
 
         section.Controls.Add(body);
         section.Controls.Add(head);
+        section.Tag = body;
         section.Resize += (_, _) =>
         {
             head.Width = section.Width;
@@ -503,7 +678,7 @@ internal sealed class MainForm : Form
         var allOn = ToolButton("全部推荐", () => SetAll(true));
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
         var refresh = ToolButton("刷新", LoadState);
-        var about = ToolButton("关于", ShowAbout);
+        var about = ToolButton("关于", ShowAboutDialog);
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -743,6 +918,7 @@ internal sealed class MainForm : Form
         try
         {
             var errors = Optimizer.Apply(CaptureState());
+            ApplyLog.WriteApply(working, errors);
             LoadState();
             _status.Text = errors.Count == 0
                 ? success + " 部分项目需注销或重启后生效。"
@@ -760,11 +936,16 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static void ShowAbout()
+    private void ShowAboutDialog()
     {
         MessageBox.Show(
-            "Windows Server 2022 / 2025 个人日常使用优化。\r\n" +
-            "「应用推荐」写入已开启项；「恢复默认」一键还原全部出厂设置。",
+            "Win一键优化 v1.0\r\n" +
+            "针对 Windows Server 2022/2025 个人桌面场景。\r\n\r\n" +
+            "系统：" + _systemFacts.Summary + "\r\n" +
+            "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
+            "操作日志：" + ApplyLog.LogFilePath + "\r\n\r\n" +
+            "预设方案对标 WinUtil；配置 JSON 导入导出。\r\n" +
+            "CLI：Win一键优化.exe --apply-preset server-desktop",
             "关于 Win一键优化",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
@@ -854,6 +1035,22 @@ internal sealed class MainForm : Form
         {
             get => _toggle.Checked;
             set => _toggle.Checked = value;
+        }
+
+        public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
+        {
+            if (hideIncompatibleDesktop && !facts.HasDesktopExperience && Help.Scope.RequiresDesktopExperience)
+                return false;
+            if (string.IsNullOrWhiteSpace(query)) return true;
+            var q = query.Trim();
+            return ItemText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || Help.Summary.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        public void SetVisible(bool visible)
+        {
+            if (_wrap is not null) _wrap.Visible = visible;
         }
 
         public void SetSelected(bool selected)
