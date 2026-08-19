@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace WinOpt;
 
 internal sealed class MainForm : Form
@@ -675,11 +677,6 @@ internal sealed class MainForm : Form
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(group.Title);
         ApplySearchFilter();
-    }
-
-    private void BuildHelpPanel()
-    {
-        // 已迁移至右侧 HelpDetailPanel
     }
 
     private void ShowHelp(SettingRow row)
