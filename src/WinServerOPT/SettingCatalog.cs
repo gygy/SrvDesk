@@ -123,6 +123,13 @@ internal static class SettingCatalog
         "若遇特殊网络设备兼容问题可恢复默认；一般宽带/内网可开启。",
         "立即生效。");
 
+    public static readonly SettingHelpInfo QosSpeedOptimize = H(
+        "QoS 零保留带宽 + 入站 TCP 最大吞吐量（级别 3）。",
+        "NonBestEffortLimit=0；基于策略的 QoS 高级设置 Tcp Autotuning Level=normal（接收窗口最大 16MB）。",
+        "对齐 gpedit 中「限制可保留带宽 0%」与「入站 TCP 吞吐量级别 3」，利于大文件下载与远程传输。",
+        "企业域环境若已由 GPO 管控 QoS 请谨慎；个人/内网 Server 桌面可开启。",
+        "策略写入后立即生效；部分场景建议重启网络栈或重启系统。");
+
     public static readonly SettingHelpInfo DisableErrorReport = H(
         "关闭 Windows 错误报告（WerSvc）上传。",
         "禁用 Windows Error Reporting 服务。",

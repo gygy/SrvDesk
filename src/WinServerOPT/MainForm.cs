@@ -16,6 +16,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启", SettingCatalog.PowerThrottlingOff);
     private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启", SettingCatalog.DisableHibernate);
     private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认", SettingCatalog.TcpOptimized);
+    private readonly SettingRow _qosSpeed = Row("QoS 网速优化（零保留+入站TCP级别3）", "系统默认", SettingCatalog.QosSpeedOptimize);
     private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启", SettingCatalog.DisableErrorReport);
     private readonly SettingRow _longPaths = Row("启用 NTFS 长路径支持", "关闭", SettingCatalog.LongPathsEnabled);
     private readonly SettingRow _fastStartup = Row("关闭快速启动（稳定双系统）", "开启", SettingCatalog.DisableFastStartup);
@@ -127,7 +128,7 @@ internal sealed class MainForm : Form
 
         _groups.Add(("性能及安全", [
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
+            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
             _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler
         ]));
         _groups.Add(("个性化设置", [
@@ -819,6 +820,7 @@ internal sealed class MainForm : Form
         _powerThrottle.Checked = s.PowerThrottlingOff;
         _hibernate.Checked = s.DisableHibernate;
         _tcp.Checked = s.TcpOptimized;
+        _qosSpeed.Checked = s.QosSpeedOptimize;
         _errorReport.Checked = s.DisableErrorReport;
         _longPaths.Checked = s.LongPathsEnabled;
         _fastStartup.Checked = s.DisableFastStartup;
@@ -884,6 +886,7 @@ internal sealed class MainForm : Form
         PowerThrottlingOff = _powerThrottle.Checked,
         DisableHibernate = _hibernate.Checked,
         TcpOptimized = _tcp.Checked,
+        QosSpeedOptimize = _qosSpeed.Checked,
         DisableErrorReport = _errorReport.Checked,
         LongPathsEnabled = _longPaths.Checked,
         DisableFastStartup = _fastStartup.Checked,

@@ -16,6 +16,9 @@ internal static class Optimizer
     internal const string IntlKey = @"Control Panel\International";
     internal const string ShortDateWithWeekday = "yyyy/MM/dd dddd";
     internal const string ShortDateDefault = "yyyy/M/d";
+    internal const string QosPschedKey = @"SOFTWARE\Policies\Microsoft\Windows\Psched";
+    internal const string QosPolicyKey = @"SOFTWARE\Policies\Microsoft\Windows\QoS";
+    internal const string QosTcpAutotuningLevel = "Tcp Autotuning Level";
 
     internal sealed class State
     {
@@ -33,6 +36,8 @@ internal static class Optimizer
         public bool PowerThrottlingOff;
         public bool DisableHibernate;
         public bool TcpOptimized;
+        public bool QosSpeedOptimize;
+
         public bool DisableErrorReport;
 
         public bool ShowThisPcIcon;
@@ -125,6 +130,7 @@ internal static class Optimizer
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
             TcpOptimized = IsTcpOptimized(),
+            QosSpeedOptimize = IsQosSpeedOptimized(),
             DisableErrorReport = ServiceStartEquals("WerSvc", 4),
 
             ShowThisPcIcon = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, 0),
@@ -211,6 +217,7 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
         Try(errors, "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
         Try(errors, "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
+        Try(errors, "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));
         Try(errors, "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
 
         Try(errors, "桌面此电脑", () =>
@@ -498,6 +505,30 @@ internal static class Optimizer
         catch
         {
             return false;
+        }
+    }
+
+    private static bool IsQosSpeedOptimized()
+    {
+        var zeroBandwidth = DwordEquals(Hive.HkLm, QosPschedKey, "NonBestEffortLimit", 0);
+        var level = GetString(Hive.HkLm, QosPolicyKey, QosTcpAutotuningLevel);
+        var maxInbound = level != null &&
+            level.Equals("normal", StringComparison.OrdinalIgnoreCase);
+        return zeroBandwidth && maxInbound;
+    }
+
+    private static void SetQosSpeedOptimized(bool enable)
+    {
+        if (enable)
+        {
+            SetDword(Hive.HkLm, QosPschedKey, "NonBestEffortLimit", 0);
+            SetString(Hive.HkLm, QosPolicyKey, QosTcpAutotuningLevel, "normal");
+            Run("netsh.exe", "int tcp set global autotuninglevel=normal");
+        }
+        else
+        {
+            DeleteValue(Hive.HkLm, QosPschedKey, "NonBestEffortLimit");
+            DeleteValue(Hive.HkLm, QosPolicyKey, QosTcpAutotuningLevel);
         }
     }
 
