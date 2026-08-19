@@ -38,6 +38,11 @@ internal static class BrandPalette
     public static readonly Color TextOnPrimarySoft = Color.FromArgb(204, 228, 248);
     public static readonly Color TextHeader = Color.FromArgb(0, 69, 120);
 
+    /// <summary>适用范围标签（版本/桌面体验）。</summary>
+    public static readonly Color ScopeTag = Color.FromArgb(0, 99, 177);
+    /// <summary>Server 专属标签。</summary>
+    public static readonly Color ScopeServer = Color.FromArgb(163, 72, 0);
+
     public static readonly Color ToggleOn = Primary;
     public static readonly Color ToggleOff = Color.FromArgb(186, 199, 212);
     public static readonly Color ToggleKnob = Color.White;

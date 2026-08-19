@@ -189,7 +189,7 @@ internal sealed class MainForm : Form
         };
         var sub = new Label
         {
-            Text = "Windows Server 2022 / 2025 个人优化",
+            Text = "Windows Server 2022 / 2025 个人优化 · 项目标识适用范围",
             AutoSize = false,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(760, 0),
@@ -334,8 +334,9 @@ internal sealed class MainForm : Form
         _selectedRow = null;
         _helpTitle.Text = groupTitle is null ? "设置说明" : $"{groupTitle} · 设置说明";
         _helpBody.Text =
-            "鼠标悬停项目名称可查看一行摘要。\r\n" +
-            "点击项目名称或右侧 ⓘ 查看完整说明（作用、好处、设置指引与生效方式）。";
+            "鼠标悬停项目名称可查看一行摘要；点击项目名称或 ⓘ 查看完整说明。\r\n" +
+            "标识：Server 专属 = 仅 Server 有效；需桌面体验 = Server Core 无效；" +
+            "Server 2016+ / Win10+ = 最低版本要求。";
     }
 
     private int ContentWidth() =>
@@ -385,7 +386,7 @@ internal sealed class MainForm : Form
     private Panel BuildGroupSection(string title, SettingRow[] rows)
     {
         const int headerH = 34;
-        const int rowH = 38;
+        const int rowH = 44;
         var expanded = true;
         var section = new Panel
         {
@@ -796,6 +797,7 @@ internal sealed class MainForm : Form
     {
         private readonly ToggleSwitch _toggle;
         private readonly Label _item;
+        private readonly Label _scope;
         private readonly Label _info;
         private readonly Label _system;
         private Panel? _wrap;
@@ -815,6 +817,17 @@ internal sealed class MainForm : Form
                 ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+            };
+            _scope = new Label
+            {
+                Text = help.Scope.FormatBadges(),
+                AutoSize = false,
+                ForeColor = help.Scope.ServerOnly ? AppTheme.ScopeServer : AppTheme.ScopeTag,
+                Font = new Font("Microsoft YaHei UI", 7.5F),
+                TextAlign = ContentAlignment.TopLeft,
+                BackColor = Color.Transparent,
+                Visible = help.Scope.HasBadge,
                 Cursor = Cursors.Hand,
             };
             _info = new Label
@@ -868,19 +881,33 @@ internal sealed class MainForm : Form
             };
             _wrap = wrap;
             _info.SetBounds(16, (h - 18) / 2, 18, 18);
-            _item.SetBounds(36, 0, 384, h);
+            var hasScope = Help.Scope.HasBadge;
+            if (hasScope)
+            {
+                _item.SetBounds(36, 4, 384, 20);
+                _scope.SetBounds(36, 24, 420, 16);
+            }
+            else
+            {
+                _item.SetBounds(36, 0, 384, h);
+            }
             _toggle.Location = new Point(500, (h - _toggle.Height) / 2);
             _system.SetBounds(628, 0, 160, h);
 
-            toolTip.SetToolTip(_item, Help.Summary);
-            toolTip.SetToolTip(_info, "点击查看详细说明\n" + Help.Summary);
+            var tip = Help.Summary;
+            if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
+            toolTip.SetToolTip(_item, tip);
+            toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
+            if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
 
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
             _info.Click += Select;
+            if (hasScope) _scope.Click += Select;
 
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
+            if (hasScope) wrap.Controls.Add(_scope);
             wrap.Controls.Add(_toggle);
             wrap.Controls.Add(_system);
             wrap.Controls.Add(new Panel

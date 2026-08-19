@@ -24,6 +24,9 @@ internal static class AppTheme
     public static readonly Color TextOnPrimarySoft = BrandPalette.TextOnPrimarySoft;
     public static readonly Color TextHeader = BrandPalette.TextHeader;
 
+    public static readonly Color ScopeTag = BrandPalette.ScopeTag;
+    public static readonly Color ScopeServer = BrandPalette.ScopeServer;
+
     public static readonly Color ToggleOn = BrandPalette.ToggleOn;
     public static readonly Color ToggleOnDeep = BrandPalette.PrimaryDark;
     public static readonly Color ToggleOff = BrandPalette.ToggleOff;
