@@ -23,23 +23,40 @@ internal static class Optimizer
         public bool DisableTelemetry;
         public bool NoUpdateReboot;
         public bool DisableDeliveryOpt;
+        public bool WuNotifyOnly;
+        public bool DisableSysMain;
+        public bool VisualBestPerf;
+        public bool PowerThrottlingOff;
+        public bool DisableHibernate;
+        public bool TcpOptimized;
+        public bool DisableErrorReport;
 
         public bool ShowThisPcIcon;
+        public bool LaunchExplorerThisPc;
         public bool SmallTaskbar;
         public bool ConfirmDelete;
         public bool EnableAudio;
         public bool ShowFileExtensions;
         public bool EnableThemes;
         public bool EnableSearch;
+        public bool DisableWebSearch;
+        public bool DisableFeedback;
+        public bool NoLockScreen;
 
         public bool EnableRdp;
+        public bool RdpGpuAccel;
+        public bool RdpHighRefresh;
+        public bool RdpDisableNla;
         public bool EnableNetworkDiscovery;
+        public bool DisableSmRemoting;
 
         public bool SkipServerManager;
         public bool DisableAzureArc;
-        public bool DisableErrorReport;
+        public bool EnableInstaller;
+        public bool EnableWia;
 
         public bool DisablePasswordComplexity;
+        public bool PasswordNeverExpire;
         public bool ShutdownWithoutLogon;
         public bool DisableShutdownReason;
         public bool DisableCad;
@@ -68,23 +85,40 @@ internal static class Optimizer
             DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
             NoUpdateReboot = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1),
             DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
+            WuNotifyOnly = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", 2),
+            DisableSysMain = ServiceStartEquals("SysMain", 4),
+            VisualBestPerf = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2),
+            PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
+            DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
+            TcpOptimized = IsTcpOptimized(),
+            DisableErrorReport = ServiceStartEquals("WerSvc", 4),
 
             ShowThisPcIcon = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, 0),
+            LaunchExplorerThisPc = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo", 1),
             SmallTaskbar = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSmallIcons", 1),
             ConfirmDelete = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "ConfirmFileDelete", 1),
             EnableAudio = ServiceStartEquals("AudioSrv", 2),
             ShowFileExtensions = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 0),
             EnableThemes = ServiceStartEquals("Themes", 2),
             EnableSearch = ServiceStartEquals("WSearch", 2),
+            DisableWebSearch = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "DisableWebSearch", 1),
+            DisableFeedback = DwordEquals(Hive.HkCu, @"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod", 0),
+            NoLockScreen = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", 1),
 
             EnableRdp = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", 0),
+            RdpGpuAccel = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", 1),
+            RdpHighRefresh = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations", "DWMFRAMEINTERVAL", 15),
+            RdpDisableNla = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp", "UserAuthentication", 0),
             EnableNetworkDiscovery = ServiceStartEquals("fdPHost", 2) && ServiceStartEquals("FDResPub", 2),
+            DisableSmRemoting = ServiceStartEquals("WinRM", 4),
 
             SkipServerManager = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", 1),
             DisableAzureArc = GetValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup") is null,
-            DisableErrorReport = ServiceStartEquals("WerSvc", 4),
+            EnableInstaller = ServiceStartEquals("msiserver", 2),
+            EnableWia = ServiceStartEquals("stisvc", 2),
 
-            DisablePasswordComplexity = ReadPasswordComplexityDisabled(),
+            DisablePasswordComplexity = ReadSecpolFlag("PasswordComplexity = 0"),
+            PasswordNeverExpire = ReadSecpolFlag("MaximumPasswordAge = 0"),
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
@@ -111,9 +145,21 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", s.NoUpdateReboot ? 1 : 0));
         Try(errors, "传递优化", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1));
+        Try(errors, "更新通知", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", s.WuNotifyOnly ? 2 : 4));
+        Try(errors, "SysMain", () => SetService("SysMain", !s.DisableSysMain, disableWhenOff: true));
+        Try(errors, "视觉效果", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", s.VisualBestPerf ? 2 : 3));
+        Try(errors, "电源节流", () =>
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
+        Try(errors, "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
+        Try(errors, "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
+        Try(errors, "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
 
         Try(errors, "桌面此电脑", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, s.ShowThisPcIcon ? 0 : 1));
+        Try(errors, "打开此电脑", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo", s.LaunchExplorerThisPc ? 1 : 2));
         Try(errors, "小按钮任务栏", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSmallIcons", s.SmallTaskbar ? 1 : 0));
         Try(errors, "删除确认", () =>
@@ -123,15 +169,32 @@ internal static class Optimizer
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", s.ShowFileExtensions ? 0 : 1));
         Try(errors, "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
         Try(errors, "Windows搜索", () => SetService("WSearch", s.EnableSearch, disableWhenOff: false));
+        Try(errors, "Bing搜索", () =>
+        {
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", s.DisableWebSearch ? 0 : 1);
+        });
+        Try(errors, "体验反馈", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod", s.DisableFeedback ? 0 : 1));
+        Try(errors, "锁屏", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", s.NoLockScreen ? 1 : 0));
 
         Try(errors, "远程桌面", () => SetRdp(s.EnableRdp));
-        Try(errors, "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
-
-        Try(errors, "服务管理器", () =>
+        Try(errors, "RDP图形加速", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", s.RdpGpuAccel ? 1 : 0));
+        Try(errors, "RDP帧率", () =>
         {
-            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", s.SkipServerManager ? 1 : 0);
-            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch", s.SkipServerManager ? 1 : 0);
+            if (s.RdpHighRefresh)
+                SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations", "DWMFRAMEINTERVAL", 15);
+            else
+                DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations", "DWMFRAMEINTERVAL");
         });
+        Try(errors, "RDP NLA", () =>
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp", "UserAuthentication", s.RdpDisableNla ? 0 : 1));
+        Try(errors, "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
+        Try(errors, "Server远程管理", () => SetSmRemoting(!s.DisableSmRemoting));
+
+        Try(errors, "服务管理器", () => SetServerManager(s.SkipServerManager));
         Try(errors, "Azure Arc", () =>
         {
             if (s.DisableAzureArc)
@@ -139,16 +202,70 @@ internal static class Optimizer
             else
                 SetString(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup", AzureArcCommand);
         });
-        Try(errors, "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
+        Try(errors, "Windows Installer", () => SetService("msiserver", s.EnableInstaller, disableWhenOff: false));
+        Try(errors, "WIA图像采集", () => SetService("stisvc", s.EnableWia, disableWhenOff: false));
 
-        Try(errors, "密码复杂性", () => SetPasswordComplexity(s.DisablePasswordComplexity));
+        Try(errors, "账户策略", () => ApplyAccountPolicy(s.DisablePasswordComplexity, s.PasswordNeverExpire));
+
         Try(errors, "未登录关机", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", s.ShutdownWithoutLogon ? 1 : 0));
-        Try(errors, "关机事件跟踪", () =>
-            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", s.DisableShutdownReason ? 0 : 1));
+        Try(errors, "关机事件跟踪", () => SetShutdownReason(!s.DisableShutdownReason));
         Try(errors, "Ctrl+Alt+Del", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", s.DisableCad ? 1 : 0));
         return errors;
+    }
+
+    private static void SetServerManager(bool skip)
+    {
+        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", skip ? 1 : 0);
+        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch", skip ? 1 : 0);
+        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "RefreshInterval", skip ? 14400 : 3600);
+    }
+
+    private static void SetShutdownReason(bool enableUi)
+    {
+        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", enableUi ? 1 : 0);
+        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonUI", enableUi ? 1 : 0);
+        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Reliability", "ShutdownReasonUI", enableUi ? 1 : 0);
+    }
+
+    private static void SetSmRemoting(bool enable)
+    {
+        var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "system32", "Configure-SMRemoting.exe");
+        if (File.Exists(exe))
+            Run(exe, enable ? "-enable" : "-disable");
+        else
+            SetService("WinRM", enable, disableWhenOff: true);
+    }
+
+    private static void SetTcpOptimized(bool enable)
+    {
+        if (enable)
+        {
+            Run("netsh.exe", "int tcp set global autotuninglevel=normal");
+            Run("netsh.exe", "int tcp set global timestamps=disabled");
+            Run("netsh.exe", "int tcp set global ecncapability=disabled");
+        }
+        else
+        {
+            Run("netsh.exe", "int tcp set global autotuninglevel=normal");
+            Run("netsh.exe", "int tcp set global timestamps=enabled");
+            Run("netsh.exe", "int tcp set global ecncapability=default");
+        }
+    }
+
+    private static bool IsTcpOptimized()
+    {
+        try
+        {
+            var output = RunCapture("netsh.exe", "int tcp show global").ToLowerInvariant();
+            return output.Contains("timestamps") && output.Contains("disabled")
+                && output.Contains("autotuninglevel") && output.Contains("normal");
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void SetRdp(bool enable)
@@ -163,16 +280,12 @@ internal static class Optimizer
     {
         SetService("fdPHost", enable, disableWhenOff: false);
         SetService("FDResPub", enable, disableWhenOff: false);
-        if (enable)
-        {
-            Run("netsh.exe", "advfirewall firewall set rule group=\"network discovery\" new enable=Yes");
-            Run("netsh.exe", "advfirewall firewall set rule group=\"file and printer sharing\" new enable=Yes");
-        }
-        else
-        {
-            Run("netsh.exe", "advfirewall firewall set rule group=\"network discovery\" new enable=No");
-            Run("netsh.exe", "advfirewall firewall set rule group=\"file and printer sharing\" new enable=No");
-        }
+        Run("netsh.exe", enable
+            ? "advfirewall firewall set rule group=\"network discovery\" new enable=Yes"
+            : "advfirewall firewall set rule group=\"network discovery\" new enable=No");
+        Run("netsh.exe", enable
+            ? "advfirewall firewall set rule group=\"file and printer sharing\" new enable=Yes"
+            : "advfirewall firewall set rule group=\"file and printer sharing\" new enable=No");
     }
 
     private static void SetTelemetry(bool enable)
@@ -186,6 +299,47 @@ internal static class Optimizer
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0);
             SetService("DiagTrack", false, disableWhenOff: true);
+        }
+    }
+
+    private static void ApplyAccountPolicy(bool disableComplexity, bool neverExpire)
+    {
+        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
+        Run("secedit.exe", $"/export /cfg \"{cfg}\"");
+        if (!File.Exists(cfg)) throw new InvalidOperationException("secedit 导出失败");
+        var text = File.ReadAllText(cfg);
+        text = ReplaceSecpolLine(text, "PasswordComplexity", disableComplexity ? 0 : 1);
+        text = ReplaceSecpolLine(text, "MaximumPasswordAge", neverExpire ? 0 : 42);
+        File.WriteAllText(cfg, text);
+        Run("secedit.exe", $"/configure /db C:\\Windows\\security\\local.sdb /cfg \"{cfg}\" /areas SECURITYPOLICY");
+        TryDelete(cfg);
+    }
+
+    private static string ReplaceSecpolLine(string text, string key, int value)
+    {
+        var line = $"{key} = {value}";
+        if (text.Contains($"{key} = 0")) return text.Replace($"{key} = 0", line);
+        if (text.Contains($"{key} = 1")) return text.Replace($"{key} = 1", line);
+        if (text.Contains($"{key} = 42")) return text.Replace($"{key} = 42", line);
+        return text + Environment.NewLine + line;
+    }
+
+    private static bool ReadSecpolFlag(string needle)
+    {
+        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol-read.inf");
+        try
+        {
+            Run("secedit.exe", $"/export /cfg \"{cfg}\"");
+            if (!File.Exists(cfg)) return false;
+            return File.ReadAllLines(cfg).Any(line => line.IndexOf(needle, StringComparison.Ordinal) >= 0);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            TryDelete(cfg);
         }
     }
 
@@ -294,39 +448,6 @@ internal static class Optimizer
             Run("sc.exe", "config AudioSrv start= disabled");
             Run("sc.exe", "config AudioEndpointBuilder start= disabled");
         }
-    }
-
-    private static bool ReadPasswordComplexityDisabled()
-    {
-        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
-        try
-        {
-            Run("secedit.exe", $"/export /cfg \"{cfg}\"");
-            if (!File.Exists(cfg)) return false;
-            return File.ReadAllLines(cfg).Any(line => line.Contains("PasswordComplexity = 0"));
-        }
-        catch
-        {
-            return false;
-        }
-        finally
-        {
-            TryDelete(cfg);
-        }
-    }
-
-    private static void SetPasswordComplexity(bool disable)
-    {
-        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
-        Run("secedit.exe", $"/export /cfg \"{cfg}\"");
-        if (!File.Exists(cfg)) throw new InvalidOperationException("secedit 导出失败");
-        var text = File.ReadAllText(cfg);
-        text = disable
-            ? text.Replace("PasswordComplexity = 1", "PasswordComplexity = 0")
-            : text.Replace("PasswordComplexity = 0", "PasswordComplexity = 1");
-        File.WriteAllText(cfg, text);
-        Run("secedit.exe", $"/configure /db C:\\Windows\\security\\local.sdb /cfg \"{cfg}\" /areas SECURITYPOLICY");
-        TryDelete(cfg);
     }
 
     private static void Run(string fileName, string arguments)

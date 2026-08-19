@@ -12,23 +12,40 @@ internal sealed class MainForm : Form
     private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启");
     private readonly SettingRow _noUpdateReboot = Row("更新时不自动重启", "允许重启");
     private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启");
+    private readonly SettingRow _wuNotify = Row("Windows 更新仅通知下载", "自动安装");
+    private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动");
+    private readonly SettingRow _visualPerf = Row("视觉效果调整为最佳性能", "系统自选");
+    private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启");
+    private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启");
+    private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认");
     private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启");
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示");
+    private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问");
     private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小");
     private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示");
     private readonly SettingRow _audio = Row("启动音频服务", "不启动");
     private readonly SettingRow _fileExt = Row("显示已知文件扩展名", "隐藏");
     private readonly SettingRow _themes = Row("启用主题服务（完整桌面外观）", "手动");
-    private readonly SettingRow _search = Row("启用 Windows 搜索", "禁用");
+    private readonly SettingRow _search = Row("启用 Windows 搜索", "手动");
+    private readonly SettingRow _webSearch = Row("关闭开始菜单 Bing 网络搜索", "开启");
+    private readonly SettingRow _feedback = Row("关闭 Windows 体验反馈提示", "开启");
+    private readonly SettingRow _noLockScreen = Row("禁用锁屏界面", "显示");
 
     private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用");
+    private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭");
+    private readonly SettingRow _rdpFps = Row("RDP 提高远程帧率", "默认");
+    private readonly SettingRow _rdpNla = Row("RDP 关闭 NLA（内网/Linux 客户端）", "开启");
     private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭");
+    private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启");
 
     private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开");
     private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动");
+    private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动");
+    private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动");
 
     private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合");
+    private readonly SettingRow _pwdExpire = Row("密码永不过期", "42 天");
     private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许");
     private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示");
     private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键");
@@ -36,6 +53,7 @@ internal sealed class MainForm : Form
     private readonly Panel _contentHost = new();
     private readonly Label _status = new();
     private readonly Button _apply = new();
+    private readonly Button _restore = new();
     private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
@@ -51,11 +69,13 @@ internal sealed class MainForm : Form
 
     private SettingRow[] AllRows =>
     [
-        _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _errorReport,
-        _thisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-        _rdp, _netDiscovery,
-        _svrMgr, _azure,
-        _pwd, _shutdownLogon, _shutdownReason, _noCad
+        _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
+        _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
+        _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
+        _webSearch, _feedback, _noLockScreen,
+        _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
+        _svrMgr, _azure, _installer, _wia,
+        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad
     ];
 
     public MainForm()
@@ -69,11 +89,17 @@ internal sealed class MainForm : Form
         ForeColor = AppTheme.TextMain;
         try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { /* 设计时 */ }
 
-        _groups.Add(("性能及安全", [_cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _errorReport]));
-        _groups.Add(("个性化设置", [_thisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search]));
-        _groups.Add(("远程与网络", [_rdp, _netDiscovery]));
-        _groups.Add(("启动项", [_svrMgr, _azure]));
-        _groups.Add(("账户策略", [_pwd, _shutdownLogon, _shutdownReason, _noCad]));
+        _groups.Add(("性能及安全", [
+            _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
+            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport
+        ]));
+        _groups.Add(("个性化设置", [
+            _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
+            _webSearch, _feedback, _noLockScreen
+        ]));
+        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
+        _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia]));
+        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad]));
 
         var header = BuildHeader();
         var sidebar = BuildSidebar();
@@ -260,8 +286,8 @@ internal sealed class MainForm : Form
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
         header.Controls.Add(MakeHeaderLabel("项目", 16, 420));
-        header.Controls.Add(MakeHeaderLabel("当前用户", 448, 160, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统", 628, 160, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("推荐设置", 448, 160, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统默认", 628, 160, ContentAlignment.MiddleCenter));
         header.Resize += (_, _) => header.Width = ContentWidth();
         header.Width = ContentWidth();
         return header;
@@ -311,7 +337,7 @@ internal sealed class MainForm : Form
         {
             Text = title,
             Location = new Point(32, 0),
-            Size = new Size(section.Width - 48, headerH),
+            Size = new Size(section.Width - 120, headerH),
             ForeColor = AppTheme.TextHeader,
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
@@ -345,51 +371,93 @@ internal sealed class MainForm : Form
         arrow.Click += Toggle;
         titleLabel.Click += Toggle;
 
+        var restoreGroup = new LinkLabel
+        {
+            Text = "恢复本组默认",
+            AutoSize = true,
+            Location = new Point(section.Width - 108, 8),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            LinkColor = AppTheme.PrimaryDark,
+            ActiveLinkColor = AppTheme.Primary,
+            VisitedLinkColor = AppTheme.PrimaryDark,
+            BackColor = Color.Transparent,
+        };
+        restoreGroup.Click += (_, _) => RestoreGroup(title, rows);
+        head.Controls.Add(restoreGroup);
+
         section.Controls.Add(body);
         section.Controls.Add(head);
         section.Resize += (_, _) =>
         {
             head.Width = section.Width;
             body.Width = section.Width;
-            titleLabel.Width = section.Width - 48;
+            titleLabel.Width = section.Width - 120;
+            restoreGroup.Location = new Point(section.Width - 108, 8);
         };
         return section;
     }
 
     private Panel BuildBottom()
     {
-        var bottom = new Panel { Height = 54, BackColor = AppTheme.SurfaceCard };
+        var bottom = new Panel { Height = 58, BackColor = AppTheme.SurfaceCard };
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
-        _status.SetBounds(188, 16, 400, 22);
-        _status.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+        _status.SetBounds(188, 10, 380, 38);
+        _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
         _status.Text = Optimizer.IsWindowsServer()
-            ? "面向 Server 个人日常使用。开关开启为推荐；「系统」列为 Server 出厂默认。"
+            ? "开关=是否采用推荐。「应用推荐」写入推荐项；「恢复默认」将全部项还原为右侧系统默认值。"
             : "当前系统可能不是 Windows Server。";
 
-        var allOn = ToolButton("全部选择", 620, 10, 88, () => SetAll(true));
-        var allOff = ToolButton("全部取消", 714, 10, 88, () => SetAll(false));
-        var refresh = ToolButton("刷新", 808, 10, 72, LoadState);
-        var about = ToolButton("关于", 884, 10, 72, ShowAbout);
-        foreach (var b in new[] { allOn, allOff, refresh, about })
-            b.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Right,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0, 10, 14, 0),
+            BackColor = AppTheme.SurfaceCard,
+        };
 
-        _apply.Text = "一键优化";
-        _apply.SetBounds(962, 8, 68, 36);
-        _apply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        var allOn = ToolButton("全部推荐", () => SetAll(true));
+        var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
+        var refresh = ToolButton("刷新", LoadState);
+        var about = ToolButton("关于", ShowAbout);
+
+        _restore.Text = "恢复默认";
+        _restore.AutoSize = false;
+        _restore.Size = new Size(92, 36);
+        _restore.Margin = new Padding(8, 0, 0, 0);
+        _restore.FlatStyle = FlatStyle.Flat;
+        _restore.BackColor = AppTheme.SurfaceCard;
+        _restore.ForeColor = AppTheme.PrimaryDeep;
+        _restore.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+        _restore.Cursor = Cursors.Hand;
+        _restore.FlatAppearance.BorderColor = AppTheme.Border;
+        _restore.Click += (_, _) => RestoreDefaults();
+        _restore.MouseEnter += (_, _) => _restore.BackColor = AppTheme.PrimaryPale;
+        _restore.MouseLeave += (_, _) => _restore.BackColor = AppTheme.SurfaceCard;
+
+        _apply.Text = "应用推荐";
+        _apply.AutoSize = false;
+        _apply.Size = new Size(92, 36);
+        _apply.Margin = new Padding(8, 0, 0, 0);
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
         _apply.BackColor = AppTheme.Primary;
         _apply.ForeColor = AppTheme.TextOnPrimary;
         _apply.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         _apply.Cursor = Cursors.Hand;
-        _apply.Click += (_, _) => Apply();
+        _apply.Click += (_, _) => ApplyRecommended();
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
-        bottom.Controls.AddRange([rule, _status, allOn, allOff, refresh, about, _apply]);
+        actions.Controls.AddRange([allOn, allOff, refresh, about, _restore, _apply]);
+        bottom.Controls.Add(actions);
+        bottom.Controls.Add(_status);
+        bottom.Controls.Add(rule);
         return bottom;
     }
 
@@ -430,19 +498,36 @@ internal sealed class MainForm : Form
         _telemetry.Checked = s.DisableTelemetry;
         _noUpdateReboot.Checked = s.NoUpdateReboot;
         _deliveryOpt.Checked = s.DisableDeliveryOpt;
+        _wuNotify.Checked = s.WuNotifyOnly;
+        _sysMain.Checked = s.DisableSysMain;
+        _visualPerf.Checked = s.VisualBestPerf;
+        _powerThrottle.Checked = s.PowerThrottlingOff;
+        _hibernate.Checked = s.DisableHibernate;
+        _tcp.Checked = s.TcpOptimized;
         _errorReport.Checked = s.DisableErrorReport;
         _thisPc.Checked = s.ShowThisPcIcon;
+        _launchThisPc.Checked = s.LaunchExplorerThisPc;
         _taskbar.Checked = s.SmallTaskbar;
         _confirmDel.Checked = s.ConfirmDelete;
         _audio.Checked = s.EnableAudio;
         _fileExt.Checked = s.ShowFileExtensions;
         _themes.Checked = s.EnableThemes;
         _search.Checked = s.EnableSearch;
+        _webSearch.Checked = s.DisableWebSearch;
+        _feedback.Checked = s.DisableFeedback;
+        _noLockScreen.Checked = s.NoLockScreen;
         _rdp.Checked = s.EnableRdp;
+        _rdpGpu.Checked = s.RdpGpuAccel;
+        _rdpFps.Checked = s.RdpHighRefresh;
+        _rdpNla.Checked = s.RdpDisableNla;
         _netDiscovery.Checked = s.EnableNetworkDiscovery;
+        _smRemoting.Checked = s.DisableSmRemoting;
         _svrMgr.Checked = s.SkipServerManager;
         _azure.Checked = s.DisableAzureArc;
+        _installer.Checked = s.EnableInstaller;
+        _wia.Checked = s.EnableWia;
         _pwd.Checked = s.DisablePasswordComplexity;
+        _pwdExpire.Checked = s.PasswordNeverExpire;
         _shutdownLogon.Checked = s.ShutdownWithoutLogon;
         _shutdownReason.Checked = s.DisableShutdownReason;
         _noCad.Checked = s.DisableCad;
@@ -458,19 +543,36 @@ internal sealed class MainForm : Form
         DisableTelemetry = _telemetry.Checked,
         NoUpdateReboot = _noUpdateReboot.Checked,
         DisableDeliveryOpt = _deliveryOpt.Checked,
+        WuNotifyOnly = _wuNotify.Checked,
+        DisableSysMain = _sysMain.Checked,
+        VisualBestPerf = _visualPerf.Checked,
+        PowerThrottlingOff = _powerThrottle.Checked,
+        DisableHibernate = _hibernate.Checked,
+        TcpOptimized = _tcp.Checked,
         DisableErrorReport = _errorReport.Checked,
         ShowThisPcIcon = _thisPc.Checked,
+        LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
         ConfirmDelete = _confirmDel.Checked,
         EnableAudio = _audio.Checked,
         ShowFileExtensions = _fileExt.Checked,
         EnableThemes = _themes.Checked,
         EnableSearch = _search.Checked,
+        DisableWebSearch = _webSearch.Checked,
+        DisableFeedback = _feedback.Checked,
+        NoLockScreen = _noLockScreen.Checked,
         EnableRdp = _rdp.Checked,
+        RdpGpuAccel = _rdpGpu.Checked,
+        RdpHighRefresh = _rdpFps.Checked,
+        RdpDisableNla = _rdpNla.Checked,
         EnableNetworkDiscovery = _netDiscovery.Checked,
+        DisableSmRemoting = _smRemoting.Checked,
         SkipServerManager = _svrMgr.Checked,
         DisableAzureArc = _azure.Checked,
+        EnableInstaller = _installer.Checked,
+        EnableWia = _wia.Checked,
         DisablePasswordComplexity = _pwd.Checked,
+        PasswordNeverExpire = _pwdExpire.Checked,
         ShutdownWithoutLogon = _shutdownLogon.Checked,
         DisableShutdownReason = _shutdownReason.Checked,
         DisableCad = _noCad.Checked,
@@ -481,28 +583,67 @@ internal sealed class MainForm : Form
         foreach (var row in AllRows) row.Checked = on;
     }
 
-    private void Apply()
+    private void SetRowsChecked(IEnumerable<SettingRow> rows, bool on)
+    {
+        foreach (var row in rows) row.Checked = on;
+    }
+
+    private void RestoreDefaults()
+    {
+        var answer = MessageBox.Show(
+            "将把全部设置项恢复为 Windows Server 出厂默认值（右侧「系统默认」列）。\n\n" +
+            "所有推荐开关将关闭并立即写入系统。部分项目需注销或重启后生效。\n\n是否继续？",
+            "恢复出厂默认",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+        if (answer != DialogResult.Yes) return;
+
+        SetAll(false);
+        RunApply("正在恢复出厂默认…", "已恢复为系统出厂默认。开关已全部关闭并与系统状态同步。");
+    }
+
+    private void RestoreGroup(string title, SettingRow[] rows)
+    {
+        var answer = MessageBox.Show(
+            $"将「{title}」分组内的 {rows.Length} 项恢复为出厂默认。\n\n是否立即写入系统？",
+            "恢复本组默认",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button2);
+        if (answer != DialogResult.Yes) return;
+
+        SetRowsChecked(rows, false);
+        RunApply($"正在恢复「{title}」…", $"「{title}」已恢复为出厂默认。");
+    }
+
+    private void ApplyRecommended() =>
+        RunApply("正在应用推荐设置…", "已应用。开启项为推荐设置，关闭项保持系统默认。");
+
+    private void RunApply(string working, string success)
     {
         _apply.Enabled = false;
+        _restore.Enabled = false;
         UseWaitCursor = true;
-        _status.Text = "正在应用…";
+        _status.Text = working;
         Application.DoEvents();
         try
         {
             var errors = Optimizer.Apply(CaptureState());
             LoadState();
             _status.Text = errors.Count == 0
-                ? "已应用。开关开启为推荐设置，关闭则恢复系统默认。部分项目需注销或重启后生效。"
+                ? success + " 部分项目需注销或重启后生效。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors);
         }
         catch (Exception ex)
         {
-            _status.Text = "应用失败：" + ex.Message;
+            _status.Text = "操作失败：" + ex.Message;
         }
         finally
         {
             UseWaitCursor = false;
             _apply.Enabled = true;
+            _restore.Enabled = true;
         }
     }
 
@@ -510,7 +651,7 @@ internal sealed class MainForm : Form
     {
         MessageBox.Show(
             "Windows Server 2022 / 2025 个人日常使用优化。\r\n" +
-            "推荐项覆盖远程桌面、桌面体验、更新策略等 Server 个人高频设置。",
+            "「应用推荐」写入已开启项；「恢复默认」一键还原全部出厂设置。",
             "关于 Win一键优化",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
@@ -519,13 +660,14 @@ internal sealed class MainForm : Form
     private static SettingRow Row(string item, string systemDefault) =>
         new(item, systemDefault);
 
-    private static Button ToolButton(string text, int x, int y, int w, Action click)
+    private static Button ToolButton(string text, Action click)
     {
         var b = new Button
         {
             Text = text,
-            Location = new Point(x, y),
-            Size = new Size(w, 32),
+            AutoSize = false,
+            Size = new Size(text.Length > 4 ? 96 : 72, 36),
+            Margin = new Padding(8, 0, 0, 0),
             FlatStyle = FlatStyle.Flat,
             BackColor = AppTheme.SurfaceCard,
             ForeColor = AppTheme.TextMain,
