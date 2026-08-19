@@ -60,6 +60,29 @@ internal static class Optimizer
         public bool ShutdownWithoutLogon;
         public bool DisableShutdownReason;
         public bool DisableCad;
+
+        // 竞品高频：性能/安全加固（Dism++、VDOT、WPD）
+        public bool LongPathsEnabled;
+        public bool DisableFastStartup;
+        public bool DisableAutoMaintenance;
+        public bool ExcludeDriverUpdates;
+        public bool DisableSmb1;
+        public bool DisableRemoteRegistry;
+        public bool DisablePrintSpooler;
+
+        // 竞品高频：资源管理器/桌面
+        public bool ShowHiddenFiles;
+        public bool NoShortcutArrow;
+        public bool ExplorerFullPath;
+        public bool TaskbarAllIcons;
+
+        // 竞品高频：隐私与体验
+        public bool DisableAnimations;
+        public bool DisableTransparency;
+        public bool DisableTips;
+        public bool DisableAutoplay;
+        public bool DisableActivityHistory;
+        public bool DisableStorageSense;
     }
 
     public static bool IsWindowsServer()
@@ -122,6 +145,26 @@ internal static class Optimizer
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
+
+            LongPathsEnabled = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", 1),
+            DisableFastStartup = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0),
+            DisableAutoMaintenance = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled", 1),
+            ExcludeDriverUpdates = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate", 1),
+            DisableSmb1 = ServiceStartEquals("mrxsmb10", 4),
+            DisableRemoteRegistry = ServiceStartEquals("RemoteRegistry", 4),
+            DisablePrintSpooler = ServiceStartEquals("Spooler", 4),
+
+            ShowHiddenFiles = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", 1),
+            NoShortcutArrow = IsShortcutArrowRemoved(),
+            ExplorerFullPath = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", 1),
+            TaskbarAllIcons = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "EnableAutoTray", 0),
+
+            DisableAnimations = IsAnimationsDisabled(),
+            DisableTransparency = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", 0),
+            DisableTips = AreTipsDisabled(),
+            DisableAutoplay = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDriveTypeAutoRun", 255),
+            DisableActivityHistory = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\System", "AllowPublishUserActivities", 0),
+            DisableStorageSense = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", 0),
         };
     }
 
@@ -212,7 +255,107 @@ internal static class Optimizer
         Try(errors, "关机事件跟踪", () => SetShutdownReason(!s.DisableShutdownReason));
         Try(errors, "Ctrl+Alt+Del", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", s.DisableCad ? 1 : 0));
+
+        Try(errors, "长路径支持", () =>
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", s.LongPathsEnabled ? 1 : 0));
+        Try(errors, "快速启动", () =>
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", s.DisableFastStartup ? 0 : 1));
+        Try(errors, "自动维护", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled", s.DisableAutoMaintenance ? 1 : 0));
+        Try(errors, "驱动自动更新", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate", s.ExcludeDriverUpdates ? 1 : 0));
+        Try(errors, "SMB1 协议", () => SetSmb1(!s.DisableSmb1));
+        Try(errors, "Remote Registry", () => SetService("RemoteRegistry", !s.DisableRemoteRegistry, disableWhenOff: true));
+        Try(errors, "打印后台处理", () => SetService("Spooler", !s.DisablePrintSpooler, disableWhenOff: true));
+
+        Try(errors, "显示隐藏文件", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", s.ShowHiddenFiles ? 1 : 2));
+        Try(errors, "快捷方式箭头", () => SetShortcutArrow(!s.NoShortcutArrow));
+        Try(errors, "标题栏完整路径", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", s.ExplorerFullPath ? 1 : 0));
+        Try(errors, "任务栏全部图标", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "EnableAutoTray", s.TaskbarAllIcons ? 0 : 1));
+
+        Try(errors, "窗口动画", () => SetAnimations(!s.DisableAnimations));
+        Try(errors, "透明效果", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", s.DisableTransparency ? 0 : 1));
+        Try(errors, "Windows 提示", () => SetTips(!s.DisableTips));
+        Try(errors, "自动播放", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDriveTypeAutoRun", s.DisableAutoplay ? 255 : 145));
+        Try(errors, "活动历史", () => SetActivityHistory(!s.DisableActivityHistory));
+        Try(errors, "存储感知", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", s.DisableStorageSense ? 0 : 1));
         return errors;
+    }
+
+    private static bool IsShortcutArrowRemoved()
+    {
+        var val = GetValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29");
+        return val is string s && s.Length == 0;
+    }
+
+    private static bool IsAnimationsDisabled()
+    {
+        var minAnimate = GetValue(Hive.HkCu, @"Control Panel\Desktop", "MinAnimate") as string;
+        return minAnimate == "0"
+            && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", 0);
+    }
+
+    private static bool AreTipsDisabled() =>
+        DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338388Enabled", 0)
+        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", 0)
+        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", 0);
+
+    private static void SetShortcutArrow(bool show)
+    {
+        if (show)
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29");
+        else
+            SetString(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29", "");
+    }
+
+    private static void SetAnimations(bool enable)
+    {
+        SetString(Hive.HkCu, @"Control Panel\Desktop", "MinAnimate", enable ? "1" : "0");
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", enable ? 1 : 0);
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ListviewAlphaSelect", enable ? 1 : 0);
+    }
+
+    private static void SetTips(bool enable)
+    {
+        var on = enable ? 1 : 0;
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338388Enabled", on);
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", on);
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", on);
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", on);
+    }
+
+    private static void SetActivityHistory(bool enable)
+    {
+        if (enable)
+        {
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\System", "AllowPublishUserActivities");
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Privacy", "PublishUserActivities", 1);
+        }
+        else
+        {
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\System", "AllowPublishUserActivities", 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Privacy", "PublishUserActivities", 0);
+        }
+    }
+
+    private static void SetSmb1(bool enable)
+    {
+        if (enable)
+        {
+            Run("sc.exe", "config mrxsmb10 start= demand");
+            DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SMB1");
+        }
+        else
+        {
+            Run("sc.exe", "config mrxsmb10 start= disabled");
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SMB1", 0);
+        }
     }
 
     private static void SetServerManager(bool skip)

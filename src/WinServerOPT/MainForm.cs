@@ -19,6 +19,13 @@ internal sealed class MainForm : Form
     private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启");
     private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认");
     private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启");
+    private readonly SettingRow _longPaths = Row("启用 NTFS 长路径支持", "关闭");
+    private readonly SettingRow _fastStartup = Row("关闭快速启动（稳定双系统）", "开启");
+    private readonly SettingRow _autoMaint = Row("禁用自动维护计划", "开启");
+    private readonly SettingRow _noDriverWu = Row("Windows 更新不含驱动", "含驱动");
+    private readonly SettingRow _smb1 = Row("禁用 SMB 1.0 协议", "允许");
+    private readonly SettingRow _remoteReg = Row("禁用 Remote Registry 服务", "手动");
+    private readonly SettingRow _spooler = Row("禁用打印后台处理（无打印机）", "自动");
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示");
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问");
@@ -31,6 +38,17 @@ internal sealed class MainForm : Form
     private readonly SettingRow _webSearch = Row("关闭开始菜单 Bing 网络搜索", "开启");
     private readonly SettingRow _feedback = Row("关闭 Windows 体验反馈提示", "开启");
     private readonly SettingRow _noLockScreen = Row("禁用锁屏界面", "显示");
+    private readonly SettingRow _hiddenFiles = Row("显示隐藏文件", "不显示");
+    private readonly SettingRow _noArrow = Row("隐藏快捷方式小箭头", "显示");
+    private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名");
+    private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏");
+
+    private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启");
+    private readonly SettingRow _transparency = Row("禁用透明效果", "开启");
+    private readonly SettingRow _tips = Row("关闭 Windows 提示与建议", "开启");
+    private readonly SettingRow _autoplay = Row("禁用所有驱动器自动播放", "开启");
+    private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启");
+    private readonly SettingRow _storageSense = Row("禁用存储感知", "开启");
 
     private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用");
     private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭");
@@ -62,6 +80,7 @@ internal sealed class MainForm : Form
     [
         "性能及安全",
         "个性化设置",
+        "隐私与体验",
         "远程与网络",
         "启动项",
         "账户策略",
@@ -71,8 +90,10 @@ internal sealed class MainForm : Form
     [
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
         _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
+        _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-        _webSearch, _feedback, _noLockScreen,
+        _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
+        _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
         _svrMgr, _azure, _installer, _wia,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad
@@ -91,11 +112,15 @@ internal sealed class MainForm : Form
 
         _groups.Add(("性能及安全", [
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport
+            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
+            _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-            _webSearch, _feedback, _noLockScreen
+            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons
+        ]));
+        _groups.Add(("隐私与体验", [
+            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense
         ]));
         _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
         _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia]));
@@ -505,6 +530,13 @@ internal sealed class MainForm : Form
         _hibernate.Checked = s.DisableHibernate;
         _tcp.Checked = s.TcpOptimized;
         _errorReport.Checked = s.DisableErrorReport;
+        _longPaths.Checked = s.LongPathsEnabled;
+        _fastStartup.Checked = s.DisableFastStartup;
+        _autoMaint.Checked = s.DisableAutoMaintenance;
+        _noDriverWu.Checked = s.ExcludeDriverUpdates;
+        _smb1.Checked = s.DisableSmb1;
+        _remoteReg.Checked = s.DisableRemoteRegistry;
+        _spooler.Checked = s.DisablePrintSpooler;
         _thisPc.Checked = s.ShowThisPcIcon;
         _launchThisPc.Checked = s.LaunchExplorerThisPc;
         _taskbar.Checked = s.SmallTaskbar;
@@ -516,6 +548,16 @@ internal sealed class MainForm : Form
         _webSearch.Checked = s.DisableWebSearch;
         _feedback.Checked = s.DisableFeedback;
         _noLockScreen.Checked = s.NoLockScreen;
+        _hiddenFiles.Checked = s.ShowHiddenFiles;
+        _noArrow.Checked = s.NoShortcutArrow;
+        _fullPath.Checked = s.ExplorerFullPath;
+        _allTrayIcons.Checked = s.TaskbarAllIcons;
+        _animations.Checked = s.DisableAnimations;
+        _transparency.Checked = s.DisableTransparency;
+        _tips.Checked = s.DisableTips;
+        _autoplay.Checked = s.DisableAutoplay;
+        _activityHist.Checked = s.DisableActivityHistory;
+        _storageSense.Checked = s.DisableStorageSense;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -550,6 +592,13 @@ internal sealed class MainForm : Form
         DisableHibernate = _hibernate.Checked,
         TcpOptimized = _tcp.Checked,
         DisableErrorReport = _errorReport.Checked,
+        LongPathsEnabled = _longPaths.Checked,
+        DisableFastStartup = _fastStartup.Checked,
+        DisableAutoMaintenance = _autoMaint.Checked,
+        ExcludeDriverUpdates = _noDriverWu.Checked,
+        DisableSmb1 = _smb1.Checked,
+        DisableRemoteRegistry = _remoteReg.Checked,
+        DisablePrintSpooler = _spooler.Checked,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
