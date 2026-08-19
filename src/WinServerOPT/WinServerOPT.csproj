@@ -15,6 +15,8 @@
     <Product>Win一键优化</Product>
     <Description>Windows Server 一键优化</Description>
     <DebugType Condition="'$(Configuration)'=='Release'">none</DebugType>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
@@ -22,4 +24,13 @@
   <ItemGroup>
     <EmbeddedResource Include="app.png" LogicalName="WinOpt.app.png" />
   </ItemGroup>
+  <Target Name="RemoveAppConfigAfterBuild" AfterTargets="Build">
+    <Delete Files="$(TargetPath).config" Condition="Exists('$(TargetPath).config')" />
+  </Target>
+  <Target Name="RemoveAppConfigAfterPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_ConfigFiles Include="$(PublishDir)**\$(AssemblyName).exe.config" />
+    </ItemGroup>
+    <Delete Files="@(_ConfigFiles)" />
+  </Target>
 </Project>

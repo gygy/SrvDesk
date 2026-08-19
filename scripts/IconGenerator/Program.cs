@@ -2,13 +2,10 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using WinOpt;
 
 static class Program
 {
-    static readonly Color Top = Color.FromArgb(72, 158, 255);
-    static readonly Color Mid = Color.FromArgb(38, 132, 245);
-    static readonly Color Bot = Color.FromArgb(16, 98, 210);
-
     static int Main(string[] args)
     {
         var outDir = args.Length > 0 ? args[0] : ".";
@@ -54,23 +51,25 @@ static class Program
         g.Clear(Color.Transparent);
 
         var rect = new RectangleF(0, 0, size, size);
-        var radius = size * 0.225f;
+        var radius = size * 0.218f;
+
         using (var path = RoundedRect(rect, radius))
         {
-            using var brush = new LinearGradientBrush(rect, Top, Bot, 135f, true);
+            using var brush = new LinearGradientBrush(
+                rect, BrandPalette.LogoTop, BrandPalette.LogoBottom, 90f, true);
             var blend = new ColorBlend(3)
             {
-                Colors = new[] { Top, Mid, Bot },
-                Positions = new[] { 0f, 0.42f, 1f }
+                Colors = new[] { BrandPalette.LogoTop, BrandPalette.LogoMid, BrandPalette.LogoBottom },
+                Positions = new[] { 0f, 0.48f, 1f }
             };
             brush.InterpolationColors = blend;
             g.FillPath(brush, path);
 
-            if (size >= 48)
+            if (size >= 96)
             {
                 using var shine = new LinearGradientBrush(
-                    new RectangleF(0, 0, size, size * 0.55f),
-                    Color.FromArgb(80, 255, 255, 255),
+                    new RectangleF(size * 0.08f, size * 0.06f, size * 0.84f, size * 0.38f),
+                    Color.FromArgb(36, 255, 255, 255),
                     Color.FromArgb(0, 255, 255, 255),
                     90f);
                 g.FillPath(shine, path);
@@ -78,7 +77,7 @@ static class Program
 
             if (size >= 64)
             {
-                using var edge = new Pen(Color.FromArgb(55, 255, 255, 255), Math.Max(1f, size / 128f));
+                using var edge = new Pen(Color.FromArgb(32, 255, 255, 255), Math.Max(1f, size / 160f));
                 g.DrawPath(edge, path);
             }
         }
@@ -95,43 +94,56 @@ static class Program
             return;
         }
 
-        var mark = size * 0.50f;
-        var gap = Math.Max(1f, mark * 0.12f);
+        // Win11 风格四格：略小留白、均匀间距、圆角 pane
+        var mark = size * 0.44f;
+        var gap = mark * 0.105f;
         var pane = (mark - gap) / 2f;
-        var paneRadius = size >= 128 ? pane * 0.18f : size >= 48 ? pane * 0.14f : 0f;
+        var paneRadius = size >= 128 ? pane * 0.16f : size >= 48 ? pane * 0.12f : 0f;
         var left = (size - mark) / 2f;
-        var top = (size - mark) / 2f;
+        var top = (size - mark) / 2f - size * 0.01f;
 
-        FillPane(g, left, top, pane, paneRadius);
-        FillPane(g, left + pane + gap, top, pane, paneRadius);
-        FillPane(g, left, top + pane + gap, pane, paneRadius);
-        FillPane(g, left + pane + gap, top + pane + gap, pane, paneRadius);
+        if (size >= 128)
+        {
+            using var shadow = new SolidBrush(Color.FromArgb(28, 0, 48, 96));
+            var off = size * 0.012f;
+            FillPane(g, left + off, top + off, pane, paneRadius, shadow);
+            FillPane(g, left + pane + gap + off, top + off, pane, paneRadius, shadow);
+            FillPane(g, left + off, top + pane + gap + off, pane, paneRadius, shadow);
+            FillPane(g, left + pane + gap + off, top + pane + gap + off, pane, paneRadius, shadow);
+        }
+
+        using var white = new SolidBrush(Color.FromArgb(255, 255, 255));
+        FillPane(g, left, top, pane, paneRadius, white);
+        FillPane(g, left + pane + gap, top, pane, paneRadius, white);
+        FillPane(g, left, top + pane + gap, pane, paneRadius, white);
+        FillPane(g, left + pane + gap, top + pane + gap, pane, paneRadius, white);
     }
 
-    static void FillPane(Graphics g, float x, float y, float pane, float radius)
+    static void FillPane(Graphics g, float x, float y, float pane, float radius, Brush brush)
     {
         var r = new RectangleF(x, y, pane, pane);
         if (radius > 0.5f)
         {
             using var p = RoundedRect(r, radius);
-            g.FillPath(Brushes.White, p);
+            g.FillPath(brush, p);
         }
         else
         {
-            g.FillRectangle(Brushes.White, x, y, pane, pane);
+            g.FillRectangle(brush, x, y, pane, pane);
         }
     }
 
     static void DrawWindowsMarkTiny(Graphics g, int size)
     {
-        var pad = Math.Max(2, (int)(size * 0.22f));
+        var pad = Math.Max(2, (int)(size * 0.2f));
         var inner = size - pad * 2;
-        var gap = Math.Max(1, inner / 9);
+        var gap = Math.Max(1, (int)(inner * 0.1f));
         var pane = (inner - gap) / 2;
-        g.FillRectangle(Brushes.White, pad, pad, pane, pane);
-        g.FillRectangle(Brushes.White, pad + pane + gap, pad, pane, pane);
-        g.FillRectangle(Brushes.White, pad, pad + pane + gap, pane, pane);
-        g.FillRectangle(Brushes.White, pad + pane + gap, pad + pane + gap, pane, pane);
+        using var white = new SolidBrush(Color.White);
+        g.FillRectangle(white, pad, pad, pane, pane);
+        g.FillRectangle(white, pad + pane + gap, pad, pane, pane);
+        g.FillRectangle(white, pad, pad + pane + gap, pane, pane);
+        g.FillRectangle(white, pad + pane + gap, pad + pane + gap, pane, pane);
     }
 
     static GraphicsPath RoundedRect(RectangleF rect, float radius)

@@ -5,8 +5,12 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WinOpt</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\WinServerOPT\BrandPalette.cs" Link="BrandPalette.cs" />
   </ItemGroup>
 </Project>

@@ -116,7 +116,7 @@ internal sealed class MainForm : Form
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(760, 0),
             Size = new Size(260, 56),
-            ForeColor = Color.FromArgb(200, 225, 255),
+            ForeColor = AppTheme.TextOnPrimarySoft,
             Font = new Font("Microsoft YaHei UI", 9F),
             TextAlign = ContentAlignment.MiddleRight,
             BackColor = Color.Transparent,
