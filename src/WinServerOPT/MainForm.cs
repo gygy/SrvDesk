@@ -25,6 +25,11 @@ internal sealed class MainForm : Form
     private readonly SettingRow _smb1 = Row("禁用 SMB 1.0 协议", "允许", SettingCatalog.DisableSmb1);
     private readonly SettingRow _remoteReg = Row("禁用 Remote Registry 服务", "手动", SettingCatalog.DisableRemoteRegistry);
     private readonly SettingRow _spooler = Row("禁用打印后台处理（无打印机）", "自动", SettingCatalog.DisablePrintSpooler);
+    private readonly SettingRow _largeCache = Row("大系统缓存与 NTFS 缓冲优化", "默认", SettingCatalog.LargeSystemCacheOptimize);
+    private readonly SettingRow _reservedStorage = Row("关闭系统保留存储", "开启", SettingCatalog.DisableReservedStorage);
+    private readonly SettingRow _srvSplit = Row("关闭 LanmanServer 服务拆分", "默认", SettingCatalog.DisableSrvSplit);
+    private readonly SettingRow _gpuSched = Row("启用 GPU 硬件加速计划", "关闭", SettingCatalog.EnableGpuHwScheduling);
+    private readonly SettingRow _defender = Row("关闭 Windows Defender", "开启", SettingCatalog.DisableDefenderAntivirus);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -42,6 +47,10 @@ internal sealed class MainForm : Form
     private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名", SettingCatalog.ExplorerFullPath);
     private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏", SettingCatalog.TaskbarAllIcons);
     private readonly SettingRow _taskbarClock = Row("任务栏时钟显示星期与秒", "无星期/无秒", SettingCatalog.TaskbarClockWeekdaySeconds);
+    private readonly SettingRow _desktopIcons = Row("显示控制面板与回收站图标", "不显示", SettingCatalog.ShowControlPanelRecycleBin);
+    private readonly SettingRow _smartScreen = Row("关闭 SmartScreen 与打开文件警告", "开启", SettingCatalog.DisableSmartScreenWarning);
+    private readonly SettingRow _classicSearch = Row("搜索退回传统模式", "现代搜索", SettingCatalog.ClassicFileSearch);
+    private readonly SettingRow _searchEngine = Row("禁用 SearchEngine 功能包", "已安装", SettingCatalog.DisableSearchEngineFeature);
 
     private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启", SettingCatalog.DisableAnimations);
     private readonly SettingRow _transparency = Row("禁用透明效果", "开启", SettingCatalog.DisableTransparency);
@@ -49,6 +58,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _autoplay = Row("禁用所有驱动器自动播放", "开启", SettingCatalog.DisableAutoplay);
     private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启", SettingCatalog.DisableActivityHistory);
     private readonly SettingRow _storageSense = Row("禁用存储感知", "开启", SettingCatalog.DisableStorageSense);
+    private readonly SettingRow _backgroundApps = Row("禁止应用在后台运行", "允许", SettingCatalog.DisableBackgroundApps);
 
     private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp);
     private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel);
@@ -61,6 +71,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动", SettingCatalog.DisableAzureArc);
     private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动", SettingCatalog.EnableInstaller);
     private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动", SettingCatalog.EnableWia);
+    private readonly SettingRow _mediaFeatures = Row("开启桌面媒体组件（DISM）", "未安装", SettingCatalog.EnableDesktopMediaFeatures);
+    private readonly SettingRow _bloatFeatures = Row("关闭 Server 冗余组件（DISM）", "已安装", SettingCatalog.DisableServerBloatFeatures);
 
     private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合", SettingCatalog.DisablePasswordComplexity);
     private readonly SettingRow _pwdExpire = Row("密码永不过期", "42 天", SettingCatalog.PasswordNeverExpire);
@@ -68,11 +80,14 @@ internal sealed class MainForm : Form
     private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示", SettingCatalog.DisableShutdownReason);
     private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键", SettingCatalog.DisableCad);
     private readonly SettingRow _autologon = Row("启用 Windows 自动登录（Autologon）", "未启用", SettingCatalog.EnableAutologon);
+    private readonly SettingRow _keyboardFilter = Row("取消登录粘滞键/筛选键提示", "显示", SettingCatalog.DisableLoginKeyboardFilters);
     private AutologonSettings? _autologonSettings;
 
-    private readonly Panel _helpPanel = new();
-    private readonly Label _helpTitle = new();
-    private readonly Label _helpBody = new();
+    private readonly HelpDetailPanel _helpDetail = new();
+    private readonly AppMenuStrip _appMenu = new(OptPresets.All);
+    private readonly Panel _commandBar = new();
+    private readonly Panel _workArea = new();
+    private readonly Label _headerSubtitle = new();
     private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
     private readonly Panel _contentHost = new();
     private readonly Label _status = new();
@@ -83,7 +98,6 @@ internal sealed class MainForm : Form
     private int _menuHover = -1;
     private SettingRow? _selectedRow;
     private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
-    private readonly Panel _toolBar = new();
     private readonly TextBox _searchBox = new();
     private readonly CheckBox _hideIncompatible = new();
     private readonly ComboBox _presetCombo = new();
@@ -107,12 +121,14 @@ internal sealed class MainForm : Form
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
         _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
+        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
-        _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense,
+        _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
+        _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
-        _svrMgr, _azure, _installer, _wia,
-        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon
+        _svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
+        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
     ];
 
     public MainForm()
@@ -125,43 +141,46 @@ internal sealed class MainForm : Form
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
         Icon = AppBrand.ApplicationIcon;
+        KeyPreview = true;
+        MainMenuStrip = _appMenu;
 
         _groups.Add(("性能及安全", [
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
             _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
-            _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler
+            _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
+            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock
+            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock,
+            _desktopIcons, _smartScreen, _classicSearch, _searchEngine
         ]));
         _groups.Add(("隐私与体验", [
-            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense
+            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps
         ]));
         _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
-        _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia]));
-        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon]));
+        _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
+        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter]));
 
+        WireAppMenu();
         var header = BuildHeader();
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
-        BuildToolBar();
+        BuildCommandBar();
         BuildContent();
-        BuildHelpPanel();
+        BuildWorkArea(sidebar);
 
+        _appMenu.Dock = DockStyle.Top;
         header.Dock = DockStyle.Top;
-        _toolBar.Dock = DockStyle.Top;
-        sidebar.Dock = DockStyle.Left;
-        _contentHost.Dock = DockStyle.Fill;
-        _helpPanel.Dock = DockStyle.Bottom;
+        _commandBar.Dock = DockStyle.Top;
+        _workArea.Dock = DockStyle.Fill;
         bottom.Dock = DockStyle.Bottom;
 
-        Controls.Add(_contentHost);
-        Controls.Add(_helpPanel);
-        Controls.Add(sidebar);
+        Controls.Add(_workArea);
         Controls.Add(bottom);
-        Controls.Add(_toolBar);
+        Controls.Add(_commandBar);
         Controls.Add(header);
+        Controls.Add(_appMenu);
 
         _menu.SelectedIndex = 0;
         ShowHelpPlaceholder();
@@ -169,6 +188,102 @@ internal sealed class MainForm : Form
         Load += (_, _) => InitializeRuntime();
         FormClosed += (_, _) => _toolTip.Dispose();
         Resize += (_, _) => LayoutContent();
+        KeyDown += OnFormKeyDown;
+    }
+
+    private void WireAppMenu()
+    {
+        _appMenu.FileImport.Click += (_, _) => ImportProfile();
+        _appMenu.FileExport.Click += (_, _) => ExportProfile();
+        _appMenu.PresetLoad.Click += (_, _) => ApplySelectedPreset();
+        _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
+        _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
+        _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
+        _appMenu.ToolRefresh.Click += (_, _) => LoadState();
+        _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
+        _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
+        _appMenu.HelpLog.Click += (_, _) => OpenApplyLog();
+        _appMenu.HelpAbout.Click += (_, _) => ShowAboutDialog();
+
+        _appMenu.ViewHideIncompatible.CheckedChanged += (_, _) =>
+        {
+            _hideIncompatible.Checked = _appMenu.ViewHideIncompatible.Checked;
+        };
+        _hideIncompatible.CheckedChanged += (_, _) =>
+        {
+            _appMenu.ViewHideIncompatible.Checked = _hideIncompatible.Checked;
+        };
+
+        _appMenu.ViewHelpPanel.CheckedChanged += (_, _) =>
+        {
+            _helpDetail.Visible = _appMenu.ViewHelpPanel.Checked;
+            LayoutContent();
+        };
+
+        var presetMenu = _appMenu.Items[1] as ToolStripMenuItem;
+        if (presetMenu is not null)
+        {
+            foreach (ToolStripItem item in presetMenu.DropDownItems)
+            {
+                if (item.Tag is OptPresets.PresetInfo preset)
+                    item.Click += (_, _) => LoadPresetFromMenu(preset);
+            }
+        }
+    }
+
+    private void LoadPresetFromMenu(OptPresets.PresetInfo preset)
+    {
+        for (var i = 0; i < _presetCombo.Items.Count; i++)
+        {
+            if (_presetCombo.Items[i] is OptPresets.PresetInfo p && p.Id == preset.Id)
+            {
+                _presetCombo.SelectedIndex = i;
+                break;
+            }
+        }
+        ApplySelectedPreset();
+    }
+
+    private void OpenApplyLog()
+    {
+        try
+        {
+            var path = ApplyLog.LogFilePath;
+            if (!File.Exists(path))
+            {
+                MessageBox.Show("日志文件尚不存在：" + path, "操作日志", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "无法打开日志", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void OnFormKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.F1)
+        {
+            _helpDetail.ShowUsageGuide();
+            e.Handled = true;
+        }
+    }
+
+    private void BuildWorkArea(Panel sidebar)
+    {
+        _workArea.BackColor = AppTheme.Surface;
+        sidebar.Dock = DockStyle.Left;
+        _helpDetail.Dock = DockStyle.Right;
+        _contentHost.Dock = DockStyle.Fill;
+        _workArea.Controls.Add(_contentHost);
+        _workArea.Controls.Add(_helpDetail);
+        _workArea.Controls.Add(sidebar);
     }
 
     private void InitializeRuntime()
@@ -177,90 +292,115 @@ internal sealed class MainForm : Form
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
             _status.Text = "警告：当前未以管理员运行，应用设置可能失败。请右键「以管理员身份运行」。";
+            _headerSubtitle.Text = "未以管理员运行 · " + _systemFacts.Summary;
         }
         else if (!_systemFacts.IsServer)
         {
             _status.ForeColor = AppTheme.ScopeServer;
             _status.Text = "提示：当前不是 Windows Server（" + _systemFacts.Summary + "）。部分「Server 专属」项可能无效。";
+            _headerSubtitle.Text = _systemFacts.Summary + " · 非 Server 环境";
         }
         else if (!_systemFacts.HasDesktopExperience)
         {
             _status.ForeColor = AppTheme.ScopeServer;
             _status.Text = "提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。";
+            _headerSubtitle.Text = _systemFacts.Summary + " · Server Core";
             _hideIncompatible.Checked = true;
         }
         else
         {
             var identity = ComputerIdentityHelper.Read().Summary;
             _status.Text = _systemFacts.Summary + " · " + identity + "。开关=推荐；关闭=恢复系统默认。";
+            _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
         }
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
         LoadState();
     }
 
-    private void BuildToolBar()
+    private void BuildCommandBar()
     {
-        _toolBar.Height = 40;
-        _toolBar.BackColor = AppTheme.SurfaceCard;
-        _toolBar.Padding = new Padding(188, 6, 12, 6);
-
-        var searchLabel = new Label
+        _commandBar.Height = 44;
+        _commandBar.BackColor = AppTheme.SurfaceCard;
+        _commandBar.Padding = new Padding(12, 6, 12, 6);
+        _commandBar.Paint += (_, e) =>
         {
-            Text = "搜索",
-            AutoSize = true,
-            Location = new Point(0, 10),
-            ForeColor = AppTheme.TextMute,
+            using var pen = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawLine(pen, 0, _commandBar.Height - 1, _commandBar.Width, _commandBar.Height - 1);
         };
-        _searchBox.SetBounds(36, 6, 200, 26);
+
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = true,
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(0),
+        };
+
+        flow.Controls.Add(BarLabel("搜索"));
+        _searchBox.Width = 200;
+        _searchBox.Height = 26;
+        _searchBox.Margin = new Padding(0, 2, 16, 0);
         _searchBox.BorderStyle = BorderStyle.FixedSingle;
         _searchBox.ForeColor = AppTheme.TextMain;
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
+        flow.Controls.Add(_searchBox);
 
         _hideIncompatible.Text = "隐藏不适用项";
         _hideIncompatible.AutoSize = true;
-        _hideIncompatible.Location = new Point(246, 8);
+        _hideIncompatible.Margin = new Padding(0, 6, 20, 0);
         _hideIncompatible.ForeColor = AppTheme.TextMute;
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
+        flow.Controls.Add(_hideIncompatible);
 
-        var presetLabel = new Label
-        {
-            Text = "预设",
-            AutoSize = true,
-            Location = new Point(360, 10),
-            ForeColor = AppTheme.TextMute,
-        };
-        _presetCombo.SetBounds(396, 6, 200, 26);
+        flow.Controls.Add(BarLabel("预设"));
+        _presetCombo.Width = 220;
+        _presetCombo.Height = 26;
+        _presetCombo.Margin = new Padding(0, 2, 8, 0);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         _presetCombo.IntegralHeight = false;
         foreach (var p in OptPresets.All) _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0) _presetCombo.SelectedIndex = 0;
         AdjustPresetComboDropDownWidth();
+        flow.Controls.Add(_presetCombo);
 
-        var loadPreset = ToolButton("载入预设", ApplySelectedPreset);
-        loadPreset.Location = new Point(604, 4);
-        loadPreset.Size = new Size(88, 30);
+        var loadPreset = CompactButton("载入预设", ApplySelectedPreset);
+        loadPreset.Margin = new Padding(0, 1, 0, 0);
+        flow.Controls.Add(loadPreset);
 
-        var exportBtn = ToolButton("导出", ExportProfile);
-        exportBtn.Location = new Point(700, 4);
-        exportBtn.Size = new Size(64, 30);
+        _commandBar.Controls.Add(flow);
+    }
 
-        var importBtn = ToolButton("导入", ImportProfile);
-        importBtn.Location = new Point(770, 4);
-        importBtn.Size = new Size(64, 30);
+    private static Label BarLabel(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        Margin = new Padding(0, 8, 6, 0),
+        ForeColor = AppTheme.TextMute,
+        BackColor = Color.Transparent,
+    };
 
-        var autologonBtn = ToolButton("Autologon 配置", ConfigureAutologon);
-        autologonBtn.Location = new Point(842, 4);
-        autologonBtn.Size = new Size(112, 30);
-
-        var identityBtn = ToolButton("计算机名/工作组", ConfigureComputerIdentity);
-        identityBtn.Location = new Point(960, 4);
-        identityBtn.Size = new Size(108, 30);
-
-        _toolBar.Controls.AddRange([
-            searchLabel, _searchBox, _hideIncompatible, presetLabel, _presetCombo,
-            loadPreset, exportBtn, importBtn, autologonBtn, identityBtn
-        ]);
+    private static Button CompactButton(string text, Action click)
+    {
+        var b = new Button
+        {
+            Text = text,
+            AutoSize = true,
+            Height = 28,
+            Padding = new Padding(10, 0, 10, 0),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = AppTheme.SurfaceCard,
+            ForeColor = AppTheme.PrimaryDeep,
+            Cursor = Cursors.Hand,
+            Margin = new Padding(0, 1, 0, 0),
+        };
+        b.FlatAppearance.BorderColor = AppTheme.Border;
+        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
+        b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
+        b.Click += (_, _) => click();
+        return b;
     }
 
     private void AdjustPresetComboDropDownWidth()
@@ -407,7 +547,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildHeader()
     {
-        var header = new Panel { Height = 56, BackColor = AppTheme.PrimaryDeep };
+        var header = new Panel { Height = 52, BackColor = AppTheme.PrimaryDeep };
         header.Paint += (_, e) =>
         {
             var r = header.ClientRectangle;
@@ -418,7 +558,7 @@ internal sealed class MainForm : Form
 
         var logo = new PictureBox
         {
-            Size = new Size(40, 40),
+            Size = new Size(36, 36),
             Location = new Point(14, 8),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
@@ -430,29 +570,28 @@ internal sealed class MainForm : Form
         {
             Text = "Win一键优化",
             AutoSize = false,
-            Location = new Point(58, 0),
-            Size = new Size(220, 56),
+            Location = new Point(54, 6),
+            Size = new Size(200, 28),
             ForeColor = AppTheme.TextOnPrimary,
-            Font = new Font("Microsoft YaHei UI", 13F, FontStyle.Bold),
+            Font = new Font("Microsoft YaHei UI", 12.5F, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
         };
-        var sub = new Label
-        {
-            Text = "Windows Server 2022 / 2025 个人优化 · 项目标识适用范围",
-            AutoSize = false,
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(760, 0),
-            Size = new Size(260, 56),
-            ForeColor = AppTheme.TextOnPrimarySoft,
-            Font = new Font("Microsoft YaHei UI", 9F),
-            TextAlign = ContentAlignment.MiddleRight,
-            BackColor = Color.Transparent,
-        };
 
-        header.Controls.Add(sub);
+        _headerSubtitle.AutoSize = false;
+        _headerSubtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        _headerSubtitle.Location = new Point(54, 32);
+        _headerSubtitle.Height = 18;
+        _headerSubtitle.ForeColor = AppTheme.TextOnPrimarySoft;
+        _headerSubtitle.Font = new Font("Microsoft YaHei UI", 8.5F);
+        _headerSubtitle.TextAlign = ContentAlignment.MiddleLeft;
+        _headerSubtitle.BackColor = Color.Transparent;
+        _headerSubtitle.Text = "Windows Server 桌面优化 · 菜单栏访问文件/工具/帮助";
+
+        header.Controls.Add(_headerSubtitle);
         header.Controls.Add(brand);
         header.Controls.Add(logo);
+        header.Resize += (_, _) => _headerSubtitle.Width = Math.Max(200, header.Width - 68);
         return header;
     }
 
@@ -540,39 +679,7 @@ internal sealed class MainForm : Form
 
     private void BuildHelpPanel()
     {
-        _helpPanel.Height = 118;
-        _helpPanel.BackColor = AppTheme.PrimaryPale;
-        _helpPanel.Padding = new Padding(16, 8, 16, 8);
-        _helpPanel.Paint += (_, e) =>
-        {
-            using var accent = new SolidBrush(AppTheme.Primary);
-            e.Graphics.FillRectangle(accent, 0, 0, 4, _helpPanel.Height);
-            using var top = new Pen(AppTheme.Border);
-            e.Graphics.DrawLine(top, 0, 0, _helpPanel.Width, 0);
-        };
-
-        _helpTitle.AutoSize = false;
-        _helpTitle.SetBounds(12, 6, 900, 22);
-        _helpTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _helpTitle.ForeColor = AppTheme.PrimaryDeep;
-        _helpTitle.Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold);
-        _helpTitle.BackColor = Color.Transparent;
-
-        _helpBody.AutoSize = false;
-        _helpBody.SetBounds(12, 30, 900, 78);
-        _helpBody.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
-        _helpBody.ForeColor = AppTheme.TextMain;
-        _helpBody.Font = new Font("Microsoft YaHei UI", 8.75F);
-        _helpBody.BackColor = Color.Transparent;
-
-        _helpPanel.Controls.Add(_helpBody);
-        _helpPanel.Controls.Add(_helpTitle);
-        _helpPanel.Resize += (_, _) =>
-        {
-            _helpTitle.Width = _helpPanel.ClientSize.Width - 24;
-            _helpBody.Width = _helpPanel.ClientSize.Width - 24;
-            _helpBody.Height = _helpPanel.ClientSize.Height - 34;
-        };
+        // 已迁移至右侧 HelpDetailPanel
     }
 
     private void ShowHelp(SettingRow row)
@@ -580,19 +687,14 @@ internal sealed class MainForm : Form
         _selectedRow?.SetSelected(false);
         _selectedRow = row;
         row.SetSelected(true);
-        _helpTitle.Text = row.ItemText;
-        _helpBody.Text = row.Help.FormatDetail();
+        _helpDetail.ShowSetting(row.ItemText, row.Help);
     }
 
     private void ShowHelpPlaceholder(string? groupTitle = null)
     {
         _selectedRow?.SetSelected(false);
         _selectedRow = null;
-        _helpTitle.Text = groupTitle is null ? "设置说明" : $"{groupTitle} · 设置说明";
-        _helpBody.Text =
-            "鼠标悬停项目名称可查看一行摘要；点击项目名称或 ⓘ 查看完整说明。\r\n" +
-            "标识：Server 专属 = 仅 Server 有效；需桌面体验 = Server Core 无效；" +
-            "Server 2016+ / Win10+ = 最低版本要求。";
+        _helpDetail.ShowPlaceholder(groupTitle);
     }
 
     private int ContentWidth() =>
@@ -739,7 +841,7 @@ internal sealed class MainForm : Form
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
-        _status.SetBounds(188, 10, 380, 38);
+        _status.SetBounds(12, 10, 420, 38);
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
         _status.Text = Optimizer.IsWindowsServer()
@@ -761,7 +863,6 @@ internal sealed class MainForm : Form
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
         var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
         var refresh = ToolButton("刷新", LoadState);
-        var about = ToolButton("关于", ShowAboutDialog);
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -791,7 +892,7 @@ internal sealed class MainForm : Form
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
-        actions.Controls.AddRange([allOn, allOff, quickTools, refresh, about, _restore, _apply]);
+        actions.Controls.AddRange([allOn, allOff, quickTools, refresh, _restore, _apply]);
         bottom.Controls.Add(actions);
         bottom.Controls.Add(_status);
         bottom.Controls.Add(rule);
@@ -850,6 +951,11 @@ internal sealed class MainForm : Form
         _smb1.Checked = s.DisableSmb1;
         _remoteReg.Checked = s.DisableRemoteRegistry;
         _spooler.Checked = s.DisablePrintSpooler;
+        _largeCache.Checked = s.LargeSystemCacheOptimize;
+        _reservedStorage.Checked = s.DisableReservedStorage;
+        _srvSplit.Checked = s.DisableSrvSplit;
+        _gpuSched.Checked = s.EnableGpuHwScheduling;
+        _defender.Checked = s.DisableDefenderAntivirus;
         _thisPc.Checked = s.ShowThisPcIcon;
         _launchThisPc.Checked = s.LaunchExplorerThisPc;
         _taskbar.Checked = s.SmallTaskbar;
@@ -866,12 +972,17 @@ internal sealed class MainForm : Form
         _fullPath.Checked = s.ExplorerFullPath;
         _allTrayIcons.Checked = s.TaskbarAllIcons;
         _taskbarClock.Checked = s.TaskbarClockWeekdaySeconds;
+        _desktopIcons.Checked = s.ShowControlPanelRecycleBin;
+        _smartScreen.Checked = s.DisableSmartScreenWarning;
+        _classicSearch.Checked = s.ClassicFileSearch;
+        _searchEngine.Checked = s.DisableSearchEngineFeature;
         _animations.Checked = s.DisableAnimations;
         _transparency.Checked = s.DisableTransparency;
         _tips.Checked = s.DisableTips;
         _autoplay.Checked = s.DisableAutoplay;
         _activityHist.Checked = s.DisableActivityHistory;
         _storageSense.Checked = s.DisableStorageSense;
+        _backgroundApps.Checked = s.DisableBackgroundApps;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -882,12 +993,15 @@ internal sealed class MainForm : Form
         _azure.Checked = s.DisableAzureArc;
         _installer.Checked = s.EnableInstaller;
         _wia.Checked = s.EnableWia;
+        _mediaFeatures.Checked = s.EnableDesktopMediaFeatures;
+        _bloatFeatures.Checked = s.DisableServerBloatFeatures;
         _pwd.Checked = s.DisablePasswordComplexity;
         _pwdExpire.Checked = s.PasswordNeverExpire;
         _shutdownLogon.Checked = s.ShutdownWithoutLogon;
         _shutdownReason.Checked = s.DisableShutdownReason;
         _noCad.Checked = s.DisableCad;
         _autologon.Checked = s.EnableAutologon;
+        _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
     }
 
@@ -916,6 +1030,11 @@ internal sealed class MainForm : Form
         DisableSmb1 = _smb1.Checked,
         DisableRemoteRegistry = _remoteReg.Checked,
         DisablePrintSpooler = _spooler.Checked,
+        LargeSystemCacheOptimize = _largeCache.Checked,
+        DisableReservedStorage = _reservedStorage.Checked,
+        DisableSrvSplit = _srvSplit.Checked,
+        EnableGpuHwScheduling = _gpuSched.Checked,
+        DisableDefenderAntivirus = _defender.Checked,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
@@ -932,12 +1051,17 @@ internal sealed class MainForm : Form
         ExplorerFullPath = _fullPath.Checked,
         TaskbarAllIcons = _allTrayIcons.Checked,
         TaskbarClockWeekdaySeconds = _taskbarClock.Checked,
+        ShowControlPanelRecycleBin = _desktopIcons.Checked,
+        DisableSmartScreenWarning = _smartScreen.Checked,
+        ClassicFileSearch = _classicSearch.Checked,
+        DisableSearchEngineFeature = _searchEngine.Checked,
         DisableAnimations = _animations.Checked,
         DisableTransparency = _transparency.Checked,
         DisableTips = _tips.Checked,
         DisableAutoplay = _autoplay.Checked,
         DisableActivityHistory = _activityHist.Checked,
         DisableStorageSense = _storageSense.Checked,
+        DisableBackgroundApps = _backgroundApps.Checked,
         EnableRdp = _rdp.Checked,
         RdpGpuAccel = _rdpGpu.Checked,
         RdpHighRefresh = _rdpFps.Checked,
@@ -948,12 +1072,15 @@ internal sealed class MainForm : Form
         DisableAzureArc = _azure.Checked,
         EnableInstaller = _installer.Checked,
         EnableWia = _wia.Checked,
+        EnableDesktopMediaFeatures = _mediaFeatures.Checked,
+        DisableServerBloatFeatures = _bloatFeatures.Checked,
         DisablePasswordComplexity = _pwd.Checked,
         PasswordNeverExpire = _pwdExpire.Checked,
         ShutdownWithoutLogon = _shutdownLogon.Checked,
         DisableShutdownReason = _shutdownReason.Checked,
         DisableCad = _noCad.Checked,
         EnableAutologon = _autologon.Checked,
+        DisableLoginKeyboardFilters = _keyboardFilter.Checked,
         AutologonDomain = _autologonSettings?.Domain ?? "",
         AutologonUser = _autologonSettings?.Username ?? "",
         AutologonPassword = _autologonSettings?.Password ?? "",

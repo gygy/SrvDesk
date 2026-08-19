@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace WinOpt;
 
-/// <summary>VB/社区 Server 桌面脚本中的注册表与 DISM 优化（原 Form 未覆盖部分）。</summary>
+/// <summary>社区 Server 桌面脚本中的注册表与 DISM 优化（原工具未覆盖部分）。</summary>
 internal static class ServerDesktopTweaks
 {
     internal const string ClsidControlPanel = "{21EC2020-3AEA-1069-A2D8-08002B30309D}";
@@ -12,74 +12,85 @@ internal static class ServerDesktopTweaks
     internal const string HideDesktopIcons = @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel";
 
     private static readonly string[] MediaFeaturesToEnable =
-    [
+    {
         "Server-Media-Foundation",
         "DirectPlay",
         "Wireless-Networking",
         "MediaFoundation",
-    ];
+    };
 
     private static readonly string[] BloatFeaturesToDisable =
-    [
+    {
         "SystemDataArchiver",
         "WindowsAdminCenterSetup",
         "AzureArcSetup",
-        "SearchEngine",
-    ];
+    };
 
-    private static readonly string[] RsatFeaturePrefixes = ["RSAT-", "Rsat"];
+    private static readonly string[] DefenderFeatures =
+    {
+        "Windows-Defender",
+        "Windows-Defender-Features",
+    };
+
+    private static readonly string[] RsatFeaturePrefixes = { "RSAT-", "Rsat" };
 
     // --- Read ---
 
+    public static bool IsSamPasswordComplexityOff() =>
+        GetDword(Hive.HkLm, SamPasswordKey, "PasswordComplexity") == 0;
+
     public static bool IsSmartScreenOff() =>
-        DwordEquals(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled", 0);
+        GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled") == 0;
 
     public static bool IsOpenFileWarningOff() =>
-        DwordEquals(@"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation", 1);
+        GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation") == 1;
 
     public static bool IsControlPanelIconShown() =>
-        DwordEquals(HideDesktopIcons, ClsidControlPanel, 0);
+        GetDword(Hive.HkCu, HideDesktopIcons, ClsidControlPanel) == 0;
 
     public static bool IsRecycleBinIconShown() =>
-        DwordEquals(HideDesktopIcons, ClsidRecycleBin, 0);
+        GetDword(Hive.HkCu, HideDesktopIcons, ClsidRecycleBin) == 0;
 
     public static bool IsLargeSystemCacheOn() =>
-        DwordEquals(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache", 1)
-        && DwordEquals(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive", 1)
-        && DwordEquals(@"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage", 2);
+        GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache") == 1
+        && GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive") == 1
+        && GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage") == 2;
 
     public static bool IsReservedStorageOff() =>
-        DwordEquals(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0);
+        GetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves") == 0;
 
     public static bool IsSrvSplitDisabled() =>
-        GetDword(@"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold") == unchecked((int)0xFFFFFFFF);
+        GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold") == unchecked((int)0xFFFFFFFF);
 
     public static bool IsGpuHwSchedulingOn() =>
-        GetDword(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode") == 2;
+        GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode") == 2;
 
     public static bool IsLoginKeyboardFilterOff() =>
         GetAccessibilityFlags(@"Control Panel\Accessibility\Keyboard Response") == "126";
 
     public static bool IsBackgroundAppsOff() =>
-        DwordEquals(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground", 2);
+        GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground") == 2;
 
     public static bool IsClassicSearchOn() =>
-        DwordEquals(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", 0)
-        && DwordEquals(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 0);
+        GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana") == 0
+        && GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode") == 0;
 
     public static bool IsDefenderOff() =>
-        DwordEquals(@"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1);
+        GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware") == 1;
 
     public static bool IsSearchEngineFeatureOff() =>
-        !IsDismFeatureEnabled("SearchEngine") && ServiceStartEquals("WSearch", 4);
+        !IsDismFeatureEnabled("SearchEngine") && GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\WSearch", "Start") == 4;
 
     public static bool IsDesktopMediaFeaturesOn()
     {
+        var any = false;
         foreach (var f in MediaFeaturesToEnable)
         {
-            if (DismFeatureExists(f) && !IsDismFeatureEnabled(f)) return false;
+            if (!DismFeatureExists(f)) continue;
+            any = true;
+            if (!IsDismFeatureEnabled(f)) return false;
         }
-        return true;
+        return any;
     }
 
     public static bool IsServerBloatFeaturesOff()
@@ -96,69 +107,70 @@ internal static class ServerDesktopTweaks
     public static void ApplySamPasswordComplexity(bool disable)
     {
         if (disable)
-            SetDword(SamPasswordKey, "PasswordComplexity", 0);
+            SetDword(Hive.HkLm, SamPasswordKey, "PasswordComplexity", 0);
         else
-            DeleteValue(SamPasswordKey, "PasswordComplexity");
+            DeleteValue(Hive.HkLm, SamPasswordKey, "PasswordComplexity");
     }
 
     public static void ApplySmartScreenAndOpenWarning(bool disable)
     {
         if (disable)
         {
-            SetDword(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled", 0);
-            SetDword(@"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation", 1);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled", 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation", 1);
         }
         else
         {
-            DeleteValue(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled");
-            DeleteValue(@"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer", "SmartScreenEnabled");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Attachments", "SaveZoneInformation");
         }
     }
 
-    public static void ApplyDesktopIcons(bool controlPanel, bool recycleBin)
+    public static void ApplyDesktopIcons(bool controlPanelAndRecycleBin)
     {
-        SetDword(HideDesktopIcons, ClsidControlPanel, controlPanel ? 0 : 1);
-        SetDword(HideDesktopIcons, ClsidRecycleBin, recycleBin ? 0 : 1);
+        var hide = controlPanelAndRecycleBin ? 0 : 1;
+        SetDword(Hive.HkCu, HideDesktopIcons, ClsidControlPanel, hide);
+        SetDword(Hive.HkCu, HideDesktopIcons, ClsidRecycleBin, hide);
     }
 
     public static void ApplyLargeSystemCache(bool enable)
     {
         if (enable)
         {
-            SetDword(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache", 1);
-            SetDword(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive", 1);
-            SetDword(@"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage", 2);
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache", 1);
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive", 1);
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage", 2);
         }
         else
         {
-            SetDword(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache", 0);
-            DeleteValue(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive");
-            DeleteValue(@"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage");
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache", 0);
+            DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingExecutive");
+            DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsMemoryUsage");
         }
     }
 
     public static void ApplyReservedStorage(bool disable)
     {
         if (disable)
-            SetDword(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0);
+            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0);
         else
-            DeleteValue(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves");
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves");
     }
 
     public static void ApplySrvSplitThreshold(bool disableSplit)
     {
         if (disableSplit)
-            SetDword(@"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold", unchecked((int)0xFFFFFFFF));
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold", unchecked((int)0xFFFFFFFF));
         else
-            DeleteValue(@"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold");
+            DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters", "SrvSplitThreshold");
     }
 
     public static void ApplyGpuHwScheduling(bool enable)
     {
         if (enable)
-            SetDword(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2);
+            SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2);
         else
-            DeleteValue(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode");
+            DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode");
     }
 
     public static void ApplyLoginKeyboardFilters(bool disable)
@@ -189,13 +201,13 @@ internal static class ServerDesktopTweaks
     {
         if (disable)
         {
-            SetDword(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground", 2);
-            SetDword(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1);
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground", 2);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1);
         }
         else
         {
-            DeleteValue(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
-            DeleteValue(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled");
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled");
         }
     }
 
@@ -203,15 +215,15 @@ internal static class ServerDesktopTweaks
     {
         if (enable)
         {
-            SetDword(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", 0);
-            SetDword(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 0);
-            SetDword(@"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation", 0);
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation", 0);
         }
         else
         {
-            DeleteValue(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana");
-            DeleteValue(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
-            DeleteValue(@"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation");
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation");
         }
     }
 
@@ -219,13 +231,17 @@ internal static class ServerDesktopTweaks
     {
         if (disable)
         {
-            SetDword(@"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1);
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1);
+            foreach (var f in DefenderFeatures)
+            {
+                if (IsDismFeatureEnabled(f)) DismDisable(f);
+            }
             RunSc("stop WinDefend");
             RunSc("config WinDefend start= disabled");
         }
         else
         {
-            DeleteValue(@"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware");
+            DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware");
             RunSc("config WinDefend start= auto");
             RunSc("start WinDefend");
         }
@@ -235,13 +251,13 @@ internal static class ServerDesktopTweaks
     {
         if (disable)
         {
-            DismDisable("SearchEngine");
+            if (IsDismFeatureEnabled("SearchEngine")) DismDisable("SearchEngine");
             RunSc("stop WSearch");
             RunSc("config WSearch start= disabled");
         }
         else
         {
-            DismEnable("SearchEngine");
+            if (DismFeatureExists("SearchEngine")) DismEnable("SearchEngine");
             RunSc("config WSearch start= auto");
             RunSc("start WSearch");
         }
@@ -273,8 +289,7 @@ internal static class ServerDesktopTweaks
     {
         try
         {
-            using var users = Registry.Users;
-            using var def = users.OpenSubKey(@".DEFAULT", writable: true);
+            using var def = Registry.Users.OpenSubKey(@".DEFAULT", writable: true);
             using var key = def?.OpenSubKey(subKey, writable: true);
             key?.SetValue("Flags", flags, RegistryValueKind.String);
         }
@@ -286,8 +301,7 @@ internal static class ServerDesktopTweaks
 
     private static string? GetAccessibilityFlags(string subKey)
     {
-        using var baseKey = Registry.CurrentUser;
-        using var k = baseKey.OpenSubKey(subKey);
+        using var k = Registry.CurrentUser.OpenSubKey(subKey);
         return k?.GetValue("Flags") as string;
     }
 
@@ -326,41 +340,46 @@ internal static class ServerDesktopTweaks
 
     private static bool HasInstalledRsat()
     {
-        try
+        foreach (var (name, state) in EnumerateDismFeatures())
         {
-            var output = RunCapture("dism.exe", "/online /Get-Features /Format:List");
-            foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (!line.StartsWith("Feature Name : ", StringComparison.OrdinalIgnoreCase)) continue;
-                var name = line.Substring("Feature Name : ".Length).Trim();
-                if (!IsRsatFeature(name)) continue;
-                if (output.IndexOf($"Feature Name : {name}", StringComparison.OrdinalIgnoreCase) >= 0
-                    && output.IndexOf("State : Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return true;
-            }
+            if (IsRsatFeature(name) && state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
         }
-        catch { /* ignore */ }
         return false;
     }
 
     private static void DisableInstalledRsat()
     {
+        foreach (var (name, state) in EnumerateDismFeatures())
+        {
+            if (IsRsatFeature(name) && state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
+                DismDisable(name);
+        }
+    }
+
+    private static IEnumerable<(string Name, string State)> EnumerateDismFeatures()
+    {
+        string output;
         try
         {
-            var output = RunCapture("dism.exe", "/online /Get-Features /Format:List");
-            string? current = null;
-            foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            output = RunCapture("dism.exe", "/online /Get-Features /Format:List");
+        }
+        catch
+        {
+            yield break;
+        }
+
+        string? current = null;
+        foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.StartsWith("Feature Name : ", StringComparison.OrdinalIgnoreCase))
+                current = line.Substring("Feature Name : ".Length).Trim();
+            else if (line.StartsWith("State : ", StringComparison.OrdinalIgnoreCase) && current != null)
             {
-                if (line.StartsWith("Feature Name : ", StringComparison.OrdinalIgnoreCase))
-                    current = line.Substring("Feature Name : ".Length).Trim();
-                else if (line.StartsWith("State : ", StringComparison.OrdinalIgnoreCase)
-                    && current != null
-                    && IsRsatFeature(current)
-                    && line.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
-                    DismDisable(current);
+                yield return (current, line.Substring("State : ".Length).Trim());
+                current = null;
             }
         }
-        catch { /* ignore */ }
     }
 
     private static bool IsRsatFeature(string name)
@@ -372,14 +391,13 @@ internal static class ServerDesktopTweaks
         return false;
     }
 
-    private static bool DwordEquals(string key, string name, int expected) => GetDword(key, name) == expected;
+    private enum Hive { HkLm, HkCu }
 
-    private static bool ServiceStartEquals(string service, int expected) =>
-        GetDword($@"SYSTEM\CurrentControlSet\Services\{service}", "Start") == expected;
-
-    private static int? GetDword(string key, string name)
+    private static int? GetDword(Hive hive, string key, string name)
     {
-        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
         using var k = baseKey.OpenSubKey(key);
         return k?.GetValue(name) switch
         {
@@ -389,11 +407,11 @@ internal static class ServerDesktopTweaks
         };
     }
 
-    private enum Hive { HkLm, HkCu }
-
-    private static void SetDword(string key, string name, int value)
+    private static void SetDword(Hive hive, string key, string name, int value)
     {
-        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
         using var k = baseKey.CreateSubKey(key, true)
             ?? throw new InvalidOperationException("无法写入注册表：" + key);
         k.SetValue(name, value, RegistryValueKind.DWord);
@@ -409,18 +427,11 @@ internal static class ServerDesktopTweaks
         k.SetValue(name, value, RegistryValueKind.String);
     }
 
-    private static void DeleteValue(string key, string name)
-    {
-        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-        using var k = baseKey.OpenSubKey(key, writable: true);
-        k?.DeleteValue(name, throwOnMissingValue: false);
-    }
-
     private static void DeleteValue(Hive hive, string key, string name)
     {
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
-            RegistryView.Default);
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
         using var k = baseKey.OpenSubKey(key, writable: true);
         k?.DeleteValue(name, throwOnMissingValue: false);
     }

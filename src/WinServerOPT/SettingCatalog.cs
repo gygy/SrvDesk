@@ -484,6 +484,110 @@ internal static class SettingCatalog
         "下次重启后生效；启动时按住 Shift 可临时跳过自动登录。",
         SettingScope.DesktopExperience);
 
+    public static readonly SettingHelpInfo DisableSmartScreenWarning = H(
+        "关闭 SmartScreen 应用筛选与「打开文件安全警告」。",
+        "SmartScreenEnabled=0；Attachments SaveZoneInformation=1 跳过区域标记提示。",
+        "本地/内网软件安装与脚本运行不再反复弹窗确认。",
+        "仅建议在可信环境开启；公网下载文件请保持系统默认防护。",
+        "立即生效；部分程序需重启后完全生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo ShowControlPanelRecycleBin = H(
+        "在桌面显示「控制面板」与「回收站」图标。",
+        "修改 HideDesktopIcons\\NewStartPanel 下对应 CLSID 为显示。",
+        "与「此电脑」图标一起，恢复经典 Server 桌面布局。",
+        "推荐 Server 当桌面用时开启。",
+        "立即生效；若未刷新可重启 Explorer。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo LargeSystemCacheOptimize = H(
+        "启用大系统缓存、禁止内核分页、增大 NTFS 内存缓冲。",
+        "LargeSystemCache=1、DisablePagingExecutive=1、NtfsMemoryUsage=2。",
+        "文件服务器/大文件读写场景提升缓存命中率；部分桌面 Server 帖推荐。",
+        "纯交互桌面、内存紧张时可关闭恢复默认。",
+        "重启后完全生效。",
+        S2016);
+
+    public static readonly SettingHelpInfo DisableReservedStorage = H(
+        "关闭系统分区「保留存储」占用。",
+        "ReserveManager ShippedWithReserves=0。",
+        "释放数 GB 磁盘给数据盘使用。",
+        "更新失败回滚空间略减；磁盘紧张时推荐开启。",
+        "立即写入；部分版本需重启或磁盘清理后可见。",
+        W10);
+
+    public static readonly SettingHelpInfo DisableSrvSplit = H(
+        "关闭 LanmanServer 服务拆分（SrvSplitThreshold 设为最大）。",
+        "避免 SMB 服务在高负载下拆分子进程导致连接异常。",
+        "部分社区 Server 桌面优化脚本推荐；适合 SMB 文件共享场景。",
+        "极高并发 SMB 场景可按微软文档评估是否保持默认。",
+        "重启后生效。",
+        SettingScope.ServerExclusive);
+
+    public static readonly SettingHelpInfo EnableGpuHwScheduling = H(
+        "启用系统级 GPU 硬件加速计划（HwSchMode=2）。",
+        "与 RDP 图形加速不同，作用于本机 GPU 调度。",
+        "Win10/Server 2019+ 桌面游戏、视频、GPU 计算更流畅。",
+        "极老显卡或驱动问题可关闭排查。",
+        "重启后生效。",
+        S2019);
+
+    public static readonly SettingHelpInfo DisableLoginKeyboardFilters = H(
+        "取消登录界面粘滞键/筛选键等辅助功能快捷键提示。",
+        "写入当前用户与 .DEFAULT 下 Accessibility Flags。",
+        "连续按 Shift 登录时不再弹出「启用粘滞键？」打断。",
+        "需要辅助功能的用户请勿开启。",
+        "注销或重启登录界面后生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo DisableBackgroundApps = H(
+        "禁止 UWP/商店应用在后台运行。",
+        "LetAppsRunInBackground=2 策略 + GlobalUserDisabled。",
+        "减少 idle CPU/网络占用，对齐「删除后台任务」类优化。",
+        "依赖后台同步的应用（邮件、OneDrive 等）可能受影响。",
+        "立即生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo ClassicFileSearch = H(
+        "搜索退回传统模式：关闭 Cortana、任务栏搜索框改为图标。",
+        "AllowCortana=0；SearchboxTaskbarMode=0。",
+        "减少索引与 Web 搜索干扰，贴近 Win7 搜索体验。",
+        "需 Windows 搜索索引时请配合「启用 Windows 搜索」使用。",
+        "注销或重启 Explorer 后生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo DisableDefenderAntivirus = H(
+        "关闭 Windows Defender 防病毒（策略 + 服务 + 可选功能）。",
+        "DisableAntiSpyware=1；停止 WinDefend；尝试 DISM 禁用 Defender 功能包。",
+        "释放 CPU/磁盘扫描占用；第三方杀软或纯内网环境常用。",
+        "公网暴露或合规环境请勿开启；关闭后系统无实时防护。",
+        "立即生效；部分版本需重启。",
+        S2016);
+
+    public static readonly SettingHelpInfo DisableSearchEngineFeature = H(
+        "卸载/禁用 SearchEngine 可选功能并停止 WSearch 服务。",
+        "DISM Disable-Feature SearchEngine + WSearch 禁用。",
+        "比仅停服务更彻底，减少索引磁盘占用。",
+        "与「启用 Windows 搜索」冲突：开启本项时搜索服务不会启动。",
+        "DISM 完成后建议重启。",
+        SettingScope.ServerExclusive);
+
+    public static readonly SettingHelpInfo EnableDesktopMediaFeatures = H(
+        "开启 Server 桌面媒体组件：MediaFoundation、DirectPlay、WLAN 等。",
+        "DISM Enable-Feature：Server-Media-Foundation、DirectPlay、Wireless-Networking 等（按版本跳过不存在项）。",
+        "支持音视频播放、旧游戏 DirectPlay、无线网络。",
+        "Server Core 或无桌面体验无效；2016/2019/2022 桌面推荐。",
+        "DISM 完成后需重启。",
+        SettingScope.ServerExclusive);
+
+    public static readonly SettingHelpInfo DisableServerBloatFeatures = H(
+        "关闭 Server 冗余可选功能：RSAT、SystemDataArchiver、WAC 安装包等。",
+        "DISM 禁用已知功能名并扫描 RSAT-* 已启用项。",
+        "减少组件占用与误触管理工具；纯桌面用途更干净。",
+        "仍需远程管理 Server 时请勿禁用 RSAT/WAC。",
+        "DISM 完成后建议重启。",
+        SettingScope.ServerExclusive);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,

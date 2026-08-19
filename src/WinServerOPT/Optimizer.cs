@@ -99,6 +99,20 @@ internal static class Optimizer
         public bool DisableAutoplay;
         public bool DisableActivityHistory;
         public bool DisableStorageSense;
+
+        public bool DisableSmartScreenWarning;
+        public bool ShowControlPanelRecycleBin;
+        public bool LargeSystemCacheOptimize;
+        public bool DisableReservedStorage;
+        public bool DisableSrvSplit;
+        public bool EnableGpuHwScheduling;
+        public bool DisableLoginKeyboardFilters;
+        public bool DisableBackgroundApps;
+        public bool ClassicFileSearch;
+        public bool DisableDefenderAntivirus;
+        public bool DisableSearchEngineFeature;
+        public bool EnableDesktopMediaFeatures;
+        public bool DisableServerBloatFeatures;
     }
 
     public static bool IsWindowsServer()
@@ -157,7 +171,7 @@ internal static class Optimizer
             EnableInstaller = ServiceStartEquals("msiserver", 2),
             EnableWia = ServiceStartEquals("stisvc", 2),
 
-            DisablePasswordComplexity = ReadSecpolFlag("PasswordComplexity = 0"),
+            DisablePasswordComplexity = ReadSecpolFlag("PasswordComplexity = 0") || ServerDesktopTweaks.IsSamPasswordComplexityOff(),
             PasswordNeverExpire = ReadSecpolFlag("MaximumPasswordAge = 0"),
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
@@ -185,6 +199,20 @@ internal static class Optimizer
             DisableAutoplay = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDriveTypeAutoRun", 255),
             DisableActivityHistory = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\System", "AllowPublishUserActivities", 0),
             DisableStorageSense = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", 0),
+
+            DisableSmartScreenWarning = ServerDesktopTweaks.IsSmartScreenOff() && ServerDesktopTweaks.IsOpenFileWarningOff(),
+            ShowControlPanelRecycleBin = ServerDesktopTweaks.IsControlPanelIconShown() && ServerDesktopTweaks.IsRecycleBinIconShown(),
+            LargeSystemCacheOptimize = ServerDesktopTweaks.IsLargeSystemCacheOn(),
+            DisableReservedStorage = ServerDesktopTweaks.IsReservedStorageOff(),
+            DisableSrvSplit = ServerDesktopTweaks.IsSrvSplitDisabled(),
+            EnableGpuHwScheduling = ServerDesktopTweaks.IsGpuHwSchedulingOn(),
+            DisableLoginKeyboardFilters = ServerDesktopTweaks.IsLoginKeyboardFilterOff(),
+            DisableBackgroundApps = ServerDesktopTweaks.IsBackgroundAppsOff(),
+            ClassicFileSearch = ServerDesktopTweaks.IsClassicSearchOn(),
+            DisableDefenderAntivirus = ServerDesktopTweaks.IsDefenderOff(),
+            DisableSearchEngineFeature = ServerDesktopTweaks.IsSearchEngineFeatureOff(),
+            EnableDesktopMediaFeatures = ServerDesktopTweaks.IsDesktopMediaFeaturesOn(),
+            DisableServerBloatFeatures = ServerDesktopTweaks.IsServerBloatFeaturesOff(),
         };
     }
 
@@ -232,7 +260,13 @@ internal static class Optimizer
         Try(errors, "文件扩展名", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", s.ShowFileExtensions ? 0 : 1));
         Try(errors, "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
-        Try(errors, "Windows搜索", () => SetService("WSearch", s.EnableSearch, disableWhenOff: false));
+        Try(errors, "Windows搜索", () =>
+        {
+            if (s.DisableSearchEngineFeature)
+                ServerDesktopTweaks.ApplySearchEngineFeature(true);
+            else
+                SetService("WSearch", s.EnableSearch, disableWhenOff: false);
+        });
         Try(errors, "Bing搜索", () =>
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
@@ -325,6 +359,19 @@ internal static class Optimizer
         Try(errors, "活动历史", () => SetActivityHistory(!s.DisableActivityHistory));
         Try(errors, "存储感知", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", s.DisableStorageSense ? 0 : 1));
+
+        Try(errors, "SmartScreen与打开警告", () => ServerDesktopTweaks.ApplySmartScreenAndOpenWarning(s.DisableSmartScreenWarning));
+        Try(errors, "控制面板与回收站", () => ServerDesktopTweaks.ApplyDesktopIcons(s.ShowControlPanelRecycleBin));
+        Try(errors, "大系统缓存", () => ServerDesktopTweaks.ApplyLargeSystemCache(s.LargeSystemCacheOptimize));
+        Try(errors, "保留存储", () => ServerDesktopTweaks.ApplyReservedStorage(s.DisableReservedStorage));
+        Try(errors, "LanmanServer拆分", () => ServerDesktopTweaks.ApplySrvSplitThreshold(s.DisableSrvSplit));
+        Try(errors, "GPU硬件调度", () => ServerDesktopTweaks.ApplyGpuHwScheduling(s.EnableGpuHwScheduling));
+        Try(errors, "登录键盘筛选", () => ServerDesktopTweaks.ApplyLoginKeyboardFilters(s.DisableLoginKeyboardFilters));
+        Try(errors, "后台应用", () => ServerDesktopTweaks.ApplyBackgroundApps(s.DisableBackgroundApps));
+        Try(errors, "传统搜索", () => ServerDesktopTweaks.ApplyClassicSearch(s.ClassicFileSearch));
+        Try(errors, "Windows Defender", () => ServerDesktopTweaks.ApplyDefender(s.DisableDefenderAntivirus));
+        Try(errors, "桌面媒体组件", () => ServerDesktopTweaks.ApplyDesktopMediaFeatures(s.EnableDesktopMediaFeatures));
+        Try(errors, "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
         return errors;
     }
 
@@ -577,6 +624,7 @@ internal static class Optimizer
         File.WriteAllText(cfg, text);
         Run("secedit.exe", $"/configure /db C:\\Windows\\security\\local.sdb /cfg \"{cfg}\" /areas SECURITYPOLICY");
         TryDelete(cfg);
+        ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
     }
 
     private static string ReplaceSecpolLine(string text, string key, int value)
