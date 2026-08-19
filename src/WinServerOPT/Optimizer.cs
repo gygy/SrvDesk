@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using Microsoft.Win32;
 
 namespace WinOpt;
@@ -9,6 +10,8 @@ internal static class Optimizer
     internal const string IeEscUser = "{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}";
     internal const string ClsidMyComputer = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}";
     internal const string AzureArcCommand = @"%windir%\AzureArcSetup\Systray\AzureArcSysTray.exe";
+    internal const string PowerPlanHighPerf = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+    internal const string PowerPlanBalanced = "381b4222-f694-41f0-9685-ff5bb260df2e";
 
     internal sealed class State
     {
@@ -16,12 +19,26 @@ internal static class Optimizer
         public bool Dep;
         public bool DisableUac;
         public bool DisableIeEsc;
+        public bool HighPerfPower;
+        public bool DisableTelemetry;
+        public bool NoUpdateReboot;
+        public bool DisableDeliveryOpt;
+
         public bool ShowThisPcIcon;
         public bool SmallTaskbar;
         public bool ConfirmDelete;
         public bool EnableAudio;
+        public bool ShowFileExtensions;
+        public bool EnableThemes;
+        public bool EnableSearch;
+
+        public bool EnableRdp;
+        public bool EnableNetworkDiscovery;
+
         public bool SkipServerManager;
         public bool DisableAzureArc;
+        public bool DisableErrorReport;
+
         public bool DisablePasswordComplexity;
         public bool ShutdownWithoutLogon;
         public bool DisableShutdownReason;
@@ -43,20 +60,34 @@ internal static class Optimizer
     {
         return new State
         {
-            CpuProgramPriority = GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation") == 38,
-            Dep = GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable") == 1,
-            DisableUac = GetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA") == 0,
-            DisableIeEsc = GetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled") == 0,
-            ShowThisPcIcon = GetDword(Hive.HkCu, $@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer) == 0,
-            SmallTaskbar = GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSmallIcons") == 1,
-            ConfirmDelete = GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "ConfirmFileDelete") == 1,
-            EnableAudio = GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\AudioSrv", "Start") == 2,
-            SkipServerManager = GetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon") == 1,
+            CpuProgramPriority = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", 38),
+            Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
+            DisableUac = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", 0),
+            DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
+            HighPerfPower = IsActivePowerPlan(PowerPlanHighPerf),
+            DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
+            NoUpdateReboot = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1),
+            DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
+
+            ShowThisPcIcon = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, 0),
+            SmallTaskbar = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSmallIcons", 1),
+            ConfirmDelete = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "ConfirmFileDelete", 1),
+            EnableAudio = ServiceStartEquals("AudioSrv", 2),
+            ShowFileExtensions = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 0),
+            EnableThemes = ServiceStartEquals("Themes", 2),
+            EnableSearch = ServiceStartEquals("WSearch", 2),
+
+            EnableRdp = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", 0),
+            EnableNetworkDiscovery = ServiceStartEquals("fdPHost", 2) && ServiceStartEquals("FDResPub", 2),
+
+            SkipServerManager = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", 1),
             DisableAzureArc = GetValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup") is null,
+            DisableErrorReport = ServiceStartEquals("WerSvc", 4),
+
             DisablePasswordComplexity = ReadPasswordComplexityDisabled(),
-            ShutdownWithoutLogon = GetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon") == 1,
-            DisableShutdownReason = GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn") == 0,
-            DisableCad = GetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD") == 1,
+            ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
+            DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
+            DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
         };
     }
 
@@ -74,6 +105,13 @@ internal static class Optimizer
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscUser}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
         });
+        Try(errors, "电源计划", () => SetPowerPlan(s.HighPerfPower ? PowerPlanHighPerf : PowerPlanBalanced));
+        Try(errors, "遥测", () => SetTelemetry(!s.DisableTelemetry));
+        Try(errors, "更新重启", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", s.NoUpdateReboot ? 1 : 0));
+        Try(errors, "传递优化", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1));
+
         Try(errors, "桌面此电脑", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, s.ShowThisPcIcon ? 0 : 1));
         Try(errors, "小按钮任务栏", () =>
@@ -81,6 +119,14 @@ internal static class Optimizer
         Try(errors, "删除确认", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "ConfirmFileDelete", s.ConfirmDelete ? 1 : 0));
         Try(errors, "音频服务", () => SetAudio(s.EnableAudio));
+        Try(errors, "文件扩展名", () =>
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", s.ShowFileExtensions ? 0 : 1));
+        Try(errors, "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
+        Try(errors, "Windows搜索", () => SetService("WSearch", s.EnableSearch, disableWhenOff: true));
+
+        Try(errors, "远程桌面", () => SetRdp(s.EnableRdp));
+        Try(errors, "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
+
         Try(errors, "服务管理器", () =>
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", s.SkipServerManager ? 1 : 0);
@@ -93,6 +139,8 @@ internal static class Optimizer
             else
                 SetString(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup", AzureArcCommand);
         });
+        Try(errors, "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
+
         Try(errors, "密码复杂性", () => SetPasswordComplexity(s.DisablePasswordComplexity));
         Try(errors, "未登录关机", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", s.ShutdownWithoutLogon ? 1 : 0));
@@ -102,6 +150,65 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", s.DisableCad ? 1 : 0));
         return errors;
     }
+
+    private static void SetRdp(bool enable)
+    {
+        SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", enable ? 0 : 1);
+        Run("netsh.exe", enable
+            ? "advfirewall firewall set rule group=\"remote desktop\" new enable=Yes"
+            : "advfirewall firewall set rule group=\"remote desktop\" new enable=No");
+    }
+
+    private static void SetNetworkDiscovery(bool enable)
+    {
+        SetService("fdPHost", enable, disableWhenOff: false);
+        SetService("FDResPub", enable, disableWhenOff: false);
+        if (enable)
+        {
+            Run("netsh.exe", "advfirewall firewall set rule group=\"network discovery\" new enable=Yes");
+            Run("netsh.exe", "advfirewall firewall set rule group=\"file and printer sharing\" new enable=Yes");
+        }
+        else
+        {
+            Run("netsh.exe", "advfirewall firewall set rule group=\"network discovery\" new enable=No");
+            Run("netsh.exe", "advfirewall firewall set rule group=\"file and printer sharing\" new enable=No");
+        }
+    }
+
+    private static void SetTelemetry(bool enable)
+    {
+        if (enable)
+        {
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 1);
+            SetService("DiagTrack", true, disableWhenOff: false);
+        }
+        else
+        {
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0);
+            SetService("DiagTrack", false, disableWhenOff: true);
+        }
+    }
+
+    private static void SetPowerPlan(string guid) => Run("powercfg.exe", "/setactive " + guid);
+
+    private static bool IsActivePowerPlan(string guid)
+    {
+        try
+        {
+            var output = RunCapture("powercfg.exe", "/getactivescheme");
+            return output.IndexOf(guid, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool DwordEquals(Hive hive, string key, string name, int expected) =>
+        GetDword(hive, key, name) == expected;
+
+    private static bool ServiceStartEquals(string service, int expected) =>
+        GetDword(Hive.HkLm, $@"SYSTEM\CurrentControlSet\Services\{service}", "Start") == expected;
 
     private enum Hive { HkLm, HkCu }
 
@@ -120,7 +227,12 @@ internal static class Optimizer
     {
         using var baseKey = OpenBase(hive);
         using var k = baseKey.OpenSubKey(key);
-        return k?.GetValue(name) is int i ? i : null;
+        return k?.GetValue(name) switch
+        {
+            int i => i,
+            byte b => b,
+            _ => null,
+        };
     }
 
     private static object? GetValue(Hive hive, string key, string name)
@@ -153,6 +265,20 @@ internal static class Optimizer
         k?.DeleteValue(name, throwOnMissingValue: false);
     }
 
+    private static void SetService(string name, bool enable, bool disableWhenOff)
+    {
+        if (enable)
+        {
+            Run("sc.exe", $"config {name} start= auto");
+            Run("sc.exe", $"start {name}");
+        }
+        else
+        {
+            Run("sc.exe", $"stop {name}");
+            Run("sc.exe", $"config {name} start= {(disableWhenOff ? "disabled" : "demand")}");
+        }
+    }
+
     private static void SetAudio(bool enable)
     {
         if (enable)
@@ -165,14 +291,14 @@ internal static class Optimizer
         {
             Run("sc.exe", "stop AudioSrv");
             Run("sc.exe", "stop AudioEndpointBuilder");
-            Run("sc.exe", "config AudioSrv start= Disabled");
-            Run("sc.exe", "config AudioEndpointBuilder start= Disabled");
+            Run("sc.exe", "config AudioSrv start= disabled");
+            Run("sc.exe", "config AudioEndpointBuilder start= disabled");
         }
     }
 
     private static bool ReadPasswordComplexityDisabled()
     {
-            var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
+        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
         try
         {
             Run("secedit.exe", $"/export /cfg \"{cfg}\"");
@@ -191,7 +317,7 @@ internal static class Optimizer
 
     private static void SetPasswordComplexity(bool disable)
     {
-            var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
+        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
         Run("secedit.exe", $"/export /cfg \"{cfg}\"");
         if (!File.Exists(cfg)) throw new InvalidOperationException("secedit 导出失败");
         var text = File.ReadAllText(cfg);
@@ -215,6 +341,23 @@ internal static class Optimizer
             RedirectStandardError = true,
         }) ?? throw new InvalidOperationException("无法启动 " + fileName);
         p.WaitForExit(60_000);
+    }
+
+    private static string RunCapture(string fileName, string arguments)
+    {
+        using var p = Process.Start(new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.Default,
+        }) ?? throw new InvalidOperationException("无法启动 " + fileName);
+        var output = p.StandardOutput.ReadToEnd();
+        p.WaitForExit(60_000);
+        return output;
     }
 
     private static void TryDelete(string path)

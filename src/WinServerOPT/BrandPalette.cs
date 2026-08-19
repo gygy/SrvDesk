@@ -1,5 +1,7 @@
 namespace WinOpt;
 
+using System.Drawing;
+
 /// <summary>
 /// 品牌色板：logo 与界面共用，数值须与 IconGenerator 保持一致。
 /// </summary>

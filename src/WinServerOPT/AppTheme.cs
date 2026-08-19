@@ -23,6 +23,8 @@ internal static class AppTheme
     public static readonly Color TextOnPrimary = BrandPalette.TextOnPrimary;
     public static readonly Color TextOnPrimarySoft = BrandPalette.TextOnPrimarySoft;
     public static readonly Color TextHeader = BrandPalette.TextHeader;
+
+    public static readonly Color ToggleOn = BrandPalette.ToggleOn;
     public static readonly Color ToggleOnDeep = BrandPalette.PrimaryDark;
     public static readonly Color ToggleOff = BrandPalette.ToggleOff;
     public static readonly Color ToggleOffDeep = Color.FromArgb(156, 170, 184);
