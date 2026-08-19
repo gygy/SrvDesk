@@ -40,6 +40,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _noArrow = Row("隐藏快捷方式小箭头", "显示", SettingCatalog.NoShortcutArrow);
     private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名", SettingCatalog.ExplorerFullPath);
     private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏", SettingCatalog.TaskbarAllIcons);
+    private readonly SettingRow _taskbarClock = Row("任务栏时钟显示星期与秒", "无星期/无秒", SettingCatalog.TaskbarClockWeekdaySeconds);
 
     private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启", SettingCatalog.DisableAnimations);
     private readonly SettingRow _transparency = Row("禁用透明效果", "开启", SettingCatalog.DisableTransparency);
@@ -131,7 +132,7 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons
+            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock
         ]));
         _groups.Add(("隐私与体验", [
             _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense
@@ -189,7 +190,8 @@ internal sealed class MainForm : Form
         }
         else
         {
-            _status.Text = _systemFacts.Summary + "。开关=推荐；关闭=恢复系统默认。";
+            var identity = ComputerIdentityHelper.Read().Summary;
+            _status.Text = _systemFacts.Summary + " · " + identity + "。开关=推荐；关闭=恢复系统默认。";
         }
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
@@ -248,9 +250,13 @@ internal sealed class MainForm : Form
         autologonBtn.Location = new Point(810, 4);
         autologonBtn.Size = new Size(112, 30);
 
+        var identityBtn = ToolButton("计算机名/工作组", ConfigureComputerIdentity);
+        identityBtn.Location = new Point(928, 4);
+        identityBtn.Size = new Size(108, 30);
+
         _toolBar.Controls.AddRange([
             searchLabel, _searchBox, _hideIncompatible, presetLabel, _presetCombo,
-            loadPreset, exportBtn, importBtn, autologonBtn
+            loadPreset, exportBtn, importBtn, autologonBtn, identityBtn
         ]);
     }
 
@@ -316,6 +322,26 @@ internal sealed class MainForm : Form
         if (!ConfigureAutologonDialog()) return;
         _autologon.Checked = true;
         _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用推荐后下次重启生效）";
+    }
+
+    private void ConfigureComputerIdentity()
+    {
+        try
+        {
+            var info = ComputerIdentityHelper.Read();
+            using var dlg = new ComputerIdentityDialog(info);
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            var msg = dlg.RestartScheduled
+                ? "计算机名/工作组已修改，系统将在 60 秒后重启（shutdown /a 可取消）。"
+                : "计算机名/工作组已修改，请尽快手动重启以完全生效。";
+            _status.Text = msg;
+            MessageBox.Show(msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "读取失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private bool EnsureAutologonReady()
@@ -816,6 +842,7 @@ internal sealed class MainForm : Form
         _noArrow.Checked = s.NoShortcutArrow;
         _fullPath.Checked = s.ExplorerFullPath;
         _allTrayIcons.Checked = s.TaskbarAllIcons;
+        _taskbarClock.Checked = s.TaskbarClockWeekdaySeconds;
         _animations.Checked = s.DisableAnimations;
         _transparency.Checked = s.DisableTransparency;
         _tips.Checked = s.DisableTips;
@@ -880,6 +907,7 @@ internal sealed class MainForm : Form
         NoShortcutArrow = _noArrow.Checked,
         ExplorerFullPath = _fullPath.Checked,
         TaskbarAllIcons = _allTrayIcons.Checked,
+        TaskbarClockWeekdaySeconds = _taskbarClock.Checked,
         DisableAnimations = _animations.Checked,
         DisableTransparency = _transparency.Checked,
         DisableTips = _tips.Checked,
@@ -992,6 +1020,7 @@ internal sealed class MainForm : Form
             "Win一键优化 v1.0\r\n" +
             "针对 Windows Server 2022/2025 个人桌面场景。\r\n\r\n" +
             "系统：" + _systemFacts.Summary + "\r\n" +
+            "计算机：" + ComputerIdentityHelper.Read().Summary + "\r\n" +
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
             "操作日志：" + ApplyLog.LogFilePath + "\r\n\r\n" +
             "预设方案对标 WinUtil；配置 JSON 导入导出。\r\n" +

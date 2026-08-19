@@ -302,6 +302,14 @@ internal static class SettingCatalog
         "立即生效。",
         SettingScope.DesktopExperience);
 
+    public static readonly SettingHelpInfo TaskbarClockWeekdaySeconds = H(
+        "任务栏右下角时钟显示星期，时间精确到秒。",
+        "ShowSecondsInSystemClock=1，并将短日期格式设为 yyyy/MM/dd dddd。",
+        "一眼看到星期几与秒级时间，适合排班、日志对照与远程桌面。",
+        "任务栏略宽；不需要时可关闭恢复系统默认格式。",
+        "应用后自动重启资源管理器使托盘时钟立即刷新。",
+        SettingScope.DesktopExperience);
+
     public static readonly SettingHelpInfo DisableAnimations = H(
         "关闭窗口最小化/任务栏等动画。",
         "MinAnimate、TaskbarAnimations 等设为关闭。",

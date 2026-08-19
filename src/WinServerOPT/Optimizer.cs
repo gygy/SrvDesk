@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32;
 
@@ -12,6 +13,9 @@ internal static class Optimizer
     internal const string AzureArcCommand = @"%windir%\AzureArcSetup\Systray\AzureArcSysTray.exe";
     internal const string PowerPlanHighPerf = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     internal const string PowerPlanBalanced = "381b4222-f694-41f0-9685-ff5bb260df2e";
+    internal const string IntlKey = @"Control Panel\International";
+    internal const string ShortDateWithWeekday = "yyyy/MM/dd dddd";
+    internal const string ShortDateDefault = "yyyy/M/d";
 
     internal sealed class State
     {
@@ -81,6 +85,7 @@ internal static class Optimizer
         public bool NoShortcutArrow;
         public bool ExplorerFullPath;
         public bool TaskbarAllIcons;
+        public bool TaskbarClockWeekdaySeconds;
 
         // 竞品高频：隐私与体验
         public bool DisableAnimations;
@@ -166,6 +171,7 @@ internal static class Optimizer
             NoShortcutArrow = IsShortcutArrowRemoved(),
             ExplorerFullPath = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", 1),
             TaskbarAllIcons = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableAutoTray", 0),
+            TaskbarClockWeekdaySeconds = IsTaskbarClockEnhanced(),
 
             DisableAnimations = IsAnimationsDisabled(),
             DisableTransparency = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", 0),
@@ -301,6 +307,7 @@ internal static class Optimizer
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", s.ExplorerFullPath ? 1 : 0));
         Try(errors, "任务栏全部图标", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableAutoTray", s.TaskbarAllIcons ? 0 : 1));
+        Try(errors, "任务栏时钟", () => SetTaskbarClockEnhanced(s.TaskbarClockWeekdaySeconds));
 
         Try(errors, "窗口动画", () => SetAnimations(!s.DisableAnimations));
         Try(errors, "透明效果", () =>
@@ -346,6 +353,63 @@ internal static class Optimizer
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", enable ? 1 : 0);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ListviewAlphaSelect", enable ? 1 : 0);
     }
+
+    private static bool IsTaskbarClockEnhanced()
+    {
+        var seconds = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", 1);
+        var shortDate = GetString(Hive.HkCu, IntlKey, "sShortDate") ?? "";
+        var hasWeekday = shortDate.IndexOf("dddd", StringComparison.OrdinalIgnoreCase) >= 0
+            || shortDate.IndexOf("ddd", StringComparison.OrdinalIgnoreCase) >= 0;
+        return seconds && hasWeekday;
+    }
+
+    private static void SetTaskbarClockEnhanced(bool enable)
+    {
+        if (enable)
+        {
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", 1);
+            SetString(Hive.HkCu, IntlKey, "sShortDate", ShortDateWithWeekday);
+        }
+        else
+        {
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", 0);
+            SetString(Hive.HkCu, IntlKey, "sShortDate", ShortDateDefault);
+        }
+
+        NotifyIntlChange();
+        RestartExplorer();
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr SendMessageTimeout(IntPtr hWnd, int msg, IntPtr wParam, string lParam, int fuFlags, int uTimeout, out IntPtr lpdwResult);
+
+    private static void NotifyIntlChange() =>
+        _ = SendMessageTimeout(new IntPtr(0xffff), 0x001A, IntPtr.Zero, "intl", 2, 1000, out _);
+
+    private static void RestartExplorer()
+    {
+        try
+        {
+            foreach (var proc in Process.GetProcessesByName("explorer"))
+            {
+                proc.Kill();
+                proc.WaitForExit(5000);
+            }
+        }
+        catch
+        {
+            // 忽略无法结束 explorer 的情况
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
+            UseShellExecute = true,
+        });
+    }
+
+    private static string? GetString(Hive hive, string key, string name) =>
+        GetValue(hive, key, name) as string;
 
     private static void SetTips(bool enable)
     {
