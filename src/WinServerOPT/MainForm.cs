@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace WinOpt;
 
 internal sealed class MainForm : Form
@@ -24,15 +26,6 @@ internal sealed class MainForm : Form
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
 
-    private static readonly Color NavBg = Color.FromArgb(245, 246, 248);
-    private static readonly Color NavText = Color.FromArgb(51, 51, 51);
-    private static readonly Color NavActive = Color.FromArgb(0, 120, 215);
-    private static readonly Color HeaderGreen = Color.FromArgb(197, 225, 165);
-    private static readonly Color RowAlt = Color.FromArgb(232, 244, 252);
-    private static readonly Color RowLine = Color.FromArgb(220, 228, 236);
-    private static readonly Color GroupBg = Color.FromArgb(238, 242, 246);
-    private static readonly Color TextMain = Color.FromArgb(33, 33, 33);
-    private static readonly Color TextMute = Color.FromArgb(117, 117, 117);
     private static readonly string[] MenuItems =
     [
         "性能及安全",
@@ -51,21 +44,24 @@ internal sealed class MainForm : Form
     {
         Text = "Win一键优化";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(980, 620);
-        ClientSize = new Size(1040, 680);
+        MinimumSize = new Size(980, 640);
+        ClientSize = new Size(1040, 700);
         Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Color.White;
-        ForeColor = TextMain;
+        BackColor = AppTheme.Surface;
+        ForeColor = AppTheme.TextMain;
+        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { /* 设计时 */ }
 
         _groups.Add(("性能及安全", [_cpu, _dep, _uac, _ie]));
         _groups.Add(("个性化设置", [_thisPc, _taskbar, _confirmDel, _audio]));
         _groups.Add(("启动项", [_svrMgr, _azure]));
         _groups.Add(("账户策略", [_pwd, _shutdownLogon, _shutdownReason, _noCad]));
 
+        var header = BuildHeader();
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
         BuildContent();
 
+        header.Dock = DockStyle.Top;
         sidebar.Dock = DockStyle.Left;
         _contentHost.Dock = DockStyle.Fill;
         bottom.Dock = DockStyle.Bottom;
@@ -73,6 +69,7 @@ internal sealed class MainForm : Form
         Controls.Add(_contentHost);
         Controls.Add(sidebar);
         Controls.Add(bottom);
+        Controls.Add(header);
 
         _menu.SelectedIndex = 0;
         ShowGroup(0);
@@ -80,25 +77,91 @@ internal sealed class MainForm : Form
         Resize += (_, _) => LayoutContent();
     }
 
+    private Panel BuildHeader()
+    {
+        var header = new Panel { Height = 56, BackColor = AppTheme.PrimaryDeep };
+        header.Paint += (_, e) =>
+        {
+            var r = header.ClientRectangle;
+            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                r, AppTheme.HeaderBarTop, AppTheme.HeaderBarBottom, 90f);
+            e.Graphics.FillRectangle(brush, r);
+        };
+
+        var logo = new PictureBox
+        {
+            Size = new Size(36, 36),
+            Location = new Point(16, 10),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.Transparent,
+        };
+        var logoImg = LoadLogo();
+        if (logoImg is not null) logo.Image = logoImg;
+
+        var brand = new Label
+        {
+            Text = "Win一键优化",
+            AutoSize = false,
+            Location = new Point(58, 0),
+            Size = new Size(220, 56),
+            ForeColor = AppTheme.TextOnPrimary,
+            Font = new Font("Microsoft YaHei UI", 13F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = Color.Transparent,
+        };
+        var sub = new Label
+        {
+            Text = "Windows Server 系统优化",
+            AutoSize = false,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(760, 0),
+            Size = new Size(260, 56),
+            ForeColor = Color.FromArgb(200, 225, 255),
+            Font = new Font("Microsoft YaHei UI", 9F),
+            TextAlign = ContentAlignment.MiddleRight,
+            BackColor = Color.Transparent,
+        };
+
+        header.Controls.Add(sub);
+        header.Controls.Add(brand);
+        header.Controls.Add(logo);
+        return header;
+    }
+
+    private static Image? LoadLogo()
+    {
+        try
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            using var stream = asm.GetManifestResourceStream("WinOpt.app.png");
+            if (stream is not null) return Image.FromStream(stream);
+        }
+        catch { /* ignore */ }
+
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
+        return File.Exists(path) ? Image.FromFile(path) : null;
+    }
+
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 168, BackColor = NavBg };
+        var sidebar = new Panel { Width = 176, BackColor = AppTheme.NavBg };
         var cap = new Label
         {
-            Text = "  常用工具",
+            Text = "  功能导航",
             Dock = DockStyle.Top,
             Height = 36,
-            ForeColor = TextMute,
+            ForeColor = AppTheme.TextMute,
             Font = new Font("Microsoft YaHei UI", 8.5F),
             TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = AppTheme.NavBg,
         };
         _menu.Dock = DockStyle.Fill;
         _menu.BorderStyle = BorderStyle.None;
-        _menu.BackColor = NavBg;
-        _menu.ForeColor = NavText;
+        _menu.BackColor = AppTheme.NavBg;
+        _menu.ForeColor = AppTheme.TextMain;
         _menu.IntegralHeight = false;
         _menu.DrawMode = DrawMode.OwnerDrawFixed;
-        _menu.ItemHeight = 40;
+        _menu.ItemHeight = 44;
         _menu.Items.AddRange(MenuItems);
         _menu.DrawItem += DrawMenuItem;
         _menu.SelectedIndexChanged += (_, _) => ShowGroup(_menu.SelectedIndex);
@@ -115,8 +178,8 @@ internal sealed class MainForm : Form
 
     private void BuildContent()
     {
-        _contentHost.BackColor = Color.White;
-        _contentHost.Padding = new Padding(0);
+        _contentHost.BackColor = AppTheme.Surface;
+        _contentHost.Padding = new Padding(12, 8, 12, 8);
         _contentHost.AutoScroll = true;
     }
 
@@ -129,9 +192,14 @@ internal sealed class MainForm : Form
         var wrap = new Panel
         {
             Location = new Point(0, 0),
-            Width = Math.Max(760, _contentHost.ClientSize.Width - 20),
+            Width = ContentWidth(),
             AutoSize = true,
-            BackColor = Color.White,
+            BackColor = AppTheme.SurfaceCard,
+        };
+        wrap.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawRectangle(pen, 0, 0, wrap.Width - 1, wrap.Height - 1);
         };
 
         var header = BuildTableHeader();
@@ -147,28 +215,36 @@ internal sealed class MainForm : Form
         _contentHost.ResumeLayout(true);
     }
 
+    private int ContentWidth() =>
+        Math.Max(760, _contentHost.ClientSize.Width - _contentHost.Padding.Horizontal);
+
     private void LayoutContent()
     {
         if (_contentHost.Controls.Count == 0) return;
         if (_contentHost.Controls[0] is Panel wrap)
-            wrap.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
+            wrap.Width = ContentWidth();
     }
 
     private Panel BuildTableHeader()
     {
-        const int h = 34;
+        const int h = 36;
         var header = new Panel
         {
             Location = new Point(0, 0),
             Height = h,
-            BackColor = HeaderGreen,
+            BackColor = AppTheme.PrimaryLight,
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
         };
-        header.Controls.Add(MakeHeaderLabel("项目", 12, 420));
-        header.Controls.Add(MakeHeaderLabel("当前用户", 440, 160, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统", 620, 160, ContentAlignment.MiddleCenter));
-        header.Resize += (_, _) => header.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
-        header.Width = Math.Max(760, _contentHost.ClientSize.Width - 20);
+        header.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AppTheme.Border);
+            e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
+        };
+        header.Controls.Add(MakeHeaderLabel("项目", 16, 420));
+        header.Controls.Add(MakeHeaderLabel("当前用户", 448, 160, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统", 628, 160, ContentAlignment.MiddleCenter));
+        header.Resize += (_, _) => header.Width = ContentWidth();
+        header.Width = ContentWidth();
         return header;
     }
 
@@ -176,48 +252,51 @@ internal sealed class MainForm : Form
     {
         Text = text,
         Location = new Point(x, 0),
-        Size = new Size(w, 34),
-        ForeColor = TextMain,
+        Size = new Size(w, 36),
+        ForeColor = AppTheme.TextHeader,
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
         TextAlign = align,
+        BackColor = Color.Transparent,
     };
 
     private Panel BuildGroupSection(string title, SettingRow[] rows)
     {
-        const int headerH = 32;
-        const int rowH = 36;
+        const int headerH = 34;
+        const int rowH = 38;
         var expanded = true;
         var section = new Panel
         {
             Location = new Point(0, 0),
-            Width = Math.Max(760, _contentHost.ClientSize.Width - 20),
+            Width = ContentWidth(),
             Height = headerH + rows.Length * rowH,
-            BackColor = Color.White,
+            BackColor = AppTheme.SurfaceCard,
         };
 
         var head = new Panel
         {
             Location = new Point(0, 0),
             Size = new Size(section.Width, headerH),
-            BackColor = GroupBg,
+            BackColor = AppTheme.GroupBg,
             Cursor = Cursors.Hand,
         };
         var arrow = new Label
         {
             Text = "▼",
-            Location = new Point(10, 6),
+            Location = new Point(12, 8),
             AutoSize = true,
-            ForeColor = TextMute,
+            ForeColor = AppTheme.PrimaryDark,
             Font = new Font("Segoe UI Symbol", 8F),
+            BackColor = Color.Transparent,
         };
         var titleLabel = new Label
         {
             Text = title,
-            Location = new Point(28, 0),
-            Size = new Size(section.Width - 40, headerH),
-            ForeColor = TextMain,
+            Location = new Point(32, 0),
+            Size = new Size(section.Width - 48, headerH),
+            ForeColor = AppTheme.TextHeader,
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = Color.Transparent,
         };
         head.Controls.Add(arrow);
         head.Controls.Add(titleLabel);
@@ -226,12 +305,12 @@ internal sealed class MainForm : Form
         {
             Location = new Point(0, headerH),
             Size = new Size(section.Width, rows.Length * rowH),
-            BackColor = Color.White,
+            BackColor = AppTheme.SurfaceCard,
         };
 
         for (var i = 0; i < rows.Length; i++)
         {
-            var bg = i % 2 == 0 ? Color.White : RowAlt;
+            var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
             rows[i].Mount(body, i * rowH, rowH, bg, section.Width);
         }
 
@@ -253,20 +332,20 @@ internal sealed class MainForm : Form
         {
             head.Width = section.Width;
             body.Width = section.Width;
-            titleLabel.Width = section.Width - 40;
+            titleLabel.Width = section.Width - 48;
         };
         return section;
     }
 
     private Panel BuildBottom()
     {
-        var bottom = new Panel { Height = 52, BackColor = Color.White };
-        var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = RowLine };
+        var bottom = new Panel { Height = 54, BackColor = AppTheme.SurfaceCard };
+        var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
-        _status.SetBounds(168, 16, 420, 22);
+        _status.SetBounds(188, 16, 400, 22);
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
-        _status.ForeColor = TextMute;
+        _status.ForeColor = AppTheme.TextMute;
         _status.Text = Optimizer.IsWindowsServer()
             ? "中间开关为推荐设置；「系统」列为出厂默认值，仅展示。"
             : "当前系统可能不是 Windows Server。";
@@ -275,21 +354,21 @@ internal sealed class MainForm : Form
         var allOff = ToolButton("全部取消", 714, 10, 88, () => SetAll(false));
         var refresh = ToolButton("刷新", 808, 10, 72, LoadState);
         var about = ToolButton("关于", 884, 10, 72, ShowAbout);
-        allOn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        allOff.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        about.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        foreach (var b in new[] { allOn, allOff, refresh, about })
+            b.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
         _apply.Text = "一键优化";
-        _apply.SetBounds(962, 8, 68, 34);
+        _apply.SetBounds(962, 8, 68, 36);
         _apply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
-        _apply.BackColor = NavActive;
-        _apply.ForeColor = Color.White;
+        _apply.BackColor = AppTheme.Primary;
+        _apply.ForeColor = AppTheme.TextOnPrimary;
         _apply.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         _apply.Cursor = Cursors.Hand;
         _apply.Click += (_, _) => Apply();
+        _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
+        _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
         bottom.Controls.AddRange([rule, _status, allOn, allOff, refresh, about, _apply]);
         return bottom;
@@ -300,14 +379,19 @@ internal sealed class MainForm : Form
         if (e.Index < 0) return;
         var selected = (e.State & DrawItemState.Selected) != 0;
         var hover = e.Index == _menuHover && !selected;
-        using var back = new SolidBrush(selected ? NavActive : hover ? Color.FromArgb(230, 236, 244) : NavBg);
+        using var back = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
         e.Graphics.FillRectangle(back, e.Bounds);
+        if (selected)
+        {
+            using var accent = new SolidBrush(AppTheme.PrimarySoft);
+            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
+        }
         TextRenderer.DrawText(
             e.Graphics,
             MenuItems[e.Index],
-            Font,
-            new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - 20, e.Bounds.Height),
-            selected ? Color.White : NavText,
+            selected ? new Font(Font, FontStyle.Bold) : Font,
+            new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
+            selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }
 
@@ -403,11 +487,13 @@ internal sealed class MainForm : Form
             Location = new Point(x, y),
             Size = new Size(w, 32),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White,
-            ForeColor = TextMain,
+            BackColor = AppTheme.SurfaceCard,
+            ForeColor = AppTheme.TextMain,
             Cursor = Cursors.Hand,
         };
-        b.FlatAppearance.BorderColor = RowLine;
+        b.FlatAppearance.BorderColor = AppTheme.Border;
+        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
+        b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
         b.Click += (_, _) => click();
         return b;
     }
@@ -424,16 +510,18 @@ internal sealed class MainForm : Form
             {
                 Text = item,
                 AutoSize = false,
-                ForeColor = TextMain,
+                ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.Transparent,
             };
             _toggle = new ToggleSwitch();
             _system = new Label
             {
                 Text = systemDefault,
                 AutoSize = false,
-                ForeColor = TextMute,
+                ForeColor = AppTheme.TextMute,
                 TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent,
             };
         }
 
@@ -451,15 +539,15 @@ internal sealed class MainForm : Form
                 Size = new Size(width, h),
                 BackColor = bg,
             };
-            _item.SetBounds(12, 0, 420, h);
-            _toggle.Location = new Point(484, (h - _toggle.Height) / 2);
-            _system.SetBounds(620, 0, 160, h);
+            _item.SetBounds(16, 0, 420, h);
+            _toggle.Location = new Point(500, (h - _toggle.Height) / 2);
+            _system.SetBounds(628, 0, 160, h);
             wrap.Controls.Add(_item);
             wrap.Controls.Add(_toggle);
             wrap.Controls.Add(_system);
             wrap.Controls.Add(new Panel
             {
-                BackColor = RowLine,
+                BackColor = AppTheme.BorderLight,
                 Dock = DockStyle.Bottom,
                 Height = 1,
             });

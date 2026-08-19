@@ -4,17 +4,11 @@ internal sealed class ToggleSwitch : Control
 {
     private bool _checked;
 
-    private static readonly Color OnLeft = Color.FromArgb(94, 53, 177);
-    private static readonly Color OnRight = Color.FromArgb(55, 55, 55);
-    private static readonly Color OffLeft = Color.FromArgb(55, 55, 55);
-    private static readonly Color OffRight = Color.FromArgb(189, 189, 189);
-    private static readonly Color Knob = Color.White;
-
     public ToggleSwitch()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
-        Size = new Size(72, 28);
+        Size = new Size(56, 26);
         Cursor = Cursors.Hand;
         TabStop = true;
     }
@@ -53,21 +47,39 @@ internal sealed class ToggleSwitch : Control
     {
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        var r = ClientRectangle;
-        r.Inflate(-1, -1);
-        var half = r.Width / 2;
-        var left = new Rectangle(r.X, r.Y, half, r.Height);
-        var right = new Rectangle(r.X + half, r.Y, r.Width - half, r.Height);
+        var track = ClientRectangle;
+        track.Inflate(-1, -3);
+        var radius = track.Height / 2;
 
-        using var leftBrush = new SolidBrush(_checked ? OnLeft : OffLeft);
-        using var rightBrush = new SolidBrush(_checked ? OnRight : OffRight);
-        g.FillRectangle(leftBrush, left);
-        g.FillRectangle(rightBrush, right);
+        var trackColor = _checked ? AppTheme.ToggleOn : AppTheme.ToggleOff;
+        using (var path = RoundedRect(track, radius))
+        using (var brush = new SolidBrush(trackColor))
+            g.FillPath(brush, path);
 
-        var knobW = Math.Max(10, r.Width / 5);
-        var knobX = _checked ? r.Right - knobW - 4 : r.X + 4;
-        var knob = new Rectangle(knobX, r.Y + 3, knobW, r.Height - 6);
-        using var knobBrush = new SolidBrush(Knob);
-        g.FillRectangle(knobBrush, knob);
+        if (_checked)
+        {
+            using var glow = new SolidBrush(Color.FromArgb(40, 255, 255, 255));
+            var glowRect = new Rectangle(track.X + 2, track.Y + 2, track.Width / 2, track.Height - 4);
+            using var glowPath = RoundedRect(glowRect, radius - 2);
+            g.FillPath(glow, glowPath);
+        }
+
+        var knobSize = track.Height - 4;
+        var knobX = _checked ? track.Right - knobSize - 2 : track.X + 2;
+        var knob = new Rectangle(knobX, track.Y + 2, knobSize, knobSize);
+        using var knobBrush = new SolidBrush(AppTheme.ToggleKnob);
+        g.FillEllipse(knobBrush, knob);
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle rect, int radius)
+    {
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }
