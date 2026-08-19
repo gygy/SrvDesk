@@ -8,12 +8,26 @@ internal sealed class MainForm : Form
     private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略");
     private readonly SettingRow _uac = Row("禁用用户账户控制 UAC", "启用");
     private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启");
+    private readonly SettingRow _highPerf = Row("高性能电源计划", "平衡");
+    private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启");
+    private readonly SettingRow _noUpdateReboot = Row("更新时不自动重启", "允许重启");
+    private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启");
+    private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启");
+
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示");
     private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小");
     private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示");
     private readonly SettingRow _audio = Row("启动音频服务", "不启动");
+    private readonly SettingRow _fileExt = Row("显示已知文件扩展名", "隐藏");
+    private readonly SettingRow _themes = Row("启用主题服务（完整桌面外观）", "手动");
+    private readonly SettingRow _search = Row("启用 Windows 搜索", "禁用");
+
+    private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用");
+    private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭");
+
     private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开");
     private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动");
+
     private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合");
     private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许");
     private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示");
@@ -30,14 +44,18 @@ internal sealed class MainForm : Form
     [
         "性能及安全",
         "个性化设置",
+        "远程与网络",
         "启动项",
         "账户策略",
     ];
 
     private SettingRow[] AllRows =>
     [
-        _cpu, _dep, _uac, _ie, _thisPc, _taskbar, _confirmDel, _audio,
-        _svrMgr, _azure, _pwd, _shutdownLogon, _shutdownReason, _noCad
+        _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _errorReport,
+        _thisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
+        _rdp, _netDiscovery,
+        _svrMgr, _azure,
+        _pwd, _shutdownLogon, _shutdownReason, _noCad
     ];
 
     public MainForm()
@@ -51,8 +69,9 @@ internal sealed class MainForm : Form
         ForeColor = AppTheme.TextMain;
         try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { /* 设计时 */ }
 
-        _groups.Add(("性能及安全", [_cpu, _dep, _uac, _ie]));
-        _groups.Add(("个性化设置", [_thisPc, _taskbar, _confirmDel, _audio]));
+        _groups.Add(("性能及安全", [_cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _errorReport]));
+        _groups.Add(("个性化设置", [_thisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search]));
+        _groups.Add(("远程与网络", [_rdp, _netDiscovery]));
         _groups.Add(("启动项", [_svrMgr, _azure]));
         _groups.Add(("账户策略", [_pwd, _shutdownLogon, _shutdownReason, _noCad]));
 
@@ -111,7 +130,7 @@ internal sealed class MainForm : Form
         };
         var sub = new Label
         {
-            Text = "Windows Server 系统优化",
+            Text = "Windows Server 2022 / 2025 个人优化",
             AutoSize = false,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(760, 0),
@@ -144,7 +163,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 176, BackColor = AppTheme.NavBg };
+        var sidebar = new Panel { Width = 184, BackColor = AppTheme.NavBg };
         var cap = new Label
         {
             Text = "  功能导航",
@@ -347,7 +366,7 @@ internal sealed class MainForm : Form
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
         _status.Text = Optimizer.IsWindowsServer()
-            ? "中间开关为推荐设置；「系统」列为出厂默认值，仅展示。"
+            ? "面向 Server 个人日常使用。开关开启为推荐；「系统」列为 Server 出厂默认。"
             : "当前系统可能不是 Windows Server。";
 
         var allOn = ToolButton("全部选择", 620, 10, 88, () => SetAll(true));
@@ -407,10 +426,20 @@ internal sealed class MainForm : Form
         _dep.Checked = s.Dep;
         _uac.Checked = s.DisableUac;
         _ie.Checked = s.DisableIeEsc;
+        _highPerf.Checked = s.HighPerfPower;
+        _telemetry.Checked = s.DisableTelemetry;
+        _noUpdateReboot.Checked = s.NoUpdateReboot;
+        _deliveryOpt.Checked = s.DisableDeliveryOpt;
+        _errorReport.Checked = s.DisableErrorReport;
         _thisPc.Checked = s.ShowThisPcIcon;
         _taskbar.Checked = s.SmallTaskbar;
         _confirmDel.Checked = s.ConfirmDelete;
         _audio.Checked = s.EnableAudio;
+        _fileExt.Checked = s.ShowFileExtensions;
+        _themes.Checked = s.EnableThemes;
+        _search.Checked = s.EnableSearch;
+        _rdp.Checked = s.EnableRdp;
+        _netDiscovery.Checked = s.EnableNetworkDiscovery;
         _svrMgr.Checked = s.SkipServerManager;
         _azure.Checked = s.DisableAzureArc;
         _pwd.Checked = s.DisablePasswordComplexity;
@@ -425,10 +454,20 @@ internal sealed class MainForm : Form
         Dep = _dep.Checked,
         DisableUac = _uac.Checked,
         DisableIeEsc = _ie.Checked,
+        HighPerfPower = _highPerf.Checked,
+        DisableTelemetry = _telemetry.Checked,
+        NoUpdateReboot = _noUpdateReboot.Checked,
+        DisableDeliveryOpt = _deliveryOpt.Checked,
+        DisableErrorReport = _errorReport.Checked,
         ShowThisPcIcon = _thisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
         ConfirmDelete = _confirmDel.Checked,
         EnableAudio = _audio.Checked,
+        ShowFileExtensions = _fileExt.Checked,
+        EnableThemes = _themes.Checked,
+        EnableSearch = _search.Checked,
+        EnableRdp = _rdp.Checked,
+        EnableNetworkDiscovery = _netDiscovery.Checked,
         SkipServerManager = _svrMgr.Checked,
         DisableAzureArc = _azure.Checked,
         DisablePasswordComplexity = _pwd.Checked,
@@ -470,7 +509,8 @@ internal sealed class MainForm : Form
     private static void ShowAbout()
     {
         MessageBox.Show(
-            "Windows Server 日常使用优化工具。\r\n中间开关控制是否采用推荐设置；右侧「系统」列为出厂默认值。",
+            "Windows Server 2022 / 2025 个人日常使用优化。\r\n" +
+            "推荐项覆盖远程桌面、桌面体验、更新策略等 Server 个人高频设置。",
             "关于 Win一键优化",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
@@ -539,7 +579,7 @@ internal sealed class MainForm : Form
                 Size = new Size(width, h),
                 BackColor = bg,
             };
-            _item.SetBounds(16, 0, 420, h);
+            _item.SetBounds(16, 0, 460, h);
             _toggle.Location = new Point(500, (h - _toggle.Height) / 2);
             _system.SetBounds(628, 0, 160, h);
             wrap.Controls.Add(_item);

@@ -122,7 +122,7 @@ internal static class Optimizer
         Try(errors, "文件扩展名", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", s.ShowFileExtensions ? 0 : 1));
         Try(errors, "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
-        Try(errors, "Windows搜索", () => SetService("WSearch", s.EnableSearch, disableWhenOff: true));
+        Try(errors, "Windows搜索", () => SetService("WSearch", s.EnableSearch, disableWhenOff: false));
 
         Try(errors, "远程桌面", () => SetRdp(s.EnableRdp));
         Try(errors, "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
