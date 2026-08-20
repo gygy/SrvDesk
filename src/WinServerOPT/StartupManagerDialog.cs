@@ -69,7 +69,10 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
             RefreshList);
 
         _filter.SelectedIndex = 0;
-        Load += (_, _) => RefreshList();
+        Shown += (_, _) =>
+        {
+            if (_items.Count == 0) RefreshList();
+        };
         Resize += (_, _) =>
         {
             if (_list.Columns.Count >= 5)

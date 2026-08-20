@@ -11,9 +11,10 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _prelaunch = new("禁用应用预启动");
     private readonly InstantToggleRow _page = new("禁用内存页面合并");
     private readonly InstantToggleRow _ucpd = new("禁止微软 UCPD 驱动");
+    private readonly InstantToggleRow _prefetchRead = new("应用启动预取（只读）");
     private readonly NumericUpDown _port = new();
     private readonly NumericUpDown _prefetch = new();
-    private readonly InstantToggleRow _prefetchRead = new("应用启动预取（只读）");
+    private bool _loaded;
 
     public OtherSettingsDialog()
     {
@@ -22,29 +23,53 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(860, 560);
+        ClientSize = new Size(860, 620);
         MinimumSize = new Size(720, 480);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var grid = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            ColumnCount = 3,
-            RowCount = 3,
-            Padding = new Padding(0, 0, 0, 8),
-        };
-        for (var i = 0; i < 3; i++)
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
+        var power = ThemedSettingsChrome.CreateSection("电源与休眠", [_hibernate, _fast]);
+        power.Dock = DockStyle.Top;
+        var remote = BuildRemoteSection();
+        remote.Dock = DockStyle.Top;
+        var svc = ThemedSettingsChrome.CreateSection("后台服务与内存", [_sysmain, _memComp, _prelaunch, _page, _ucpd]);
+        svc.Dock = DockStyle.Top;
+        var prefetch = BuildPrefetchSection();
+        prefetch.Dock = DockStyle.Top;
+        var search = BuildSearchTools();
+        search.Dock = DockStyle.Top;
+
+        body.Controls.Add(search);
+        body.Controls.Add(prefetch);
+        body.Controls.Add(svc);
+        body.Controls.Add(remote);
+        body.Controls.Add(power);
+
+        ThemedSettingsChrome.MountEmbedded(
+            this,
+            "系统服务",
+            "休眠 · 远程桌面 · SysMain · 内存与预取 · 开关立即生效",
+            body,
+            "UCPD 为微软用户选择保护驱动，禁用后可修改默认浏览器等关联。",
+            LoadValues);
+
+        Shown += (_, _) =>
+        {
+            if (_loaded) return;
+            _loaded = true;
+            BeginInvoke(new Action(LoadValues));
+        };
+    }
+
+    public void RefreshFromSystem() => LoadValues();
+
+    private Panel BuildRemoteSection()
+    {
         _port.Minimum = 1;
         _port.Maximum = 65535;
-        _port.Width = 80;
+        _port.Width = 90;
         var portBtn = ThemedSettingsChrome.CreateButton("更改端口", false);
-        portBtn.AutoSize = true;
+        portBtn.Size = new Size(96, 30);
         portBtn.Click += (_, _) =>
         {
             try
@@ -54,45 +79,123 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "远程桌面", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
-        var rdpExtra = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
-        rdpExtra.Controls.Add(new Label { Text = "端口", AutoSize = true, Padding = new Padding(0, 8, 6, 0) });
-        rdpExtra.Controls.Add(_port);
-        rdpExtra.Controls.Add(portBtn);
 
+        var portRow = new FlowLayoutPanel
+        {
+            Height = 38,
+            Dock = DockStyle.Top,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(4, 4, 0, 0),
+        };
+        portRow.Controls.Add(new Label
+        {
+            Text = "RDP 端口",
+            AutoSize = true,
+            Padding = new Padding(0, 6, 8, 0),
+            ForeColor = AppTheme.TextMain,
+        });
+        portRow.Controls.Add(_port);
+        portRow.Controls.Add(portBtn);
+
+        var card = ThemedSettingsChrome.CreateSectionCard("远程桌面");
+        card.Dock = DockStyle.Top;
+        card.Height = 34 + 3 * 38 + 16;
+        card.Padding = new Padding(10, 6, 10, 8);
+        var host = new Panel { Dock = DockStyle.Fill };
+        _ra.Dock = DockStyle.Top;
+        _rdp.Dock = DockStyle.Top;
+        host.Controls.Add(portRow);
+        host.Controls.Add(_ra);
+        host.Controls.Add(_rdp);
+        card.Controls.Add(host);
+        return card;
+    }
+
+    private Panel BuildPrefetchSection()
+    {
         _prefetch.Minimum = 32;
         _prefetch.Maximum = 4096;
-        _prefetch.Width = 80;
+        _prefetch.Width = 90;
         var pfBtn = ThemedSettingsChrome.CreateButton("应用", true);
-        pfBtn.AutoSize = true;
+        pfBtn.Size = new Size(72, 30);
         pfBtn.Click += (_, _) =>
         {
             EasySettingsTweaks.SetMaxPrefetchFiles((int)_prefetch.Value);
             MessageBox.Show("已写入最大预取文件数。", "预取", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
-        var pfRow = new FlowLayoutPanel { AutoSize = true };
+
+        var pfRow = new FlowLayoutPanel
+        {
+            Height = 38,
+            Dock = DockStyle.Top,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(4, 4, 0, 0),
+        };
+        pfRow.Controls.Add(new Label
+        {
+            Text = "最大预取文件数",
+            AutoSize = true,
+            Padding = new Padding(0, 6, 8, 0),
+        });
         pfRow.Controls.Add(_prefetch);
         pfRow.Controls.Add(pfBtn);
+
         _prefetchRead.Enabled = false;
-
-        grid.Controls.Add(Tile("电源与休眠", _hibernate, _fast), 0, 0);
-        grid.Controls.Add(Tile("远程桌面", _rdp, _ra, rdpExtra), 1, 0);
-        grid.Controls.Add(Tile("后台服务", _sysmain, _memComp), 2, 0);
-        grid.Controls.Add(Tile("内存优化", _prelaunch, _page), 0, 1);
-        grid.Controls.Add(Tile("预取设置", pfRow, _prefetchRead), 1, 1);
-        grid.Controls.Add(Tile("系统驱动", _ucpd), 2, 1);
-
-        body.Controls.Add(grid);
-        ThemedSettingsChrome.MountEmbedded(
-            this,
-            "系统服务",
-            "休眠 · 远程桌面 · SysMain · 内存与预取 · 开关立即生效",
-            body,
-            "UCPD 为微软用户选择保护驱动，禁用后可修改默认浏览器等关联。",
-            LoadValues);
-        Load += (_, _) => LoadValues();
+        var card = ThemedSettingsChrome.CreateSectionCard("预取设置");
+        card.Dock = DockStyle.Top;
+        card.Height = 34 + 2 * 38 + 16;
+        var host = new Panel { Dock = DockStyle.Fill };
+        _prefetchRead.Dock = DockStyle.Top;
+        host.Controls.Add(pfRow);
+        host.Controls.Add(_prefetchRead);
+        card.Controls.Add(host);
+        return card;
     }
 
-    public void RefreshFromSystem() => LoadValues();
+    private Panel BuildSearchTools()
+    {
+        var card = ThemedSettingsChrome.CreateSectionCard("搜索服务与防火墙");
+        card.Dock = DockStyle.Top;
+        card.Height = 120;
+        var host = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(4, 28, 4, 4),
+        };
+        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        row.Controls.Add(MkBtn("停止并禁止 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(false)));
+        row.Controls.Add(MkBtn("恢复 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(true)));
+        row.Controls.Add(MkBtn("添加搜索防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
+        row.Controls.Add(MkBtn("移除搜索防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
+        host.Controls.Add(row);
+        card.Controls.Add(host);
+        return card;
+    }
+
+    private static Button MkBtn(string text, Action click)
+    {
+        var b = ThemedSettingsChrome.CreateButton(text, false);
+        b.AutoSize = true;
+        b.Height = 32;
+        b.Margin = new Padding(0, 0, 8, 8);
+        b.Click += (_, _) =>
+        {
+            try
+            {
+                click();
+                MessageBox.Show("已完成。", text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        };
+        return b;
+    }
 
     private void LoadValues()
     {
@@ -109,26 +212,5 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         _prefetchRead.Bind(EasySettingsTweaks.IsAppLaunchPrefetchOn(), _ => { });
         _port.Value = Math.Min(_port.Maximum, Math.Max(_port.Minimum, EasySettingsTweaks.GetRdpPort()));
         _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));
-    }
-
-    private static Panel Tile(string title, params Control[] children)
-    {
-        var card = ThemedSettingsChrome.CreateSectionCard(title);
-        card.Dock = DockStyle.Fill;
-        card.Margin = new Padding(4);
-        card.AutoSize = true;
-        card.Padding = new Padding(8, 32, 8, 10);
-
-        var host = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-        };
-        foreach (var c in children)
-            host.Controls.Add(c);
-        card.Controls.Add(host);
-        return card;
     }
 }

@@ -29,13 +29,23 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(560, 360);
-        MinimumSize = new Size(480, 320);
+        ClientSize = new Size(640, 420);
+        MinimumSize = new Size(520, 360);
 
-        var card = ThemedSettingsChrome.CreateSectionCard("网卡 DNS");
-        card.Dock = DockStyle.Top;
-        card.AutoSize = true;
-        card.Padding = new Padding(16, 36, 16, 16);
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+        var card = new Panel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(16, 16, 16, 16),
+            Margin = new Padding(0, 0, 0, 8),
+        };
+        card.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+        };
 
         var form = new TableLayoutPanel
         {
@@ -44,11 +54,12 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             ColumnCount = 2,
             Padding = new Padding(0),
         };
-        form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 56));
+        form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         _preset.DropDownStyle = ComboBoxStyle.DropDownList;
         _preset.Dock = DockStyle.Fill;
+        _preset.Height = 28;
         foreach (var p in Presets) _preset.Items.Add(p.Name);
         _preset.SelectedIndex = 0;
         _preset.SelectedIndexChanged += (_, _) =>
@@ -62,15 +73,16 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
 
         _primary.Dock = DockStyle.Fill;
         _secondary.Dock = DockStyle.Fill;
-
         AddRow(form, "预设", _preset);
         AddRow(form, "首选", _primary);
         AddRow(form, "备选", _secondary);
 
         _current.AutoSize = false;
-        _current.Height = 48;
+        _current.MinimumSize = new Size(200, 72);
+        _current.Height = 72;
         _current.Dock = DockStyle.Top;
         _current.ForeColor = AppTheme.TextMute;
+        _current.Padding = new Padding(0, 10, 0, 0);
         _current.Text = CurrentSummary();
 
         var actions = new FlowLayoutPanel
@@ -86,6 +98,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
         flush.Size = new Size(120, 34);
+        flush.Margin = new Padding(0, 0, 8, 0);
         flush.Click += (_, _) =>
         {
             HostsFileHelper.FlushDns();
@@ -97,8 +110,6 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         card.Controls.Add(actions);
         card.Controls.Add(_current);
         card.Controls.Add(form);
-
-        var body = ThemedSettingsChrome.CreateBodyPanel();
         body.Controls.Add(card);
 
         ThemedSettingsChrome.MountEmbedded(
@@ -107,6 +118,8 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             "应用到已连接的以太网/无线网卡 · 修改后立即刷新缓存",
             body,
             "DHCP 模式会恢复为自动获取 DNS。");
+
+        Shown += (_, _) => _current.Text = CurrentSummary();
     }
 
     public void RefreshFromSystem() => _current.Text = CurrentSummary();
@@ -114,13 +127,13 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
     private static void AddRow(TableLayoutPanel grid, string label, Control control)
     {
         var row = grid.RowCount++;
-        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
         grid.Controls.Add(new Label
         {
             Text = label,
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
-            Padding = new Padding(0, 6, 0, 0),
+            Padding = new Padding(0, 8, 0, 0),
         }, 0, row);
         grid.Controls.Add(control, 1, row);
     }
@@ -136,9 +149,11 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
                 if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback) continue;
                 var dns = nic.GetIPProperties().DnsAddresses;
                 if (dns.Count == 0) continue;
-                lines.Add(nic.Name + "：" + string.Join(", ", dns.Take(3).Select(a => a.ToString())));
+                lines.Add(nic.Name + "：" + string.Join(", ", dns.Take(4).Select(a => a.ToString())));
             }
-            return lines.Count == 0 ? "未检测到已连接网卡的 DNS。" : string.Join("\r\n", lines.Take(3));
+            return lines.Count == 0
+                ? "未检测到已连接网卡的 DNS。"
+                : "当前 DNS：\r\n" + string.Join("\r\n", lines.Take(4));
         }
         catch { return "无法读取当前 DNS。"; }
     }

@@ -184,10 +184,11 @@ internal sealed class MainForm : Form
     private string _defaultStatusText = "";
 
     private Form? _embeddedPage;
+    private readonly Dictionary<string, Form> _pageCache = new(StringComparer.Ordinal);
 
     private static readonly string[] EmbeddedPageTitles =
     [
-        "资源管理器", "隐私与搜索", "系统服务", "登录启动项", "DNS 设置",
+        "资源管理器", "系统服务", "登录启动项", "DNS 设置",
     ];
 
     private static readonly string[] MenuItems =
@@ -199,7 +200,6 @@ internal sealed class MainForm : Form
         "系统组件",
         "账户策略",
         "资源管理器",
-        "隐私与搜索",
         "系统服务",
         "登录启动项",
         "DNS 设置",
@@ -260,6 +260,8 @@ internal sealed class MainForm : Form
         _groups.Add(("隐私与体验", [
             _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
             _searchHighlights, _recommended, _stickyKeys,
+            _cloudSearch, _webSearch, _searchHistory, _adTracking, _langList, _trackApps, _settingsSuggest, _inking,
+            _deliveryOpt, _msrt, _wuPause2035,
             _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
             _insider, _storeUpd
         ]));
@@ -293,7 +295,7 @@ internal sealed class MainForm : Form
         Load += (_, _) => InitializeRuntime();
         FormClosed += (_, _) =>
         {
-            DisposeEmbeddedPage();
+            ClearPageCache();
             _toolTip.Dispose();
         };
         Resize += (_, _) => LayoutContent();
@@ -805,24 +807,14 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 210, BackColor = AppTheme.NavBg };
-        var cap = new Label
-        {
-            Text = "  批量优化",
-            Dock = DockStyle.Top,
-            Height = 36,
-            ForeColor = AppTheme.TextMute,
-            Font = new Font("Microsoft YaHei UI", 8.5F),
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = AppTheme.NavBg,
-        };
+        var sidebar = new Panel { Width = 196, BackColor = AppTheme.NavBg };
         _menu.Dock = DockStyle.Fill;
         _menu.BorderStyle = BorderStyle.None;
         _menu.BackColor = AppTheme.NavBg;
         _menu.ForeColor = AppTheme.TextMain;
         _menu.IntegralHeight = false;
         _menu.DrawMode = DrawMode.OwnerDrawFixed;
-        _menu.ItemHeight = 48;
+        _menu.ItemHeight = 44;
         _menu.Items.AddRange(MenuItems);
         _menu.DrawItem += DrawMenuItem;
         _menu.SelectedIndexChanged += (_, _) => ShowGroup(_menu.SelectedIndex);
@@ -833,7 +825,6 @@ internal sealed class MainForm : Form
         };
         _menu.MouseLeave += (_, _) => { _menuHover = -1; _menu.Invalidate(); };
         sidebar.Controls.Add(_menu);
-        sidebar.Controls.Add(cap);
         return sidebar;
     }
 
@@ -898,18 +889,31 @@ internal sealed class MainForm : Form
     private void ShowEmbeddedPage(int index)
     {
         var title = MenuItems[index];
-        Form page = title switch
-        {
-            "资源管理器" => new ExplorerSettingsDialog(),
-            "隐私与搜索" => new PrivacySettingsDialog(),
-            "系统服务" => new OtherSettingsDialog(),
-            "登录启动项" => new StartupManagerDialog(),
-            "DNS 设置" => new DnsSwitcherDialog(),
-            _ => throw new InvalidOperationException(title),
-        };
-
         SetBatchMode(batch: false);
-        DisposeEmbeddedPage();
+
+        if (_embeddedPage is not null)
+        {
+            _contentHost.Controls.Remove(_embeddedPage);
+            _embeddedPage = null;
+        }
+
+        if (!_pageCache.TryGetValue(title, out var page))
+        {
+            page = title switch
+            {
+                "资源管理器" => new ExplorerSettingsDialog(),
+                "系统服务" => new OtherSettingsDialog(),
+                "登录启动项" => new StartupManagerDialog(),
+                "DNS 设置" => new DnsSwitcherDialog(),
+                _ => throw new InvalidOperationException(title),
+            };
+            page.TopLevel = false;
+            page.FormBorderStyle = FormBorderStyle.None;
+            page.ControlBox = false;
+            page.Dock = DockStyle.Fill;
+            _pageCache[title] = page;
+        }
+
         _activeRows = [];
         _activeSection = null;
         _activeBody = null;
@@ -917,15 +921,10 @@ internal sealed class MainForm : Form
         _contentHost.AutoScroll = false;
         _contentHost.SuspendLayout();
         _contentHost.Controls.Clear();
-
-        page.TopLevel = false;
-        page.FormBorderStyle = FormBorderStyle.None;
-        page.ControlBox = false;
-        page.Dock = DockStyle.Fill;
-        page.Visible = true;
         _embeddedPage = page;
+        page.Visible = true;
         _contentHost.Controls.Add(page);
-        page.Show();
+        if (!page.IsHandleCreated) page.Show();
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
     }
@@ -940,8 +939,15 @@ internal sealed class MainForm : Form
     {
         if (_embeddedPage is null) return;
         _contentHost.Controls.Remove(_embeddedPage);
-        _embeddedPage.Dispose();
         _embeddedPage = null;
+    }
+
+    private void ClearPageCache()
+    {
+        DisposeEmbeddedPage();
+        foreach (var page in _pageCache.Values)
+            page.Dispose();
+        _pageCache.Clear();
     }
 
     private void ShowHelp(SettingRow row)
@@ -1192,37 +1198,28 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
-        var instantStart = _groups.Count;
         var selected = (e.State & DrawItemState.Selected) != 0;
         var hover = e.Index == _menuHover && !selected;
         using var back = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
         e.Graphics.FillRectangle(back, e.Bounds);
 
-        var textRect = new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height);
-        if (e.Index == instantStart)
+        if (e.Index == _groups.Count)
         {
             using var sep = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawLine(sep, e.Bounds.X + 10, e.Bounds.Y + 2, e.Bounds.Right - 10, e.Bounds.Y + 2);
-            TextRenderer.DrawText(
-                e.Graphics, "即时设置",
-                new Font(Font.FontFamily, 7.5f),
-                new Rectangle(e.Bounds.X + 18, e.Bounds.Y + 5, e.Bounds.Width - 22, 12),
-                AppTheme.TextMute, TextFormatFlags.Left);
-            textRect = new Rectangle(e.Bounds.X + 18, e.Bounds.Y + 20, e.Bounds.Width - 22, e.Bounds.Height - 20);
+            e.Graphics.DrawLine(sep, e.Bounds.X + 12, e.Bounds.Y + 1, e.Bounds.Right - 12, e.Bounds.Y + 1);
         }
 
         if (selected)
         {
             using var accent = new SolidBrush(AppTheme.PrimarySoft);
-            var accentY = e.Index == instantStart ? e.Bounds.Y + 18 : e.Bounds.Y + 8;
-            e.Graphics.FillRectangle(accent, e.Bounds.X, accentY, 3, e.Bounds.Height - accentY + e.Bounds.Y - 8);
+            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
         }
 
         TextRenderer.DrawText(
             e.Graphics,
             MenuItems[e.Index],
             selected ? new Font(Font, FontStyle.Bold) : Font,
-            textRect,
+            new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
             selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }

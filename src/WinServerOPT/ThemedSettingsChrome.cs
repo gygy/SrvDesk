@@ -3,27 +3,30 @@ namespace WinOpt;
 internal sealed class InstantToggleRow : Panel
 {
     private readonly ToggleSwitch _toggle = new();
+    private readonly Label _label;
     private bool _suppress;
     private Action<bool>? _apply;
 
     public InstantToggleRow(string title)
     {
         Height = 38;
-        Width = 520;
+        Dock = DockStyle.Top;
+        MinimumSize = new Size(200, 38);
         BackColor = Color.Transparent;
 
         _toggle.Location = new Point(4, 6);
-        var label = new Label
+        _label = new Label
         {
             Text = title,
             AutoSize = false,
             Location = new Point(68, 2),
-            Size = new Size(520, 34),
+            Size = new Size(200, 34),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             TextAlign = ContentAlignment.MiddleLeft,
             Cursor = Cursors.Hand,
             BackColor = Color.Transparent,
         };
-        label.Click += (_, _) => _toggle.Checked = !_toggle.Checked;
+        _label.Click += (_, _) => _toggle.Checked = !_toggle.Checked;
         _toggle.CheckedChanged += (_, _) =>
         {
             if (_suppress || _apply is null) return;
@@ -36,8 +39,9 @@ internal sealed class InstantToggleRow : Panel
                 _suppress = false;
             }
         };
-        Controls.Add(label);
+        Controls.Add(_label);
         Controls.Add(_toggle);
+        Resize += (_, _) => _label.Width = Math.Max(120, ClientSize.Width - 76);
     }
 
     public bool Checked
