@@ -6,6 +6,7 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly Panel _listHost = new();
     private readonly Label _subtitle = new();
     private readonly Label _wingetHint = new();
+    private readonly Button _installWingetBtn = new();
     private readonly ListBox _categoryMenu = new();
     private readonly Dictionary<string, CommonSoftwareRow> _rows = new(StringComparer.OrdinalIgnoreCase);
     private string _selectedCategory = "全部";
@@ -218,16 +219,28 @@ internal sealed class CommonSoftwareDialog : Form
 
         _wingetHint.AutoSize = false;
         _wingetHint.Location = new Point(0, 10);
-        _wingetHint.Size = new Size(420, 22);
+        _wingetHint.Size = new Size(360, 22);
         _wingetHint.ForeColor = AppTheme.TextMute;
+
+        _installWingetBtn.Text = "一键安装 winget";
+        _installWingetBtn.Location = new Point(368, 6);
+        _installWingetBtn.Size = new Size(120, 28);
+        _installWingetBtn.FlatStyle = FlatStyle.Flat;
+        _installWingetBtn.BackColor = AppTheme.Primary;
+        _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
+        _installWingetBtn.Cursor = Cursors.Hand;
+        _installWingetBtn.FlatAppearance.BorderSize = 0;
+        _installWingetBtn.Visible = false;
+        _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
         _askBeforeInstall.Text = "安装前询问确认";
         _askBeforeInstall.Checked = true;
         _askBeforeInstall.AutoSize = true;
-        _askBeforeInstall.Location = new Point(440, 10);
+        _askBeforeInstall.Location = new Point(500, 10);
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
 
         strip.Controls.Add(_wingetHint);
+        strip.Controls.Add(_installWingetBtn);
         strip.Controls.Add(_askBeforeInstall);
         return strip;
     }
@@ -337,12 +350,13 @@ internal sealed class CommonSoftwareDialog : Form
     private void RefreshAll()
     {
         var wingetOk = CommonSoftwareHelper.IsWingetAvailable();
+        _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
-            ? "已检测到 winget，可一键静默安装。"
-            : "未检测到 winget，将打开官方下载页。";
+            ? "已检测到 winget，可一键静默安装其它软件。"
+            : "未检测到 winget，请先安装后再使用一键安装其它软件。";
         _subtitle.Text = wingetOk
             ? "官方源下载与安装 · 已启用 winget"
-            : "官方源下载与安装 · 浏览器下载模式";
+            : "官方源下载与安装 · 需先安装 winget";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
         if (_rows.Count == 0) BuildList();
@@ -350,8 +364,52 @@ internal sealed class CommonSoftwareDialog : Form
             row.RefreshStatus();
     }
 
+    private void InstallWingetNow()
+    {
+        var winget = CommonSoftwareCatalog.Find("winget");
+        if (winget is null) return;
+
+        if (_askBeforeInstall.Checked)
+        {
+            var answer = MessageBox.Show(this,
+                "将下载并安装「应用安装程序」(winget) 及其依赖。\r\n\r\n" +
+                "依次尝试：PowerShell 修复模块 → 官方离线包 → 注册别名。\r\n" +
+                "Server 环境可能需要数分钟，是否继续？",
+                "安装 winget", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+        }
+
+        UseWaitCursor = true;
+        _installWingetBtn.Enabled = false;
+        try
+        {
+            var msg = CommonSoftwareHelper.InstallWinget();
+            RefreshAll();
+            MessageBox.Show(this,
+                string.IsNullOrWhiteSpace(msg) ? "winget 安装完成。" : msg,
+                "安装 winget",
+                MessageBoxButtons.OK,
+                CommonSoftwareHelper.IsWingetAvailable() ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "安装 winget 失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _installWingetBtn.Enabled = true;
+        }
+    }
+
     private void OnInstall(CommonSoftwareItem item)
     {
+        if (item.IsWingetBootstrap)
+        {
+            InstallWingetNow();
+            return;
+        }
+
         var status = CommonSoftwareHelper.Query(item);
         var action = status.Installed ? "修复安装" : "一键安装";
         if (_askBeforeInstall.Checked)
@@ -418,7 +476,12 @@ internal sealed class CommonSoftwareDialog : Form
     private void InstallEssentials()
     {
         var essentials = CommonSoftwareCatalog.All.Where(x => x.Essential).ToList();
-        var missing = essentials.Where(x => !CommonSoftwareHelper.Query(x).Installed).ToList();
+        var missing = essentials
+            .Where(x => x.IsWingetBootstrap
+                ? !CommonSoftwareHelper.IsWingetAvailable()
+                : !CommonSoftwareHelper.Query(x).Installed)
+            .OrderBy(x => x.IsWingetBootstrap ? 0 : 1)
+            .ToList();
         if (missing.Count == 0)
         {
             MessageBox.Show(this, "系统必备软件均已安装。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -528,6 +591,11 @@ internal sealed class CommonSoftwareDialog : Form
 
             _uninstall = RowButton("卸载", 448);
             _uninstall.Click += (_, _) => _onUninstall(_item);
+            if (item.IsWingetBootstrap)
+            {
+                _uninstall.Enabled = false;
+                _uninstall.ForeColor = AppTheme.TextMute;
+            }
 
             _status = new Label
             {
@@ -551,18 +619,29 @@ internal sealed class CommonSoftwareDialog : Form
         public void RefreshStatus()
         {
             var s = CommonSoftwareHelper.Query(_item);
+            if (_item.IsWingetBootstrap)
+                _install.Text = CommonSoftwareHelper.IsWingetAvailable() ? "修复安装" : "一键安装";
+
             if (s.Installed)
             {
-                _install.Text = "修复安装";
+                if (!_item.IsWingetBootstrap)
+                    _install.Text = "修复安装";
                 _status.Text = string.IsNullOrWhiteSpace(s.Version)
                     ? "已安装"
                     : "已安装 · " + s.Version;
                 _status.ForeColor = AppTheme.PrimaryDeep;
                 _status.BackColor = AppTheme.PrimaryPale;
             }
+            else if (_item.IsWingetBootstrap && s.Version.Length > 0)
+            {
+                _status.Text = s.Version;
+                _status.ForeColor = AppTheme.ScopeServer;
+                _status.BackColor = AppTheme.PrimaryPale;
+            }
             else
             {
-                _install.Text = "一键安装";
+                if (!_item.IsWingetBootstrap)
+                    _install.Text = "一键安装";
                 _status.Text = "未安装";
                 _status.ForeColor = AppTheme.TextMute;
                 _status.BackColor = AppTheme.Surface;

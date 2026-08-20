@@ -9,12 +9,16 @@ internal sealed class CommonSoftwareItem
     public string[] DetectPatterns { get; set; } = [];
     public string DownloadUrl { get; set; } = "";
     public bool Essential { get; set; }
+
+    public bool IsWingetBootstrap => Id.Equals("winget", StringComparison.OrdinalIgnoreCase);
 }
 
 internal static class CommonSoftwareCatalog
 {
     public static IReadOnlyList<CommonSoftwareItem> All { get; } =
     [
+        Item("winget", "Windows 包管理器 (winget)", "必备", "Microsoft.AppInstaller",
+            ["App Installer", "Windows Package Manager"], "https://aka.ms/getwinget", essential: true),
         Item("winrar", "WinRAR官方简体中文注册版", "必备", "RARLab.WinRAR",
             ["WinRAR"], "https://www.win-rar.com/download.html", essential: true),
         Item("notepad3", "NotePad3（替代记事本）", "必备", "Rizonesoft.Notepad3",
