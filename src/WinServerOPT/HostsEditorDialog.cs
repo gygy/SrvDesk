@@ -18,28 +18,16 @@ internal sealed class HostsEditorDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         KeyPreview = true;
-        ClientSize = new Size(760, 520);
+        ClientSize = new Size(780, 560);
         MinimumSize = new Size(640, 420);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.SurfaceCard;
 
-        var tip = new Label
-        {
-            Text = "修改本机 DNS 覆盖（%SystemRoot%\\System32\\drivers\\etc\\hosts）。勾选「启用」生效；取消勾选会以 # 注释该行。\r\n" +
-                   "支持从网页/文本复制多行 hosts 后 Ctrl+V 或点「粘贴」批量导入（自动跳过纯注释行）。",
-            Location = new Point(16, 12),
-            Size = new Size(728, 48),
-            ForeColor = AppTheme.TextMute,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 48), BackColor = AppTheme.Surface };
 
-        _path.SetBounds(16, 62, 728, 20);
+        _path.Dock = DockStyle.Top;
+        _path.Height = 22;
         _path.ForeColor = AppTheme.TextHeader;
-        _path.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-        _grid.Location = new Point(16, 88);
-        _grid.Size = new Size(728, 326);
-        _grid.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        _grid.Dock = DockStyle.Fill;
         _grid.AllowUserToAddRows = true;
         _grid.AllowUserToDeleteRows = true;
         _grid.BackgroundColor = AppTheme.SurfaceCard;
@@ -50,72 +38,60 @@ internal sealed class HostsEditorDialog : Form
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.ColumnHeadersHeight = 32;
         _grid.RowTemplate.Height = 28;
+        _grid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Enabled", HeaderText = "启用", FillWeight = 12 });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "IP 地址", FillWeight = 28 });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Hosts", HeaderText = "主机名（多个用空格分隔）", FillWeight = 40 });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Comment", HeaderText = "备注", FillWeight = 20 });
 
-        _grid.Columns.Add(new DataGridViewCheckBoxColumn
+        var options = new FlowLayoutPanel
         {
-            Name = "Enabled",
-            HeaderText = "启用",
-            FillWeight = 12,
-            Width = 56,
-        });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            Name = "Address",
-            HeaderText = "IP 地址",
-            FillWeight = 28,
-        });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            Name = "Hosts",
-            HeaderText = "主机名（多个用空格分隔）",
-            FillWeight = 40,
-        });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            Name = "Comment",
-            HeaderText = "备注",
-            FillWeight = 20,
-        });
-
+            Dock = DockStyle.Bottom,
+            Height = 32,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+        };
         _backup.Text = "保存前备份";
         _backup.Checked = true;
         _backup.AutoSize = true;
-        _backup.Location = new Point(16, 428);
-        _backup.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
         _backup.ForeColor = AppTheme.TextMain;
-
         _flush.Text = "保存后刷新 DNS 缓存";
         _flush.Checked = true;
         _flush.AutoSize = true;
-        _flush.Location = new Point(130, 428);
-        _flush.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+        _flush.Margin = new Padding(16, 0, 0, 0);
         _flush.ForeColor = AppTheme.TextMain;
+        options.Controls.Add(_backup);
+        options.Controls.Add(_flush);
 
         var bar = new FlowLayoutPanel
         {
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            AutoSize = true,
+            Dock = DockStyle.Bottom,
+            Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Location = new Point(200, 464),
-            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(0, 4, 0, 0),
         };
+        bar.Controls.Add(MkBtn("添加", AddRow, false));
+        bar.Controls.Add(MkBtn("粘贴", PasteFromClipboard, false));
+        bar.Controls.Add(MkBtn("删除", DeleteSelected, false));
+        bar.Controls.Add(MkBtn("重新加载", Reload, false));
+        bar.Controls.Add(MkBtn("备份目录", OpenBackupDir, false));
+        var save = MkBtn("保存", Save, true);
+        bar.Controls.Add(save);
 
-        bar.Controls.Add(ActionButton("添加", AddRow, false));
-        bar.Controls.Add(ActionButton("粘贴", PasteFromClipboard, false));
-        bar.Controls.Add(ActionButton("删除", DeleteSelected, false));
-        bar.Controls.Add(ActionButton("重新加载", Reload, false));
-        bar.Controls.Add(ActionButton("打开备份目录", OpenBackupDir, false));
-        bar.Controls.Add(ActionButton("保存", Save, true));
+        body.Controls.Add(_grid);
+        body.Controls.Add(bar);
+        body.Controls.Add(options);
+        body.Controls.Add(_path);
 
-        var close = ActionButton("关闭", () => Close(), false);
-        close.DialogResult = DialogResult.Cancel;
-        bar.Controls.Add(close);
-        CancelButton = close;
+        ThemedSettingsChrome.MountModal(
+            this,
+            "编辑 hosts",
+            "本机 DNS 覆盖 · 支持 Ctrl+V 批量粘贴",
+            body,
+            "取消勾选「启用」将以 # 注释该行。",
+            Reload);
 
-        Controls.AddRange([tip, _path, _grid, _backup, _flush, bar]);
         Load += (_, _) => Reload();
-        Resize += (_, _) => bar.Location = new Point(Math.Max(16, ClientSize.Width - bar.Width - 16), ClientSize.Height - 48);
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -270,23 +246,12 @@ internal sealed class HostsEditorDialog : Form
         }
     }
 
-    private static Button ActionButton(string text, Action click, bool primary)
+    private static Button MkBtn(string text, Action click, bool primary)
     {
-        var b = new Button
-        {
-            Text = text,
-            AutoSize = true,
-            Height = 32,
-            MinimumSize = new Size(72, 32),
-            Padding = new Padding(8, 0, 8, 0),
-            Margin = new Padding(6, 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            Cursor = Cursors.Hand,
-            BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
-            ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-        };
-        if (primary) b.FlatAppearance.BorderSize = 0;
-        else b.FlatAppearance.BorderColor = AppTheme.Border;
+        var b = ThemedSettingsChrome.CreateButton(text, primary);
+        b.AutoSize = true;
+        b.Height = 32;
+        b.Margin = new Padding(0, 0, 8, 0);
         b.Click += (_, _) => click();
         return b;
     }

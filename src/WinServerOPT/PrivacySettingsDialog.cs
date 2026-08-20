@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-internal sealed class PrivacySettingsDialog : Form
+internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 {
     private readonly InstantToggleRow _cloud = new("搜索界面禁止云内容搜索（OneDrive / SharePoint / Outlook / 必应）");
     private readonly InstantToggleRow _web = new("搜索界面禁止 Web 搜索（仅当前用户）");
@@ -100,6 +100,8 @@ internal sealed class PrivacySettingsDialog : Form
             LoadValues);
         Load += (_, _) => LoadValues();
     }
+
+    public void RefreshFromSystem() => LoadValues();
 
     private void LoadValues()
     {

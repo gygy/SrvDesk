@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 
 namespace WinOpt;
 
-internal sealed class DnsSwitcherDialog : Form
+internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
 {
     private readonly ComboBox _preset = new();
     private readonly TextBox _primary = new();
@@ -108,6 +108,8 @@ internal sealed class DnsSwitcherDialog : Form
             body,
             "DHCP 模式会恢复为自动获取 DNS。");
     }
+
+    public void RefreshFromSystem() => _current.Text = CurrentSummary();
 
     private static void AddRow(TableLayoutPanel grid, string label, Control control)
     {

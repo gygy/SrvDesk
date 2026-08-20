@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-internal sealed class StartupManagerDialog : Form
+internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 {
     private readonly ListView _list = new();
     private readonly TextBox _search = new();
@@ -76,6 +76,8 @@ internal sealed class StartupManagerDialog : Form
                 _list.Columns[4].Width = Math.Max(180, _list.ClientSize.Width - 480);
         };
     }
+
+    public void RefreshFromSystem() => RefreshList();
 
     private Panel BuildSidebar()
     {

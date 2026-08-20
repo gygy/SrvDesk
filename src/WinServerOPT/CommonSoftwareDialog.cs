@@ -4,7 +4,6 @@ internal sealed class CommonSoftwareDialog : Form
 {
     private readonly CheckBox _askBeforeInstall = new();
     private readonly Panel _listHost = new();
-    private readonly Label _subtitle = new();
     private readonly Label _wingetHint = new();
     private readonly Button _installWingetBtn = new();
     private readonly ListBox _categoryMenu = new();
@@ -23,66 +22,68 @@ internal sealed class CommonSoftwareDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(920, 620);
         MinimumSize = new Size(780, 520);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
 
-        var header = BuildHeader();
-        header.Dock = DockStyle.Top;
+        var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(0, 0, 0, 4) };
 
-        var bottom = BuildBottomBar();
-        bottom.Dock = DockStyle.Bottom;
-
-        var body = new Panel
+        var actions = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Bottom,
+            Height = 44,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(12, 4, 12, 4),
             BackColor = AppTheme.Surface,
         };
+        actions.Controls.Add(MkBtn("清理下载缓存", () =>
+        {
+            CommonSoftwareHelper.ClearDownloadCache();
+            MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }, false));
+        actions.Controls.Add(MkBtn("检查软件更新", () =>
+        {
+            var msg = CommonSoftwareHelper.CheckUpdates(CommonSoftwareCatalog.All);
+            MessageBox.Show(this, msg, "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            RefreshAll();
+        }, false));
+        actions.Controls.Add(MkBtn("安装系统必备", InstallEssentials, true));
 
         var sidebar = BuildSidebar();
         sidebar.Dock = DockStyle.Left;
 
-        var main = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = AppTheme.Surface,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-
+        var main = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(12, 8, 12, 8) };
         var toolStrip = BuildToolStrip();
         toolStrip.Dock = DockStyle.Top;
 
-        var tableWrap = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(0),
-        };
+        var tableWrap = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.SurfaceCard };
         tableWrap.Paint += (_, e) =>
         {
             using var pen = new Pen(AppTheme.BorderLight);
             e.Graphics.DrawRectangle(pen, 0, 0, tableWrap.Width - 1, tableWrap.Height - 1);
         };
-
         var tableHeader = BuildTableHeader();
         tableHeader.Dock = DockStyle.Top;
-
         _listHost.Dock = DockStyle.Fill;
         _listHost.AutoScroll = true;
         _listHost.BackColor = AppTheme.SurfaceCard;
-
         tableWrap.Controls.Add(_listHost);
         tableWrap.Controls.Add(tableHeader);
-
         main.Controls.Add(tableWrap);
         main.Controls.Add(toolStrip);
 
-        body.Controls.Add(main);
-        body.Controls.Add(sidebar);
+        var content = new Panel { Dock = DockStyle.Fill };
+        content.Controls.Add(main);
+        content.Controls.Add(sidebar);
+        body.Controls.Add(content);
+        body.Controls.Add(actions);
 
-        Controls.Add(body);
-        Controls.Add(bottom);
-        Controls.Add(header);
+        ThemedSettingsChrome.MountModal(
+            this,
+            "常用软件",
+            "官方源下载与安装 · 优先 winget",
+            body,
+            "安装前请确认来源可信；Server 环境 winget 需先安装应用安装程序。",
+            RefreshAll);
 
         Load += (_, _) => RefreshAll();
         _categoryMenu.SelectedIndexChanged += (_, _) =>
@@ -95,54 +96,14 @@ internal sealed class CommonSoftwareDialog : Form
         };
     }
 
-    private Panel BuildHeader()
+    private static Button MkBtn(string text, Action click, bool primary)
     {
-        var header = new Panel { Height = 52, BackColor = AppTheme.PrimaryDeep };
-        header.Paint += (_, e) =>
-        {
-            var r = header.ClientRectangle;
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                r, AppTheme.HeaderBarTop, AppTheme.HeaderBarBottom, 90f);
-            e.Graphics.FillRectangle(brush, r);
-        };
-
-        var logo = new PictureBox
-        {
-            Size = new Size(36, 36),
-            Location = new Point(14, 8),
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.Transparent,
-        };
-        var logoImg = AppBrand.LoadLogoImage();
-        if (logoImg is not null) logo.Image = logoImg;
-
-        var title = new Label
-        {
-            Text = "常用软件",
-            AutoSize = false,
-            Location = new Point(54, 6),
-            Size = new Size(240, 28),
-            ForeColor = AppTheme.TextOnPrimary,
-            Font = new Font("Microsoft YaHei UI", 12.5F, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = Color.Transparent,
-        };
-
-        _subtitle.AutoSize = false;
-        _subtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _subtitle.Location = new Point(54, 32);
-        _subtitle.Height = 18;
-        _subtitle.ForeColor = AppTheme.TextOnPrimarySoft;
-        _subtitle.Font = new Font("Microsoft YaHei UI", 8.5F);
-        _subtitle.TextAlign = ContentAlignment.MiddleLeft;
-        _subtitle.BackColor = Color.Transparent;
-        _subtitle.Text = "官方源下载与安装 · 优先 winget";
-
-        header.Controls.Add(_subtitle);
-        header.Controls.Add(title);
-        header.Controls.Add(logo);
-        header.Resize += (_, _) => _subtitle.Width = Math.Max(200, header.Width - 68);
-        return header;
+        var b = ThemedSettingsChrome.CreateButton(text, primary);
+        b.AutoSize = true;
+        b.Height = 32;
+        b.Margin = new Padding(6, 0, 0, 0);
+        b.Click += (_, _) => click();
+        return b;
     }
 
     private Panel BuildSidebar()
@@ -266,50 +227,6 @@ internal sealed class CommonSoftwareDialog : Form
         return header;
     }
 
-    private Panel BuildBottomBar()
-    {
-        var bar = new Panel
-        {
-            Height = 52,
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(12, 8, 12, 8),
-        };
-        bar.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawLine(pen, 0, 0, bar.Width, 0);
-        };
-
-        var flow = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
-            WrapContents = false,
-            BackColor = AppTheme.SurfaceCard,
-        };
-
-        var close = ActionButton("关闭", () => Close(), primary: true);
-        close.DialogResult = DialogResult.Cancel;
-        CancelButton = close;
-
-        flow.Controls.Add(close);
-        flow.Controls.Add(ActionButton("安装系统必备", InstallEssentials, primary: false));
-        flow.Controls.Add(ActionButton("检查软件更新", () =>
-        {
-            var msg = CommonSoftwareHelper.CheckUpdates(CommonSoftwareCatalog.All);
-            MessageBox.Show(this, msg, "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            RefreshAll();
-        }, primary: false));
-        flow.Controls.Add(ActionButton("清理下载临时文件", () =>
-        {
-            CommonSoftwareHelper.ClearDownloadCache();
-            MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }, primary: false));
-
-        bar.Controls.Add(flow);
-        return bar;
-    }
-
     private void BuildList()
     {
         _listHost.SuspendLayout();
@@ -361,9 +278,6 @@ internal sealed class CommonSoftwareDialog : Form
         _wingetHint.Text = wingetOk
             ? "已检测到 winget，可一键静默安装其它软件。"
             : "未检测到 winget，请先安装后再使用一键安装其它软件。";
-        _subtitle.Text = wingetOk
-            ? "官方源下载与安装 · 已启用 winget"
-            : "官方源下载与安装 · 需先安装 winget";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
         if (_rows.Count == 0) BuildList();
@@ -534,32 +448,6 @@ internal sealed class CommonSoftwareDialog : Form
         TextAlign = align,
         BackColor = Color.Transparent,
     };
-
-    private static Button ActionButton(string text, Action click, bool primary)
-    {
-        var b = new Button
-        {
-            Text = text,
-            AutoSize = true,
-            Height = 32,
-            MinimumSize = new Size(72, 32),
-            Padding = new Padding(10, 0, 10, 0),
-            Margin = new Padding(6, 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            Cursor = Cursors.Hand,
-            BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
-            ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-        };
-        if (primary) b.FlatAppearance.BorderSize = 0;
-        else
-        {
-            b.FlatAppearance.BorderColor = AppTheme.Border;
-            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-            b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
-        }
-        b.Click += (_, _) => click();
-        return b;
-    }
 
     private sealed class CommonSoftwareRow : Panel
     {

@@ -2,7 +2,7 @@ using Microsoft.Win32;
 
 namespace WinOpt;
 
-internal sealed class ExplorerSettingsDialog : Form
+internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 {
     private readonly InstantToggleRow _ext = new("显示所有文件的文件扩展名");
     private readonly InstantToggleRow _fullPath = new("在标题栏中显示完整路径");
@@ -180,6 +180,8 @@ internal sealed class ExplorerSettingsDialog : Form
         card.Controls.Add(grid);
         return card;
     }
+
+    public void RefreshFromSystem() => LoadValues();
 
     private void LoadValues()
     {

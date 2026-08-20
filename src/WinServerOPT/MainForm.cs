@@ -802,7 +802,7 @@ internal sealed class MainForm : Form
         var sidebar = new Panel { Width = 210, BackColor = AppTheme.NavBg };
         var cap = new Label
         {
-            Text = "  功能导航",
+            Text = "  批量优化",
             Dock = DockStyle.Top,
             Height = 36,
             ForeColor = AppTheme.TextMute,
@@ -816,7 +816,7 @@ internal sealed class MainForm : Form
         _menu.ForeColor = AppTheme.TextMain;
         _menu.IntegralHeight = false;
         _menu.DrawMode = DrawMode.OwnerDrawFixed;
-        _menu.ItemHeight = 44;
+        _menu.ItemHeight = 48;
         _menu.Items.AddRange(MenuItems);
         _menu.DrawItem += DrawMenuItem;
         _menu.SelectedIndexChanged += (_, _) => ShowGroup(_menu.SelectedIndex);
@@ -922,6 +922,12 @@ internal sealed class MainForm : Form
         page.Show();
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
+    }
+
+    private void RefreshEmbeddedPageIfVisible()
+    {
+        if (_embeddedPage is IEmbeddedSettingsPage page)
+            page.RefreshFromSystem();
     }
 
     private void DisposeEmbeddedPage()
@@ -1179,20 +1185,37 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
+        var instantStart = _groups.Count;
         var selected = (e.State & DrawItemState.Selected) != 0;
         var hover = e.Index == _menuHover && !selected;
         using var back = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
         e.Graphics.FillRectangle(back, e.Bounds);
+
+        var textRect = new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height);
+        if (e.Index == instantStart)
+        {
+            using var sep = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawLine(sep, e.Bounds.X + 10, e.Bounds.Y + 2, e.Bounds.Right - 10, e.Bounds.Y + 2);
+            TextRenderer.DrawText(
+                e.Graphics, "即时设置",
+                new Font(Font.FontFamily, 7.5f),
+                new Rectangle(e.Bounds.X + 18, e.Bounds.Y + 5, e.Bounds.Width - 22, 12),
+                AppTheme.TextMute, TextFormatFlags.Left);
+            textRect = new Rectangle(e.Bounds.X + 18, e.Bounds.Y + 20, e.Bounds.Width - 22, e.Bounds.Height - 20);
+        }
+
         if (selected)
         {
             using var accent = new SolidBrush(AppTheme.PrimarySoft);
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
+            var accentY = e.Index == instantStart ? e.Bounds.Y + 18 : e.Bounds.Y + 8;
+            e.Graphics.FillRectangle(accent, e.Bounds.X, accentY, 3, e.Bounds.Height - accentY + e.Bounds.Y - 8);
         }
+
         TextRenderer.DrawText(
             e.Graphics,
             MenuItems[e.Index],
             selected ? new Font(Font, FontStyle.Bold) : Font,
-            new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
+            textRect,
             selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }
@@ -1216,6 +1239,7 @@ internal sealed class MainForm : Form
                     catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
                     finally
                     {
+                        RefreshEmbeddedPageIfVisible();
                         if (fullScan)
                         {
                             UseWaitCursor = false;
@@ -1383,6 +1407,7 @@ internal sealed class MainForm : Form
         _autologon.Checked = s.EnableAutologon;
         _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
+        RefreshEmbeddedPageIfVisible();
     }
 
     private Optimizer.State CaptureState() => new()

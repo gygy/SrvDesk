@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-internal sealed class OtherSettingsDialog : Form
+internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 {
     private readonly InstantToggleRow _hibernate = new("禁用系统休眠");
     private readonly InstantToggleRow _fast = new("禁用快速启动");
@@ -91,6 +91,8 @@ internal sealed class OtherSettingsDialog : Form
             LoadValues);
         Load += (_, _) => LoadValues();
     }
+
+    public void RefreshFromSystem() => LoadValues();
 
     private void LoadValues()
     {
