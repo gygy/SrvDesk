@@ -96,6 +96,12 @@ internal static class CommonSoftwareHelper
         if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx))
             yield return appx;
 
+        foreach (var path in TryFindWindowsAppsWingetPaths())
+        {
+            if (seen.Add(path))
+                yield return path;
+        }
+
         var alias = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Microsoft", "WindowsApps", "winget.exe");
@@ -116,6 +122,29 @@ internal static class CommonSoftwareHelper
         catch
         {
             return null;
+        }
+    }
+
+    private static IEnumerable<string> TryFindWindowsAppsWingetPaths()
+    {
+        const string root = @"C:\Program Files\WindowsApps";
+        if (!Directory.Exists(root)) yield break;
+
+        string[] dirs;
+        try
+        {
+            dirs = Directory.GetDirectories(root, "Microsoft.DesktopAppInstaller_*");
+        }
+        catch
+        {
+            yield break;
+        }
+
+        foreach (var dir in dirs)
+        {
+            var path = Path.Combine(dir, "winget.exe");
+            if (File.Exists(path))
+                yield return path;
         }
     }
 
@@ -422,22 +451,6 @@ Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller
     {
         var escaped = path.Replace("'", "''");
         RunPowerShell($"Add-AppxPackage -Path '{escaped}'");
-    }
-
-    private static bool TryRunWinget(string args, out string output)
-    {
-        output = "";
-        if (!IsWingetAvailable()) return false;
-        try
-        {
-            output = RunCapture(ResolveWingetPath(), args);
-            return true;
-        }
-        catch
-        {
-            ResetWingetDiscovery();
-            return false;
-        }
     }
 
     private static bool Matches(string displayName, string[] patterns)

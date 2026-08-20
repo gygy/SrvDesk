@@ -349,6 +349,7 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void RefreshAll()
     {
+        CommonSoftwareHelper.ResetWingetDiscovery();
         var wingetOk = CommonSoftwareHelper.IsWingetAvailable();
         _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
