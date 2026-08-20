@@ -5,6 +5,7 @@ namespace WinOpt;
 internal sealed class SystemInfoDialog : Form
 {
     private readonly ListView _list = new();
+    private readonly Label _summary = new();
     private List<SystemInfoRow> _rows = [];
 
     public SystemInfoDialog()
@@ -29,6 +30,9 @@ internal sealed class SystemInfoDialog : Form
         _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Columns.Add("项目", 160);
         _list.Columns.Add("值", 420);
+        _summary.Dock = DockStyle.Top;
+        _summary.Height = 22;
+        _summary.ForeColor = AppTheme.TextMute;
 
         var refresh = ThemedSettingsChrome.CreateButton("刷新", false);
         refresh.Size = new Size(80, 34);
@@ -46,6 +50,7 @@ internal sealed class SystemInfoDialog : Form
         msinfo.Click += (_, _) => OpenMsinfo();
 
         body.Controls.Add(_list);
+        body.Controls.Add(_summary);
         body.Controls.AddRange([refresh, copy, msinfo]);
 
         ThemedSettingsChrome.MountModal(
@@ -92,10 +97,12 @@ internal sealed class SystemInfoDialog : Form
                 item.SubItems.Add(r.Value);
                 _list.Items.Add(item);
             }
+            _summary.Text = $"共 {_rows.Count} 项，分 {groups.Count} 组。";
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "读取系统信息失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _summary.Text = "读取失败。";
         }
         finally
         {

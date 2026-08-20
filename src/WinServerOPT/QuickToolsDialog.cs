@@ -6,6 +6,7 @@ internal sealed class QuickToolsDialog : Form
     private readonly ListView _list = new();
     private readonly TextBox _search = new();
     private readonly Label _desc = new();
+    private readonly Label _count = new();
     private List<QuickTool> _tools = [];
 
     public QuickToolsDialog(SystemFacts facts)
@@ -35,6 +36,10 @@ internal sealed class QuickToolsDialog : Form
         _search.ForeColor = AppTheme.TextMain;
         _search.TextChanged += (_, _) => ApplyFilter();
         toolbar.Controls.Add(_search);
+        _count.AutoSize = true;
+        _count.Location = new Point(336, 8);
+        _count.ForeColor = AppTheme.TextMute;
+        toolbar.Controls.Add(_count);
 
         _list.View = View.Details;
         _list.FullRowSelect = true;
@@ -100,6 +105,7 @@ internal sealed class QuickToolsDialog : Form
         }
         _list.EndUpdate();
         if (_list.Items.Count > 0) _list.Items[0].Selected = true;
+        _count.Text = $"当前 {_list.Items.Count} 项 / 共 {_tools.Count} 项";
         UpdateDescription();
     }
 
@@ -126,5 +132,16 @@ internal sealed class QuickToolsDialog : Form
         if (_list.SelectedItems.Count == 0) return;
         if (_list.SelectedItems[0].Tag is QuickTool tool)
             QuickToolsLauncher.Launch(tool, this);
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == Keys.Enter && _list.Focused)
+        {
+            OpenSelected();
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 }

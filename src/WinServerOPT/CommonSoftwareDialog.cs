@@ -108,7 +108,7 @@ internal sealed class CommonSoftwareDialog : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 160, BackColor = AppTheme.NavBg };
+        var sidebar = new Panel { Width = 176, BackColor = AppTheme.NavBg };
 
         var cap = new Label
         {
@@ -127,7 +127,7 @@ internal sealed class CommonSoftwareDialog : Form
         _categoryMenu.ForeColor = AppTheme.TextMain;
         _categoryMenu.IntegralHeight = false;
         _categoryMenu.DrawMode = DrawMode.OwnerDrawFixed;
-        _categoryMenu.ItemHeight = 44;
+        _categoryMenu.ItemHeight = 48;
         _categoryMenu.Items.AddRange(Categories);
         _categoryMenu.DrawItem += DrawCategoryItem;
         _categoryMenu.MouseMove += (_, e) =>
@@ -178,14 +178,24 @@ internal sealed class CommonSoftwareDialog : Form
             Padding = new Padding(0, 0, 0, 8),
         };
 
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = true,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0),
+        };
+
         _wingetHint.AutoSize = false;
-        _wingetHint.Location = new Point(0, 10);
-        _wingetHint.Size = new Size(360, 22);
+        _wingetHint.Size = new Size(360, 24);
+        _wingetHint.Margin = new Padding(0, 8, 12, 0);
         _wingetHint.ForeColor = AppTheme.TextMute;
 
         _installWingetBtn.Text = "一键安装 winget";
-        _installWingetBtn.Location = new Point(368, 6);
         _installWingetBtn.Size = new Size(120, 28);
+        _installWingetBtn.Margin = new Padding(0, 4, 12, 0);
         _installWingetBtn.FlatStyle = FlatStyle.Flat;
         _installWingetBtn.BackColor = AppTheme.Primary;
         _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
@@ -197,12 +207,13 @@ internal sealed class CommonSoftwareDialog : Form
         _askBeforeInstall.Text = "安装前询问确认";
         _askBeforeInstall.Checked = true;
         _askBeforeInstall.AutoSize = true;
-        _askBeforeInstall.Location = new Point(500, 10);
+        _askBeforeInstall.Margin = new Padding(0, 8, 0, 0);
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
 
-        strip.Controls.Add(_wingetHint);
-        strip.Controls.Add(_installWingetBtn);
-        strip.Controls.Add(_askBeforeInstall);
+        flow.Controls.Add(_wingetHint);
+        flow.Controls.Add(_installWingetBtn);
+        flow.Controls.Add(_askBeforeInstall);
+        strip.Controls.Add(flow);
         return strip;
     }
 

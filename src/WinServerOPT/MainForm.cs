@@ -174,6 +174,8 @@ internal sealed class MainForm : Form
     private readonly TextBox _searchBox = new();
     private readonly CheckBox _hideIncompatible = new();
     private readonly ComboBox _presetCombo = new();
+    private readonly FlowLayoutPanel _commandFlow = new();
+    private readonly Label _commandHint = new();
     private SettingRow[] _activeRows = [];
     private Panel? _activeBody;
     private Panel? _activeSection;
@@ -458,33 +460,30 @@ internal sealed class MainForm : Form
             e.Graphics.DrawLine(pen, 0, _commandBar.Height - 1, _commandBar.Width, _commandBar.Height - 1);
         };
 
-        var flow = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoScroll = true,
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(0),
-        };
+        _commandFlow.Dock = DockStyle.Fill;
+        _commandFlow.FlowDirection = FlowDirection.LeftToRight;
+        _commandFlow.WrapContents = false;
+        _commandFlow.AutoScroll = true;
+        _commandFlow.BackColor = AppTheme.SurfaceCard;
+        _commandFlow.Padding = new Padding(0);
 
-        flow.Controls.Add(BarLabel("搜索"));
+        _commandFlow.Controls.Add(BarLabel("搜索"));
         _searchBox.Width = 200;
         _searchBox.Height = 26;
         _searchBox.Margin = new Padding(0, 2, 16, 0);
         _searchBox.BorderStyle = BorderStyle.FixedSingle;
         _searchBox.ForeColor = AppTheme.TextMain;
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
-        flow.Controls.Add(_searchBox);
+        _commandFlow.Controls.Add(_searchBox);
 
         _hideIncompatible.Text = "隐藏不适用项";
         _hideIncompatible.AutoSize = true;
         _hideIncompatible.Margin = new Padding(0, 6, 20, 0);
         _hideIncompatible.ForeColor = AppTheme.TextMute;
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
-        flow.Controls.Add(_hideIncompatible);
+        _commandFlow.Controls.Add(_hideIncompatible);
 
-        flow.Controls.Add(BarLabel("预设"));
+        _commandFlow.Controls.Add(BarLabel("预设"));
         _presetCombo.Width = 220;
         _presetCombo.Height = 26;
         _presetCombo.Margin = new Padding(0, 2, 8, 0);
@@ -493,13 +492,20 @@ internal sealed class MainForm : Form
         foreach (var p in OptPresets.All) _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0) _presetCombo.SelectedIndex = 0;
         AdjustPresetComboDropDownWidth();
-        flow.Controls.Add(_presetCombo);
+        _commandFlow.Controls.Add(_presetCombo);
 
         var loadPreset = CompactButton("载入预设", ApplySelectedPreset);
         loadPreset.Margin = new Padding(0, 1, 0, 0);
-        flow.Controls.Add(loadPreset);
+        _commandFlow.Controls.Add(loadPreset);
 
-        _commandBar.Controls.Add(flow);
+        _commandHint.Dock = DockStyle.Fill;
+        _commandHint.Visible = false;
+        _commandHint.ForeColor = AppTheme.TextMute;
+        _commandHint.TextAlign = ContentAlignment.MiddleLeft;
+        _commandHint.Text = "当前为即时设置页：修改后立即写入系统。请使用本页底部“刷新”重新读取状态。";
+
+        _commandBar.Controls.Add(_commandHint);
+        _commandBar.Controls.Add(_commandFlow);
     }
 
     private static Label BarLabel(string text) => new()
@@ -958,7 +964,8 @@ internal sealed class MainForm : Form
 
     private void SetBatchMode(bool batch)
     {
-        _commandBar.Visible = batch;
+        _commandFlow.Visible = batch;
+        _commandHint.Visible = !batch;
         _apply.Enabled = batch;
         _restore.Enabled = batch;
         if (_bottomActions is not null)
