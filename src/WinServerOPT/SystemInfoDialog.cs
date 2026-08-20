@@ -16,54 +16,58 @@ internal sealed class SystemInfoDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(640, 560);
         MinimumSize = new Size(520, 420);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.SurfaceCard;
 
-        var tip = new Label
-        {
-            Text = "本机操作系统、硬件与网络摘要。可复制为文本，或打开系统自带「系统信息」(msinfo32)。",
-            Location = new Point(16, 12),
-            Size = new Size(608, 32),
-            ForeColor = AppTheme.TextMute,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 48), BackColor = AppTheme.Surface };
 
-        _list.Location = new Point(16, 48);
-        _list.Size = new Size(608, 452);
-        _list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
         _list.FullRowSelect = true;
         _list.GridLines = true;
         _list.ShowGroups = true;
         _list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+        _list.BackColor = AppTheme.SurfaceCard;
+        _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Columns.Add("项目", 160);
         _list.Columns.Add("值", 420);
 
-        var bar = new FlowLayoutPanel
-        {
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            BackColor = AppTheme.SurfaceCard,
-        };
-        bar.Controls.Add(ActionButton("刷新", LoadInfo, false));
-        bar.Controls.Add(ActionButton("复制全部", CopyAll, false));
-        bar.Controls.Add(ActionButton("打开 msinfo32", OpenMsinfo, false));
-        var close = ActionButton("关闭", () => Close(), true);
-        close.DialogResult = DialogResult.Cancel;
-        bar.Controls.Add(close);
-        CancelButton = close;
+        var refresh = ThemedSettingsChrome.CreateButton("刷新", false);
+        refresh.Size = new Size(80, 34);
+        refresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        refresh.Click += (_, _) => LoadInfo();
 
-        Controls.AddRange([tip, _list, bar]);
-        Load += (_, _) => LoadInfo();
-        Resize += (_, _) =>
+        var copy = ThemedSettingsChrome.CreateButton("复制全部", false);
+        copy.Size = new Size(96, 34);
+        copy.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        copy.Click += (_, _) => CopyAll();
+
+        var msinfo = ThemedSettingsChrome.CreateButton("msinfo32", false);
+        msinfo.Size = new Size(96, 34);
+        msinfo.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        msinfo.Click += (_, _) => OpenMsinfo();
+
+        body.Controls.Add(_list);
+        body.Controls.AddRange([refresh, copy, msinfo]);
+
+        ThemedSettingsChrome.MountModal(
+            this,
+            "系统信息",
+            "操作系统 · 硬件 · 网络摘要",
+            body,
+            "可复制为文本，或打开系统自带 msinfo32。",
+            LoadInfo);
+
+        void LayoutButtons()
         {
-            bar.Location = new Point(Math.Max(16, ClientSize.Width - bar.Width - 16), ClientSize.Height - 48);
+            msinfo.Location = new Point(body.ClientSize.Width - msinfo.Width, body.ClientSize.Height - msinfo.Height);
+            copy.Location = new Point(msinfo.Left - copy.Width - 8, msinfo.Top);
+            refresh.Location = new Point(copy.Left - refresh.Width - 8, msinfo.Top);
             if (_list.Columns.Count >= 2)
                 _list.Columns[1].Width = Math.Max(200, _list.ClientSize.Width - _list.Columns[0].Width - 24);
-        };
-        Shown += (_, _) => bar.Location = new Point(Math.Max(16, ClientSize.Width - bar.Width - 16), ClientSize.Height - 48);
+        }
+
+        body.Resize += (_, _) => LayoutButtons();
+        Load += (_, _) => LoadInfo();
+        Shown += (_, _) => LayoutButtons();
     }
 
     private void LoadInfo()
@@ -84,7 +88,6 @@ internal sealed class SystemInfoDialog : Form
                     groups[r.Group] = grp;
                     _list.Groups.Add(grp);
                 }
-
                 var item = new ListViewItem(r.Name) { Group = grp };
                 item.SubItems.Add(r.Value);
                 _list.Items.Add(item);
@@ -103,8 +106,7 @@ internal sealed class SystemInfoDialog : Form
 
     private void CopyAll()
     {
-        var text = SystemInfoSnapshot.ToText(_rows);
-        Clipboard.SetText(text);
+        Clipboard.SetText(SystemInfoSnapshot.ToText(_rows));
         MessageBox.Show(this, "已复制到剪贴板。", "系统信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
@@ -124,26 +126,5 @@ internal sealed class SystemInfoDialog : Form
             MessageBox.Show(this, "无法打开 msinfo32。\r\n\r\n" + ex.Message,
                 "系统信息", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
-    }
-
-    private static Button ActionButton(string text, Action click, bool primary)
-    {
-        var b = new Button
-        {
-            Text = text,
-            AutoSize = true,
-            Height = 32,
-            MinimumSize = new Size(72, 32),
-            Padding = new Padding(8, 0, 8, 0),
-            Margin = new Padding(6, 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            Cursor = Cursors.Hand,
-            BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
-            ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-        };
-        if (primary) b.FlatAppearance.BorderSize = 0;
-        else b.FlatAppearance.BorderColor = AppTheme.Border;
-        b.Click += (_, _) => click();
-        return b;
     }
 }

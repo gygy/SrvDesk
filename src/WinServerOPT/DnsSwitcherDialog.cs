@@ -24,23 +24,31 @@ internal sealed class DnsSwitcherDialog : Form
 
     public DnsSwitcherDialog()
     {
-        Text = "DNS 切换";
+        Text = "DNS 设置";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 280);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
+        ClientSize = new Size(560, 360);
+        MinimumSize = new Size(480, 320);
 
-        var header = ThemedSettingsChrome.CreateHeader("DNS 切换", "对齐 Optimizer Pinger · 应用到已连接的以太网/无线适配器");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "切换后会刷新 DNS 缓存。", showClose: false);
+        var card = ThemedSettingsChrome.CreateSectionCard("网卡 DNS");
+        card.Dock = DockStyle.Top;
+        card.AutoSize = true;
+        card.Padding = new Padding(16, 36, 16, 16);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20, 12, 20, 8), BackColor = AppTheme.SurfaceCard };
-        body.Controls.Add(new Label { Text = "预设", Location = new Point(8, 12), AutoSize = true });
+        var form = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 2,
+            Padding = new Padding(0),
+        };
+        form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 56));
+        form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
         _preset.DropDownStyle = ComboBoxStyle.DropDownList;
-        _preset.SetBounds(80, 8, 400, 26);
+        _preset.Dock = DockStyle.Fill;
         foreach (var p in Presets) _preset.Items.Add(p.Name);
         _preset.SelectedIndex = 0;
         _preset.SelectedIndexChanged += (_, _) =>
@@ -52,30 +60,67 @@ internal sealed class DnsSwitcherDialog : Form
             _secondary.Enabled = _preset.SelectedIndex != 0;
         };
 
-        body.Controls.Add(new Label { Text = "首选", Location = new Point(8, 52), AutoSize = true });
-        _primary.SetBounds(80, 48, 400, 24);
-        body.Controls.Add(new Label { Text = "备选", Location = new Point(8, 88), AutoSize = true });
-        _secondary.SetBounds(80, 84, 400, 24);
+        _primary.Dock = DockStyle.Fill;
+        _secondary.Dock = DockStyle.Fill;
 
-        _current.SetBounds(8, 124, 480, 48);
+        AddRow(form, "预设", _preset);
+        AddRow(form, "首选", _primary);
+        AddRow(form, "备选", _secondary);
+
+        _current.AutoSize = false;
+        _current.Height = 48;
+        _current.Dock = DockStyle.Top;
         _current.ForeColor = AppTheme.TextMute;
         _current.Text = CurrentSummary();
 
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0, 12, 0, 0),
+        };
         var apply = ThemedSettingsChrome.CreateButton("应用到网卡", true);
-        apply.SetBounds(280, 180, 120, 34);
+        apply.Size = new Size(120, 34);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
-        flush.SetBounds(80, 180, 120, 34);
+        flush.Size = new Size(120, 34);
         flush.Click += (_, _) =>
         {
             HostsFileHelper.FlushDns();
             MessageBox.Show(this, "已刷新 DNS 缓存。", "DNS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
+        actions.Controls.Add(flush);
+        actions.Controls.Add(apply);
 
-        body.Controls.AddRange([_preset, _primary, _secondary, _current, apply, flush]);
-        Controls.Add(body);
-        Controls.Add(footer);
-        Controls.Add(header);
+        card.Controls.Add(actions);
+        card.Controls.Add(_current);
+        card.Controls.Add(form);
+
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.Controls.Add(card);
+
+        ThemedSettingsChrome.MountEmbedded(
+            this,
+            "DNS 设置",
+            "应用到已连接的以太网/无线网卡 · 修改后立即刷新缓存",
+            body,
+            "DHCP 模式会恢复为自动获取 DNS。");
+    }
+
+    private static void AddRow(TableLayoutPanel grid, string label, Control control)
+    {
+        var row = grid.RowCount++;
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.Controls.Add(new Label
+        {
+            Text = label,
+            AutoSize = true,
+            ForeColor = AppTheme.TextHeader,
+            Padding = new Padding(0, 6, 0, 0),
+        }, 0, row);
+        grid.Controls.Add(control, 1, row);
     }
 
     private static string CurrentSummary()
@@ -101,9 +146,7 @@ internal sealed class DnsSwitcherDialog : Form
         try
         {
             if (_preset.SelectedIndex == 0)
-            {
                 SetAdapterDns(null);
-            }
             else
             {
                 var servers = new[] { _primary.Text.Trim(), _secondary.Text.Trim() }

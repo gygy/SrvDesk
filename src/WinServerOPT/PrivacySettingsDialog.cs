@@ -44,7 +44,7 @@ internal sealed class PrivacySettingsDialog : Form
         searchHost.Controls.Add(warn);
         searchCard.Controls.Add(searchHost);
 
-        var svcCard = Section("Windows Search 服务", 90);
+        var svcCard = ThemedSettingsChrome.CreateSectionCard("Windows Search 服务", 90);
         var svcHost = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(8, 32, 8, 8) };
         var stop = ThemedSettingsChrome.CreateButton("停止并禁止 Windows Search 服务", false);
         stop.Size = new Size(320, 36);
@@ -56,7 +56,7 @@ internal sealed class PrivacySettingsDialog : Form
         svcHost.Controls.Add(start);
         svcCard.Controls.Add(svcHost);
 
-        var leftCard = Section("隐私和安全（仅当前用户）", 280);
+        var leftCard = ThemedSettingsChrome.CreateSectionCard("隐私和安全（仅当前用户）", 280);
         var leftHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
         leftHost.Controls.Add(_history);
         var tip = new Label { Text = "以下为系统默认开启项，隐私场景建议关闭：", AutoSize = true, ForeColor = AppTheme.TextMute };
@@ -68,7 +68,7 @@ internal sealed class PrivacySettingsDialog : Form
         leftHost.Controls.Add(_ink);
         leftCard.Controls.Add(leftHost);
 
-        var rightCard = Section("更新与其它", 180);
+        var rightCard = ThemedSettingsChrome.CreateSectionCard("更新与其它", 180);
         var rightHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
         rightHost.Controls.Add(_delivery);
         rightHost.Controls.Add(_msrt);
@@ -91,9 +91,13 @@ internal sealed class PrivacySettingsDialog : Form
         body.Controls.Add(svcCard);
         body.Controls.Add(searchCard);
 
-        Controls.Add(body);
-        Controls.Add(footer);
-        Controls.Add(header);
+        ThemedSettingsChrome.MountEmbedded(
+            this,
+            "隐私与搜索",
+            "搜索隐私 · 广告跟踪 · 更新传递 · 开关立即生效",
+            body,
+            "建议同时添加防火墙规则以拦截搜索上传。",
+            LoadValues);
         Load += (_, _) => LoadValues();
     }
 
@@ -111,32 +115,6 @@ internal sealed class PrivacySettingsDialog : Form
         _delivery.Bind(s.DisableDeliveryOpt, v => { s.DisableDeliveryOpt = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _msrt.Bind(s.ExcludeMsrtFromWu, v => { s.ExcludeMsrtFromWu = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _major.Bind(s.PauseFeatureUpdatesUntil2035, v => { s.PauseFeatureUpdatesUntil2035 = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
-    }
-
-    private static Panel Section(string title, int height)
-    {
-        var card = new Panel
-        {
-            Height = height,
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(10, 6, 10, 8),
-            Margin = new Padding(0, 0, 8, 8),
-        };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
-        var cap = new Label
-        {
-            Text = title,
-            Dock = DockStyle.Top,
-            Height = 26,
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
-            ForeColor = AppTheme.TextHeader,
-        };
-        card.Controls.Add(cap);
-        return card;
     }
 
     private static Control Btn(string text, Action click)

@@ -799,7 +799,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 196, BackColor = AppTheme.NavBg };
+        var sidebar = new Panel { Width = 210, BackColor = AppTheme.NavBg };
         var cap = new Label
         {
             Text = "  功能导航",
@@ -944,7 +944,7 @@ internal sealed class MainForm : Form
     {
         _selectedRow?.SetSelected(false);
         _selectedRow = null;
-        if (groupTitle is not null && EmbeddedPageTitles.Contains(groupTitle))
+        if (groupTitle is not null && Array.IndexOf(EmbeddedPageTitles, groupTitle) >= 0)
             _helpDetail.ShowEmbeddedGuide(groupTitle);
         else
             _helpDetail.ShowPlaceholder(groupTitle);

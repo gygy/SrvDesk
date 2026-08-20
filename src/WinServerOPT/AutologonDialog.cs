@@ -12,32 +12,31 @@ internal sealed class AutologonDialog : Form
 
     public AutologonDialog(AutologonSettings initial, bool editing)
     {
-        Text = "Windows 自动登录（Autologon）";
+        Text = "Windows 自动登录";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(440, 320);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.SurfaceCard;
+        ClientSize = new Size(460, 360);
+
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 48), BackColor = AppTheme.Surface };
 
         var warn = new Label
         {
-            Text = "实现方式与微软 Sysinternals Autologon 相同：\r\n" +
-                   "密码存入 LSA 机密（非注册表明文），管理员仍可解密。\r\n" +
-                   "仅建议在物理安全可控的个人 Server 桌面使用。",
-            Location = new Point(16, 12),
-            Size = new Size(408, 56),
+            Text = "实现方式与微软 Sysinternals Autologon 相同：密码存入 LSA 机密（非注册表明文）。\r\n仅建议在物理安全可控的个人 Server 桌面使用。",
+            Dock = DockStyle.Top,
+            Height = 44,
             ForeColor = AppTheme.ScopeServer,
         };
 
-        AddField("域（本地账户可留空）", _domain, 78, initial.Domain);
-        AddField("用户名", _user, 130, initial.Username);
-        AddField("密码", _password, 182, "", password: true);
+        var form = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 0, 0) };
+        AddField(form, "域（本地账户可留空）", _domain, 0, initial.Domain);
+        AddField(form, "用户名", _user, 72, initial.Username);
+        AddField(form, "密码", _password, 144, "", password: true);
 
         _keepPassword.Text = "保留现有 LSA 密码（不修改密码时勾选）";
-        _keepPassword.Location = new Point(16, 228);
+        _keepPassword.Location = new Point(0, 220);
         _keepPassword.AutoSize = true;
         _keepPassword.ForeColor = AppTheme.TextMute;
         _keepPassword.Checked = editing && !initial.UpdatePassword;
@@ -46,55 +45,50 @@ internal sealed class AutologonDialog : Form
         _hint.Text = editing
             ? "留空密码并勾选「保留现有 LSA 密码」可只改用户名/域。"
             : "启用自动登录必须填写密码。";
-        _hint.SetBounds(16, 252, 408, 32);
+        _hint.SetBounds(0, 246, 420, 32);
         _hint.ForeColor = AppTheme.TextMute;
 
-        var ok = new Button
-        {
-            Text = "确定",
-            DialogResult = DialogResult.OK,
-            Location = new Point(248, 278),
-            Size = new Size(88, 32),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = AppTheme.Primary,
-            ForeColor = AppTheme.TextOnPrimary,
-        };
-        ok.FlatAppearance.BorderSize = 0;
+        form.Controls.Add(_hint);
+        form.Controls.Add(_keepPassword);
 
-        var cancel = new Button
+        var ok = ThemedSettingsChrome.CreateButton("确定", true);
+        ok.Size = new Size(88, 34);
+        ok.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        ok.Click += (_, _) =>
         {
-            Text = "取消",
-            DialogResult = DialogResult.Cancel,
-            Location = new Point(344, 278),
-            Size = new Size(80, 32),
-            FlatStyle = FlatStyle.Flat,
+            if (TryAccept()) Close();
         };
+
+        body.Controls.Add(form);
+        body.Controls.Add(warn);
+        body.Controls.Add(ok);
+
+        ThemedSettingsChrome.MountModal(
+            this,
+            "Windows 自动登录",
+            "Autologon · LSA 机密存储",
+            body,
+            "凭据由管理员权限写入，请勿在不可信环境启用。");
+
+        body.Resize += (_, _) =>
+            ok.Location = new Point(body.ClientSize.Width - ok.Width, body.ClientSize.Height - ok.Height);
 
         AcceptButton = ok;
-        CancelButton = cancel;
-        Controls.AddRange([warn, _keepPassword, _hint, ok, cancel]);
+        CancelButton = null;
     }
 
-    protected override void OnFormClosing(FormClosingEventArgs e)
+    private bool TryAccept()
     {
-        if (DialogResult != DialogResult.OK)
-        {
-            base.OnFormClosing(e);
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(_user.Text))
         {
             MessageBox.Show("请填写用户名。", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            e.Cancel = true;
-            return;
+            return false;
         }
 
         if (!_keepPassword.Checked && string.IsNullOrEmpty(_password.Text))
         {
             MessageBox.Show("请填写密码，或勾选保留现有 LSA 密码。", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            e.Cancel = true;
-            return;
+            return false;
         }
 
         Settings = new AutologonSettings
@@ -104,21 +98,22 @@ internal sealed class AutologonDialog : Form
             Password = _password.Text,
             UpdatePassword = !_keepPassword.Checked,
         };
-        base.OnFormClosing(e);
+        DialogResult = DialogResult.OK;
+        return true;
     }
 
-    private void AddField(string label, TextBox box, int y, string value, bool password = false)
+    private static void AddField(Panel parent, string label, TextBox box, int y, string value, bool password = false)
     {
-        Controls.Add(new Label
+        parent.Controls.Add(new Label
         {
             Text = label,
-            Location = new Point(16, y),
+            Location = new Point(0, y),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         });
-        box.SetBounds(16, y + 22, 408, 26);
+        box.SetBounds(0, y + 22, 420, 26);
         box.Text = value;
         if (password) box.UseSystemPasswordChar = true;
-        Controls.Add(box);
+        parent.Controls.Add(box);
     }
 }

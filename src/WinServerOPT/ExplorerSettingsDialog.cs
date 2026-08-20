@@ -33,20 +33,15 @@ internal sealed class ExplorerSettingsDialog : Form
 
     public ExplorerSettingsDialog()
     {
-        Text = "Explorer 设置";
+        Text = "资源管理器";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(980, 680);
         MinimumSize = new Size(860, 560);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
 
-        var header = ThemedSettingsChrome.CreateHeader("Explorer 设置", "资源管理器 · 任务栏 · 快速打开");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即写入注册表。部分项需点「重启资源管理器」后可见。", LoadValues, showClose: false);
-
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), AutoScroll = true, BackColor = AppTheme.Surface };
+        var body = ThemedSettingsChrome.CreateBodyPanel();
 
         var explorerCard = BuildExplorerCard();
         explorerCard.Dock = DockStyle.Top;
@@ -59,9 +54,13 @@ internal sealed class ExplorerSettingsDialog : Form
         body.Controls.Add(taskbarCard);
         body.Controls.Add(explorerCard);
 
-        Controls.Add(body);
-        Controls.Add(footer);
-        Controls.Add(header);
+        ThemedSettingsChrome.MountEmbedded(
+            this,
+            "资源管理器",
+            "资源管理器 · 任务栏 · 桌面快捷维护 · 开关立即生效",
+            body,
+            "部分项需点「重启资源管理器」后可见。",
+            LoadValues);
         Load += (_, _) => LoadValues();
     }
 

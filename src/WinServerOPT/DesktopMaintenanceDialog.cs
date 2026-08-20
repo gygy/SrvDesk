@@ -6,34 +6,24 @@ internal sealed class DesktopMaintenanceDialog : Form
     {
         Text = "桌面维护";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 380);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.SurfaceCard;
+        ClientSize = new Size(540, 420);
+        MinimumSize = new Size(480, 380);
 
-        var tip = new Label
-        {
-            Text = "一键执行系统维护操作。部分资源管理器相关优化应用后若未生效，可点「重启资源管理器」。",
-            Location = new Point(16, 12),
-            Size = new Size(488, 36),
-            ForeColor = AppTheme.TextMute,
-        };
-
+        var body = ThemedSettingsChrome.CreateBodyPanel();
         var grid = new TableLayoutPanel
         {
-            Location = new Point(16, 56),
-            Size = new Size(488, 260),
+            Dock = DockStyle.Top,
+            AutoSize = true,
             ColumnCount = 2,
-            RowCount = 5,
-            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(0, 0, 0, 8),
         };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        for (var i = 0; i < 5; i++)
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 20));
+        for (var i = 0; i < 4; i++)
+            grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
 
         AddBtn(grid, 0, 0, "重启资源管理器", () => { DesktopQuickActions.RestartExplorer(); Close(); });
         AddBtn(grid, 1, 0, "刷新图标缓存", () => DesktopQuickActions.RefreshIconCache(this));
@@ -44,42 +34,23 @@ internal sealed class DesktopMaintenanceDialog : Form
         AddBtn(grid, 0, 3, "磁盘管理", () => DesktopQuickActions.OpenDiskManagement(this));
         AddBtn(grid, 1, 3, "设备管理器", () => DesktopQuickActions.OpenDeviceManager(this));
 
-        var close = ActionButton("关闭", () => Close(), true);
-        close.DialogResult = DialogResult.Cancel;
-        close.Location = new Point(424, 332);
-        CancelButton = close;
+        body.Controls.Add(grid);
 
-        Controls.AddRange([tip, grid, close]);
+        ThemedSettingsChrome.MountModal(
+            this,
+            "桌面维护",
+            "资源管理器 · 图标 · 系统管理快捷操作",
+            body,
+            "部分 Explorer 优化应用后若未生效，可重启资源管理器。");
     }
 
     private static void AddBtn(TableLayoutPanel grid, int col, int row, string text, Action click)
     {
-        var b = ActionButton(text, click, false);
+        var b = ThemedSettingsChrome.CreateButton(text, false);
         b.Dock = DockStyle.Fill;
         b.Margin = new Padding(4);
         b.Height = 44;
-        grid.Controls.Add(b, col, row);
-    }
-
-    private static Button ActionButton(string text, Action click, bool primary)
-    {
-        var b = new Button
-        {
-            Text = text,
-            FlatStyle = FlatStyle.Flat,
-            Cursor = Cursors.Hand,
-            BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
-            ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-            Font = new Font("Microsoft YaHei UI", 9F),
-        };
-        if (primary) b.FlatAppearance.BorderSize = 0;
-        else
-        {
-            b.FlatAppearance.BorderColor = AppTheme.Border;
-            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-            b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
-        }
         b.Click += (_, _) => click();
-        return b;
+        grid.Controls.Add(b, col, row);
     }
 }

@@ -17,22 +17,17 @@ internal sealed class CleanupDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 340);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
+        ClientSize = new Size(520, 360);
 
-        var header = ThemedSettingsChrome.CreateHeader("垃圾清理", "对齐 Optimizer Cleaner / SophiApp 清理 · 不清理浏览器密码");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "清理不可恢复，请先确认勾选项。");
-
-        var body = new FlowLayoutPanel
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 8), BackColor = AppTheme.Surface };
+        var opts = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(16, 12, 16, 8),
+            Dock = DockStyle.Top,
+            AutoSize = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            BackColor = AppTheme.SurfaceCard,
         };
-        body.Controls.AddRange([_temp, _recent, _recycle, _prefetch, _thumb]);
+        opts.Controls.AddRange([_temp, _recent, _recycle, _prefetch, _thumb]);
         var run = ThemedSettingsChrome.CreateButton("开始清理", true);
         run.Size = new Size(120, 34);
         run.Click += (_, _) => RunCleanup();
@@ -49,12 +44,16 @@ internal sealed class CleanupDialog : Form
         row.Controls.Add(repair);
         _result.AutoSize = true;
         _result.ForeColor = AppTheme.TextMute;
-        body.Controls.Add(row);
         body.Controls.Add(_result);
+        body.Controls.Add(row);
+        body.Controls.Add(opts);
 
-        Controls.Add(body);
-        Controls.Add(footer);
-        Controls.Add(header);
+        ThemedSettingsChrome.MountModal(
+            this,
+            "垃圾清理",
+            "临时文件 · 缩略图 · 预取 · 不清理浏览器密码",
+            body,
+            "清理不可恢复，请先确认勾选项。");
     }
 
     private static CheckBox Mk(string text, bool on) => new()

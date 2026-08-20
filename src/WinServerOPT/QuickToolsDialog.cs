@@ -11,103 +11,79 @@ internal sealed class QuickToolsDialog : Form
     public QuickToolsDialog(SystemFacts facts)
     {
         _facts = facts;
-        Text = "快速打开工具";
+        Text = "快速工具";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(620, 520);
+        ClientSize = new Size(640, 520);
         MinimumSize = new Size(520, 420);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.SurfaceCard;
 
-        var tip = new Label
-        {
-            Text = "双击或点「打开」启动系统管理工具。列表已按 Server 桌面场景筛选可用项。",
-            Location = new Point(16, 12),
-            Size = new Size(588, 36),
-            ForeColor = AppTheme.TextMute,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-        };
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 8), BackColor = AppTheme.Surface };
 
-        var searchLabel = new Label
+        var toolbar = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = AppTheme.Surface };
+        toolbar.Controls.Add(new Label
         {
             Text = "搜索",
-            Location = new Point(16, 54),
+            Location = new Point(0, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
-        };
-        _search.SetBounds(52, 50, 300, 26);
+        });
+        _search.SetBounds(44, 4, 280, 26);
+        _search.Anchor = AnchorStyles.Top | AnchorStyles.Left;
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.ForeColor = AppTheme.TextMain;
         _search.TextChanged += (_, _) => ApplyFilter();
-
-        var countLabel = new Label
-        {
-            Name = "countLabel",
-            Location = new Point(360, 54),
-            AutoSize = true,
-            ForeColor = AppTheme.TextMute,
-        };
+        toolbar.Controls.Add(_search);
 
         _list.View = View.Details;
         _list.FullRowSelect = true;
         _list.GridLines = true;
         _list.HideSelection = false;
         _list.MultiSelect = false;
-        _list.Location = new Point(16, 84);
-        _list.Size = new Size(588, 340);
-        _list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        _list.Dock = DockStyle.Fill;
+        _list.BackColor = AppTheme.SurfaceCard;
+        _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Columns.Add("分类", 108);
         _list.Columns.Add("工具", 200);
         _list.Columns.Add("说明", 260);
         _list.DoubleClick += (_, _) => OpenSelected();
         _list.SelectedIndexChanged += (_, _) => UpdateDescription();
 
-        _desc.SetBounds(16, 432, 420, 40);
+        _desc.Dock = DockStyle.Bottom;
+        _desc.Height = 40;
         _desc.ForeColor = AppTheme.TextMute;
-        _desc.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        _desc.Padding = new Padding(0, 6, 0, 0);
 
-        var openBtn = new Button
-        {
-            Text = "打开",
-            Size = new Size(88, 34),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = AppTheme.Primary,
-            ForeColor = AppTheme.TextOnPrimary,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-        };
-        openBtn.FlatAppearance.BorderSize = 0;
+        var openBtn = ThemedSettingsChrome.CreateButton("打开", true);
+        openBtn.Size = new Size(88, 34);
+        openBtn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         openBtn.Click += (_, _) => OpenSelected();
 
-        var closeBtn = new Button
-        {
-            Text = "关闭",
-            DialogResult = DialogResult.Cancel,
-            Size = new Size(80, 34),
-            FlatStyle = FlatStyle.Flat,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-        };
+        body.Controls.Add(_list);
+        body.Controls.Add(_desc);
+        body.Controls.Add(toolbar);
+        body.Controls.Add(openBtn);
+
+        ThemedSettingsChrome.MountModal(
+            this,
+            "快速工具",
+            "系统管理工具快捷入口 · 已按 Server 桌面场景筛选",
+            body,
+            "双击列表项或点「打开」启动。");
 
         Load += (_, _) =>
         {
-            openBtn.Location = new Point(ClientSize.Width - 192, ClientSize.Height - 48);
-            closeBtn.Location = new Point(ClientSize.Width - 96, ClientSize.Height - 48);
+            openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
+            _tools = QuickToolsLauncher.GetAvailableTools(_facts).ToList();
+            ReloadList(_tools);
         };
-        Resize += (_, _) =>
+        body.Resize += (_, _) =>
         {
-            openBtn.Location = new Point(ClientSize.Width - 192, ClientSize.Height - 48);
-            closeBtn.Location = new Point(ClientSize.Width - 96, ClientSize.Height - 48);
+            openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
             if (_list.Columns.Count >= 3)
                 _list.Columns[2].Width = Math.Max(120, _list.ClientSize.Width - _list.Columns[0].Width - _list.Columns[1].Width - 4);
         };
-
-        CancelButton = closeBtn;
-        Controls.AddRange([tip, searchLabel, _search, countLabel, _list, _desc, openBtn, closeBtn]);
-
-        _tools = QuickToolsLauncher.GetAvailableTools(_facts).ToList();
-        ReloadList(_tools);
-        UpdateCountLabel(countLabel);
     }
 
     private void ReloadList(IEnumerable<QuickTool> tools)
@@ -130,38 +106,25 @@ internal sealed class QuickToolsDialog : Form
     private void ApplyFilter()
     {
         var q = _search.Text.Trim();
-        if (q.Length == 0)
-        {
-            ReloadList(_tools);
-            return;
-        }
-
-        var filtered = _tools.Where(t =>
-            t.Title.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-            t.Category.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-            t.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-        ReloadList(filtered);
+        ReloadList(q.Length == 0
+            ? _tools
+            : _tools.Where(t =>
+                t.Title.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                t.Category.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                t.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0));
     }
 
     private void UpdateDescription()
     {
-        if (_list.SelectedItems.Count == 0)
-        {
-            _desc.Text = "";
-            return;
-        }
-
-        if (_list.SelectedItems[0].Tag is QuickTool t)
-            _desc.Text = t.Description;
+        _desc.Text = _list.SelectedItems.Count > 0 && _list.SelectedItems[0].Tag is QuickTool t
+            ? t.Description
+            : "";
     }
-
-    private void UpdateCountLabel(Label label) =>
-        label.Text = $"共 {_tools.Count} 项可用";
 
     private void OpenSelected()
     {
         if (_list.SelectedItems.Count == 0) return;
-        if (_list.SelectedItems[0].Tag is not QuickTool tool) return;
-        QuickToolsLauncher.Launch(tool, this);
+        if (_list.SelectedItems[0].Tag is QuickTool tool)
+            QuickToolsLauncher.Launch(tool, this);
     }
 }
