@@ -12,6 +12,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolHosts { get; }
     public ToolStripMenuItem ToolEventViewer { get; }
     public ToolStripMenuItem ToolFlushDns { get; }
+    public ToolStripMenuItem ToolCommonSoftware { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
@@ -51,10 +52,11 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolHosts = new ToolStripMenuItem("编辑 hosts...");
         ToolEventViewer = new ToolStripMenuItem("事件查看器");
         ToolFlushDns = new ToolStripMenuItem("刷新 DNS 缓存");
+        ToolCommonSoftware = new ToolStripMenuItem("常用软件...");
         ToolQuick = new ToolStripMenuItem("快速工具...");
         ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
         tools.DropDownItems.AddRange([
-            ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts, ToolEventViewer, ToolFlushDns,
+            ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts, ToolEventViewer, ToolFlushDns, ToolCommonSoftware,
             new ToolStripSeparator(), ToolQuick, ToolRefresh
         ]);
 

@@ -204,6 +204,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
+        _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState();
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
@@ -503,6 +504,12 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(ex.Message, "读取失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void ShowCommonSoftware()
+    {
+        using var dlg = new CommonSoftwareDialog();
+        dlg.ShowDialog(this);
     }
 
     private void ShowQuickToolsDialog()
@@ -916,6 +923,7 @@ internal sealed class MainForm : Form
         var allOn = ToolButton("全部推荐", () => SetAll(true));
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
         var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
+        var commonSoftware = ToolButton("常用软件", ShowCommonSoftware);
         var refresh = ToolButton("刷新", LoadState);
 
         _restore.Text = "恢复默认";
@@ -946,7 +954,7 @@ internal sealed class MainForm : Form
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
-        actions.Controls.AddRange([allOn, allOff, quickTools, refresh, _restore, _apply]);
+        actions.Controls.AddRange([allOn, allOff, quickTools, commonSoftware, refresh, _restore, _apply]);
         bottom.Controls.Add(actions);
         bottom.Controls.Add(_status);
         bottom.Controls.Add(rule);
