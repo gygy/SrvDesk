@@ -62,6 +62,29 @@ internal sealed class MainForm : Form
     private readonly SettingRow _prelaunch = Row("禁用应用预启动", "启用", SettingCatalog.DisableAppPrelaunch);
     private readonly SettingRow _pageCombine = Row("禁用内存页面合并", "启用", SettingCatalog.DisablePageCombining);
     private readonly SettingRow _ucpd = Row("禁用微软 UCPD 驱动", "启用", SettingCatalog.DisableUcpdDriver);
+    private readonly SettingRow _cortana = Row("关闭 Cortana", "开启", SettingCatalog.DisableCortana);
+    private readonly SettingRow _copilotAi = Row("关闭 Copilot（系统+Edge）", "开启", SettingCatalog.DisableCopilotAi);
+    private readonly SettingRow _officeTel = Row("关闭 Office 遥测", "开启", SettingCatalog.DisableOfficeTelemetry);
+    private readonly SettingRow _utc = Row("硬件时钟使用 UTC（双系统）", "本地时间", SettingCatalog.EnableUtcTime);
+    private readonly SettingRow _hpet = Row("关闭 HPET 高精度计时器", "开启", SettingCatalog.DisableHpet);
+    private readonly SettingRow _loginVerbose = Row("登录显示详细状态", "简洁", SettingCatalog.EnableLoginVerbose);
+    private readonly SettingRow _netThrottle = Row("关闭多媒体网络节流", "开启", SettingCatalog.DisableNetworkThrottling);
+    private readonly SettingRow _gameDvr = Row("关闭游戏栏 / Game DVR", "开启", SettingCatalog.DisableGameDvr);
+    private readonly SettingRow _location = Row("禁止定位服务", "允许", SettingCatalog.DisableLocationTracking);
+    private readonly SettingRow _consumer = Row("关闭消费者体验推送", "开启", SettingCatalog.DisableConsumerFeatures);
+    private readonly SettingRow _edgePre = Row("禁止 Edge 预启动与后台", "允许", SettingCatalog.DisableEdgePreload);
+    private readonly SettingRow _teredo = Row("禁用 Teredo 隧道", "允许", SettingCatalog.DisableTeredo);
+    private readonly SettingRow _clipCloud = Row("关闭剪贴板云同步", "允许", SettingCatalog.DisableClipboardCloud);
+    private readonly SettingRow _ntfsStamp = Row("关闭 NTFS 最后访问时间戳", "记录", SettingCatalog.DisableNtfsLastAccess);
+    private readonly SettingRow _xbox = Row("禁用 Xbox Live 服务", "手动", SettingCatalog.DisableXboxServices);
+    private readonly SettingRow _fax = Row("禁用传真服务", "手动", SettingCatalog.DisableFaxService);
+    private readonly SettingRow _f8 = Row("启用 F8 高级启动菜单", "标准", SettingCatalog.EnableF8BootMenu);
+    private readonly SettingRow _takeOwn = Row("右键菜单：取得所有权", "无", SettingCatalog.ContextMenuTakeOwnership);
+    private readonly SettingRow _openCmd = Row("右键菜单：在此处打开 CMD", "无", SettingCatalog.ContextMenuOpenCmd);
+    private readonly SettingRow _wmpShare = Row("禁用媒体播放器网络共享", "手动", SettingCatalog.DisableMediaPlayerSharing);
+    private readonly SettingRow _insider = Row("禁用 Windows Insider 服务", "手动", SettingCatalog.DisableInsiderService);
+    private readonly SettingRow _storeUpd = Row("禁止商店自动更新应用", "自动", SettingCatalog.DisableStoreAutoUpdate);
+    private readonly SettingRow _news = Row("关闭资讯与兴趣", "开启", SettingCatalog.DisableNewsInterests);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -175,15 +198,19 @@ internal sealed class MainForm : Form
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
         _memComp, _prelaunch, _pageCombine, _ucpd,
+        _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
+        _takeOwn, _openCmd, _news,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
+        _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
+        _insider, _storeUpd,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra,
         _svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
@@ -208,7 +235,8 @@ internal sealed class MainForm : Form
             _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
             _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
             _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
-            _memComp, _prelaunch, _pageCombine, _ucpd
+            _memComp, _prelaunch, _pageCombine, _ucpd,
+            _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
@@ -216,12 +244,15 @@ internal sealed class MainForm : Form
             _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
             _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
             _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
-            _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot
+            _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
+            _takeOwn, _openCmd, _news
         ]));
         _groups.Add(("隐私与体验", [
             _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
             _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
-            _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt
+            _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
+            _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
+            _insider, _storeUpd
         ]));
         _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra]));
         _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
@@ -277,6 +308,8 @@ internal sealed class MainForm : Form
         _appMenu.ToolPrivacy.Click += (_, _) => ShowPrivacySettings();
         _appMenu.ToolOther.Click += (_, _) => ShowOtherSettings();
         _appMenu.ToolStartup.Click += (_, _) => ShowStartupManager();
+        _appMenu.ToolDns.Click += (_, _) => { using var d = new DnsSwitcherDialog(); d.ShowDialog(this); };
+        _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
@@ -1250,6 +1283,29 @@ internal sealed class MainForm : Form
         _prelaunch.Checked = s.DisableAppPrelaunch;
         _pageCombine.Checked = s.DisablePageCombining;
         _ucpd.Checked = s.DisableUcpdDriver;
+        _cortana.Checked = s.DisableCortana;
+        _copilotAi.Checked = s.DisableCopilotAi;
+        _officeTel.Checked = s.DisableOfficeTelemetry;
+        _utc.Checked = s.EnableUtcTime;
+        _hpet.Checked = s.DisableHpet;
+        _loginVerbose.Checked = s.EnableLoginVerbose;
+        _netThrottle.Checked = s.DisableNetworkThrottling;
+        _gameDvr.Checked = s.DisableGameDvr;
+        _location.Checked = s.DisableLocationTracking;
+        _consumer.Checked = s.DisableConsumerFeatures;
+        _edgePre.Checked = s.DisableEdgePreload;
+        _teredo.Checked = s.DisableTeredo;
+        _clipCloud.Checked = s.DisableClipboardCloud;
+        _ntfsStamp.Checked = s.DisableNtfsLastAccess;
+        _xbox.Checked = s.DisableXboxServices;
+        _fax.Checked = s.DisableFaxService;
+        _f8.Checked = s.EnableF8BootMenu;
+        _takeOwn.Checked = s.ContextMenuTakeOwnership;
+        _openCmd.Checked = s.ContextMenuOpenCmd;
+        _wmpShare.Checked = s.DisableMediaPlayerSharing;
+        _insider.Checked = s.DisableInsiderService;
+        _storeUpd.Checked = s.DisableStoreAutoUpdate;
+        _news.Checked = s.DisableNewsInterests;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -1332,6 +1388,29 @@ internal sealed class MainForm : Form
         DisableAppPrelaunch = _prelaunch.Checked,
         DisablePageCombining = _pageCombine.Checked,
         DisableUcpdDriver = _ucpd.Checked,
+        DisableCortana = _cortana.Checked,
+        DisableCopilotAi = _copilotAi.Checked,
+        DisableOfficeTelemetry = _officeTel.Checked,
+        EnableUtcTime = _utc.Checked,
+        DisableHpet = _hpet.Checked,
+        EnableLoginVerbose = _loginVerbose.Checked,
+        DisableNetworkThrottling = _netThrottle.Checked,
+        DisableGameDvr = _gameDvr.Checked,
+        DisableLocationTracking = _location.Checked,
+        DisableConsumerFeatures = _consumer.Checked,
+        DisableEdgePreload = _edgePre.Checked,
+        DisableTeredo = _teredo.Checked,
+        DisableClipboardCloud = _clipCloud.Checked,
+        DisableNtfsLastAccess = _ntfsStamp.Checked,
+        DisableXboxServices = _xbox.Checked,
+        DisableFaxService = _fax.Checked,
+        EnableF8BootMenu = _f8.Checked,
+        ContextMenuTakeOwnership = _takeOwn.Checked,
+        ContextMenuOpenCmd = _openCmd.Checked,
+        DisableMediaPlayerSharing = _wmpShare.Checked,
+        DisableInsiderService = _insider.Checked,
+        DisableStoreAutoUpdate = _storeUpd.Checked,
+        DisableNewsInterests = _news.Checked,
         TaskbarSearchMode = _tbSearch.Checked ? 2 : 1,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,

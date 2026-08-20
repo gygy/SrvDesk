@@ -167,6 +167,30 @@ internal static class Optimizer
         public bool DisableAppPrelaunch;
         public bool DisablePageCombining;
         public bool DisableUcpdDriver;
+
+        public bool DisableCortana;
+        public bool DisableCopilotAi;
+        public bool DisableOfficeTelemetry;
+        public bool EnableUtcTime;
+        public bool DisableHpet;
+        public bool EnableLoginVerbose;
+        public bool DisableNetworkThrottling;
+        public bool DisableGameDvr;
+        public bool DisableLocationTracking;
+        public bool DisableConsumerFeatures;
+        public bool DisableEdgePreload;
+        public bool DisableTeredo;
+        public bool DisableClipboardCloud;
+        public bool DisableNtfsLastAccess;
+        public bool DisableXboxServices;
+        public bool DisableFaxService;
+        public bool EnableF8BootMenu;
+        public bool ContextMenuTakeOwnership;
+        public bool ContextMenuOpenCmd;
+        public bool DisableMediaPlayerSharing;
+        public bool DisableInsiderService;
+        public bool DisableStoreAutoUpdate;
+        public bool DisableNewsInterests;
     }
 
     public static bool IsWindowsServer()
@@ -298,6 +322,7 @@ internal static class Optimizer
             TaskbarSearchMode = Win11DesktopTweaks.IsTaskbarSearchBoxOn() ? 2 : 1,
         };
         EasySettingsTweaks.ReadInto(state);
+        CompetitorTweaks.ReadInto(state);
         var searchMode = EasySettingsTweaks.GetSearchboxMode();
         if (searchMode is 0 or 1 or 2)
             state.TaskbarSearchMode = searchMode;
@@ -467,6 +492,7 @@ internal static class Optimizer
         });
         Try(errors, "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
         Try(errors, "轻松设置扩展项", () => EasySettingsTweaks.Apply(s));
+        Try(errors, "竞品常用项", () => CompetitorTweaks.Apply(s));
         return errors;
     }
 

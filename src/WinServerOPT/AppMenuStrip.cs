@@ -22,6 +22,8 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolPrivacy { get; }
     public ToolStripMenuItem ToolOther { get; }
     public ToolStripMenuItem ToolStartup { get; }
+    public ToolStripMenuItem ToolDns { get; }
+    public ToolStripMenuItem ToolCleanup { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
@@ -72,13 +74,15 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolPrivacy = new ToolStripMenuItem("隐私设置...");
         ToolOther = new ToolStripMenuItem("其他设置...");
         ToolStartup = new ToolStripMenuItem("启动项管理...");
+        ToolDns = new ToolStripMenuItem("DNS 切换...");
+        ToolCleanup = new ToolStripMenuItem("垃圾清理...");
         ToolDesktopMaintenance = new ToolStripMenuItem("桌面维护...");
         ToolQuick = new ToolStripMenuItem("快速工具...");
         ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
         tools.DropDownItems.AddRange([
             ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts,
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
-            ToolFlushDns, ToolCommonSoftware, ToolExplorer, ToolPrivacy, ToolOther, ToolStartup, ToolDesktopMaintenance,
+            ToolFlushDns, ToolDns, ToolCleanup, ToolCommonSoftware, ToolExplorer, ToolPrivacy, ToolOther, ToolStartup, ToolDesktopMaintenance,
             new ToolStripSeparator(), ToolQuick, ToolRefresh
         ]);
 

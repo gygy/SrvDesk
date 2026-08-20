@@ -686,6 +686,53 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisableUcpdDriver = H(
         "禁用微软用户选择保护驱动 UCPD。", "UCPD 服务禁用。", "便于修改默认浏览器/关联。", "仅在需要改默认应用时开启。", "服务停止后生效。", W10);
 
+    public static readonly SettingHelpInfo DisableCortana = H(
+        "关闭 Cortana。", "AllowCortana=0。", "减少语音助手后台。", "对齐 Optimizer DisableCortana。", "注销后完全生效。", W10De);
+    public static readonly SettingHelpInfo DisableCopilotAi = H(
+        "关闭 Windows / Edge Copilot。", "TurnOffWindowsCopilot + Edge HubsSidebar。", "去掉 AI 侧栏占用。", "对齐 Optimizer DisableCoPilotAI。", "重启资源管理器或 Edge 后生效。", W10De);
+    public static readonly SettingHelpInfo DisableOfficeTelemetry = H(
+        "关闭 Office 遥测上传。", "Office ClientTelemetry / OSM 策略。", "减少 Office 后台上报。", "需已安装 Office 2016+。", "重新打开 Office 后生效。");
+    public static readonly SettingHelpInfo EnableUtcTime = H(
+        "硬件时钟使用 UTC（双系统）。", "RealTimeIsUniversal=1。", "与 Linux 双系统时间一致。", "仅 Windows+Linux 双系统需要；纯 Windows 请保持关闭。", "立即生效。");
+    public static readonly SettingHelpInfo DisableHpet = H(
+        "关闭 HPET 高精度事件计时器。", "bcdedit useplatformclock / disabledynamictick。", "部分游戏/延迟场景可能改善。", "可能影响多媒体时钟，不确定勿开。", "需重启。");
+    public static readonly SettingHelpInfo EnableLoginVerbose = H(
+        "登录时显示详细状态信息。", "VerboseStatus=1。", "便于排查启动卡住的服务。", "运维机推荐。", "下次登录生效。");
+    public static readonly SettingHelpInfo DisableNetworkThrottling = H(
+        "关闭多媒体网络节流。", "NetworkThrottlingIndex=0xFFFFFFFF。", "提高后台网络吞吐。", "对齐 Optimizer DisableNetworkThrottling。", "立即生效。");
+    public static readonly SettingHelpInfo DisableGameDvr = H(
+        "关闭游戏栏 / Game DVR。", "AllowGameDVR=0。", "减少录制与 Xbox 叠加层。", "不玩游戏可开。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableLocationTracking = H(
+        "禁止定位服务。", "DisableLocation=1。", "减少位置上传。", "地图/天气定位会失效。", "立即生效。");
+    public static readonly SettingHelpInfo DisableConsumerFeatures = H(
+        "关闭 Windows 消费者体验推送。", "DisableWindowsConsumerFeatures=1。", "减少预装建议应用。", "对齐 SophiApp / Optimizer。", "注销后生效。", W10De);
+    public static readonly SettingHelpInfo DisableEdgePreload = H(
+        "禁止 Edge 预启动与后台模式。", "StartupBoostEnabled=0。", "减少闲时内存。", "首次打开 Edge 会稍慢。", "立即生效。");
+    public static readonly SettingHelpInfo DisableTeredo = H(
+        "禁用 Teredo IPv6 隧道。", "netsh teredo disabled。", "减少无用隧道与扫描面。", "需 IPv6 穿越 NAT 时勿开。", "立即生效。");
+    public static readonly SettingHelpInfo DisableClipboardCloud = H(
+        "关闭剪贴板云同步与跨设备。", "AllowCrossDeviceClipboard=0。", "剪贴板内容不上传。", "对齐 Optimizer DisableCloudClipboard。", "立即生效。", W10);
+    public static readonly SettingHelpInfo DisableNtfsLastAccess = H(
+        "关闭 NTFS 最后访问时间戳。", "fsutil disablelastaccess。", "降低磁盘元数据写入。", "对齐 Optimizer DisableNTFSTimeStamp。", "立即生效。");
+    public static readonly SettingHelpInfo DisableXboxServices = H(
+        "禁用 Xbox Live 相关服务。", "XblAuthManager 等。", "无 Xbox 时减少后台。", "商店游戏/Xbox 应用会受影响。", "服务停止后生效。", W10De);
+    public static readonly SettingHelpInfo DisableFaxService = H(
+        "禁用传真服务。", "Fax 服务禁用。", "几乎无人用传真时可关。", "需要传真时勿开。", "服务停止后生效。");
+    public static readonly SettingHelpInfo EnableF8BootMenu = H(
+        "启用传统 F8 高级启动菜单。", "bcdedit bootmenupolicy legacy。", "开机可进安全模式菜单。", "UEFI 机器仍可用 Shift+重启。", "下次开机生效。");
+    public static readonly SettingHelpInfo ContextMenuTakeOwnership = H(
+        "右键菜单增加「取得所有权」。", "HKCR *\\shell。", "快速 takeown/icacls。", "对齐 Optimizer Integrator。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo ContextMenuOpenCmd = H(
+        "文件夹右键「在此处打开 CMD」。", "HKCR Directory\\shell。", "运维常用。", "对齐 Optimizer OpenWithCMD。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableMediaPlayerSharing = H(
+        "禁用 Windows Media Player 网络共享。", "WMPNetworkSvc。", "减少共享端口。", "不共享媒体库可开。", "服务停止后生效。");
+    public static readonly SettingHelpInfo DisableInsiderService = H(
+        "禁用 Windows Insider 服务。", "wisvc。", "不参加预览计划时可关。", "Insider 通道将不可用。", "服务停止后生效。", W10);
+    public static readonly SettingHelpInfo DisableStoreAutoUpdate = H(
+        "禁止微软商店自动更新应用。", "WindowsStore AutoDownload=2。", "避免商店应用悄悄更新。", "需手动检查商店更新。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableNewsInterests = H(
+        "关闭资讯与兴趣/天气动态。", "AllowNewsAndInterests=0。", "任务栏更干净。", "对齐 Optimizer DisableNewsInterests。", "重启资源管理器后生效。", W10De);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,

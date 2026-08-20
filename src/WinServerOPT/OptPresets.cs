@@ -62,6 +62,10 @@ internal static class OptPresets
         s.EnableSearch = false;
         s.DisableSearchEngineFeature = true;
         s.DisableDefenderAntivirus = true;
+        s.EnableUtcTime = false;
+        s.DisableHpet = false;
+        s.EnableF8BootMenu = false;
+        s.EnableLoginVerbose = false;
         return s;
     }
 
@@ -83,6 +87,10 @@ internal static class OptPresets
         s.DisableMemoryIntegrity = false;
         s.DisableWdac = false;
         s.DisableVbs = false;
+        s.EnableUtcTime = false;
+        s.DisableHpet = false;
+        s.EnableF8BootMenu = false;
+        s.EnableLoginVerbose = false;
         return s;
     }
 
