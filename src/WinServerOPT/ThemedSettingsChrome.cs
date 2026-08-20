@@ -9,7 +9,7 @@ internal sealed class InstantToggleRow : Panel
     public InstantToggleRow(string title)
     {
         Height = 38;
-        Dock = DockStyle.Top;
+        Width = 520;
         BackColor = Color.Transparent;
 
         _toggle.Location = new Point(4, 6);

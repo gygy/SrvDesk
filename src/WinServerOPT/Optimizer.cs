@@ -134,6 +134,39 @@ internal static class Optimizer
         public bool DisableStickyKeys;
         public bool DisablePca;
         public bool PauseFeatureUpdatesUntil2035;
+
+        public bool HideProtectedOsFiles;
+        public bool AlwaysShowIconsNeverThumbnails;
+        public bool ShowEmptyDrives;
+        public bool ShowRecentFiles = true;
+        public bool ShowFrequentPlaces = true;
+        public bool HideOfficeCloudFiles;
+        public bool DisableOneDrive;
+        public bool HideTaskbarChat;
+        public bool HideTaskbarCopilot;
+        public int TaskbarSearchMode = -1;
+
+        public bool DisableCloudSearch;
+        public bool DisableWebsiteLangList;
+        public bool DisableAppLaunchTracking;
+        public bool DisableSettingsSuggestions;
+        public bool DisableInkingPersonalization;
+        public bool ExcludeMsrtFromWu;
+
+        public bool DisableMeltdownSpectre;
+        public bool DisableMemoryIntegrity;
+        public bool DisableWdac;
+        public bool DisableVbs;
+        public bool EnableTcpBbr2;
+        public bool DisableSystemRestore;
+        public bool DisableCeip;
+        public bool DisableDiagnosticPolicy;
+
+        public bool DisableRemoteAssistance;
+        public bool DisableMemoryCompression;
+        public bool DisableAppPrelaunch;
+        public bool DisablePageCombining;
+        public bool DisableUcpdDriver;
     }
 
     public static bool IsWindowsServer()
@@ -154,7 +187,7 @@ internal static class Optimizer
 
         var account = fullScan ? ReadAccountPolicyFlags() : (ComplexityOff: ServerDesktopTweaks.IsSamPasswordComplexityOff(), NeverExpire: false);
 
-        return new State
+        var state = new State
         {
             CpuProgramPriority = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", 38),
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
@@ -262,7 +295,13 @@ internal static class Optimizer
             DisableStickyKeys = Win11DesktopTweaks.IsDisableStickyKeysOn(),
             DisablePca = ServiceStartEquals("PcaSvc", 4),
             PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On(),
+            TaskbarSearchMode = Win11DesktopTweaks.IsTaskbarSearchBoxOn() ? 2 : 1,
         };
+        EasySettingsTweaks.ReadInto(state);
+        var searchMode = EasySettingsTweaks.GetSearchboxMode();
+        if (searchMode is 0 or 1 or 2)
+            state.TaskbarSearchMode = searchMode;
+        return state;
     }
 
     public static List<string> Apply(State s)
@@ -427,6 +466,7 @@ internal static class Optimizer
             DesktopQuickActions.RestartExplorer();
         });
         Try(errors, "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
+        Try(errors, "轻松设置扩展项", () => EasySettingsTweaks.Apply(s));
         return errors;
     }
 

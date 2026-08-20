@@ -19,7 +19,8 @@ internal static class Win11DesktopTweaks
         SetShortcutSuffixOff(s.NoShortcutSuffix);
         SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", s.Win11ExplorerStyle ? 0 : 1);
         SetClassicContextMenu(s.Win10ClassicContextMenu);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode", s.TaskbarSearchBox ? 2 : 1);
+        SetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode",
+            s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
         SetTaskbarAutoHide(s.TaskbarAutoHide);

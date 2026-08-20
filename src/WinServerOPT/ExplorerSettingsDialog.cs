@@ -200,16 +200,16 @@ internal sealed class ExplorerSettingsDialog : Form
         _frequent.Bind(s.ShowFrequentPlaces, v => { s.ShowFrequentPlaces = v; EasySettingsTweaks.ApplyExplorerBits(s); });
         _office.Bind(s.HideOfficeCloudFiles, v => { s.HideOfficeCloudFiles = v; EasySettingsTweaks.ApplyExplorerBits(s); });
         _arrow.Bind(s.NoShortcutArrow, v => { /* applied via Optimizer path */ ApplyArrow(v); });
-        _suffix.Bind(s.NoShortcutSuffix, v => { s.NoShortcutSuffix = v; Win11DesktopTweaks.Apply(s); });
-        _shield.Bind(s.RemoveAdminShield, v => { s.RemoveAdminShield = v; Win11DesktopTweaks.Apply(s); });
-        _win10Explorer.Bind(!s.Win11ExplorerStyle, v => { s.Win11ExplorerStyle = !v; Win11DesktopTweaks.Apply(s); });
-        _classicMenu.Bind(s.Win10ClassicContextMenu, v => { s.Win10ClassicContextMenu = v; Win11DesktopTweaks.Apply(s); });
+        _suffix.Bind(s.NoShortcutSuffix, v => { s.NoShortcutSuffix = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
+        _shield.Bind(s.RemoveAdminShield, v => { s.RemoveAdminShield = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
+        _win10Explorer.Bind(!s.Win11ExplorerStyle, v => { s.Win11ExplorerStyle = !v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
+        _classicMenu.Bind(s.Win10ClassicContextMenu, v => { s.Win10ClassicContextMenu = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
         _onedrive.Bind(s.DisableOneDrive, v => { s.DisableOneDrive = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _autohide.Bind(s.TaskbarAutoHide, v => { s.TaskbarAutoHide = v; Win11DesktopTweaks.Apply(s); });
-        _taskView.Bind(s.ShowTaskViewButton, v => { s.ShowTaskViewButton = v; Win11DesktopTweaks.Apply(s); });
+        _autohide.Bind(s.TaskbarAutoHide, v => { s.TaskbarAutoHide = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
+        _taskView.Bind(s.ShowTaskViewButton, v => { s.ShowTaskViewButton = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
         _chat.Bind(s.HideTaskbarChat, v => { s.HideTaskbarChat = v; EasySettingsTweaks.ApplyExplorerBits(s); });
         _copilot.Bind(s.HideTaskbarCopilot, v => { s.HideTaskbarCopilot = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _widgets.Bind(s.DisableWidgets, v => { s.DisableWidgets = v; Win11DesktopTweaks.Apply(s); });
+        _widgets.Bind(s.DisableWidgets, v => { s.DisableWidgets = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
         _seconds.Bind(s.TaskbarClockWeekdaySeconds, v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", v ? 1 : 0));
 
         _launchTo.SelectedIndex = s.LaunchExplorerThisPc ? 0 : 1;

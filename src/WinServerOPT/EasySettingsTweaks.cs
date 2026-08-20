@@ -51,25 +51,6 @@ internal static class EasySettingsTweaks
     {
         ApplyExplorerBits(s);
         ApplyPrivacyBits(s);
-        SetDword(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", s.HideProtectedOsFiles ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdv, "IconsOnly", s.AlwaysShowIconsNeverThumbnails ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", s.ShowEmptyDrives ? 0 : 1);
-        SetDword(Hive.HkCu, Explorer, "ShowRecent", s.ShowRecentFiles ? 1 : 0);
-        SetDword(Hive.HkCu, Explorer, "ShowFrequent", s.ShowFrequentPlaces ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
-
-        SetDword(Hive.HkLm, SearchPol, "AllowCloudSearch", s.DisableCloudSearch ? 0 : 1);
-        SetDword(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", s.DisableWebsiteLangList ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", s.DisableAppLaunchTracking ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled", s.DisableSettingsSuggestions ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", s.DisableSettingsSuggestions ? 0 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
-
         SetMeltdownSpectre(s.DisableMeltdownSpectre);
         SetHvci(!s.DisableMemoryIntegrity);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", s.DisableWdac ? 0 : 1);
@@ -120,6 +101,21 @@ internal static class EasySettingsTweaks
         s.DisablePageCombining = !IsMmAgentOn("PageCombining");
         s.DisableUcpdDriver = ServiceDisabled("UCPD");
     }
+
+    public static void SetRemoteAssistanceDisabled(bool disable) =>
+        SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", disable ? 0 : 1);
+
+    public static void SetMemoryCompressionDisabled(bool disable) =>
+        SetMmAgent("MemoryCompression", !disable);
+
+    public static void SetAppPrelaunchDisabled(bool disable) =>
+        SetMmAgent("ApplicationPreLaunch", !disable);
+
+    public static void SetPageCombiningDisabled(bool disable) =>
+        SetMmAgent("PageCombining", !disable);
+
+    public static void SetUcpdDisabled(bool disable) =>
+        SetService("UCPD", !disable);
 
     public static int GetSearchboxMode() =>
         GetDword(Hive.HkCu, ExplorerAdv, "SearchboxTaskbarMode");

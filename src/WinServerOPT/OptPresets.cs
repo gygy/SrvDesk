@@ -79,6 +79,10 @@ internal static class OptPresets
         s.DisablePrintSpooler = true;
         s.DisableAutoplay = true;
         s.ExcludeDriverUpdates = true;
+        s.DisableMeltdownSpectre = false;
+        s.DisableMemoryIntegrity = false;
+        s.DisableWdac = false;
+        s.DisableVbs = false;
         return s;
     }
 

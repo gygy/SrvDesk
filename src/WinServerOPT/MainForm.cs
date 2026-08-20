@@ -34,6 +34,34 @@ internal sealed class MainForm : Form
     private readonly SettingRow _defender = Row("关闭 Windows Defender", "开启", SettingCatalog.DisableDefenderAntivirus);
     private readonly SettingRow _pca = Row("禁用程序兼容性助手 PCA", "开启", SettingCatalog.DisablePca);
     private readonly SettingRow _wuPause2035 = Row("暂停功能更新至 2035", "不暂停", SettingCatalog.PauseFeatureUpdatesUntil2035);
+    private readonly SettingRow _meltdown = Row("关闭 Meltdown/Spectre 缓解", "系统默认", SettingCatalog.DisableMeltdownSpectre);
+    private readonly SettingRow _hvci = Row("关闭内存完整性 HVCI", "由系统决定", SettingCatalog.DisableMemoryIntegrity);
+    private readonly SettingRow _wdac = Row("关闭 WDAC 应用控制", "系统默认", SettingCatalog.DisableWdac);
+    private readonly SettingRow _vbs = Row("强制关闭 VBS 虚拟化安全", "由系统决定", SettingCatalog.DisableVbs);
+    private readonly SettingRow _bbr2 = Row("TCP 拥塞控制开启 BBR2", "CUBIC 默认", SettingCatalog.EnableTcpBbr2);
+    private readonly SettingRow _sysRestore = Row("禁用系统还原", "启用", SettingCatalog.DisableSystemRestore);
+    private readonly SettingRow _ceip = Row("关闭客户体验改善计划", "启用", SettingCatalog.DisableCeip);
+    private readonly SettingRow _dps = Row("禁用诊断策略服务 DPS", "自动", SettingCatalog.DisableDiagnosticPolicy);
+    private readonly SettingRow _hideOs = Row("隐藏受保护的系统文件", "显示", SettingCatalog.HideProtectedOsFiles);
+    private readonly SettingRow _iconsOnly = Row("始终显示图标从不缩略图", "允许缩略图", SettingCatalog.AlwaysShowIconsNeverThumbnails);
+    private readonly SettingRow _emptyDrives = Row("显示空驱动器", "隐藏", SettingCatalog.ShowEmptyDrives);
+    private readonly SettingRow _recentFiles = Row("显示最近使用的文件", "不显示", SettingCatalog.ShowRecentFiles);
+    private readonly SettingRow _frequent = Row("显示快速访问常用文件夹", "不显示", SettingCatalog.ShowFrequentPlaces);
+    private readonly SettingRow _officeCloud = Row("隐藏 office.com 云文件", "显示", SettingCatalog.HideOfficeCloudFiles);
+    private readonly SettingRow _onedrive = Row("禁止 OneDrive 同步", "允许", SettingCatalog.DisableOneDrive);
+    private readonly SettingRow _tbChat = Row("隐藏任务栏聊天", "显示", SettingCatalog.HideTaskbarChat);
+    private readonly SettingRow _tbCopilot = Row("隐藏任务栏 Copilot", "显示", SettingCatalog.HideTaskbarCopilot);
+    private readonly SettingRow _cloudSearch = Row("禁止搜索云内容", "允许", SettingCatalog.DisableCloudSearch);
+    private readonly SettingRow _langList = Row("禁止网站读取语言列表", "允许", SettingCatalog.DisableWebsiteLangList);
+    private readonly SettingRow _trackApps = Row("关闭应用启动跟踪", "开启", SettingCatalog.DisableAppLaunchTracking);
+    private readonly SettingRow _settingsSuggest = Row("关闭设置应用建议内容", "开启", SettingCatalog.DisableSettingsSuggestions);
+    private readonly SettingRow _inking = Row("关闭墨迹与键入个性化", "开启", SettingCatalog.DisableInkingPersonalization);
+    private readonly SettingRow _msrt = Row("更新不含恶意软件删除工具", "包含", SettingCatalog.ExcludeMsrtFromWu);
+    private readonly SettingRow _ra = Row("禁用远程协助", "允许", SettingCatalog.DisableRemoteAssistance);
+    private readonly SettingRow _memComp = Row("禁用内存压缩", "启用", SettingCatalog.DisableMemoryCompression);
+    private readonly SettingRow _prelaunch = Row("禁用应用预启动", "启用", SettingCatalog.DisableAppPrelaunch);
+    private readonly SettingRow _pageCombine = Row("禁用内存页面合并", "启用", SettingCatalog.DisablePageCombining);
+    private readonly SettingRow _ucpd = Row("禁用微软 UCPD 驱动", "启用", SettingCatalog.DisableUcpdDriver);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -145,14 +173,18 @@ internal sealed class MainForm : Form
         _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
+        _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
+        _memComp, _prelaunch, _pageCombine, _ucpd,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
+        _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
-        _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
+        _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
+        _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra,
         _svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
     ];
@@ -174,20 +206,24 @@ internal sealed class MainForm : Form
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
             _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
             _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035
+            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
+            _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
+            _memComp, _prelaunch, _pageCombine, _ucpd
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
             _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock,
             _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
             _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
-            _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets
+            _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
+            _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot
         ]));
         _groups.Add(("隐私与体验", [
             _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
-            _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys
+            _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
+            _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt
         ]));
-        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
+        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra]));
         _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
         _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter]));
 
@@ -237,6 +273,9 @@ internal sealed class MainForm : Form
         _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
+        _appMenu.ToolExplorer.Click += (_, _) => ShowExplorerSettings();
+        _appMenu.ToolPrivacy.Click += (_, _) => ShowPrivacySettings();
+        _appMenu.ToolOther.Click += (_, _) => ShowOtherSettings();
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
@@ -554,6 +593,29 @@ internal sealed class MainForm : Form
         using var dlg = new CommonSoftwareDialog();
         dlg.ShowDialog(this);
     }
+
+    private void ShowExplorerSettings()
+    {
+        using var dlg = new ExplorerSettingsDialog();
+        dlg.ShowDialog(this);
+        ReloadStateQuiet();
+    }
+
+    private void ShowPrivacySettings()
+    {
+        using var dlg = new PrivacySettingsDialog();
+        dlg.ShowDialog(this);
+        ReloadStateQuiet();
+    }
+
+    private void ShowOtherSettings()
+    {
+        using var dlg = new OtherSettingsDialog();
+        dlg.ShowDialog(this);
+        ReloadStateQuiet();
+    }
+
+    private void ReloadStateQuiet() => LoadState(fullScan: false);
 
     private void ShowDesktopMaintenance()
     {
@@ -1153,6 +1215,34 @@ internal sealed class MainForm : Form
         _stickyKeys.Checked = s.DisableStickyKeys;
         _pca.Checked = s.DisablePca;
         _wuPause2035.Checked = s.PauseFeatureUpdatesUntil2035;
+        _meltdown.Checked = s.DisableMeltdownSpectre;
+        _hvci.Checked = s.DisableMemoryIntegrity;
+        _wdac.Checked = s.DisableWdac;
+        _vbs.Checked = s.DisableVbs;
+        _bbr2.Checked = s.EnableTcpBbr2;
+        _sysRestore.Checked = s.DisableSystemRestore;
+        _ceip.Checked = s.DisableCeip;
+        _dps.Checked = s.DisableDiagnosticPolicy;
+        _hideOs.Checked = s.HideProtectedOsFiles;
+        _iconsOnly.Checked = s.AlwaysShowIconsNeverThumbnails;
+        _emptyDrives.Checked = s.ShowEmptyDrives;
+        _recentFiles.Checked = s.ShowRecentFiles;
+        _frequent.Checked = s.ShowFrequentPlaces;
+        _officeCloud.Checked = s.HideOfficeCloudFiles;
+        _onedrive.Checked = s.DisableOneDrive;
+        _tbChat.Checked = s.HideTaskbarChat;
+        _tbCopilot.Checked = s.HideTaskbarCopilot;
+        _cloudSearch.Checked = s.DisableCloudSearch;
+        _langList.Checked = s.DisableWebsiteLangList;
+        _trackApps.Checked = s.DisableAppLaunchTracking;
+        _settingsSuggest.Checked = s.DisableSettingsSuggestions;
+        _inking.Checked = s.DisableInkingPersonalization;
+        _msrt.Checked = s.ExcludeMsrtFromWu;
+        _ra.Checked = s.DisableRemoteAssistance;
+        _memComp.Checked = s.DisableMemoryCompression;
+        _prelaunch.Checked = s.DisableAppPrelaunch;
+        _pageCombine.Checked = s.DisablePageCombining;
+        _ucpd.Checked = s.DisableUcpdDriver;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -1207,6 +1297,35 @@ internal sealed class MainForm : Form
         DisableDefenderAntivirus = _defender.Checked,
         DisablePca = _pca.Checked,
         PauseFeatureUpdatesUntil2035 = _wuPause2035.Checked,
+        DisableMeltdownSpectre = _meltdown.Checked,
+        DisableMemoryIntegrity = _hvci.Checked,
+        DisableWdac = _wdac.Checked,
+        DisableVbs = _vbs.Checked,
+        EnableTcpBbr2 = _bbr2.Checked,
+        DisableSystemRestore = _sysRestore.Checked,
+        DisableCeip = _ceip.Checked,
+        DisableDiagnosticPolicy = _dps.Checked,
+        HideProtectedOsFiles = _hideOs.Checked,
+        AlwaysShowIconsNeverThumbnails = _iconsOnly.Checked,
+        ShowEmptyDrives = _emptyDrives.Checked,
+        ShowRecentFiles = _recentFiles.Checked,
+        ShowFrequentPlaces = _frequent.Checked,
+        HideOfficeCloudFiles = _officeCloud.Checked,
+        DisableOneDrive = _onedrive.Checked,
+        HideTaskbarChat = _tbChat.Checked,
+        HideTaskbarCopilot = _tbCopilot.Checked,
+        DisableCloudSearch = _cloudSearch.Checked,
+        DisableWebsiteLangList = _langList.Checked,
+        DisableAppLaunchTracking = _trackApps.Checked,
+        DisableSettingsSuggestions = _settingsSuggest.Checked,
+        DisableInkingPersonalization = _inking.Checked,
+        ExcludeMsrtFromWu = _msrt.Checked,
+        DisableRemoteAssistance = _ra.Checked,
+        DisableMemoryCompression = _memComp.Checked,
+        DisableAppPrelaunch = _prelaunch.Checked,
+        DisablePageCombining = _pageCombine.Checked,
+        DisableUcpdDriver = _ucpd.Checked,
+        TaskbarSearchMode = _tbSearch.Checked ? 2 : 1,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,

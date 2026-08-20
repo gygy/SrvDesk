@@ -629,6 +629,63 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo PauseFeatureUpdatesUntil2035 = H(
         "暂停功能更新至 2035 年。", "PauseFeatureUpdates 策略。", "长期跳过功能版升级。", "安全更新仍可能推送；请自行评估风险。", "策略写入后生效。", W10De);
 
+    public static readonly SettingHelpInfo HideProtectedOsFiles = H(
+        "隐藏受保护的操作系统文件。", "ShowSuperHidden=0。", "避免误删系统文件。", "一般建议开启。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo AlwaysShowIconsNeverThumbnails = H(
+        "始终显示图标，不生成缩略图。", "IconsOnly=1。", "减少磁盘缓存、列表更快。", "看图场景可关闭。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo ShowEmptyDrives = H(
+        "显示没有介质的空驱动器。", "HideDrivesWithNoMedia=0。", "读卡器/空光驱可见。", "桌面按需。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo ShowRecentFiles = H(
+        "快速访问显示最近使用的文件。", "Explorer\\ShowRecent。", "方便找回文件。", "隐私场景可关闭。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo ShowFrequentPlaces = H(
+        "快速访问显示常用文件夹。", "Explorer\\ShowFrequent。", "常用目录更快。", "隐私场景可关闭。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo HideOfficeCloudFiles = H(
+        "快速访问不显示 office.com 云文件。", "ShowCloudFilesInQuickAccess=0。", "减少云内容混入。", "不用 Microsoft 365 可开启。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableOneDrive = H(
+        "策略禁止 OneDrive 文件同步。", "DisableFileSyncNGSC=1。", "去掉网盘占用。", "仍需 OneDrive 时勿开。", "注销后完全生效。", W10De);
+    public static readonly SettingHelpInfo HideTaskbarChat = H(
+        "隐藏任务栏聊天按钮。", "TaskbarMn=0。", "任务栏更干净。", "Win11 有效。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo HideTaskbarCopilot = H(
+        "隐藏任务栏 Copilot。", "TaskbarCo=0。", "减少入口干扰。", "Win11 有效。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo DisableCloudSearch = H(
+        "禁止搜索界面云内容搜索。", "AllowCloudSearch=0。", "搜索不查 OneDrive/SharePoint 等。", "推荐隐私场景。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableWebsiteLangList = H(
+        "禁止网站读取语言列表做本地化推荐。", "HttpAcceptLanguageOptOut=1。", "减少指纹。", "网页语言可能不自动匹配。", "立即生效。");
+    public static readonly SettingHelpInfo DisableAppLaunchTracking = H(
+        "不跟踪应用启动以改进开始菜单搜索。", "Start_TrackProgs=0。", "减少本地画像。", "开始菜单推荐会变弱。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableSettingsSuggestions = H(
+        "设置应用不显示建议内容。", "SystemPaneSuggestionsEnabled=0。", "设置页更干净。", "推荐关闭建议。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableInkingPersonalization = H(
+        "关闭墨迹与键入个性化词典。", "RestrictImplicitInk/TextCollection。", "减少输入上传。", "手写识别可能变弱。", "立即生效。");
+    public static readonly SettingHelpInfo ExcludeMsrtFromWu = H(
+        "Windows 更新不含恶意软件删除工具。", "MRT DontOfferThroughWUAU=1。", "减少每月 MSRT 包。", "需自行维护杀软。", "下次更新扫描生效。");
+    public static readonly SettingHelpInfo DisableMeltdownSpectre = H(
+        "关闭 Meltdown/Spectre 微码缓解。", "FeatureSettingsOverride=3。", "部分旧 CPU 可提升性能。", "降低侧信道防护，仅内网可信机建议。", "需重启。");
+    public static readonly SettingHelpInfo DisableMemoryIntegrity = H(
+        "关闭内存完整性（HVCI）。", "HypervisorEnforcedCodeIntegrity Enabled=0。", "减少虚拟化开销、兼容部分驱动。", "降低内核防护。", "需重启。", W10);
+    public static readonly SettingHelpInfo DisableWdac = H(
+        "关闭 WDAC 应用控制策略部署。", "ConfigCIPolicyEnable=0。", "避免企业策略误拦程序。", "有合规 WDAC 时勿开。", "需重启。", W10);
+    public static readonly SettingHelpInfo DisableVbs = H(
+        "强制关闭基于虚拟化的安全性。", "EnableVirtualizationBasedSecurity=0。", "减少 VBS 性能损耗。", "Credential Guard/HVCI 将不可用。", "需重启。", W10);
+    public static readonly SettingHelpInfo EnableTcpBbr2 = H(
+        "TCP 拥塞控制改用 BBR2。", "netsh int tcp set supplemental CongestionProvider=bbr2。", "部分广域网吞吐更好。", "旧系统或不支持时会失败并保持 CUBIC。", "立即生效。", W10);
+    public static readonly SettingHelpInfo DisableSystemRestore = H(
+        "禁用系统还原。", "DisableSR=1。", "节省还原点磁盘。", "将无法一键回滚系统。", "立即生效。");
+    public static readonly SettingHelpInfo DisableCeip = H(
+        "关闭微软客户体验改善计划。", "CEIPEnable=0。", "减少遥测。", "与关闭 DiagTrack 互补。", "立即生效。");
+    public static readonly SettingHelpInfo DisableDiagnosticPolicy = H(
+        "禁用诊断策略服务 DPS。", "DPS Start=disabled。", "减少后台诊断。", "故障排查向导可能不可用。", "服务停止后生效。");
+    public static readonly SettingHelpInfo DisableRemoteAssistance = H(
+        "禁止远程协助。", "fAllowToGetHelp=0。", "缩小远程协助攻击面。", "需要远程协助时勿开。", "立即生效。");
+    public static readonly SettingHelpInfo DisableMemoryCompression = H(
+        "关闭内存压缩。", "Disable-MMAgent MemoryCompression。", "减少压缩 CPU 占用。", "内存紧张时可能更易用页文件。", "立即生效。", W10);
+    public static readonly SettingHelpInfo DisableAppPrelaunch = H(
+        "关闭应用预启动。", "Disable-MMAgent ApplicationPreLaunch。", "减少预热占用。", "UWP 首次打开可能稍慢。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisablePageCombining = H(
+        "关闭内存页面合并。", "Disable-MMAgent PageCombining。", "减少合并扫描。", "内存占用可能略增。", "立即生效。", W10);
+    public static readonly SettingHelpInfo DisableUcpdDriver = H(
+        "禁用微软用户选择保护驱动 UCPD。", "UCPD 服务禁用。", "便于修改默认浏览器/关联。", "仅在需要改默认应用时开启。", "服务停止后生效。", W10);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,
