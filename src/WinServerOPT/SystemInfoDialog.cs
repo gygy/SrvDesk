@@ -10,6 +10,7 @@ internal sealed class SystemInfoDialog : Form
     public SystemInfoDialog()
     {
         Text = "系统信息";
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;

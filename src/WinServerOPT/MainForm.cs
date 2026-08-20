@@ -142,7 +142,7 @@ internal sealed class MainForm : Form
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
-        Icon = AppBrand.ApplicationIcon;
+        AppBrand.ApplyWindowIcon(this);
         KeyPreview = true;
         MainMenuStrip = _appMenu;
 
@@ -203,6 +203,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
+        _appMenu.ToolGroupPolicy.Click += (_, _) => ShowGroupPolicy();
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
@@ -561,6 +562,12 @@ internal sealed class MainForm : Form
             MessageBox.Show(this, "无法刷新 DNS 缓存。\r\n\r\n" + ex.Message,
                 "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+    }
+
+    private void ShowGroupPolicy()
+    {
+        using var dlg = new GroupPolicyDialog();
+        dlg.ShowDialog(this);
     }
 
     private void OpenEventViewer()

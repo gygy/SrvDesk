@@ -13,9 +13,11 @@ internal sealed class HostsEditorDialog : Form
     public HostsEditorDialog()
     {
         Text = "编辑 hosts";
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
+        KeyPreview = true;
         ClientSize = new Size(760, 520);
         MinimumSize = new Size(640, 420);
         Font = new Font("Microsoft YaHei UI", 9F);
@@ -23,19 +25,20 @@ internal sealed class HostsEditorDialog : Form
 
         var tip = new Label
         {
-            Text = "修改本机 DNS 覆盖（%SystemRoot%\\System32\\drivers\\etc\\hosts）。勾选「启用」生效；取消勾选会以 # 注释该行。",
+            Text = "修改本机 DNS 覆盖（%SystemRoot%\\System32\\drivers\\etc\\hosts）。勾选「启用」生效；取消勾选会以 # 注释该行。\r\n" +
+                   "支持从网页/文本复制多行 hosts 后 Ctrl+V 或点「粘贴」批量导入（自动跳过纯注释行）。",
             Location = new Point(16, 12),
-            Size = new Size(728, 36),
+            Size = new Size(728, 48),
             ForeColor = AppTheme.TextMute,
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
         };
 
-        _path.SetBounds(16, 48, 728, 20);
+        _path.SetBounds(16, 62, 728, 20);
         _path.ForeColor = AppTheme.TextHeader;
         _path.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-        _grid.Location = new Point(16, 74);
-        _grid.Size = new Size(728, 340);
+        _grid.Location = new Point(16, 88);
+        _grid.Size = new Size(728, 326);
         _grid.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         _grid.AllowUserToAddRows = true;
         _grid.AllowUserToDeleteRows = true;
@@ -99,6 +102,7 @@ internal sealed class HostsEditorDialog : Form
         };
 
         bar.Controls.Add(ActionButton("添加", AddRow, false));
+        bar.Controls.Add(ActionButton("粘贴", PasteFromClipboard, false));
         bar.Controls.Add(ActionButton("删除", DeleteSelected, false));
         bar.Controls.Add(ActionButton("重新加载", Reload, false));
         bar.Controls.Add(ActionButton("打开备份目录", OpenBackupDir, false));
@@ -112,6 +116,66 @@ internal sealed class HostsEditorDialog : Form
         Controls.AddRange([tip, _path, _grid, _backup, _flush, bar]);
         Load += (_, _) => Reload();
         Resize += (_, _) => bar.Location = new Point(Math.Max(16, ClientSize.Width - bar.Width - 16), ClientSize.Height - 48);
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == (Keys.Control | Keys.V) && !_grid.IsCurrentCellInEditMode)
+        {
+            try
+            {
+                if (Clipboard.ContainsText())
+                {
+                    var text = Clipboard.GetText();
+                    if (text.IndexOf('\n') >= 0 || text.IndexOf('\r') >= 0)
+                    {
+                        PasteFromClipboard();
+                        return true;
+                    }
+                }
+            }
+            catch { /* 使用默认粘贴 */ }
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private void PasteFromClipboard()
+    {
+        try
+        {
+            if (!Clipboard.ContainsText()) return;
+            var text = Clipboard.GetText();
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            if (!text.Contains("\n") && !text.Contains("\r") && _grid.IsCurrentCellInEditMode)
+                return;
+
+            var parsed = HostsFileHelper.ParseText(text);
+            if (parsed.Entries.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "剪贴板中未识别到有效的 hosts 映射行。\r\n\r\n" +
+                    "支持格式示例：\r\n127.0.0.1 example.com\r\n# 192.168.1.1 test.local",
+                    "粘贴 hosts", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var insertAt = _grid.Rows.Count - 1;
+            if (_grid.CurrentRow is not null && !_grid.CurrentRow.IsNewRow)
+                insertAt = _grid.CurrentRow.Index;
+
+            foreach (var entry in parsed.Entries)
+                _grid.Rows.Insert(insertAt++, entry.Enabled, entry.Address, entry.Hosts, entry.Comment);
+
+            var msg = $"已粘贴 {parsed.Entries.Count} 条映射。";
+            if (parsed.SkippedLines > 0)
+                msg += $"\r\n已跳过 {parsed.SkippedLines} 行（空行或非映射注释）。";
+            MessageBox.Show(this, msg, "粘贴 hosts", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "粘贴失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void Reload()

@@ -17,7 +17,7 @@ internal sealed class CommonSoftwareDialog : Form
     public CommonSoftwareDialog()
     {
         Text = "常用软件";
-        Icon = AppBrand.ApplicationIcon;
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;

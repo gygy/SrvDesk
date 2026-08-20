@@ -12,6 +12,7 @@ internal sealed class QuickToolsDialog : Form
     {
         _facts = facts;
         Text = "快速打开工具";
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;

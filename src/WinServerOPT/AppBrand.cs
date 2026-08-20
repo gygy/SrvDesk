@@ -11,6 +11,9 @@ internal static class AppBrand
 
     public static Icon ApplicationIcon => _applicationIcon ??= LoadApplicationIcon();
 
+    /// <summary>统一设置窗口标题栏与任务栏图标（与主程序 logo 一致）。</summary>
+    public static void ApplyWindowIcon(Form form) => form.Icon = ApplicationIcon;
+
     public static Image? LoadLogoImage()
     {
         var asm = Assembly.GetExecutingAssembly();

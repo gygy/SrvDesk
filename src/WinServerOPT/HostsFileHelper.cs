@@ -20,6 +20,12 @@ internal sealed class HostsDocument
     public List<HostsEntry> Entries { get; } = [];
 }
 
+internal sealed class HostsPasteResult
+{
+    public List<HostsEntry> Entries { get; } = [];
+    public int SkippedLines { get; set; }
+}
+
 internal static class HostsFileHelper
 {
     private static readonly Regex MappingLine = new(
@@ -151,12 +157,84 @@ internal static class HostsFileHelper
         if (address.Length == 0) return "IP 地址不能为空。";
         if (!IPAddress.TryParse(address, out _)) return "IP 地址格式无效：" + address;
         if (hosts.Length == 0) return "主机名不能为空。";
-        foreach (var name in hosts.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
+        foreach (var name in hosts.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
         {
             if (!IsValidHostName(name))
                 return "主机名无效：" + name;
         }
         return "";
+    }
+
+    /// <summary>解析外部复制的 hosts 文本（多行、含注释行会自动跳过）。</summary>
+    public static HostsPasteResult ParseText(string text)
+    {
+        var result = new HostsPasteResult();
+        if (string.IsNullOrWhiteSpace(text))
+            return result;
+
+        foreach (var raw in text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0)
+            {
+                result.SkippedLines++;
+                continue;
+            }
+
+            if (TryParseEntry(raw, out var entry) || TryParseTabSeparated(raw, out entry))
+            {
+                result.Entries.Add(entry);
+                continue;
+            }
+
+            result.SkippedLines++;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseTabSeparated(string raw, out HostsEntry entry)
+    {
+        entry = new HostsEntry();
+        if (raw.IndexOf('\t') < 0) return false;
+
+        var parts = raw.Split('\t');
+        if (parts.Length < 2) return false;
+
+        var start = 0;
+        var enabled = true;
+        if (parts.Length >= 3 && TryParseEnabled(parts[0], out enabled))
+            start = 1;
+
+        if (parts.Length - start < 2) return false;
+
+        var address = parts[start].Trim();
+        var hosts = NormalizeHosts(parts[start + 1]);
+        var comment = parts.Length > start + 2 ? parts[start + 2].Trim() : "";
+
+        if (!IPAddress.TryParse(address, out _) || hosts.Length == 0)
+            return false;
+
+        entry.Enabled = enabled;
+        entry.Address = address;
+        entry.Hosts = hosts;
+        entry.Comment = comment.TrimStart('#').Trim();
+        return true;
+    }
+
+    private static bool TryParseEnabled(string text, out bool enabled)
+    {
+        enabled = true;
+        var t = text.Trim();
+        if (t.Length == 0) return false;
+        if (bool.TryParse(t, out enabled)) return true;
+        if (t == "1" || t.Equals("yes", StringComparison.OrdinalIgnoreCase)
+            || t.Equals("y", StringComparison.OrdinalIgnoreCase)
+            || t == "是" || t == "启用") { enabled = true; return true; }
+        if (t == "0" || t.Equals("no", StringComparison.OrdinalIgnoreCase)
+            || t.Equals("n", StringComparison.OrdinalIgnoreCase)
+            || t == "否" || t == "禁用") { enabled = false; return true; }
+        return false;
     }
 
     private static bool TryParseEntry(string raw, out HostsEntry entry)

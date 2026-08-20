@@ -15,6 +15,7 @@ internal sealed class ComputerIdentityDialog : Form
     {
         _info = info;
         Text = "计算机名 / 工作组";
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;

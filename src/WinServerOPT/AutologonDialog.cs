@@ -13,6 +13,7 @@ internal sealed class AutologonDialog : Form
     public AutologonDialog(AutologonSettings initial, bool editing)
     {
         Text = "Windows 自动登录（Autologon）";
+        AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
