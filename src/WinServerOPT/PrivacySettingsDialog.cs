@@ -16,22 +16,17 @@ internal sealed class PrivacySettingsDialog : Form
 
     public PrivacySettingsDialog()
     {
-        Text = "隐私设置";
+        Text = "隐私与搜索";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(780, 640);
         MinimumSize = new Size(680, 520);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
 
-        var header = ThemedSettingsChrome.CreateHeader("隐私设置", "Windows 隐私相关设置 · 更改立即生效");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "此页更改立即生效。建议同时添加防火墙规则以拦截搜索上传。", LoadValues, showClose: false);
+        var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), AutoScroll = true, BackColor = AppTheme.Surface };
-
-        var searchCard = Section("搜索与云内容", 210);
+        var searchCard = ThemedSettingsChrome.CreateSectionCard("搜索与云内容", 210);
         var searchHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
         searchHost.Controls.Add(_cloud);
         searchHost.Controls.Add(_web);

@@ -177,27 +177,36 @@ internal sealed class MainForm : Form
     private SettingRow[] _activeRows = [];
     private Panel? _activeBody;
     private Panel? _activeSection;
+    private readonly Panel _bottomPanel = new();
+    private FlowLayoutPanel? _bottomActions;
+    private string _defaultStatusText = "";
+
     private Form? _embeddedPage;
+
+    private static readonly string[] EmbeddedPageTitles =
+    [
+        "资源管理器", "隐私与搜索", "系统服务", "登录启动项", "DNS 设置",
+    ];
 
     private static readonly string[] MenuItems =
     [
         "性能及安全",
-        "个性化设置",
+        "桌面外观",
         "隐私与体验",
         "远程与网络",
-        "启动项",
+        "系统组件",
         "账户策略",
-        "Explorer 设置",
-        "隐私设置",
-        "其他设置",
-        "启动项管理",
+        "资源管理器",
+        "隐私与搜索",
+        "系统服务",
+        "登录启动项",
         "DNS 设置",
     ];
 
     private SettingRow[] AllRows =>
     [
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-        _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
+        _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
@@ -234,32 +243,26 @@ internal sealed class MainForm : Form
         MainMenuStrip = _appMenu;
 
         _groups.Add(("性能及安全", [
-            _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-            _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
-            _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
+            _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _wuNotify,
+            _visualPerf, _powerThrottle, _tcp, _qosSpeed, _errorReport,
+            _longPaths, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
+            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca,
             _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
-            _memComp, _prelaunch, _pageCombine, _ucpd,
             _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare
         ]));
-        _groups.Add(("个性化设置", [
-            _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
-            _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock,
-            _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
-            _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
-            _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
-            _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
-            _takeOwn, _openCmd, _news
+        _groups.Add(("桌面外观", [
+            _thisPc, _taskbar, _confirmDel, _audio, _themes, _search,
+            _feedback, _noLockScreen, _allTrayIcons, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
+            _tbEndTask, _takeOwn, _openCmd, _news
         ]));
         _groups.Add(("隐私与体验", [
             _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
-            _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
-            _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
+            _searchHighlights, _recommended, _stickyKeys,
             _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
             _insider, _storeUpd
         ]));
-        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra]));
-        _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
+        _groups.Add(("远程与网络", [_rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
+        _groups.Add(("系统组件", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
         _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter]));
 
         WireAppMenu();
@@ -274,10 +277,10 @@ internal sealed class MainForm : Form
         header.Dock = DockStyle.Top;
         _commandBar.Dock = DockStyle.Top;
         _workArea.Dock = DockStyle.Fill;
-        bottom.Dock = DockStyle.Bottom;
+        _bottomPanel.Dock = DockStyle.Bottom;
 
         Controls.Add(_workArea);
-        Controls.Add(bottom);
+        Controls.Add(_bottomPanel);
         Controls.Add(_commandBar);
         Controls.Add(header);
         Controls.Add(_appMenu);
@@ -845,6 +848,7 @@ internal sealed class MainForm : Form
             return;
         }
 
+        SetBatchMode(batch: true);
         var fromPage = _embeddedPage is not null;
         DisposeEmbeddedPage();
         _contentHost.Padding = new Padding(12, 8, 12, 8);
@@ -890,14 +894,15 @@ internal sealed class MainForm : Form
         var title = MenuItems[index];
         Form page = title switch
         {
-            "Explorer 设置" => new ExplorerSettingsDialog(),
-            "隐私设置" => new PrivacySettingsDialog(),
-            "其他设置" => new OtherSettingsDialog(),
-            "启动项管理" => new StartupManagerDialog(),
+            "资源管理器" => new ExplorerSettingsDialog(),
+            "隐私与搜索" => new PrivacySettingsDialog(),
+            "系统服务" => new OtherSettingsDialog(),
+            "登录启动项" => new StartupManagerDialog(),
             "DNS 设置" => new DnsSwitcherDialog(),
             _ => throw new InvalidOperationException(title),
         };
 
+        SetBatchMode(batch: false);
         DisposeEmbeddedPage();
         _activeRows = [];
         _activeSection = null;
@@ -939,7 +944,29 @@ internal sealed class MainForm : Form
     {
         _selectedRow?.SetSelected(false);
         _selectedRow = null;
-        _helpDetail.ShowPlaceholder(groupTitle);
+        if (groupTitle is not null && EmbeddedPageTitles.Contains(groupTitle))
+            _helpDetail.ShowEmbeddedGuide(groupTitle);
+        else
+            _helpDetail.ShowPlaceholder(groupTitle);
+    }
+
+    private void SetBatchMode(bool batch)
+    {
+        _commandBar.Visible = batch;
+        _apply.Enabled = batch;
+        _restore.Enabled = batch;
+        if (_bottomActions is not null)
+        {
+            foreach (Control c in _bottomActions.Controls)
+            {
+                if (c is Button b && b is not null && b.Text is "全部推荐" or "关闭全部推荐")
+                    b.Enabled = batch;
+            }
+        }
+
+        _status.Text = batch
+            ? _defaultStatusText
+            : "此页修改立即生效，无需点击「应用推荐」。";
     }
 
     private int ContentWidth() =>
@@ -1083,16 +1110,18 @@ internal sealed class MainForm : Form
 
     private Panel BuildBottom()
     {
-        var bottom = new Panel { Height = 58, BackColor = AppTheme.SurfaceCard };
+        _bottomPanel.Height = 58;
+        _bottomPanel.BackColor = AppTheme.SurfaceCard;
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
         _status.SetBounds(12, 10, 420, 38);
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
-        _status.Text = Optimizer.IsWindowsServer()
+        _defaultStatusText = Optimizer.IsWindowsServer()
             ? "开关=是否采用推荐。「应用推荐」写入推荐项；「恢复默认」将全部项还原为右侧系统默认值。"
             : "当前系统可能不是 Windows Server。";
+        _status.Text = _defaultStatusText;
 
         var actions = new FlowLayoutPanel
         {
@@ -1104,6 +1133,7 @@ internal sealed class MainForm : Form
             Padding = new Padding(0, 10, 14, 0),
             BackColor = AppTheme.SurfaceCard,
         };
+        _bottomActions = actions;
 
         var allOn = ToolButton("全部推荐", () => SetAll(true));
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
@@ -1140,10 +1170,10 @@ internal sealed class MainForm : Form
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
         actions.Controls.AddRange([allOn, allOff, quickTools, commonSoftware, refresh, _restore, _apply]);
-        bottom.Controls.Add(actions);
-        bottom.Controls.Add(_status);
-        bottom.Controls.Add(rule);
-        return bottom;
+        _bottomPanel.Controls.Add(actions);
+        _bottomPanel.Controls.Add(_status);
+        _bottomPanel.Controls.Add(rule);
+        return _bottomPanel;
     }
 
     private void DrawMenuItem(object sender, DrawItemEventArgs e)

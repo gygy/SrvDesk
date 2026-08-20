@@ -60,6 +60,18 @@ internal sealed class HelpDetailPanel : Panel
         ShowPlaceholder();
     }
 
+    public void ShowEmbeddedGuide(string pageTitle)
+    {
+        _caption.Text = "帮助 · 即时设置";
+        _title.Text = pageTitle;
+        _summary.Text = "本页开关修改后立即写入系统，无需点击底部「应用推荐」。";
+        BuildSections([
+            ("与分组页的关系", "同一设置若在「性能及安全」等分组中也有，本页用于逐项微调；分组页适合配合预设批量应用。"),
+            ("同步状态", "在其他地方修改系统后，可点本页底部「刷新」读取当前值。"),
+        ]);
+        _footer.Text = "hosts、事件查看器等系统工具请从顶部「工具」菜单打开";
+    }
+
     public void ShowPlaceholder(string? groupTitle = null)
     {
         _caption.Text = "帮助 · 使用指引";

@@ -187,16 +187,31 @@ internal static class ThemedSettingsChrome
 
     public static Panel CreateSection(string title, Control[] rows)
     {
-        var card = new Panel { BackColor = AppTheme.SurfaceCard, Padding = new Padding(10, 6, 10, 8) };
+        var card = CreateSectionCard(title);
+        var host = new Panel { Dock = DockStyle.Fill, AutoScroll = false };
+        for (var i = rows.Length - 1; i >= 0; i--)
+            host.Controls.Add(rows[i]);
+        card.Height = 34 + rows.Length * 38 + 12;
+        card.Controls.Add(host);
+        return card;
+    }
+
+    /// <summary>带标题的卡片容器，供嵌入页与对话框复用。</summary>
+    public static Panel CreateSectionCard(string title, int height = 0)
+    {
+        var card = new Panel
+        {
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(10, 6, 10, 8),
+            Margin = new Padding(0, 0, 8, 8),
+        };
+        if (height > 0) card.Height = height;
+
         card.Paint += (_, e) =>
         {
             using var pen = new Pen(AppTheme.BorderLight);
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
-
-        var host = new Panel { Dock = DockStyle.Fill, AutoScroll = false };
-        for (var i = rows.Length - 1; i >= 0; i--)
-            host.Controls.Add(rows[i]);
 
         var cap = new Label
         {
@@ -207,10 +222,55 @@ internal static class ThemedSettingsChrome
             ForeColor = AppTheme.TextHeader,
             TextAlign = ContentAlignment.MiddleLeft,
         };
-
-        card.Height = 34 + rows.Length * 38 + 12;
-        card.Controls.Add(host);
         card.Controls.Add(cap);
         return card;
+    }
+
+    public static Panel CreateBodyPanel()
+    {
+        return new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(12),
+            AutoScroll = true,
+            BackColor = AppTheme.Surface,
+        };
+    }
+
+    /// <summary>为模态对话框挂载统一顶栏、内容区与底栏。</summary>
+    public static void MountModal(
+        Form form,
+        string title,
+        string subtitle,
+        Control body,
+        string footerHint,
+        Action? onRefresh = null)
+    {
+        form.BackColor = AppTheme.Surface;
+        form.Font = new Font("Microsoft YaHei UI", 9F);
+        body.Dock = DockStyle.Fill;
+        var header = CreateHeader(title, subtitle);
+        var footer = CreateFooter(form, footerHint, onRefresh, showClose: true);
+        form.Controls.Add(body);
+        form.Controls.Add(footer);
+        form.Controls.Add(header);
+    }
+
+    public static void MountEmbedded(
+        Form form,
+        string title,
+        string subtitle,
+        Control body,
+        string footerHint,
+        Action? onRefresh = null)
+    {
+        form.BackColor = AppTheme.Surface;
+        form.Font = new Font("Microsoft YaHei UI", 9F);
+        body.Dock = DockStyle.Fill;
+        var header = CreateHeader(title, subtitle);
+        var footer = CreateFooter(form, footerHint, onRefresh, showClose: false);
+        form.Controls.Add(body);
+        form.Controls.Add(footer);
+        form.Controls.Add(header);
     }
 }

@@ -17,32 +17,28 @@ internal sealed class OtherSettingsDialog : Form
 
     public OtherSettingsDialog()
     {
-        Text = "其他设置";
+        Text = "系统服务";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(920, 620);
-        MinimumSize = new Size(780, 520);
-        Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = AppTheme.Surface;
+        ClientSize = new Size(860, 560);
+        MinimumSize = new Size(720, 480);
 
-        var header = ThemedSettingsChrome.CreateHeader("其他设置", "系统功能调节 · 防火墙 / 日志 / 远程端口");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即生效。UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。", LoadValues, showClose: false);
-
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = AppTheme.Surface };
-
+        var body = ThemedSettingsChrome.CreateBodyPanel();
         var grid = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            ColumnCount = 4,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 3,
             RowCount = 3,
+            Padding = new Padding(0, 0, 0, 8),
         };
-        for (var i = 0; i < 4; i++)
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, i == 3 ? 28 : 24));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 34));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 33));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 33));
+        for (var i = 0; i < 3; i++)
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _port.Minimum = 1;
         _port.Maximum = 65535;
@@ -76,35 +72,23 @@ internal sealed class OtherSettingsDialog : Form
         var pfRow = new FlowLayoutPanel { AutoSize = true };
         pfRow.Controls.Add(_prefetch);
         pfRow.Controls.Add(pfBtn);
-
         _prefetchRead.Enabled = false;
 
-        grid.Controls.Add(Tile("系统休眠", _hibernate), 0, 0);
-        grid.Controls.Add(Tile("快速启动", _fast), 1, 0);
-        grid.Controls.Add(Tile("远程设置", _rdp, _ra, rdpExtra), 2, 0);
-        var side = BuildSideButtons();
-        grid.Controls.Add(side, 3, 0);
-        grid.SetRowSpan(side, 3);
-
-        grid.Controls.Add(Tile("SysMain 服务", _sysmain), 0, 1);
-        grid.Controls.Add(Tile("内存压缩", _memComp), 1, 1);
-        grid.Controls.Add(Tile("应用预启动", _prelaunch), 2, 1);
-
-        grid.Controls.Add(Tile("最大预取文件数", pfRow), 0, 2);
-        grid.Controls.Add(Tile("内存页面合并", _page), 1, 2);
-        grid.Controls.Add(Tile("应用启动预取", _prefetchRead), 2, 2);
-
-        var bottomBar = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = AppTheme.Surface };
-        _ucpd.Dock = DockStyle.Left;
-        _ucpd.Width = 280;
-        bottomBar.Controls.Add(_ucpd);
+        grid.Controls.Add(Tile("电源与休眠", _hibernate, _fast), 0, 0);
+        grid.Controls.Add(Tile("远程桌面", _rdp, _ra, rdpExtra), 1, 0);
+        grid.Controls.Add(Tile("后台服务", _sysmain, _memComp), 2, 0);
+        grid.Controls.Add(Tile("内存优化", _prelaunch, _page), 0, 1);
+        grid.Controls.Add(Tile("预取设置", pfRow, _prefetchRead), 1, 1);
+        grid.Controls.Add(Tile("系统驱动", _ucpd), 2, 1);
 
         body.Controls.Add(grid);
-        body.Controls.Add(bottomBar);
-
-        Controls.Add(body);
-        Controls.Add(footer);
-        Controls.Add(header);
+        ThemedSettingsChrome.MountEmbedded(
+            this,
+            "系统服务",
+            "休眠 · 远程桌面 · SysMain · 内存与预取 · 开关立即生效",
+            body,
+            "UCPD 为微软用户选择保护驱动，禁用后可修改默认浏览器等关联。",
+            LoadValues);
         Load += (_, _) => LoadValues();
     }
 
@@ -125,88 +109,24 @@ internal sealed class OtherSettingsDialog : Form
         _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));
     }
 
-    private Control BuildSideButtons()
+    private static Panel Tile(string title, params Control[] children)
     {
-        var p = new FlowLayoutPanel
+        var card = ThemedSettingsChrome.CreateSectionCard(title);
+        card.Dock = DockStyle.Fill;
+        card.Margin = new Padding(4);
+        card.AutoSize = true;
+        card.Padding = new Padding(8, 32, 8, 10);
+
+        var host = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            Padding = new Padding(6),
-            BackColor = AppTheme.SurfaceCard,
+            AutoSize = true,
         };
-        p.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, p.Width - 1, p.Height - 1);
-        };
-        p.Controls.Add(Side("防火墙状态...", EasySettingsTweaks.OpenFirewallStatus));
-        p.Controls.Add(Side("防火墙规则设置...", EasySettingsTweaks.OpenFirewallRules));
-        p.Controls.Add(Side("刷新 DNS 解析缓存", () => HostsFileHelper.FlushDns()));
-        p.Controls.Add(Side("修改 HOSTS 文件", () =>
-        {
-            using var dlg = new HostsEditorDialog();
-            dlg.ShowDialog(this);
-        }));
-        p.Controls.Add(Side("事件查看器...", () =>
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            { FileName = "eventvwr.msc", UseShellExecute = true })));
-        var clear = Side("清除系统日志", () =>
-        {
-            if (MessageBox.Show(this, "将清除 Application / System / Setup 日志，是否继续？",
-                    "清除系统日志", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
-                return;
-            EasySettingsTweaks.ClearEventLogs();
-        });
-        clear.ForeColor = Color.FromArgb(176, 42, 42);
-        p.Controls.Add(clear);
-        return p;
-    }
-
-    private static Panel Tile(string title, params Control[] children)
-    {
-        var card = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(4),
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(8),
-        };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
-        var cap = new Label
-        {
-            Text = title,
-            Dock = DockStyle.Top,
-            Height = 24,
-            Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold),
-            ForeColor = AppTheme.PrimaryDark,
-        };
-        var host = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false };
         foreach (var c in children)
-        {
-            c.Dock = DockStyle.None;
             host.Controls.Add(c);
-        }
         card.Controls.Add(host);
-        card.Controls.Add(cap);
         return card;
-    }
-
-    private static Button Side(string text, Action click)
-    {
-        var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Width = 210;
-        b.Height = 34;
-        b.Margin = new Padding(4);
-        b.Click += (_, _) =>
-        {
-            try { click(); }
-            catch (Exception ex) { MessageBox.Show(ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
-        };
-        return b;
     }
 }
