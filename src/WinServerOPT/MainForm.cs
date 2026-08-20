@@ -178,7 +178,8 @@ internal sealed class MainForm : Form
     private SettingRow[] _activeRows = [];
     private Panel? _activeBody;
     private Panel? _activeSection;
-    private int _activeGroupIndex;
+    private Form? _embeddedPage;
+    private readonly int _settingGroupCount = 6;
 
     private static readonly string[] MenuItems =
     [
@@ -188,6 +189,11 @@ internal sealed class MainForm : Form
         "远程与网络",
         "启动项",
         "账户策略",
+        "Explorer 设置",
+        "隐私设置",
+        "其他设置",
+        "启动项管理",
+        "DNS 设置",
     ];
 
     private SettingRow[] AllRows =>
@@ -304,11 +310,6 @@ internal sealed class MainForm : Form
         _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
-        _appMenu.ToolExplorer.Click += (_, _) => ShowExplorerSettings();
-        _appMenu.ToolPrivacy.Click += (_, _) => ShowPrivacySettings();
-        _appMenu.ToolOther.Click += (_, _) => ShowOtherSettings();
-        _appMenu.ToolStartup.Click += (_, _) => ShowStartupManager();
-        _appMenu.ToolDns.Click += (_, _) => { using var d = new DnsSwitcherDialog(); d.ShowDialog(this); };
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();

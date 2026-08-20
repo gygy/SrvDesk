@@ -44,7 +44,7 @@ internal sealed class ExplorerSettingsDialog : Form
         BackColor = AppTheme.Surface;
 
         var header = ThemedSettingsChrome.CreateHeader("Explorer 设置", "资源管理器 · 任务栏 · 快速打开");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即写入注册表。部分项需点「重启资源管理器」后可见。", LoadValues);
+        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即写入注册表。部分项需点「重启资源管理器」后可见。", LoadValues, showClose: false);
 
         var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), AutoScroll = true, BackColor = AppTheme.Surface };
 

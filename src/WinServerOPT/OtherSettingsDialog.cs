@@ -28,7 +28,7 @@ internal sealed class OtherSettingsDialog : Form
         BackColor = AppTheme.Surface;
 
         var header = ThemedSettingsChrome.CreateHeader("其他设置", "系统功能调节 · 防火墙 / 日志 / 远程端口");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即生效。UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。", LoadValues);
+        var footer = ThemedSettingsChrome.CreateFooter(this, "开关立即生效。UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。", LoadValues, showClose: false);
 
         var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = AppTheme.Surface };
 

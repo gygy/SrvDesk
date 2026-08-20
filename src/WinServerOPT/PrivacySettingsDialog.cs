@@ -27,7 +27,7 @@ internal sealed class PrivacySettingsDialog : Form
         BackColor = AppTheme.Surface;
 
         var header = ThemedSettingsChrome.CreateHeader("隐私设置", "Windows 隐私相关设置 · 更改立即生效");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "此窗口所有更改将立即生效。建议同时添加防火墙规则以拦截搜索上传。", LoadValues);
+        var footer = ThemedSettingsChrome.CreateFooter(this, "此页更改立即生效。建议同时添加防火墙规则以拦截搜索上传。", LoadValues, showClose: false);
 
         var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), AutoScroll = true, BackColor = AppTheme.Surface };
 

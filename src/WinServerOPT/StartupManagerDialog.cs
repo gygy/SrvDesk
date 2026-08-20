@@ -26,7 +26,7 @@ internal sealed class StartupManagerDialog : Form
         ForeColor = AppTheme.TextMain;
 
         var header = ThemedSettingsChrome.CreateHeader("启动项管理", "登录时自动运行的程序 · 注册表 Run 与启动文件夹");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "禁用使用系统 StartupApproved，不删除条目。删除不可恢复。", RefreshList);
+        var footer = ThemedSettingsChrome.CreateFooter(this, "禁用使用系统 StartupApproved，不删除条目。删除不可恢复。", RefreshList, showClose: false);
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface };
         var sidebar = BuildSidebar();

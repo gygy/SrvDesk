@@ -34,7 +34,7 @@ internal sealed class DnsSwitcherDialog : Form
         BackColor = AppTheme.Surface;
 
         var header = ThemedSettingsChrome.CreateHeader("DNS 切换", "对齐 Optimizer Pinger · 应用到已连接的以太网/无线适配器");
-        var footer = ThemedSettingsChrome.CreateFooter(this, "切换后会刷新 DNS 缓存。");
+        var footer = ThemedSettingsChrome.CreateFooter(this, "切换后会刷新 DNS 缓存。", showClose: false);
 
         var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20, 12, 20, 8), BackColor = AppTheme.SurfaceCard };
         body.Controls.Add(new Label { Text = "预设", Location = new Point(8, 12), AutoSize = true });

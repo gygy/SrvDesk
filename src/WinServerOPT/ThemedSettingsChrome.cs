@@ -113,7 +113,7 @@ internal static class ThemedSettingsChrome
         return header;
     }
 
-    public static Panel CreateFooter(Form form, string hint, Action? onRefresh = null)
+    public static Panel CreateFooter(Form form, string hint, Action? onRefresh = null, bool showClose = true)
     {
         var footer = new Panel
         {
@@ -127,12 +127,13 @@ internal static class ThemedSettingsChrome
             e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0);
         };
 
+        var right = (showClose ? 104 : 16) + (onRefresh is not null ? 100 : 0);
         var label = new Label
         {
             Text = hint,
             AutoSize = false,
             Location = new Point(16, 8),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 240), 36),
+            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - right), 36),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = AppTheme.TextMute,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -143,20 +144,23 @@ internal static class ThemedSettingsChrome
             var refresh = CreateButton("刷新", false);
             refresh.Size = new Size(88, 34);
             refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            refresh.Location = new Point(form.ClientSize.Width - 204, 9);
+            refresh.Location = new Point(form.ClientSize.Width - (showClose ? 204 : 104), 9);
             refresh.Click += (_, _) => onRefresh();
             footer.Controls.Add(refresh);
         }
 
-        var close = CreateButton("关闭", true);
-        close.Size = new Size(88, 34);
-        close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        close.Location = new Point(form.ClientSize.Width - 104, 9);
-        close.DialogResult = DialogResult.Cancel;
-        form.CancelButton = close;
+        if (showClose)
+        {
+            var close = CreateButton("关闭", true);
+            close.Size = new Size(88, 34);
+            close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            close.Location = new Point(form.ClientSize.Width - 104, 9);
+            close.DialogResult = DialogResult.Cancel;
+            form.CancelButton = close;
+            footer.Controls.Add(close);
+        }
 
         footer.Controls.Add(label);
-        footer.Controls.Add(close);
         return footer;
     }
 

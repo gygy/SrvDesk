@@ -313,6 +313,9 @@ internal sealed class CommonSoftwareDialog : Form
     private void BuildList()
     {
         _listHost.SuspendLayout();
+        _listHost.AutoScroll = false;
+        _listHost.AutoScrollMinSize = Size.Empty;
+        _listHost.AutoScrollPosition = Point.Empty;
         _listHost.Controls.Clear();
         _rows.Clear();
 
@@ -323,18 +326,21 @@ internal sealed class CommonSoftwareDialog : Form
         const int rowH = 44;
         var y = 0;
         var alt = false;
+        var w = Math.Max(680, Math.Max(0, _listHost.ClientSize.Width - SystemInformation.VerticalScrollBarWidth));
         foreach (var item in items)
         {
             var row = new CommonSoftwareRow(item, rowH, alt ? AppTheme.RowAlt : AppTheme.SurfaceCard, OnInstall, OnUninstall);
-            row.Location = new Point(0, y);
-            row.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            row.Width = Math.Max(680, _listHost.ClientSize.Width - 4);
+            row.SetBounds(0, y, w, rowH);
+            row.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             _listHost.Controls.Add(row);
             _rows[item.Id] = row;
             y += rowH;
             alt = !alt;
         }
 
+        _listHost.AutoScrollMinSize = new Size(0, y);
+        _listHost.AutoScroll = true;
+        _listHost.AutoScrollPosition = Point.Empty;
         _listHost.ResumeLayout(true);
         _listHost.Resize -= OnListHostResize;
         _listHost.Resize += OnListHostResize;
