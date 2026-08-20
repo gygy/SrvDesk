@@ -32,6 +32,22 @@ internal static class CommonSoftwareCatalog
         Item("everything", "Everything极速文件搜索", "必备", "voidtools.Everything",
             ["Everything"], "https://www.voidtools.com/downloads/", essential: true),
 
+        Item("geek", "Geek Uninstaller（深度卸载）", "工具", "GeekUninstaller.GeekUninstaller",
+            ["Geek Uninstaller"], "https://geekuninstaller.com/download", essential: false),
+        Item("stirling-pdf", "Stirling-PDF（本地 PDF 工具箱）", "工具", "StirlingTools.StirlingPDF",
+            ["Stirling-PDF", "Stirling PDF"], "https://github.com/Stirling-Tools/Stirling-PDF/releases", essential: false),
+        Item("hikconnect", "海康互联", "工具", "",
+            ["海康互联"], "https://www.hikiot.com/download", essential: false),
+        Item("pixpin", "PixPin（截图贴图）", "工具", "PixPin.PixPin",
+            ["PixPin"], "https://pixpin.cn/", essential: false),
+        Item("bitwarden", "Bitwarden（密码管理）", "工具", "Bitwarden.Bitwarden",
+            ["Bitwarden"], "https://bitwarden.com/download/", essential: false),
+
+        Item("yandex", "Yandex 浏览器", "浏览器", "Yandex.Browser",
+            ["Yandex Browser", "Yandex"], "https://browser.yandex.com/", essential: false),
+        Item("vivaldi", "Vivaldi 浏览器", "浏览器", "Vivaldi.Vivaldi",
+            ["Vivaldi"], "https://vivaldi.com/download/", essential: false),
+
         Item("qq-classic", "腾讯QQ（经典版）", "通讯", "Tencent.QQ",
             ["腾讯QQ"], "https://im.qq.com/pcqq", essential: false),
         Item("qq-nt", "腾讯QQ（全新体验版）", "通讯", "Tencent.QQ.NT",
@@ -48,6 +64,8 @@ internal static class CommonSoftwareCatalog
 
         Item("git", "Git For Windows", "开发", "Git.Git",
             ["Git"], "https://git-scm.com/download/win", essential: false),
+        Item("notepadpp", "Notepad++", "开发", "Notepad++.Notepad++",
+            ["Notepad++"], "https://notepad-plus-plus.org/downloads/", essential: false),
         Item("tortoisegit", "TortoiseGit简体中文版", "开发", "TortoiseGit.TortoiseGit",
             ["TortoiseGit"], "https://tortoisegit.org/download/", essential: false),
     ];

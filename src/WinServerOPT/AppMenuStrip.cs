@@ -12,6 +12,10 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolHosts { get; }
     public ToolStripMenuItem ToolEventViewer { get; }
     public ToolStripMenuItem ToolGroupPolicy { get; }
+    public ToolStripMenuItem ToolCmd { get; }
+    public ToolStripMenuItem ToolPowerShell { get; }
+    public ToolStripMenuItem ToolTaskScheduler { get; }
+    public ToolStripMenuItem ToolComputerMgmt { get; }
     public ToolStripMenuItem ToolFlushDns { get; }
     public ToolStripMenuItem ToolCommonSoftware { get; }
     public ToolStripMenuItem ToolQuick { get; }
@@ -53,12 +57,18 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolHosts = new ToolStripMenuItem("编辑 hosts...");
         ToolEventViewer = new ToolStripMenuItem("事件查看器");
         ToolGroupPolicy = new ToolStripMenuItem("组策略...");
+        ToolCmd = new ToolStripMenuItem("命令提示符");
+        ToolPowerShell = new ToolStripMenuItem("Windows PowerShell");
+        ToolTaskScheduler = new ToolStripMenuItem("计划任务");
+        ToolComputerMgmt = new ToolStripMenuItem("计算机管理");
         ToolFlushDns = new ToolStripMenuItem("刷新 DNS 缓存");
         ToolCommonSoftware = new ToolStripMenuItem("常用软件...");
         ToolQuick = new ToolStripMenuItem("快速工具...");
         ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
         tools.DropDownItems.AddRange([
-            ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts, ToolEventViewer, ToolGroupPolicy, ToolFlushDns, ToolCommonSoftware,
+            ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts,
+            ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
+            ToolFlushDns, ToolCommonSoftware,
             new ToolStripSeparator(), ToolQuick, ToolRefresh
         ]);
 

@@ -12,7 +12,7 @@ internal sealed class CommonSoftwareDialog : Form
     private string _selectedCategory = "全部";
     private int _categoryHover = -1;
 
-    private static readonly string[] Categories = ["全部", "必备", "通讯", "网盘", "开发"];
+    private static readonly string[] Categories = ["全部", "必备", "工具", "浏览器", "通讯", "网盘", "开发"];
 
     public CommonSoftwareDialog()
     {

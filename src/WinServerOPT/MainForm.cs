@@ -204,6 +204,10 @@ internal sealed class MainForm : Form
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
         _appMenu.ToolGroupPolicy.Click += (_, _) => ShowGroupPolicy();
+        _appMenu.ToolCmd.Click += (_, _) => SystemToolLauncher.OpenCommandPrompt(this);
+        _appMenu.ToolPowerShell.Click += (_, _) => SystemToolLauncher.OpenWindowsPowerShell(this);
+        _appMenu.ToolTaskScheduler.Click += (_, _) => SystemToolLauncher.OpenTaskScheduler(this);
+        _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();

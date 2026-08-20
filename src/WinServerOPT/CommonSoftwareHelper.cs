@@ -92,7 +92,7 @@ internal static class CommonSoftwareHelper
         if (item.IsWingetBootstrap)
             return InstallWinget();
 
-        if (IsWingetAvailable())
+        if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
             var code = Run(ResolveWingetPath(),
                 $"install -e --id {item.WingetId} --accept-package-agreements --accept-source-agreements");
@@ -102,9 +102,11 @@ internal static class CommonSoftwareHelper
         }
 
         OpenDownloadPage(item);
-        return IsWingetAvailable()
+        return IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId)
             ? "winget 安装未成功，已在浏览器打开官方下载页，请手动安装。"
-            : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
+            : string.IsNullOrWhiteSpace(item.WingetId)
+                ? "该软件暂无 winget 包，已在浏览器打开官方下载页。"
+                : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
     }
 
     public static string Uninstall(CommonSoftwareItem item)
@@ -113,7 +115,7 @@ internal static class CommonSoftwareHelper
         if (item.IsWingetBootstrap)
             return "winget（应用安装程序）为系统组件，不建议在此卸载。请在「设置 → 应用」中操作。";
 
-        if (IsWingetAvailable())
+        if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
             var code = Run(ResolveWingetPath(), $"uninstall -e --id {item.WingetId}");
             if (code == 0) return "";
@@ -181,7 +183,7 @@ internal static class CommonSoftwareHelper
         var output = RunCapture(ResolveWingetPath(), "upgrade --include-unknown");
         var upgradable = items.Count(i =>
         {
-            if (i.IsWingetBootstrap) return false;
+            if (i.IsWingetBootstrap || string.IsNullOrWhiteSpace(i.WingetId)) return false;
             var status = Query(i);
             return status.Installed &&
                 output.IndexOf(i.WingetId, StringComparison.OrdinalIgnoreCase) >= 0;
