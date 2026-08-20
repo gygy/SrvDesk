@@ -588,6 +588,47 @@ internal static class SettingCatalog
         "DISM 完成后建议重启。",
         SettingScope.ServerExclusive);
 
+    public static readonly SettingHelpInfo ShowItemCheckboxes = H(
+        "资源管理器使用复选框选择文件。", "AutoCheckSelect=1。", "批量选择更方便。", "桌面/File Explorer 推荐。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo ShowCommonFolders = H(
+        "导航窗格显示所有文件夹。", "NavPaneShowAllFolders=1。", "快速访问常用目录。", "个人桌面推荐。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo RemoveAdminShield = H(
+        "快捷方式不显示管理员盾牌图标。", "Shell Icons 77 置空。", "界面更简洁。", "仅影响图标显示，不降低权限。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo NoShortcutSuffix = H(
+        "新建快捷方式时不自动加「快捷方式」后缀。", "Explorer\\Link 二进制。", "文件名更干净。", "推荐开启。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo Win11ExplorerStyle = H(
+        "使用 Win11 默认间距的资源管理器布局。", "UseCompactMode=0。", "非紧凑模式。", "关闭则使用紧凑模式。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo Win10ClassicContextMenu = H(
+        "右键菜单恢复 Win10 经典完整菜单。", "CLSID 86ca1aa0 InprocServer32。", "更多项一步可见。", "习惯经典菜单时开启。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo TaskbarSearchBox = H(
+        "任务栏显示搜索框。", "SearchboxTaskbarMode=2。", "快速搜索入口。", "关闭则仅显示图标。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo TaskbarAlignLeft = H(
+        "任务栏图标靠左对齐。", "TaskbarAl=0。", "类似 Win10 布局。", "Win11 22H2+ 有效。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo TaskbarCombineAlways = H(
+        "任务栏按钮始终合并。", "TaskbarGlomLevel=0。", "节省任务栏空间。", "关闭则从不合并。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo TaskbarAutoHide = H(
+        "自动隐藏任务栏。", "StuckRects3 Settings。", "最大化屏幕空间。", "鼠标移至边缘显示。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo ShowTaskViewButton = H(
+        "任务栏显示任务视图按钮。", "ShowTaskViewButton=1。", "多桌面/任务概览。", "不用时可关闭。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo TaskbarEndTask = H(
+        "任务栏右键可结束任务。", "EndTask=1。", "快速结束无响应用。", "内网桌面实用。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo DisableWidgets = H(
+        "关闭任务栏小组件/资讯。", "TaskbarDa=0。", "减少干扰与占用。", "Win11 有效。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo DisableSearchHighlights = H(
+        "关闭搜索框动态亮点/推荐。", "IsDynamicSearchBoxEnabled=0。", "搜索更纯净。", "推荐开启。", "立即或重启资源管理器。", W10De);
+    public static readonly SettingHelpInfo DisableRecommendedItems = H(
+        "开始菜单不显示推荐项目。", "Start_ShowRecentRecommendations=0。", "减少开始菜单干扰。", "个人桌面推荐。", "重启资源管理器后生效。", W10De);
+    public static readonly SettingHelpInfo DisableAdTracking = H(
+        "关闭广告标识符跟踪。", "AdvertisingInfo\\Enabled=0。", "提升隐私。", "推荐开启。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableSearchHistory = H(
+        "关闭 Windows 搜索历史记录。", "HistoryViewEnabled=0。", "减少本地搜索痕迹。", "推荐开启。", "立即生效。", W10De);
+    public static readonly SettingHelpInfo DisableStickyKeys = H(
+        "禁用粘滞键快捷键提示。", "StickyKeys Flags=506。", "避免误触 Shift 五次弹窗。", "全局生效。", "立即或注销后生效。", W10De);
+    public static readonly SettingHelpInfo DisablePca = H(
+        "禁用程序兼容性助手服务。", "停止 PcaSvc。", "减少兼容性弹窗。", "极老软件排查时可关闭本项。", "服务停止后生效。");
+    public static readonly SettingHelpInfo PauseFeatureUpdatesUntil2035 = H(
+        "暂停功能更新至 2035 年。", "PauseFeatureUpdates 策略。", "长期跳过功能版升级。", "安全更新仍可能推送；请自行评估风险。", "策略写入后生效。", W10De);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,

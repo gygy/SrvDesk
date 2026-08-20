@@ -32,6 +32,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _srvSplit = Row("关闭 LanmanServer 服务拆分", "默认", SettingCatalog.DisableSrvSplit);
     private readonly SettingRow _gpuSched = Row("启用 GPU 硬件加速计划", "关闭", SettingCatalog.EnableGpuHwScheduling);
     private readonly SettingRow _defender = Row("关闭 Windows Defender", "开启", SettingCatalog.DisableDefenderAntivirus);
+    private readonly SettingRow _pca = Row("禁用程序兼容性助手 PCA", "开启", SettingCatalog.DisablePca);
+    private readonly SettingRow _wuPause2035 = Row("暂停功能更新至 2035", "不暂停", SettingCatalog.PauseFeatureUpdatesUntil2035);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -54,6 +56,20 @@ internal sealed class MainForm : Form
     private readonly SettingRow _classicSearch = Row("搜索退回传统模式", "现代搜索", SettingCatalog.ClassicFileSearch);
     private readonly SettingRow _searchEngine = Row("禁用 SearchEngine 功能包", "已安装", SettingCatalog.DisableSearchEngineFeature);
 
+    private readonly SettingRow _itemCheckboxes = Row("显示项目复选框", "不显示", SettingCatalog.ShowItemCheckboxes);
+    private readonly SettingRow _commonFolders = Row("显示常用文件夹", "不显示", SettingCatalog.ShowCommonFolders);
+    private readonly SettingRow _noShield = Row("去除快捷方式管理员盾牌", "显示", SettingCatalog.RemoveAdminShield);
+    private readonly SettingRow _noSuffix = Row("快捷方式不加「快捷方式」后缀", "添加", SettingCatalog.NoShortcutSuffix);
+    private readonly SettingRow _win11Explorer = Row("Win11 资源管理器布局", "紧凑", SettingCatalog.Win11ExplorerStyle);
+    private readonly SettingRow _classicMenu = Row("Win10 经典右键菜单", "Win11 现代", SettingCatalog.Win10ClassicContextMenu);
+    private readonly SettingRow _tbSearch = Row("任务栏搜索框", "仅图标", SettingCatalog.TaskbarSearchBox);
+    private readonly SettingRow _tbLeft = Row("任务栏靠左对齐", "居中", SettingCatalog.TaskbarAlignLeft);
+    private readonly SettingRow _tbCombine = Row("任务栏按钮始终合并", "从不", SettingCatalog.TaskbarCombineAlways);
+    private readonly SettingRow _tbAutohide = Row("自动隐藏任务栏", "不隐藏", SettingCatalog.TaskbarAutoHide);
+    private readonly SettingRow _taskView = Row("显示任务视图按钮", "不显示", SettingCatalog.ShowTaskViewButton);
+    private readonly SettingRow _tbEndTask = Row("任务栏右键结束任务", "关闭", SettingCatalog.TaskbarEndTask);
+    private readonly SettingRow _widgets = Row("关闭任务栏小组件", "开启", SettingCatalog.DisableWidgets);
+
     private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启", SettingCatalog.DisableAnimations);
     private readonly SettingRow _transparency = Row("禁用透明效果", "开启", SettingCatalog.DisableTransparency);
     private readonly SettingRow _tips = Row("关闭 Windows 提示与建议", "开启", SettingCatalog.DisableTips);
@@ -61,6 +77,11 @@ internal sealed class MainForm : Form
     private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启", SettingCatalog.DisableActivityHistory);
     private readonly SettingRow _storageSense = Row("禁用存储感知", "开启", SettingCatalog.DisableStorageSense);
     private readonly SettingRow _backgroundApps = Row("禁止应用在后台运行", "允许", SettingCatalog.DisableBackgroundApps);
+    private readonly SettingRow _searchHighlights = Row("关闭搜索要点/亮点", "开启", SettingCatalog.DisableSearchHighlights);
+    private readonly SettingRow _recommended = Row("关闭开始菜单推荐", "开启", SettingCatalog.DisableRecommendedItems);
+    private readonly SettingRow _adTracking = Row("关闭广告标识符跟踪", "开启", SettingCatalog.DisableAdTracking);
+    private readonly SettingRow _searchHistory = Row("关闭搜索历史记录", "开启", SettingCatalog.DisableSearchHistory);
+    private readonly SettingRow _stickyKeys = Row("禁用粘滞键提示", "开启", SettingCatalog.DisableStickyKeys);
 
     private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp);
     private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel);
@@ -123,11 +144,14 @@ internal sealed class MainForm : Form
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
         _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender,
+        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
+        _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
+        _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
+        _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting,
         _svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
@@ -150,15 +174,18 @@ internal sealed class MainForm : Form
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
             _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
             _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender
+            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035
         ]));
         _groups.Add(("个性化设置", [
             _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
             _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons, _taskbarClock,
-            _desktopIcons, _smartScreen, _classicSearch, _searchEngine
+            _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
+            _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
+            _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets
         ]));
         _groups.Add(("隐私与体验", [
-            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps
+            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
+            _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys
         ]));
         _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
         _groups.Add(("启动项", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
@@ -210,6 +237,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
+        _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
@@ -524,6 +552,12 @@ internal sealed class MainForm : Form
     private void ShowCommonSoftware()
     {
         using var dlg = new CommonSoftwareDialog();
+        dlg.ShowDialog(this);
+    }
+
+    private void ShowDesktopMaintenance()
+    {
+        using var dlg = new DesktopMaintenanceDialog();
         dlg.ShowDialog(this);
     }
 
@@ -1092,6 +1126,19 @@ internal sealed class MainForm : Form
         _smartScreen.Checked = s.DisableSmartScreenWarning;
         _classicSearch.Checked = s.ClassicFileSearch;
         _searchEngine.Checked = s.DisableSearchEngineFeature;
+        _itemCheckboxes.Checked = s.ShowItemCheckboxes;
+        _commonFolders.Checked = s.ShowCommonFolders;
+        _noShield.Checked = s.RemoveAdminShield;
+        _noSuffix.Checked = s.NoShortcutSuffix;
+        _win11Explorer.Checked = s.Win11ExplorerStyle;
+        _classicMenu.Checked = s.Win10ClassicContextMenu;
+        _tbSearch.Checked = s.TaskbarSearchBox;
+        _tbLeft.Checked = s.TaskbarAlignLeft;
+        _tbCombine.Checked = s.TaskbarCombineAlways;
+        _tbAutohide.Checked = s.TaskbarAutoHide;
+        _taskView.Checked = s.ShowTaskViewButton;
+        _tbEndTask.Checked = s.TaskbarEndTask;
+        _widgets.Checked = s.DisableWidgets;
         _animations.Checked = s.DisableAnimations;
         _transparency.Checked = s.DisableTransparency;
         _tips.Checked = s.DisableTips;
@@ -1099,6 +1146,13 @@ internal sealed class MainForm : Form
         _activityHist.Checked = s.DisableActivityHistory;
         _storageSense.Checked = s.DisableStorageSense;
         _backgroundApps.Checked = s.DisableBackgroundApps;
+        _searchHighlights.Checked = s.DisableSearchHighlights;
+        _recommended.Checked = s.DisableRecommendedItems;
+        _adTracking.Checked = s.DisableAdTracking;
+        _searchHistory.Checked = s.DisableSearchHistory;
+        _stickyKeys.Checked = s.DisableStickyKeys;
+        _pca.Checked = s.DisablePca;
+        _wuPause2035.Checked = s.PauseFeatureUpdatesUntil2035;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -1151,6 +1205,8 @@ internal sealed class MainForm : Form
         DisableSrvSplit = _srvSplit.Checked,
         EnableGpuHwScheduling = _gpuSched.Checked,
         DisableDefenderAntivirus = _defender.Checked,
+        DisablePca = _pca.Checked,
+        PauseFeatureUpdatesUntil2035 = _wuPause2035.Checked,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
@@ -1171,6 +1227,19 @@ internal sealed class MainForm : Form
         DisableSmartScreenWarning = _smartScreen.Checked,
         ClassicFileSearch = _classicSearch.Checked,
         DisableSearchEngineFeature = _searchEngine.Checked,
+        ShowItemCheckboxes = _itemCheckboxes.Checked,
+        ShowCommonFolders = _commonFolders.Checked,
+        RemoveAdminShield = _noShield.Checked,
+        NoShortcutSuffix = _noSuffix.Checked,
+        Win11ExplorerStyle = _win11Explorer.Checked,
+        Win10ClassicContextMenu = _classicMenu.Checked,
+        TaskbarSearchBox = _tbSearch.Checked,
+        TaskbarAlignLeft = _tbLeft.Checked,
+        TaskbarCombineAlways = _tbCombine.Checked,
+        TaskbarAutoHide = _tbAutohide.Checked,
+        ShowTaskViewButton = _taskView.Checked,
+        TaskbarEndTask = _tbEndTask.Checked,
+        DisableWidgets = _widgets.Checked,
         DisableAnimations = _animations.Checked,
         DisableTransparency = _transparency.Checked,
         DisableTips = _tips.Checked,
@@ -1178,6 +1247,11 @@ internal sealed class MainForm : Form
         DisableActivityHistory = _activityHist.Checked,
         DisableStorageSense = _storageSense.Checked,
         DisableBackgroundApps = _backgroundApps.Checked,
+        DisableSearchHighlights = _searchHighlights.Checked,
+        DisableRecommendedItems = _recommended.Checked,
+        DisableAdTracking = _adTracking.Checked,
+        DisableSearchHistory = _searchHistory.Checked,
+        DisableStickyKeys = _stickyKeys.Checked,
         EnableRdp = _rdp.Checked,
         RdpGpuAccel = _rdpGpu.Checked,
         RdpHighRefresh = _rdpFps.Checked,

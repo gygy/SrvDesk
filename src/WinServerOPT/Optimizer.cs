@@ -113,6 +113,27 @@ internal static class Optimizer
         public bool DisableSearchEngineFeature;
         public bool EnableDesktopMediaFeatures;
         public bool DisableServerBloatFeatures;
+
+        public bool ShowItemCheckboxes;
+        public bool ShowCommonFolders;
+        public bool RemoveAdminShield;
+        public bool NoShortcutSuffix;
+        public bool Win11ExplorerStyle;
+        public bool Win10ClassicContextMenu;
+        public bool TaskbarSearchBox;
+        public bool TaskbarAlignLeft;
+        public bool TaskbarCombineAlways;
+        public bool TaskbarAutoHide;
+        public bool ShowTaskViewButton;
+        public bool TaskbarEndTask;
+        public bool DisableWidgets;
+        public bool DisableSearchHighlights;
+        public bool DisableRecommendedItems;
+        public bool DisableAdTracking;
+        public bool DisableSearchHistory;
+        public bool DisableStickyKeys;
+        public bool DisablePca;
+        public bool PauseFeatureUpdatesUntil2035;
     }
 
     public static bool IsWindowsServer()
@@ -220,6 +241,27 @@ internal static class Optimizer
                 : ServiceStartEquals("WSearch", 4),
             EnableDesktopMediaFeatures = fullScan && ServerDesktopTweaks.IsDesktopMediaFeaturesOn(),
             DisableServerBloatFeatures = fullScan && ServerDesktopTweaks.IsServerBloatFeaturesOff(includeRsatScan: fullScan),
+
+            ShowItemCheckboxes = Win11DesktopTweaks.IsShowItemCheckboxesOn(),
+            ShowCommonFolders = Win11DesktopTweaks.IsShowCommonFoldersOn(),
+            RemoveAdminShield = Win11DesktopTweaks.IsRemoveAdminShieldOn(),
+            NoShortcutSuffix = Win11DesktopTweaks.IsNoShortcutSuffixOn(),
+            Win11ExplorerStyle = Win11DesktopTweaks.IsWin11ExplorerStyleOn(),
+            Win10ClassicContextMenu = Win11DesktopTweaks.IsWin10ClassicContextMenuOn(),
+            TaskbarSearchBox = Win11DesktopTweaks.IsTaskbarSearchBoxOn(),
+            TaskbarAlignLeft = Win11DesktopTweaks.IsTaskbarAlignLeftOn(),
+            TaskbarCombineAlways = Win11DesktopTweaks.IsTaskbarCombineAlwaysOn(),
+            TaskbarAutoHide = Win11DesktopTweaks.IsTaskbarAutoHideOn(),
+            ShowTaskViewButton = Win11DesktopTweaks.IsShowTaskViewButtonOn(),
+            TaskbarEndTask = Win11DesktopTweaks.IsTaskbarEndTaskOn(),
+            DisableWidgets = Win11DesktopTweaks.IsDisableWidgetsOn(),
+            DisableSearchHighlights = Win11DesktopTweaks.IsDisableSearchHighlightsOn(),
+            DisableRecommendedItems = Win11DesktopTweaks.IsDisableRecommendedItemsOn(),
+            DisableAdTracking = Win11DesktopTweaks.IsDisableAdTrackingOn(),
+            DisableSearchHistory = Win11DesktopTweaks.IsDisableSearchHistoryOn(),
+            DisableStickyKeys = Win11DesktopTweaks.IsDisableStickyKeysOn(),
+            DisablePca = ServiceStartEquals("PcaSvc", 4),
+            PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On(),
         };
     }
 
@@ -379,6 +421,12 @@ internal static class Optimizer
         Try(errors, "Windows Defender", () => ServerDesktopTweaks.ApplyDefender(s.DisableDefenderAntivirus));
         Try(errors, "桌面媒体组件", () => ServerDesktopTweaks.ApplyDesktopMediaFeatures(s.EnableDesktopMediaFeatures));
         Try(errors, "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
+        Try(errors, "Win11桌面体验", () =>
+        {
+            Win11DesktopTweaks.Apply(s);
+            DesktopQuickActions.RestartExplorer();
+        });
+        Try(errors, "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
         return errors;
     }
 
@@ -438,7 +486,7 @@ internal static class Optimizer
         }
 
         NotifyIntlChange();
-        RestartExplorer();
+        DesktopQuickActions.RestartExplorer();
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
@@ -446,28 +494,6 @@ internal static class Optimizer
 
     private static void NotifyIntlChange() =>
         _ = SendMessageTimeout(new IntPtr(0xffff), 0x001A, IntPtr.Zero, "intl", 2, 1000, out _);
-
-    private static void RestartExplorer()
-    {
-        try
-        {
-            foreach (var proc in Process.GetProcessesByName("explorer"))
-            {
-                proc.Kill();
-                proc.WaitForExit(5000);
-            }
-        }
-        catch
-        {
-            // 忽略无法结束 explorer 的情况
-        }
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
-            UseShellExecute = true,
-        });
-    }
 
     private static string? GetString(Hive hive, string key, string name) =>
         GetValue(hive, key, name) as string;
