@@ -1,5 +1,4 @@
 using System.Management;
-using System.Net.NetworkInformation;
 
 namespace WinOpt;
 
@@ -8,7 +7,8 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
     private readonly ComboBox _preset = new();
     private readonly TextBox _primary = new();
     private readonly TextBox _secondary = new();
-    private readonly Label _current = new();
+    private readonly CheckedListBox _adapters = new();
+    private readonly Label _hint = new();
 
     private static readonly (string Name, string Dns1, string Dns2)[] Presets =
     [
@@ -29,17 +29,15 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(640, 420);
-        MinimumSize = new Size(520, 360);
+        ClientSize = new Size(720, 520);
+        MinimumSize = new Size(600, 440);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         var card = new Panel
         {
-            Dock = DockStyle.Top,
-            AutoSize = true,
+            Dock = DockStyle.Fill,
             BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(16, 16, 16, 16),
-            Margin = new Padding(0, 0, 0, 8),
+            Padding = new Padding(16),
         };
         card.Paint += (_, e) =>
         {
@@ -50,16 +48,17 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         var form = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            AutoSize = true,
+            Height = 120,
             ColumnCount = 2,
-            Padding = new Padding(0),
         };
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
 
         _preset.DropDownStyle = ComboBoxStyle.DropDownList;
         _preset.Dock = DockStyle.Fill;
-        _preset.Height = 28;
         foreach (var p in Presets) _preset.Items.Add(p.Name);
         _preset.SelectedIndex = 0;
         _preset.SelectedIndexChanged += (_, _) =>
@@ -70,134 +69,174 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             _primary.Enabled = _preset.SelectedIndex != 0;
             _secondary.Enabled = _preset.SelectedIndex != 0;
         };
-
         _primary.Dock = DockStyle.Fill;
         _secondary.Dock = DockStyle.Fill;
-        AddRow(form, "预设", _preset);
-        AddRow(form, "首选", _primary);
-        AddRow(form, "备选", _secondary);
+        form.Controls.Add(new Label { Text = "预设", AutoSize = true, Padding = new Padding(0, 8, 0, 0), ForeColor = AppTheme.TextHeader }, 0, 0);
+        form.Controls.Add(_preset, 1, 0);
+        form.Controls.Add(new Label { Text = "首选", AutoSize = true, Padding = new Padding(0, 8, 0, 0), ForeColor = AppTheme.TextHeader }, 0, 1);
+        form.Controls.Add(_primary, 1, 1);
+        form.Controls.Add(new Label { Text = "备选", AutoSize = true, Padding = new Padding(0, 8, 0, 0), ForeColor = AppTheme.TextHeader }, 0, 2);
+        form.Controls.Add(_secondary, 1, 2);
 
-        _current.AutoSize = false;
-        _current.MinimumSize = new Size(200, 72);
-        _current.Height = 72;
-        _current.Dock = DockStyle.Top;
-        _current.ForeColor = AppTheme.TextMute;
-        _current.Padding = new Padding(0, 10, 0, 0);
-        _current.Text = CurrentSummary();
+        _hint.Dock = DockStyle.Top;
+        _hint.Height = 40;
+        _hint.ForeColor = AppTheme.TextMute;
+        _hint.Text = "勾选要修改的网卡。默认勾选「已连接」的物理网卡；虚拟网卡默认不勾选。";
+
+        var listCap = new Label
+        {
+            Text = "选择网卡",
+            Dock = DockStyle.Top,
+            Height = 24,
+            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            ForeColor = AppTheme.TextHeader,
+        };
+
+        _adapters.Dock = DockStyle.Fill;
+        _adapters.CheckOnClick = true;
+        _adapters.IntegralHeight = false;
+        _adapters.BorderStyle = BorderStyle.FixedSingle;
+        _adapters.BackColor = AppTheme.Surface;
 
         var actions = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top,
-            AutoSize = true,
+            Dock = DockStyle.Bottom,
+            Height = 44,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 12, 0, 0),
+            Padding = new Padding(0, 8, 0, 0),
         };
-        var apply = ThemedSettingsChrome.CreateButton("应用到网卡", true);
-        apply.Size = new Size(120, 34);
+        var selectUp = ThemedSettingsChrome.CreateButton("仅勾选已连接", false);
+        selectUp.Size = new Size(120, 34);
+        selectUp.Click += (_, _) => SelectConnectedOnly();
+        var selectAll = ThemedSettingsChrome.CreateButton("全选", false);
+        selectAll.Size = new Size(72, 34);
+        selectAll.Margin = new Padding(8, 0, 0, 0);
+        selectAll.Click += (_, _) => SetAllChecked(true);
+        var clear = ThemedSettingsChrome.CreateButton("全不选", false);
+        clear.Size = new Size(80, 34);
+        clear.Margin = new Padding(8, 0, 0, 0);
+        clear.Click += (_, _) => SetAllChecked(false);
+        var apply = ThemedSettingsChrome.CreateButton("应用到勾选网卡", true);
+        apply.Size = new Size(140, 34);
+        apply.Margin = new Padding(16, 0, 0, 0);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
-        flush.Size = new Size(120, 34);
-        flush.Margin = new Padding(0, 0, 8, 0);
+        flush.Size = new Size(110, 34);
+        flush.Margin = new Padding(8, 0, 0, 0);
         flush.Click += (_, _) =>
         {
             HostsFileHelper.FlushDns();
             MessageBox.Show(this, "已刷新 DNS 缓存。", "DNS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
-        actions.Controls.Add(flush);
-        actions.Controls.Add(apply);
+        actions.Controls.AddRange([selectUp, selectAll, clear, apply, flush]);
 
+        card.Controls.Add(_adapters);
         card.Controls.Add(actions);
-        card.Controls.Add(_current);
+        card.Controls.Add(listCap);
+        card.Controls.Add(_hint);
         card.Controls.Add(form);
         body.Controls.Add(card);
 
         ThemedSettingsChrome.MountEmbedded(
             this,
             "DNS 设置",
-            "应用到已连接的以太网/无线网卡 · 修改后立即刷新缓存",
+            "仅修改勾选的网卡 · 虚拟网卡默认不选",
             body,
-            "DHCP 模式会恢复为自动获取 DNS。");
+            "DHCP 模式会对勾选网卡恢复自动获取 DNS。",
+            RefreshAdapters);
 
-        Shown += (_, _) => _current.Text = CurrentSummary();
-    }
-
-    public void RefreshFromSystem() => _current.Text = CurrentSummary();
-
-    private static void AddRow(TableLayoutPanel grid, string label, Control control)
-    {
-        var row = grid.RowCount++;
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-        grid.Controls.Add(new Label
+        Shown += (_, _) =>
         {
-            Text = label,
-            AutoSize = true,
-            ForeColor = AppTheme.TextHeader,
-            Padding = new Padding(0, 8, 0, 0),
-        }, 0, row);
-        grid.Controls.Add(control, 1, row);
+            if (_adapters.Items.Count == 0) RefreshAdapters();
+        };
     }
 
-    private static string CurrentSummary()
+    public void RefreshFromSystem() => RefreshAdapters();
+
+    private void RefreshAdapters()
     {
+        _adapters.BeginUpdate();
+        _adapters.Items.Clear();
         try
         {
-            var lines = new List<string>();
-            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            foreach (var a in DnsAdapterHelper.ListIpEnabledAdapters())
             {
-                if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback) continue;
-                var dns = nic.GetIPProperties().DnsAddresses;
-                if (dns.Count == 0) continue;
-                lines.Add(nic.Name + "：" + string.Join(", ", dns.Take(4).Select(a => a.ToString())));
+                var i = _adapters.Items.Add(a);
+                // 默认只勾选已连接、且不像虚拟网卡的项
+                _adapters.SetItemChecked(i, a.IsUp && !a.LikelyVirtual);
             }
-            return lines.Count == 0
-                ? "未检测到已连接网卡的 DNS。"
-                : "当前 DNS：\r\n" + string.Join("\r\n", lines.Take(4));
+            if (_adapters.Items.Count == 0)
+                _hint.Text = "未找到已启用 IP 的网卡。";
+            else
+                _hint.Text = $"共 {_adapters.Items.Count} 块网卡。默认勾选已连接的物理网卡；可改选后点「应用到勾选网卡」。";
         }
-        catch { return "无法读取当前 DNS。"; }
+        catch (Exception ex)
+        {
+            _hint.Text = "读取网卡失败：" + ex.Message;
+        }
+        finally
+        {
+            _adapters.EndUpdate();
+        }
+    }
+
+    private void SelectConnectedOnly()
+    {
+        for (var i = 0; i < _adapters.Items.Count; i++)
+        {
+            if (_adapters.Items[i] is DnsAdapterInfo a)
+                _adapters.SetItemChecked(i, a.IsUp && !a.LikelyVirtual);
+        }
+    }
+
+    private void SetAllChecked(bool on)
+    {
+        for (var i = 0; i < _adapters.Items.Count; i++)
+            _adapters.SetItemChecked(i, on);
     }
 
     private void ApplyDns()
     {
         try
         {
-            if (_preset.SelectedIndex == 0)
-                SetAdapterDns(null);
-            else
+            var indexes = new List<int>();
+            var names = new List<string>();
+            for (var i = 0; i < _adapters.Items.Count; i++)
             {
-                var servers = new[] { _primary.Text.Trim(), _secondary.Text.Trim() }
+                if (!_adapters.GetItemChecked(i)) continue;
+                if (_adapters.Items[i] is not DnsAdapterInfo a) continue;
+                indexes.Add(a.Index);
+                names.Add(a.Name);
+            }
+
+            if (indexes.Count == 0)
+                throw new InvalidOperationException("请先勾选要修改的网卡。");
+
+            string[]? servers = null;
+            if (_preset.SelectedIndex != 0)
+            {
+                servers = new[] { _primary.Text.Trim(), _secondary.Text.Trim() }
                     .Where(x => x.Length > 0)
                     .ToArray();
                 if (servers.Length == 0) throw new InvalidOperationException("请填写 DNS 地址。");
-                SetAdapterDns(servers);
             }
+
+            var count = DnsAdapterHelper.ApplyDns(indexes, servers);
             HostsFileHelper.FlushDns();
-            _current.Text = CurrentSummary();
-            ApplyLog.Write("已切换 DNS：" + _preset.Text);
-            MessageBox.Show(this, "已应用到已连接网卡。", "DNS 切换", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            RefreshAdapters();
+            ApplyLog.Write($"DNS → {string.Join(", ", names)} / {_preset.Text}");
+            MessageBox.Show(this,
+                $"已应用到 {count} 块网卡：\r\n" + string.Join("\r\n", names),
+                "DNS 切换", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (ManagementException ex)
+        {
+            MessageBox.Show(this, "WMI 操作失败：" + ex.Message, "DNS 切换", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "DNS 切换", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
-    }
-
-    private static void SetAdapterDns(string[]? servers)
-    {
-        using var searcher = new ManagementObjectSearcher(
-            "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = TRUE");
-        var any = false;
-        foreach (ManagementObject adapter in searcher.Get())
-        {
-            using (adapter)
-            {
-                any = true;
-                var result = (uint)adapter.InvokeMethod("SetDNSServerSearchOrder", new object?[] { servers });
-                if (result is not 0 and not 1)
-                    throw new InvalidOperationException("设置 DNS 失败，WMI 返回 " + result + "。");
-            }
-        }
-        if (!any) throw new InvalidOperationException("未找到已启用 IP 的网卡。");
     }
 }

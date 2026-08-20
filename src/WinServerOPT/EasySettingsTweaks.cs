@@ -102,6 +102,11 @@ internal static class EasySettingsTweaks
         s.DisableUcpdDriver = ServiceDisabled("UCPD");
     }
 
+    public static bool IsMemoryCompressionDisabled() => !IsMmAgentOn("MemoryCompression");
+    public static bool IsAppPrelaunchDisabled() => !IsMmAgentOn("ApplicationPreLaunch");
+    public static bool IsPageCombiningDisabled() => !IsMmAgentOn("PageCombining");
+    public static bool IsUcpdDisabled() => ServiceDisabled("UCPD");
+
     public static void SetRemoteAssistanceDisabled(bool disable) =>
         SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", disable ? 0 : 1);
 
@@ -288,15 +293,46 @@ internal static class EasySettingsTweaks
             Run("netsh", "int tcp set supplemental Template=Internet CongestionProvider=cubic");
     }
 
+    private static (bool MemoryCompression, bool ApplicationPreLaunch, bool PageCombining)? _mmAgentCache;
+    private static DateTime _mmAgentCacheUtc;
+
     private static bool IsMmAgentOn(string name)
     {
+        EnsureMmAgentCache();
+        var c = _mmAgentCache!.Value;
+        return name switch
+        {
+            "MemoryCompression" => c.MemoryCompression,
+            "ApplicationPreLaunch" => c.ApplicationPreLaunch,
+            "PageCombining" => c.PageCombining,
+            _ => true,
+        };
+    }
+
+    private static void EnsureMmAgentCache()
+    {
+        if (_mmAgentCache is not null && (DateTime.UtcNow - _mmAgentCacheUtc).TotalSeconds < 45)
+            return;
+
         try
         {
             var output = RunCapture("powershell.exe",
-                $"-NoProfile -Command \"(Get-MMAgent).{name}\"");
-            return output.IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0;
+                "-NoProfile -Command \"$m=Get-MMAgent; '{0},{1},{2}' -f $m.MemoryCompression,$m.ApplicationPreLaunch,$m.PageCombining\"").Trim();
+            var parts = output.Split(',');
+            if (parts.Length >= 3)
+            {
+                _mmAgentCache = (
+                    parts[0].IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0,
+                    parts[1].IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0,
+                    parts[2].IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0);
+                _mmAgentCacheUtc = DateTime.UtcNow;
+                return;
+            }
         }
-        catch { return true; }
+        catch { /* fall through */ }
+
+        _mmAgentCache = (true, true, true);
+        _mmAgentCacheUtc = DateTime.UtcNow;
     }
 
     private static void SetMmAgent(string name, bool enable)
@@ -305,6 +341,7 @@ internal static class EasySettingsTweaks
         if (name == "ApplicationPreLaunch")
             cmd = enable ? "Enable-MMAgent -ApplicationPreLaunch" : "Disable-MMAgent -ApplicationPreLaunch";
         Run("powershell.exe", "-NoProfile -Command " + cmd);
+        _mmAgentCache = null;
     }
 
     private static bool ServiceDisabled(string name) =>

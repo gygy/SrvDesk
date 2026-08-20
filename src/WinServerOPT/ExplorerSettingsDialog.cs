@@ -174,36 +174,92 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private void LoadValues()
     {
         _loading = true;
-        var s = Optimizer.Read(fullScan: false);
-        _ext.Bind(s.ShowFileExtensions, v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", v ? 0 : 1));
-        _fullPath.Bind(s.ExplorerFullPath, v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", v ? 1 : 0));
-        _hidden.Bind(s.ShowHiddenFiles, v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", v ? 1 : 2));
-        _osFiles.Bind(s.HideProtectedOsFiles, v => { s.HideProtectedOsFiles = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _iconsOnly.Bind(s.AlwaysShowIconsNeverThumbnails, v => { s.AlwaysShowIconsNeverThumbnails = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _emptyDrives.Bind(s.ShowEmptyDrives, v => { s.ShowEmptyDrives = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _recent.Bind(s.ShowRecentFiles, v => { s.ShowRecentFiles = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _frequent.Bind(s.ShowFrequentPlaces, v => { s.ShowFrequentPlaces = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _office.Bind(s.HideOfficeCloudFiles, v => { s.HideOfficeCloudFiles = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _arrow.Bind(s.NoShortcutArrow, ApplyArrow);
-        _suffix.Bind(s.NoShortcutSuffix, v => { s.NoShortcutSuffix = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _shield.Bind(s.RemoveAdminShield, v => { s.RemoveAdminShield = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _win10Explorer.Bind(!s.Win11ExplorerStyle, v => { s.Win11ExplorerStyle = !v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _classicMenu.Bind(s.Win10ClassicContextMenu, v => { s.Win10ClassicContextMenu = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _onedrive.Bind(s.DisableOneDrive, v => { s.DisableOneDrive = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _autohide.Bind(s.TaskbarAutoHide, v => { s.TaskbarAutoHide = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _taskView.Bind(s.ShowTaskViewButton, v => { s.ShowTaskViewButton = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _chat.Bind(s.HideTaskbarChat, v => { s.HideTaskbarChat = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _copilot.Bind(s.HideTaskbarCopilot, v => { s.HideTaskbarCopilot = v; EasySettingsTweaks.ApplyExplorerBits(s); });
-        _widgets.Bind(s.DisableWidgets, v => { s.DisableWidgets = v; s.TaskbarSearchMode = _searchMode.SelectedIndex; Win11DesktopTweaks.Apply(s); });
-        _seconds.Bind(s.TaskbarClockWeekdaySeconds, v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", v ? 1 : 0));
+        // 仅读本页需要的注册表/服务，避免 Optimizer.Read 全量扫描导致卡顿
+        _ext.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt") == 0,
+            v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", v ? 0 : 1));
+        _fullPath.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath") == 1,
+            v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", v ? 1 : 0));
+        _hidden.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden") == 1,
+            v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", v ? 1 : 2));
 
-        _launchTo.SelectedIndex = s.LaunchExplorerThisPc ? 0 : 1;
+        var bits = new Optimizer.State();
+        EasySettingsTweaks.ReadExplorerOnly(bits);
+        _osFiles.Bind(bits.HideProtectedOsFiles, v => { bits.HideProtectedOsFiles = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _iconsOnly.Bind(bits.AlwaysShowIconsNeverThumbnails, v => { bits.AlwaysShowIconsNeverThumbnails = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _emptyDrives.Bind(bits.ShowEmptyDrives, v => { bits.ShowEmptyDrives = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _recent.Bind(bits.ShowRecentFiles, v => { bits.ShowRecentFiles = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _frequent.Bind(bits.ShowFrequentPlaces, v => { bits.ShowFrequentPlaces = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _office.Bind(bits.HideOfficeCloudFiles, v => { bits.HideOfficeCloudFiles = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _onedrive.Bind(bits.DisableOneDrive, v => { bits.DisableOneDrive = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _chat.Bind(bits.HideTaskbarChat, v => { bits.HideTaskbarChat = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+        _copilot.Bind(bits.HideTaskbarCopilot, v => { bits.HideTaskbarCopilot = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
+
+        _arrow.Bind(IsShortcutArrowHidden(), ApplyArrow);
+        _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), v =>
+        {
+            bits.NoShortcutSuffix = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), v =>
+        {
+            bits.RemoveAdminShield = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _win10Explorer.Bind(!Win11DesktopTweaks.IsWin11ExplorerStyleOn(), v =>
+        {
+            bits.Win11ExplorerStyle = !v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _classicMenu.Bind(Win11DesktopTweaks.IsWin10ClassicContextMenuOn(), v =>
+        {
+            bits.Win10ClassicContextMenu = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _autohide.Bind(Win11DesktopTweaks.IsTaskbarAutoHideOn(), v =>
+        {
+            bits.TaskbarAutoHide = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), v =>
+        {
+            bits.ShowTaskViewButton = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _widgets.Bind(Win11DesktopTweaks.IsWidgetsDisabled(), v =>
+        {
+            bits.DisableWidgets = v;
+            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
+            Win11DesktopTweaks.Apply(bits);
+        });
+        _seconds.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock") == 1,
+            v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", v ? 1 : 0));
+
+        _launchTo.SelectedIndex = DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo") == 1 ? 0 : 1;
         var mode = EasySettingsTweaks.GetSearchboxMode();
         _searchMode.SelectedIndex = mode is 0 or 1 or 2 ? mode : 1;
-        _align.SelectedIndex = s.TaskbarAlignLeft ? 0 : 1;
+        _align.SelectedIndex = Win11DesktopTweaks.IsTaskbarAlignLeftOn() ? 0 : 1;
         var glom = EasySettingsTweaks.GetTaskbarGlomLevel();
         _glom.SelectedIndex = glom is 0 or 1 or 2 ? glom : 0;
         _loading = false;
+    }
+
+    private static int DwordCu(string key, string name)
+    {
+        using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(key);
+        return k?.GetValue(name) is int i ? i : -1;
+    }
+
+    private static bool IsShortcutArrowHidden()
+    {
+        using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons");
+        return k?.GetValue("29") is not null;
     }
 
     private static FlowLayoutPanel Column(InstantToggleRow[] rows)
