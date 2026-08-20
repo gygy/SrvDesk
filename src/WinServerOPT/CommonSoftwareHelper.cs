@@ -15,17 +15,70 @@ internal sealed class CommonSoftwareStatus
 internal static class CommonSoftwareHelper
 {
     private static string? _wingetPath;
+    private static bool _wingetDiscoveryDone;
+
+    private static readonly string[] KnownWingetPaths =
+    [
+        @"C:\Tools\winget\winget.exe",
+        @"C:\Program Files\WinGet\winget.exe",
+        @"C:\Program Files (x86)\WinGet\winget.exe",
+    ];
 
     public static string DownloadDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "software-downloads");
 
-    public static bool IsWingetAvailable() =>
-        TryRunWinget("--version", out _);
+    public static bool IsWingetAvailable()
+    {
+        EnsureWingetDiscovered();
+        return _wingetPath is not null;
+    }
+
+    public static void ResetWingetDiscovery()
+    {
+        _wingetPath = null;
+        _wingetDiscoveryDone = false;
+    }
 
     public static string ResolveWingetPath()
     {
-        if (_wingetPath is not null && File.Exists(_wingetPath))
-            return _wingetPath;
+        EnsureWingetDiscovered();
+        return _wingetPath ?? "winget.exe";
+    }
+
+    private static void EnsureWingetDiscovered()
+    {
+        if (_wingetDiscoveryDone) return;
+        _wingetDiscoveryDone = true;
+
+        if (_wingetPath is not null && ProbeWinget(_wingetPath))
+            return;
+
+        _wingetPath = null;
+        foreach (var candidate in DiscoverWingetCandidates())
+        {
+            if (!ProbeWinget(candidate)) continue;
+            _wingetPath = candidate;
+            ApplyLog.Write("检测到 winget：" + candidate);
+            return;
+        }
+    }
+
+    private static IEnumerable<string> DiscoverWingetCandidates()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var known in KnownWingetPaths)
+        {
+            if (seen.Add(known))
+                yield return known;
+        }
+
+        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+        {
+            var path = Path.Combine(dir.Trim(), "winget.exe");
+            if (seen.Add(path))
+                yield return path;
+        }
 
         try
         {
@@ -33,25 +86,66 @@ internal static class CommonSoftwareHelper
             foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var path = line.Trim().Trim('"');
-                if (path.EndsWith("winget.exe", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
-                {
-                    _wingetPath = path;
-                    return path;
-                }
+                if (seen.Add(path))
+                    yield return path;
             }
         }
         catch { /* ignore */ }
 
-        var localApps = Path.Combine(
+        var appx = TryGetAppxWingetPath();
+        if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx))
+            yield return appx;
+
+        var alias = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Microsoft", "WindowsApps", "winget.exe");
-        if (File.Exists(localApps))
-        {
-            _wingetPath = localApps;
-            return localApps;
-        }
+        if (seen.Add(alias))
+            yield return alias;
+    }
 
-        return "winget.exe";
+    private static string? TryGetAppxWingetPath()
+    {
+        try
+        {
+            var output = RunCapture("powershell.exe",
+                "-NoProfile -ExecutionPolicy Bypass -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
+            if (output.Length == 0) return null;
+            var path = Path.Combine(output, "winget.exe");
+            return File.Exists(path) ? path : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool ProbeWinget(string path)
+    {
+        if (path != "winget.exe" && !File.Exists(path))
+            return false;
+
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                Arguments = "--version",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            if (p is null) return false;
+            var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+            p.WaitForExit(15_000);
+            return p.ExitCode == 0 &&
+                (output.IndexOf('v') >= 0 ||
+                 output.IndexOf("Windows Package Manager", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static CommonSoftwareStatus Query(CommonSoftwareItem item)
@@ -136,18 +230,22 @@ internal static class CommonSoftwareHelper
             return "";
 
         ApplyLog.Write("安装 winget（App Installer）");
+        ResetWingetDiscovery();
         var notes = new List<string>();
 
         var repair = TryRepairWinGetPackageManager();
         if (repair.Length > 0) notes.Add(repair);
+        ResetWingetDiscovery();
         if (IsWingetAvailable()) return FormatWingetReady(notes);
 
         var bootstrap = TryBootstrapWingetPackages();
         if (bootstrap.Length > 0) notes.Add(bootstrap);
+        ResetWingetDiscovery();
         if (IsWingetAvailable()) return FormatWingetReady(notes);
 
         var register = TryRegisterAppInstaller();
         if (register.Length > 0) notes.Add(register);
+        ResetWingetDiscovery();
         if (IsWingetAvailable()) return FormatWingetReady(notes);
 
         var wingetItem = CommonSoftwareCatalog.Find("winget");
@@ -195,6 +293,7 @@ internal static class CommonSoftwareHelper
 
     private static CommonSoftwareStatus QueryWingetStatus()
     {
+        ResetWingetDiscovery();
         if (!IsWingetAvailable())
         {
             if (IsAppInstallerPackagePresent())
@@ -202,14 +301,13 @@ internal static class CommonSoftwareHelper
                 return new CommonSoftwareStatus
                 {
                     Installed = false,
-                    Version = "已安装应用安装程序，winget 未注册",
+                    Version = "已安装应用安装程序，winget 别名不可用（可点一键安装修复）",
                 };
             }
             return new CommonSoftwareStatus();
         }
 
-        TryRunWinget("--version", out var version);
-        version = version.Trim();
+        var version = RunCapture(ResolveWingetPath(), "--version").Trim();
         if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase) && version.Length > 1)
             version = version.Substring(1).Trim();
         return new CommonSoftwareStatus
@@ -307,7 +405,8 @@ Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller
 
     private static string FormatWingetReady(List<string> notes)
     {
-        _wingetPath = null;
+        ResetWingetDiscovery();
+        EnsureWingetDiscovered();
         notes.Add("winget 已可用，可继续一键安装其它软件。");
         return string.Join("\r\n", notes.Where(n => n.Length > 0));
     }
@@ -328,24 +427,15 @@ Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller
     private static bool TryRunWinget(string args, out string output)
     {
         output = "";
+        if (!IsWingetAvailable()) return false;
         try
         {
             output = RunCapture(ResolveWingetPath(), args);
-            if (output.IndexOf("v", StringComparison.OrdinalIgnoreCase) >= 0
-                || output.IndexOf("Windows Package Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-        }
-        catch { /* ignore */ }
-
-        _wingetPath = null;
-        try
-        {
-            output = RunCapture("winget.exe", args);
-            return output.IndexOf("v", StringComparison.OrdinalIgnoreCase) >= 0
-                || output.IndexOf("Windows Package Manager", StringComparison.OrdinalIgnoreCase) >= 0;
+            return true;
         }
         catch
         {
+            ResetWingetDiscovery();
             return false;
         }
     }
