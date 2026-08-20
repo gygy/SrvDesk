@@ -126,15 +126,20 @@ internal static class Optimizer
             || name.IndexOf("Windows Server", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
-    public static State Read()
+    public static State Read(bool fullScan = true)
     {
+        if (fullScan)
+            ServerDesktopTweaks.ResetDismCache();
+
+        var account = fullScan ? ReadAccountPolicyFlags() : (ComplexityOff: ServerDesktopTweaks.IsSamPasswordComplexityOff(), NeverExpire: false);
+
         return new State
         {
             CpuProgramPriority = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", 38),
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
             DisableUac = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", 0),
             DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
-            HighPerfPower = IsActivePowerPlan(PowerPlanHighPerf),
+            HighPerfPower = fullScan && IsActivePowerPlan(PowerPlanHighPerf),
             DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
             NoUpdateReboot = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1),
             DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
@@ -143,7 +148,7 @@ internal static class Optimizer
             VisualBestPerf = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2),
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
-            TcpOptimized = IsTcpOptimized(),
+            TcpOptimized = fullScan && IsTcpOptimized(),
             QosSpeedOptimize = IsQosSpeedOptimized(),
             DisableErrorReport = ServiceStartEquals("WerSvc", 4),
 
@@ -171,8 +176,8 @@ internal static class Optimizer
             EnableInstaller = ServiceStartEquals("msiserver", 2),
             EnableWia = ServiceStartEquals("stisvc", 2),
 
-            DisablePasswordComplexity = ReadSecpolFlag("PasswordComplexity = 0") || ServerDesktopTweaks.IsSamPasswordComplexityOff(),
-            PasswordNeverExpire = ReadSecpolFlag("MaximumPasswordAge = 0"),
+            DisablePasswordComplexity = account.ComplexityOff,
+            PasswordNeverExpire = account.NeverExpire,
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
@@ -210,9 +215,11 @@ internal static class Optimizer
             DisableBackgroundApps = ServerDesktopTweaks.IsBackgroundAppsOff(),
             ClassicFileSearch = ServerDesktopTweaks.IsClassicSearchOn(),
             DisableDefenderAntivirus = ServerDesktopTweaks.IsDefenderOff(),
-            DisableSearchEngineFeature = ServerDesktopTweaks.IsSearchEngineFeatureOff(),
-            EnableDesktopMediaFeatures = ServerDesktopTweaks.IsDesktopMediaFeaturesOn(),
-            DisableServerBloatFeatures = ServerDesktopTweaks.IsServerBloatFeaturesOff(),
+            DisableSearchEngineFeature = fullScan
+                ? ServerDesktopTweaks.IsSearchEngineFeatureOff()
+                : ServiceStartEquals("WSearch", 4),
+            EnableDesktopMediaFeatures = fullScan && ServerDesktopTweaks.IsDesktopMediaFeaturesOn(),
+            DisableServerBloatFeatures = fullScan && ServerDesktopTweaks.IsServerBloatFeaturesOff(includeRsatScan: fullScan),
         };
     }
 
@@ -634,6 +641,31 @@ internal static class Optimizer
         if (text.Contains($"{key} = 1")) return text.Replace($"{key} = 1", line);
         if (text.Contains($"{key} = 42")) return text.Replace($"{key} = 42", line);
         return text + Environment.NewLine + line;
+    }
+
+    private static (bool ComplexityOff, bool NeverExpire) ReadAccountPolicyFlags()
+    {
+        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol-read.inf");
+        try
+        {
+            Run("secedit.exe", $"/export /cfg \"{cfg}\"");
+            if (!File.Exists(cfg))
+                return (ServerDesktopTweaks.IsSamPasswordComplexityOff(), false);
+
+            var lines = File.ReadAllLines(cfg);
+            var complexityOff = lines.Any(line => line.IndexOf("PasswordComplexity = 0", StringComparison.Ordinal) >= 0)
+                || ServerDesktopTweaks.IsSamPasswordComplexityOff();
+            var neverExpire = lines.Any(line => line.IndexOf("MaximumPasswordAge = 0", StringComparison.Ordinal) >= 0);
+            return (complexityOff, neverExpire);
+        }
+        catch
+        {
+            return (ServerDesktopTweaks.IsSamPasswordComplexityOff(), false);
+        }
+        finally
+        {
+            TryDelete(cfg);
+        }
     }
 
     private static bool ReadSecpolFlag(string needle)

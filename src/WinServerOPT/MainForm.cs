@@ -206,7 +206,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
-        _appMenu.ToolRefresh.Click += (_, _) => LoadState();
+        _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
         _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
         _appMenu.HelpLog.Click += (_, _) => OpenApplyLog();
@@ -316,13 +316,23 @@ internal sealed class MainForm : Form
         }
         else
         {
-            var identity = ComputerIdentityHelper.Read().Summary;
-            _status.Text = _systemFacts.Summary + " · " + identity + "。开关=推荐；关闭=恢复系统默认。";
-            _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
+            _status.Text = _systemFacts.Summary + " · 正在加载…";
+            _headerSubtitle.Text = _systemFacts.Summary;
+            System.Threading.Tasks.Task.Run(() => ComputerIdentityHelper.Read().Summary)
+                .ContinueWith(t =>
+                {
+                    if (t.IsFaulted) return;
+                    BeginInvoke(() =>
+                    {
+                        var identity = t.Result;
+                        _status.Text = _systemFacts.Summary + " · " + identity + "。开关=推荐；关闭=恢复系统默认。";
+                        _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
+                    });
+                });
         }
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
-        LoadState();
+        LoadState(fullScan: false);
     }
 
     private void BuildCommandBar()
@@ -924,7 +934,7 @@ internal sealed class MainForm : Form
         var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
         var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
         var commonSoftware = ToolButton("常用软件", ShowCommonSoftware);
-        var refresh = ToolButton("刷新", LoadState);
+        var refresh = ToolButton("刷新", () => LoadState(fullScan: true));
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -982,10 +992,43 @@ internal sealed class MainForm : Form
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }
 
-    private void LoadState()
+    private void LoadState(bool fullScan = false)
     {
-        try { Bind(Optimizer.Read()); }
-        catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
+        if (fullScan)
+        {
+            _status.Text = "正在完整扫描系统状态（含 DISM，可能需要数十秒）…";
+            UseWaitCursor = true;
+        }
+
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                var state = Optimizer.Read(fullScan);
+                BeginInvoke(new Action(() =>
+                {
+                    try { Bind(state); }
+                    catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
+                    finally
+                    {
+                        if (fullScan)
+                        {
+                            UseWaitCursor = false;
+                            if (!_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
+                                _status.Text = _systemFacts.Summary + " · 状态已刷新。";
+                        }
+                    }
+                }));
+            }
+            catch (Exception ex)
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    _status.Text = "读取当前配置失败：" + ex.Message;
+                    if (fullScan) UseWaitCursor = false;
+                }));
+            }
+        });
     }
 
     private void Bind(Optimizer.State s)
@@ -1208,7 +1251,7 @@ internal sealed class MainForm : Form
 
             var errors = Optimizer.Apply(CaptureState());
             ApplyLog.WriteApply(working, errors);
-            LoadState();
+            LoadState(fullScan: true);
             if (!_autologon.Checked) _autologonSettings = null;
             RefreshAutologonDisplay();
             _status.Text = errors.Count == 0

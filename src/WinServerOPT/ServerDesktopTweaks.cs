@@ -34,6 +34,15 @@ internal static class ServerDesktopTweaks
 
     private static readonly string[] RsatFeaturePrefixes = { "RSAT-", "Rsat" };
 
+    private static readonly Dictionary<string, bool> DismEnabledCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, bool> DismExistsCache = new(StringComparer.OrdinalIgnoreCase);
+
+    public static void ResetDismCache()
+    {
+        DismEnabledCache.Clear();
+        DismExistsCache.Clear();
+    }
+
     // --- Read ---
 
     public static bool IsSamPasswordComplexityOff() =>
@@ -93,12 +102,13 @@ internal static class ServerDesktopTweaks
         return any;
     }
 
-    public static bool IsServerBloatFeaturesOff()
+    public static bool IsServerBloatFeaturesOff(bool includeRsatScan = true)
     {
         foreach (var f in BloatFeaturesToDisable)
         {
             if (IsDismFeatureEnabled(f)) return false;
         }
+        if (!includeRsatScan) return true;
         return !HasInstalledRsat();
     }
 
@@ -307,27 +317,44 @@ internal static class ServerDesktopTweaks
 
     private static bool DismFeatureExists(string name)
     {
+        if (DismExistsCache.TryGetValue(name, out var cached))
+            return cached;
+
         try
         {
             var output = RunCapture("dism.exe", $"/online /Get-FeatureInfo /FeatureName:{name}");
-            return output.IndexOf("Error", StringComparison.OrdinalIgnoreCase) < 0
+            var exists = output.IndexOf("Error", StringComparison.OrdinalIgnoreCase) < 0
                 && output.IndexOf("not found", StringComparison.OrdinalIgnoreCase) < 0;
+            DismExistsCache[name] = exists;
+            if (exists && output.IndexOf("State : Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
+                DismEnabledCache[name] = true;
+            else if (exists)
+                DismEnabledCache[name] = false;
+            return exists;
         }
         catch
         {
+            DismExistsCache[name] = false;
             return false;
         }
     }
 
     private static bool IsDismFeatureEnabled(string name)
     {
+        if (DismEnabledCache.TryGetValue(name, out var cached))
+            return cached;
+
         try
         {
             var output = RunCapture("dism.exe", $"/online /Get-FeatureInfo /FeatureName:{name}");
-            return output.IndexOf("State : Enabled", StringComparison.OrdinalIgnoreCase) >= 0;
+            var enabled = output.IndexOf("State : Enabled", StringComparison.OrdinalIgnoreCase) >= 0;
+            DismEnabledCache[name] = enabled;
+            DismExistsCache[name] = output.IndexOf("not found", StringComparison.OrdinalIgnoreCase) < 0;
+            return enabled;
         }
         catch
         {
+            DismEnabledCache[name] = false;
             return false;
         }
     }
