@@ -155,6 +155,8 @@ internal static class Win11DesktopTweaks
         k.SetValue("Settings", settings, RegistryValueKind.Binary);
     }
 
+    public static void SetFeatureUpdatePause(bool pause) => SetFeatureUpdatePause2035(pause);
+
     private static bool IsFeatureUpdatePausedUntil2035()
     {
         if (!DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "PauseFeatureUpdates", 1))
