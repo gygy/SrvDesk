@@ -200,6 +200,7 @@ internal sealed class MainForm : Form
         _appMenu.PresetLoad.Click += (_, _) => ApplySelectedPreset();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
         _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
+        _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
@@ -507,6 +508,12 @@ internal sealed class MainForm : Form
     private void ShowQuickToolsDialog()
     {
         using var dlg = new QuickToolsDialog(_systemFacts);
+        dlg.ShowDialog(this);
+    }
+
+    private void ShowSystemInfo()
+    {
+        using var dlg = new SystemInfoDialog();
         dlg.ShowDialog(this);
     }
 
@@ -1233,11 +1240,14 @@ internal sealed class MainForm : Form
 
     private static Button ToolButton(string text, Action click)
     {
+        var font = new Font("Microsoft YaHei UI", 9F);
+        var textWidth = TextRenderer.MeasureText(text, font).Width;
         var b = new Button
         {
             Text = text,
+            Font = font,
             AutoSize = false,
-            Size = new Size(text.Length > 4 ? 96 : 72, 36),
+            Size = new Size(Math.Max(72, textWidth + 24), 36),
             Margin = new Padding(8, 0, 0, 0),
             FlatStyle = FlatStyle.Flat,
             BackColor = AppTheme.SurfaceCard,
