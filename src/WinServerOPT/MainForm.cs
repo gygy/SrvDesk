@@ -276,6 +276,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolExplorer.Click += (_, _) => ShowExplorerSettings();
         _appMenu.ToolPrivacy.Click += (_, _) => ShowPrivacySettings();
         _appMenu.ToolOther.Click += (_, _) => ShowOtherSettings();
+        _appMenu.ToolStartup.Click += (_, _) => ShowStartupManager();
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
@@ -616,6 +617,12 @@ internal sealed class MainForm : Form
     }
 
     private void ReloadStateQuiet() => LoadState(fullScan: false);
+
+    private void ShowStartupManager()
+    {
+        using var dlg = new StartupManagerDialog();
+        dlg.ShowDialog(this);
+    }
 
     private void ShowDesktopMaintenance()
     {

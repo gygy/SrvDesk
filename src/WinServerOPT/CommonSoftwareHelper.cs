@@ -80,20 +80,23 @@ internal static class CommonSoftwareHelper
                 yield return path;
         }
 
+        var whereHits = new List<string>();
         try
         {
             var output = RunCapture("where.exe", "winget.exe");
             foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var path = line.Trim().Trim('"');
-                if (seen.Add(path))
-                    yield return path;
-            }
+                whereHits.Add(line.Trim().Trim('"'));
         }
         catch { /* ignore */ }
 
+        foreach (var path in whereHits)
+        {
+            if (seen.Add(path))
+                yield return path;
+        }
+
         var appx = TryGetAppxWingetPath();
-        if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx))
+        if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx!))
             yield return appx;
 
         foreach (var path in TryFindWindowsAppsWingetPaths())
