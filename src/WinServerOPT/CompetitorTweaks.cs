@@ -25,8 +25,8 @@ internal static class CompetitorTweaks
         SetXbox(!s.DisableXboxServices);
         SetFax(!s.DisableFaxService);
         SetF8Menu(s.EnableF8BootMenu);
-        SetTakeOwnership(s.ContextMenuTakeOwnership);
-        SetOpenCmdHere(s.ContextMenuOpenCmd);
+        ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
+        ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
         SetMediaSharing(!s.DisableMediaPlayerSharing);
         SetInsider(!s.DisableInsiderService);
         SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
@@ -52,8 +52,8 @@ internal static class CompetitorTweaks
         s.DisableXboxServices = ServiceDisabled("XblAuthManager") && ServiceDisabled("XboxNetApiSvc");
         s.DisableFaxService = ServiceDisabled("Fax");
         s.EnableF8BootMenu = IsF8Legacy();
-        s.ContextMenuTakeOwnership = IsTakeOwnershipOn();
-        s.ContextMenuOpenCmd = IsOpenCmdHereOn();
+        s.ContextMenuTakeOwnership = ContextMenuTweaks.IsTakeOwnershipOn();
+        s.ContextMenuOpenCmd = ContextMenuTweaks.IsOpenCmdOn();
         s.DisableMediaPlayerSharing = ServiceDisabled("WMPNetworkSvc");
         s.DisableInsiderService = ServiceDisabled("wisvc");
         s.DisableStoreAutoUpdate = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload", 2);
@@ -213,52 +213,6 @@ internal static class CompetitorTweaks
 
     private static void SetNewsInterests(bool enable) =>
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests", enable ? 1 : 0);
-
-    private const string TakeOwnClsid = @"*\shell\WinOptTakeOwnership";
-
-    private static bool IsTakeOwnershipOn()
-    {
-        using var k = Registry.ClassesRoot.OpenSubKey(TakeOwnClsid);
-        return k is not null;
-    }
-
-    private static void SetTakeOwnership(bool enable)
-    {
-        if (!enable)
-        {
-            try { Registry.ClassesRoot.DeleteSubKeyTree(TakeOwnClsid, throwOnMissingSubKey: false); }
-            catch { /* ignore */ }
-            return;
-        }
-
-        using var k = Registry.ClassesRoot.CreateSubKey(TakeOwnClsid);
-        k?.SetValue("", "取得所有权");
-        using var cmd = Registry.ClassesRoot.CreateSubKey(TakeOwnClsid + @"\command");
-        cmd?.SetValue("", "cmd.exe /c takeown /f \"%1\" /r /d y & icacls \"%1\" /grant administrators:F /t");
-    }
-
-    private const string OpenCmdClsid = @"Directory\shell\WinOptOpenCmd";
-
-    private static bool IsOpenCmdHereOn()
-    {
-        using var k = Registry.ClassesRoot.OpenSubKey(OpenCmdClsid);
-        return k is not null;
-    }
-
-    private static void SetOpenCmdHere(bool enable)
-    {
-        if (!enable)
-        {
-            try { Registry.ClassesRoot.DeleteSubKeyTree(OpenCmdClsid, throwOnMissingSubKey: false); }
-            catch { /* ignore */ }
-            return;
-        }
-
-        using var k = Registry.ClassesRoot.CreateSubKey(OpenCmdClsid);
-        k?.SetValue("", "在此处打开命令提示符");
-        using var cmd = Registry.ClassesRoot.CreateSubKey(OpenCmdClsid + @"\command");
-        cmd?.SetValue("", "cmd.exe /s /k pushd \"%V\"");
-    }
 
     private static bool ServiceDisabled(string name) =>
         DwordEquals(Hive.HkLm, $@"SYSTEM\CurrentControlSet\Services\{name}", "Start", 4);

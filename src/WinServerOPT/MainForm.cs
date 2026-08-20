@@ -321,6 +321,16 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
+        _appMenu.ToolWindowsFeatures.Click += (_, _) =>
+        {
+            using var d = new WindowsFeaturesDialog();
+            d.ShowDialog(this);
+        };
+        _appMenu.ToolContextMenu.Click += (_, _) =>
+        {
+            using var d = new ContextMenuSettingsDialog();
+            d.ShowDialog(this);
+        };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();

@@ -9,6 +9,7 @@ internal sealed class InstantToggleRow : Panel
 
     public InstantToggleRow(string title)
     {
+        Title = title;
         Height = 38;
         Dock = DockStyle.Top;
         MinimumSize = new Size(200, 38);
@@ -43,6 +44,8 @@ internal sealed class InstantToggleRow : Panel
         Controls.Add(_toggle);
         Resize += (_, _) => _label.Width = Math.Max(120, ClientSize.Width - 76);
     }
+
+    public string Title { get; }
 
     public bool Checked
     {
