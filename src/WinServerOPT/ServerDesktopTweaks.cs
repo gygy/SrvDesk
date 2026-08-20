@@ -26,12 +26,6 @@ internal static class ServerDesktopTweaks
         "AzureArcSetup",
     };
 
-    private static readonly string[] DefenderFeatures =
-    {
-        "Windows-Defender",
-        "Windows-Defender-Features",
-    };
-
     private static readonly string[] RsatFeaturePrefixes = { "RSAT-", "Rsat" };
 
     private static readonly Dictionary<string, bool> DismEnabledCache = new(StringComparer.OrdinalIgnoreCase);
@@ -83,9 +77,6 @@ internal static class ServerDesktopTweaks
     public static bool IsClassicSearchOn() =>
         GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana") == 0
         && GetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode") == 0;
-
-    public static bool IsDefenderOff() =>
-        GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware") == 1;
 
     public static bool IsSearchEngineFeatureOff() =>
         !IsDismFeatureEnabled("SearchEngine") && GetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\WSearch", "Start") == 4;
@@ -234,26 +225,6 @@ internal static class ServerDesktopTweaks
             DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana");
             DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
             DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation");
-        }
-    }
-
-    public static void ApplyDefender(bool disable)
-    {
-        if (disable)
-        {
-            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1);
-            foreach (var f in DefenderFeatures)
-            {
-                if (IsDismFeatureEnabled(f)) DismDisable(f);
-            }
-            RunSc("stop WinDefend");
-            RunSc("config WinDefend start= disabled");
-        }
-        else
-        {
-            DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows Defender", "DisableAntiSpyware");
-            RunSc("config WinDefend start= auto");
-            RunSc("start WinDefend");
         }
     }
 

@@ -109,7 +109,6 @@ internal static class Optimizer
         public bool DisableLoginKeyboardFilters;
         public bool DisableBackgroundApps;
         public bool ClassicFileSearch;
-        public bool DisableDefenderAntivirus;
         public bool DisableSearchEngineFeature;
         public bool EnableDesktopMediaFeatures;
         public bool DisableServerBloatFeatures;
@@ -292,7 +291,6 @@ internal static class Optimizer
             DisableLoginKeyboardFilters = ServerDesktopTweaks.IsLoginKeyboardFilterOff(),
             DisableBackgroundApps = ServerDesktopTweaks.IsBackgroundAppsOff(),
             ClassicFileSearch = ServerDesktopTweaks.IsClassicSearchOn(),
-            DisableDefenderAntivirus = ServerDesktopTweaks.IsDefenderOff(),
             DisableSearchEngineFeature = fullScan
                 ? ServerDesktopTweaks.IsSearchEngineFeatureOff()
                 : ServiceStartEquals("WSearch", 4),
@@ -482,7 +480,6 @@ internal static class Optimizer
         Try(errors, "登录键盘筛选", () => ServerDesktopTweaks.ApplyLoginKeyboardFilters(s.DisableLoginKeyboardFilters));
         Try(errors, "后台应用", () => ServerDesktopTweaks.ApplyBackgroundApps(s.DisableBackgroundApps));
         Try(errors, "传统搜索", () => ServerDesktopTweaks.ApplyClassicSearch(s.ClassicFileSearch));
-        Try(errors, "Windows Defender", () => ServerDesktopTweaks.ApplyDefender(s.DisableDefenderAntivirus));
         Try(errors, "桌面媒体组件", () => ServerDesktopTweaks.ApplyDesktopMediaFeatures(s.EnableDesktopMediaFeatures));
         Try(errors, "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
         Try(errors, "Win11桌面体验", () =>

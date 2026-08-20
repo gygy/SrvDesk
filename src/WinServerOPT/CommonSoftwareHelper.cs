@@ -117,7 +117,7 @@ internal static class CommonSoftwareHelper
         try
         {
             var output = RunCapture("powershell.exe",
-                "-NoProfile -ExecutionPolicy Bypass -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
+                "-NoProfile -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
             if (output.Length == 0) return null;
             var path = Path.Combine(output, "winget.exe");
             return File.Exists(path) ? path : null;
@@ -354,7 +354,7 @@ internal static class CommonSoftwareHelper
         try
         {
             var output = RunCapture("powershell.exe",
-                "-NoProfile -ExecutionPolicy Bypass -Command \"Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name\"");
+                "-NoProfile -Command \"Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name\"");
             return output.IndexOf("DesktopAppInstaller", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
@@ -493,7 +493,7 @@ Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller
         try
         {
             return Run("powershell.exe",
-                $"-NoProfile -ExecutionPolicy Bypass -File \"{file}\"");
+                "-NoProfile -File \"" + file + "\"");
         }
         finally
         {

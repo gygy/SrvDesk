@@ -11,10 +11,18 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>Win一键优化</AssemblyName>
     <RootNamespace>WinOpt</RootNamespace>
-    <Version>1.0.0</Version>
+    <Title>Win一键优化</Title>
     <Product>Win一键优化</Product>
-    <Description>Windows Server 一键优化</Description>
-    <DebugType Condition="'$(Configuration)'=='Release'">none</DebugType>
+    <Company>WinOpt</Company>
+    <Authors>WinOpt</Authors>
+    <Copyright>Copyright (c) 2026 WinOpt</Copyright>
+    <Description>Windows Server 与桌面系统设置优化工具</Description>
+    <Version>1.0.1</Version>
+    <FileVersion>1.0.1.0</FileVersion>
+    <InformationalVersion>1.0.1</InformationalVersion>
+    <NeutralLanguage>zh-CN</NeutralLanguage>
+    <DebugType Condition="'$(Configuration)'=='Release'">pdbonly</DebugType>
+    <DebugSymbols Condition="'$(Configuration)'=='Release'">true</DebugSymbols>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>

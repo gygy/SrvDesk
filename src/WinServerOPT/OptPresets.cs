@@ -58,10 +58,9 @@ internal static class OptPresets
             if (field.FieldType == typeof(bool))
                 field.SetValue(s, true);
         }
-        // 与「全开」语义冲突的项：Server 桌面帖推荐关闭搜索/Defender，改用 DISM 项
+        // 与「全开」语义冲突的项：Server 桌面帖推荐关闭搜索，改用 DISM 项
         s.EnableSearch = false;
         s.DisableSearchEngineFeature = true;
-        s.DisableDefenderAntivirus = true;
         s.EnableUtcTime = false;
         s.DisableHpet = false;
         s.EnableF8BootMenu = false;

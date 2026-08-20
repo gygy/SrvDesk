@@ -31,7 +31,6 @@ internal sealed class MainForm : Form
     private readonly SettingRow _reservedStorage = Row("关闭系统保留存储", "开启", SettingCatalog.DisableReservedStorage);
     private readonly SettingRow _srvSplit = Row("关闭 LanmanServer 服务拆分", "默认", SettingCatalog.DisableSrvSplit);
     private readonly SettingRow _gpuSched = Row("启用 GPU 硬件加速计划", "关闭", SettingCatalog.EnableGpuHwScheduling);
-    private readonly SettingRow _defender = Row("关闭 Windows Defender", "开启", SettingCatalog.DisableDefenderAntivirus);
     private readonly SettingRow _pca = Row("禁用程序兼容性助手 PCA", "开启", SettingCatalog.DisablePca);
     private readonly SettingRow _wuPause2035 = Row("暂停功能更新至 2035", "不暂停", SettingCatalog.PauseFeatureUpdatesUntil2035);
     private readonly SettingRow _meltdown = Row("关闭 Meltdown/Spectre 缓解", "系统默认", SettingCatalog.DisableMeltdownSpectre);
@@ -200,7 +199,7 @@ internal sealed class MainForm : Form
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
         _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
+        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
         _memComp, _prelaunch, _pageCombine, _ucpd,
         _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
@@ -238,7 +237,7 @@ internal sealed class MainForm : Form
             _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
             _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
             _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _defender, _pca, _wuPause2035,
+            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
             _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
             _memComp, _prelaunch, _pageCombine, _ucpd,
             _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare
@@ -1236,7 +1235,6 @@ internal sealed class MainForm : Form
         _reservedStorage.Checked = s.DisableReservedStorage;
         _srvSplit.Checked = s.DisableSrvSplit;
         _gpuSched.Checked = s.EnableGpuHwScheduling;
-        _defender.Checked = s.DisableDefenderAntivirus;
         _thisPc.Checked = s.ShowThisPcIcon;
         _launchThisPc.Checked = s.LaunchExplorerThisPc;
         _taskbar.Checked = s.SmallTaskbar;
@@ -1386,7 +1384,6 @@ internal sealed class MainForm : Form
         DisableReservedStorage = _reservedStorage.Checked,
         DisableSrvSplit = _srvSplit.Checked,
         EnableGpuHwScheduling = _gpuSched.Checked,
-        DisableDefenderAntivirus = _defender.Checked,
         DisablePca = _pca.Checked,
         PauseFeatureUpdatesUntil2035 = _wuPause2035.Checked,
         DisableMeltdownSpectre = _meltdown.Checked,

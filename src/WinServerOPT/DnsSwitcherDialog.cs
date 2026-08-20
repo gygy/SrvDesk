@@ -1,3 +1,4 @@
+using System.Management;
 using System.Net.NetworkInformation;
 
 namespace WinOpt;
@@ -101,13 +102,15 @@ internal sealed class DnsSwitcherDialog : Form
         {
             if (_preset.SelectedIndex == 0)
             {
-                RunPs("Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object { Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses }");
+                SetAdapterDns(null);
             }
             else
             {
-                var dns = string.Join(",", new[] { _primary.Text.Trim(), _secondary.Text.Trim() }.Where(x => x.Length > 0));
-                if (dns.Length == 0) throw new InvalidOperationException("请填写 DNS 地址。");
-                RunPs($"$d=@({string.Join(",", dns.Split(',').Select(x => "'" + x.Trim() + "'"))}); Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {{ Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses $d }}");
+                var servers = new[] { _primary.Text.Trim(), _secondary.Text.Trim() }
+                    .Where(x => x.Length > 0)
+                    .ToArray();
+                if (servers.Length == 0) throw new InvalidOperationException("请填写 DNS 地址。");
+                SetAdapterDns(servers);
             }
             HostsFileHelper.FlushDns();
             _current.Text = CurrentSummary();
@@ -120,19 +123,21 @@ internal sealed class DnsSwitcherDialog : Form
         }
     }
 
-    private static void RunPs(string command)
+    private static void SetAdapterDns(string[]? servers)
     {
-        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = TRUE");
+        var any = false;
+        foreach (ManagementObject adapter in searcher.Get())
         {
-            FileName = "powershell.exe",
-            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command " + command,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        });
-        p?.WaitForExit(30_000);
-        if (p is not null && p.ExitCode != 0)
-            throw new InvalidOperationException(p.StandardError.ReadToEnd());
+            using (adapter)
+            {
+                any = true;
+                var result = (uint)adapter.InvokeMethod("SetDNSServerSearchOrder", new object?[] { servers });
+                if (result is not 0 and not 1)
+                    throw new InvalidOperationException("设置 DNS 失败，WMI 返回 " + result + "。");
+            }
+        }
+        if (!any) throw new InvalidOperationException("未找到已启用 IP 的网卡。");
     }
 }

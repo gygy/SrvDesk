@@ -556,14 +556,6 @@ internal static class SettingCatalog
         "注销或重启 Explorer 后生效。",
         W10De);
 
-    public static readonly SettingHelpInfo DisableDefenderAntivirus = H(
-        "关闭 Windows Defender 防病毒（策略 + 服务 + 可选功能）。",
-        "DisableAntiSpyware=1；停止 WinDefend；尝试 DISM 禁用 Defender 功能包。",
-        "释放 CPU/磁盘扫描占用；第三方杀软或纯内网环境常用。",
-        "公网暴露或合规环境请勿开启；关闭后系统无实时防护。",
-        "立即生效；部分版本需重启。",
-        S2016);
-
     public static readonly SettingHelpInfo DisableSearchEngineFeature = H(
         "卸载/禁用 SearchEngine 可选功能并停止 WSearch 服务。",
         "DISM Disable-Feature SearchEngine + WSearch 禁用。",
