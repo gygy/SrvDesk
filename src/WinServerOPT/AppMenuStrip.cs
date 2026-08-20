@@ -16,10 +16,10 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolPowerShell { get; }
     public ToolStripMenuItem ToolTaskScheduler { get; }
     public ToolStripMenuItem ToolComputerMgmt { get; }
-        public ToolStripMenuItem ToolFlushDns { get; }
-        public ToolStripMenuItem ToolCommonSoftware { get; }
-        public ToolStripMenuItem ToolCleanup { get; }
-        public ToolStripMenuItem ToolDesktopMaintenance { get; }
+    public ToolStripMenuItem ToolFlushDns { get; }
+    public ToolStripMenuItem ToolCommonSoftware { get; }
+    public ToolStripMenuItem ToolCleanup { get; }
+    public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }

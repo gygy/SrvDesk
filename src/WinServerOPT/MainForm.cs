@@ -179,7 +179,6 @@ internal sealed class MainForm : Form
     private Panel? _activeBody;
     private Panel? _activeSection;
     private Form? _embeddedPage;
-    private readonly int _settingGroupCount = 6;
 
     private static readonly string[] MenuItems =
     [
@@ -288,7 +287,11 @@ internal sealed class MainForm : Form
         ShowHelpPlaceholder();
         ShowGroup(0);
         Load += (_, _) => InitializeRuntime();
-        FormClosed += (_, _) => _toolTip.Dispose();
+        FormClosed += (_, _) =>
+        {
+            DisposeEmbeddedPage();
+            _toolTip.Dispose();
+        };
         Resize += (_, _) => LayoutContent();
         KeyDown += OnFormKeyDown;
     }
@@ -629,35 +632,6 @@ internal sealed class MainForm : Form
         dlg.ShowDialog(this);
     }
 
-    private void ShowExplorerSettings()
-    {
-        using var dlg = new ExplorerSettingsDialog();
-        dlg.ShowDialog(this);
-        ReloadStateQuiet();
-    }
-
-    private void ShowPrivacySettings()
-    {
-        using var dlg = new PrivacySettingsDialog();
-        dlg.ShowDialog(this);
-        ReloadStateQuiet();
-    }
-
-    private void ShowOtherSettings()
-    {
-        using var dlg = new OtherSettingsDialog();
-        dlg.ShowDialog(this);
-        ReloadStateQuiet();
-    }
-
-    private void ReloadStateQuiet() => LoadState(fullScan: false);
-
-    private void ShowStartupManager()
-    {
-        using var dlg = new StartupManagerDialog();
-        dlg.ShowDialog(this);
-    }
-
     private void ShowDesktopMaintenance()
     {
         using var dlg = new DesktopMaintenanceDialog();
@@ -823,7 +797,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 184, BackColor = AppTheme.NavBg };
+        var sidebar = new Panel { Width = 196, BackColor = AppTheme.NavBg };
         var cap = new Label
         {
             Text = "  功能导航",
@@ -864,8 +838,18 @@ internal sealed class MainForm : Form
 
     private void ShowGroup(int index)
     {
-        if (index < 0 || index >= _groups.Count) return;
-        _activeGroupIndex = index;
+        if (index < 0 || index >= MenuItems.Length) return;
+
+        if (index >= _groups.Count)
+        {
+            ShowEmbeddedPage(index);
+            return;
+        }
+
+        var fromPage = _embeddedPage is not null;
+        DisposeEmbeddedPage();
+        _contentHost.Padding = new Padding(12, 8, 12, 8);
+        _contentHost.AutoScroll = true;
         _contentHost.SuspendLayout();
         _contentHost.Controls.Clear();
 
@@ -899,6 +883,49 @@ internal sealed class MainForm : Form
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(group.Title);
         ApplySearchFilter();
+        if (fromPage) LoadState(fullScan: false);
+    }
+
+    private void ShowEmbeddedPage(int index)
+    {
+        var title = MenuItems[index];
+        Form page = title switch
+        {
+            "Explorer 设置" => new ExplorerSettingsDialog(),
+            "隐私设置" => new PrivacySettingsDialog(),
+            "其他设置" => new OtherSettingsDialog(),
+            "启动项管理" => new StartupManagerDialog(),
+            "DNS 设置" => new DnsSwitcherDialog(),
+            _ => throw new InvalidOperationException(title),
+        };
+
+        DisposeEmbeddedPage();
+        _activeRows = [];
+        _activeSection = null;
+        _activeBody = null;
+        _contentHost.Padding = new Padding(0);
+        _contentHost.AutoScroll = false;
+        _contentHost.SuspendLayout();
+        _contentHost.Controls.Clear();
+
+        page.TopLevel = false;
+        page.FormBorderStyle = FormBorderStyle.None;
+        page.ControlBox = false;
+        page.Dock = DockStyle.Fill;
+        page.Visible = true;
+        _embeddedPage = page;
+        _contentHost.Controls.Add(page);
+        page.Show();
+        _contentHost.ResumeLayout(true);
+        ShowHelpPlaceholder(title);
+    }
+
+    private void DisposeEmbeddedPage()
+    {
+        if (_embeddedPage is null) return;
+        _contentHost.Controls.Remove(_embeddedPage);
+        _embeddedPage.Dispose();
+        _embeddedPage = null;
     }
 
     private void ShowHelp(SettingRow row)
@@ -921,6 +948,7 @@ internal sealed class MainForm : Form
 
     private void LayoutContent()
     {
+        if (_embeddedPage is not null) return;
         if (_contentHost.Controls.Count == 0) return;
         if (_contentHost.Controls[0] is Panel wrap)
             wrap.Width = ContentWidth();
