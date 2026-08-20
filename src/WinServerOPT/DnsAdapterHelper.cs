@@ -5,12 +5,12 @@ namespace WinOpt;
 
 internal sealed class DnsAdapterInfo
 {
-    public int Index { get; init; }
-    public string Name { get; init; } = "";
-    public string Description { get; init; } = "";
-    public string[] DnsServers { get; init; } = [];
-    public bool IsUp { get; init; }
-    public bool LikelyVirtual { get; init; }
+    public int Index { get; set; }
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string[] DnsServers { get; set; } = [];
+    public bool IsUp { get; set; }
+    public bool LikelyVirtual { get; set; }
 
     public string DisplayText
     {

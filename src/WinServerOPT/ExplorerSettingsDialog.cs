@@ -231,7 +231,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             bits.TaskbarSearchMode = _searchMode.SelectedIndex;
             Win11DesktopTweaks.Apply(bits);
         });
-        _widgets.Bind(Win11DesktopTweaks.IsWidgetsDisabled(), v =>
+        _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), v =>
         {
             bits.DisableWidgets = v;
             bits.TaskbarSearchMode = _searchMode.SelectedIndex;

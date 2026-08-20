@@ -449,6 +449,51 @@ internal sealed class MainForm : Form
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
         LoadState(fullScan: false);
+        BeginInvoke(new Action(StartWarmupInstantPages));
+    }
+
+    /// <summary>空闲时分帧预创建即时页，并预热 MMAgent，减轻首次点左侧菜单的卡顿。</summary>
+    private void StartWarmupInstantPages()
+    {
+        System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
+
+        var titles = new[] { "资源管理器", "系统服务", "登录启动项", "DNS 设置" };
+        var i = 0;
+        var timer = new System.Windows.Forms.Timer { Interval = 80 };
+        timer.Tick += (_, _) =>
+        {
+            if (i >= titles.Length)
+            {
+                timer.Stop();
+                timer.Dispose();
+                return;
+            }
+
+            var title = titles[i++];
+            if (_pageCache.ContainsKey(title)) return;
+            try
+            {
+                Form page = title switch
+                {
+                    "资源管理器" => new ExplorerSettingsDialog(),
+                    "系统服务" => new OtherSettingsDialog(),
+                    "登录启动项" => new StartupManagerDialog(),
+                    "DNS 设置" => new DnsSwitcherDialog(),
+                    _ => throw new InvalidOperationException(title),
+                };
+                page.TopLevel = false;
+                page.FormBorderStyle = FormBorderStyle.None;
+                page.ControlBox = false;
+                page.Dock = DockStyle.Fill;
+                page.Visible = false;
+                _pageCache[title] = page;
+            }
+            catch
+            {
+                // 预热失败不影响主界面
+            }
+        };
+        timer.Start();
     }
 
     private void BuildCommandBar()
@@ -883,6 +928,7 @@ internal sealed class MainForm : Form
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(group.Title);
         ApplySearchFilter();
+        // 从即时页返回时异步刷新批量开关，不阻塞切换
         if (fromPage) LoadState(fullScan: false);
     }
 

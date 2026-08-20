@@ -199,16 +199,16 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
     private void LoadValues()
     {
-        var s = Optimizer.Read(fullScan: false);
-        _hibernate.Bind(s.DisableHibernate, EasySettingsTweaks.SetHibernate);
-        _fast.Bind(s.DisableFastStartup, EasySettingsTweaks.SetFastStartup);
-        _rdp.Bind(s.EnableRdp, EasySettingsTweaks.SetRdpEnabled);
-        _ra.Bind(s.DisableRemoteAssistance, EasySettingsTweaks.SetRemoteAssistanceDisabled);
-        _sysmain.Bind(s.DisableSysMain, EasySettingsTweaks.SetSysMain);
-        _memComp.Bind(s.DisableMemoryCompression, EasySettingsTweaks.SetMemoryCompressionDisabled);
-        _prelaunch.Bind(s.DisableAppPrelaunch, EasySettingsTweaks.SetAppPrelaunchDisabled);
-        _page.Bind(s.DisablePageCombining, EasySettingsTweaks.SetPageCombiningDisabled);
-        _ucpd.Bind(s.DisableUcpdDriver, EasySettingsTweaks.SetUcpdDisabled);
+        // 轻量读取：注册表/服务 + 一次 Get-MMAgent（带缓存），避免 Optimizer.Read 全量扫描
+        _hibernate.Bind(EasySettingsTweaks.IsHibernateDisabled(), EasySettingsTweaks.SetHibernate);
+        _fast.Bind(EasySettingsTweaks.IsFastStartupDisabled(), EasySettingsTweaks.SetFastStartup);
+        _rdp.Bind(EasySettingsTweaks.IsRdpEnabled(), EasySettingsTweaks.SetRdpEnabled);
+        _ra.Bind(EasySettingsTweaks.IsRemoteAssistanceDisabled(), EasySettingsTweaks.SetRemoteAssistanceDisabled);
+        _sysmain.Bind(EasySettingsTweaks.IsSysMainDisabled(), EasySettingsTweaks.SetSysMain);
+        _memComp.Bind(EasySettingsTweaks.IsMemoryCompressionDisabled(), EasySettingsTweaks.SetMemoryCompressionDisabled);
+        _prelaunch.Bind(EasySettingsTweaks.IsAppPrelaunchDisabled(), EasySettingsTweaks.SetAppPrelaunchDisabled);
+        _page.Bind(EasySettingsTweaks.IsPageCombiningDisabled(), EasySettingsTweaks.SetPageCombiningDisabled);
+        _ucpd.Bind(EasySettingsTweaks.IsUcpdDisabled(), EasySettingsTweaks.SetUcpdDisabled);
         _prefetchRead.Bind(EasySettingsTweaks.IsAppLaunchPrefetchOn(), _ => { });
         _port.Value = Math.Min(_port.Maximum, Math.Max(_port.Minimum, EasySettingsTweaks.GetRdpPort()));
         _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));

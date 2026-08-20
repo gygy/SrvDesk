@@ -67,7 +67,8 @@ internal static class EasySettingsTweaks
         SetService("UCPD", !s.DisableUcpdDriver);
     }
 
-    public static void ReadInto(Optimizer.State s)
+    /// <summary>仅读资源管理器页开关（纯注册表，无 PowerShell/netsh）。</summary>
+    public static void ReadExplorerOnly(Optimizer.State s)
     {
         s.HideProtectedOsFiles = DwordEquals(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", 0);
         s.AlwaysShowIconsNeverThumbnails = DwordEquals(Hive.HkCu, ExplorerAdv, "IconsOnly", 1);
@@ -78,6 +79,11 @@ internal static class EasySettingsTweaks
         s.DisableOneDrive = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", 1);
         s.HideTaskbarChat = DwordEquals(Hive.HkCu, ExplorerAdv, "TaskbarMn", 0);
         s.HideTaskbarCopilot = DwordEquals(Hive.HkCu, ExplorerAdv, "TaskbarCo", 0);
+    }
+
+    public static void ReadInto(Optimizer.State s)
+    {
+        ReadExplorerOnly(s);
 
         s.DisableCloudSearch = DwordEquals(Hive.HkLm, SearchPol, "AllowCloudSearch", 0);
         s.DisableWebsiteLangList = DwordEquals(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", 1);
@@ -106,6 +112,9 @@ internal static class EasySettingsTweaks
     public static bool IsAppPrelaunchDisabled() => !IsMmAgentOn("ApplicationPreLaunch");
     public static bool IsPageCombiningDisabled() => !IsMmAgentOn("PageCombining");
     public static bool IsUcpdDisabled() => ServiceDisabled("UCPD");
+
+    /// <summary>后台预热 Get-MMAgent，避免首次打开「系统服务」卡顿。</summary>
+    public static void WarmupMmAgentCache() => EnsureMmAgentCache();
 
     public static void SetRemoteAssistanceDisabled(bool disable) =>
         SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", disable ? 0 : 1);
