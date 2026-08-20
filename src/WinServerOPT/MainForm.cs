@@ -200,6 +200,9 @@ internal sealed class MainForm : Form
         _appMenu.PresetLoad.Click += (_, _) => ApplySelectedPreset();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
         _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
+        _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
+        _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
+        _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState();
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
@@ -505,6 +508,53 @@ internal sealed class MainForm : Form
     {
         using var dlg = new QuickToolsDialog(_systemFacts);
         dlg.ShowDialog(this);
+    }
+
+    private void ShowHostsEditor()
+    {
+        using var dlg = new HostsEditorDialog();
+        dlg.ShowDialog(this);
+    }
+
+    private void FlushDnsCache()
+    {
+        try
+        {
+            if (HostsFileHelper.FlushDns())
+            {
+                _status.Text = "已刷新 DNS 缓存（ipconfig /flushdns）。";
+                MessageBox.Show(this, "DNS 解析缓存已清空。\r\n之后的域名解析会重新向 DNS 服务器查询。",
+                    "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show(this, "ipconfig /flushdns 未成功完成。",
+                    "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "无法刷新 DNS 缓存。\r\n\r\n" + ex.Message,
+                "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void OpenEventViewer()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "eventvwr.msc",
+                UseShellExecute = true,
+            });
+            ApplyLog.Write("打开事件查看器");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "无法打开事件查看器。\r\n\r\n" + ex.Message,
+                "事件查看器", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private bool EnsureAutologonReady()

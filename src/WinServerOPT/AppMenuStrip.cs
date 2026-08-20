@@ -8,6 +8,9 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem PresetLoad { get; }
     public ToolStripMenuItem ToolAutologon { get; }
     public ToolStripMenuItem ToolIdentity { get; }
+    public ToolStripMenuItem ToolHosts { get; }
+    public ToolStripMenuItem ToolEventViewer { get; }
+    public ToolStripMenuItem ToolFlushDns { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
@@ -43,9 +46,15 @@ internal sealed class AppMenuStrip : MenuStrip
         var tools = new ToolStripMenuItem("工具(&T)");
         ToolAutologon = new ToolStripMenuItem("Autologon 配置...");
         ToolIdentity = new ToolStripMenuItem("计算机名 / 工作组...");
+        ToolHosts = new ToolStripMenuItem("编辑 hosts...");
+        ToolEventViewer = new ToolStripMenuItem("事件查看器");
+        ToolFlushDns = new ToolStripMenuItem("刷新 DNS 缓存");
         ToolQuick = new ToolStripMenuItem("快速工具...");
         ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
-        tools.DropDownItems.AddRange([ToolAutologon, ToolIdentity, new ToolStripSeparator(), ToolQuick, ToolRefresh]);
+        tools.DropDownItems.AddRange([
+            ToolAutologon, ToolIdentity, ToolHosts, ToolEventViewer, ToolFlushDns,
+            new ToolStripSeparator(), ToolQuick, ToolRefresh
+        ]);
 
         var view = new ToolStripMenuItem("视图(&V)");
         ViewHideIncompatible = new ToolStripMenuItem("隐藏不适用项") { CheckOnClick = true };
