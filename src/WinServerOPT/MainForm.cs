@@ -1070,9 +1070,9 @@ internal sealed class MainForm : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderLabel("项目", 16, 420));
-        header.Controls.Add(MakeHeaderLabel("推荐设置", 448, 160, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统默认", 628, 160, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX));
+        header.Controls.Add(MakeHeaderLabel("推荐设置", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统默认", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Resize += (_, _) => header.Width = ContentWidth();
         header.Width = ContentWidth();
         return header;
@@ -1841,11 +1841,11 @@ internal sealed class MainForm : Form
             ToolTip toolTip,
             Action<SettingRow> onSelectHelp)
         {
-            // 与表头列对齐：项目 | 推荐设置(448) | 系统默认(628)
-            const int toggleX = 500;
-            const int systemX = 628;
-            const int toggleW = 56;
-            const int itemX = 36;
+            // 与表头列对齐（SettingListLayout），文字不得盖住开关
+            var toggleX = SettingListLayout.ToggleX;
+            var systemX = SettingListLayout.SystemX;
+            var toggleW = SettingListLayout.ToggleW;
+            var itemX = SettingListLayout.ItemX;
 
             _normalBg = bg;
             var wrap = new Panel
@@ -1855,10 +1855,9 @@ internal sealed class MainForm : Form
                 BackColor = bg,
             };
             _wrap = wrap;
-            _info.SetBounds(16, (h - 18) / 2, 18, 18);
+            _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
 
-            // 标签右缘必须在开关左侧留空，否则透明 Label 会盖住开关左半边
-            var textW = Math.Max(120, toggleX - itemX - 12);
+            var textW = Math.Max(120, toggleX - itemX - SettingListLayout.TextToggleGap);
             var hasScope = Help.Scope.HasBadge;
             if (hasScope)
             {
@@ -1872,7 +1871,7 @@ internal sealed class MainForm : Form
 
             _toggle.Size = new Size(toggleW, 26);
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
-            _system.SetBounds(systemX, 0, 160, h);
+            _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";

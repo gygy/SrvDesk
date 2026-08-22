@@ -48,7 +48,9 @@ internal sealed class ToggleSwitch : Control
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var track = ClientRectangle;
-        track.Inflate(-1, -3);
+        // 左右各留 1px，避免圆角贴边被父控件裁切
+        track.Inflate(-2, -3);
+        if (track.Width < 8 || track.Height < 8) return;
         var radius = track.Height / 2;
 
         var trackColor = _checked ? AppTheme.ToggleOn : AppTheme.ToggleOff;

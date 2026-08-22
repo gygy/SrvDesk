@@ -15,19 +15,20 @@ internal sealed class InstantToggleRow : Panel
         Dock = DockStyle.Top;
         MinimumSize = new Size(200, 36);
         Margin = new Padding(0, 0, 0, 4);
+        Padding = new Padding(4, 0, 8, 0);
         BackColor = Color.Transparent;
 
-        _toggle.Location = new Point(4, 5);
+        // 文字在左、开关在右（避免贴左被裁切，也避免 Label 盖住开关）
         _label = new Label
         {
             Text = title,
             AutoSize = false,
-            Location = new Point(68, 0),
-            Size = new Size(400, 36),
+            Location = new Point(4, 0),
+            Size = new Size(200, 36),
             TextAlign = ContentAlignment.MiddleLeft,
             Cursor = Cursors.Hand,
             BackColor = Color.Transparent,
-            AutoEllipsis = false, // 完整显示，不够则换行加高
+            AutoEllipsis = false,
         };
         _label.Click += (_, _) => _toggle.Checked = !_toggle.Checked;
         _toggle.CheckedChanged += (_, _) =>
@@ -43,7 +44,7 @@ internal sealed class InstantToggleRow : Panel
             }
         };
         Controls.Add(_label);
-        Controls.Add(_toggle);
+        Controls.Add(_toggle); // 后添加 = 最上层
         Resize += (_, _) => LayoutLabel();
         ParentChanged += (_, _) =>
         {
@@ -91,7 +92,12 @@ internal sealed class InstantToggleRow : Panel
         _layouting = true;
         try
         {
-            var labelWidth = Math.Max(80, ClientSize.Width - 76);
+            const int gap = 10;
+            var toggleW = _toggle.Width;
+            var labelLeft = 4;
+            var labelWidth = Math.Max(80, ClientSize.Width - labelLeft - toggleW - gap - 4);
+
+            _label.Left = labelLeft;
             _label.Width = labelWidth;
 
             var measured = TextRenderer.MeasureText(
@@ -103,8 +109,13 @@ internal sealed class InstantToggleRow : Panel
             var contentH = Math.Max(26, measured.Height);
             var rowH = Math.Max(36, contentH + 10);
             _label.Height = rowH;
-            _label.Location = new Point(68, 0);
+            _label.Top = 0;
+
+            _toggle.Left = labelLeft + labelWidth + gap;
             _toggle.Top = Math.Max(4, (rowH - _toggle.Height) / 2);
+            if (_toggle.Right > ClientSize.Width - 2)
+                _toggle.Left = Math.Max(labelLeft, ClientSize.Width - toggleW - 2);
+
             if (Height != rowH)
                 Height = rowH;
         }
