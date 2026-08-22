@@ -6,14 +6,15 @@ internal sealed class InstantToggleRow : Panel
     private readonly Label _label;
     private bool _suppress;
     private Action<bool>? _apply;
+    private bool _layouting;
 
     public InstantToggleRow(string title)
     {
         Title = title;
         Height = 36;
         Dock = DockStyle.Top;
-        MinimumSize = new Size(240, 36);
-        Margin = new Padding(0, 0, 0, 2);
+        MinimumSize = new Size(200, 36);
+        Margin = new Padding(0, 0, 0, 4);
         BackColor = Color.Transparent;
 
         _toggle.Location = new Point(4, 5);
@@ -23,11 +24,10 @@ internal sealed class InstantToggleRow : Panel
             AutoSize = false,
             Location = new Point(68, 0),
             Size = new Size(400, 36),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             TextAlign = ContentAlignment.MiddleLeft,
             Cursor = Cursors.Hand,
             BackColor = Color.Transparent,
-            AutoEllipsis = true,
+            AutoEllipsis = false, // 完整显示，不够则换行加高
         };
         _label.Click += (_, _) => _toggle.Checked = !_toggle.Checked;
         _toggle.CheckedChanged += (_, _) =>
@@ -77,7 +77,6 @@ internal sealed class InstantToggleRow : Panel
 
     private void SyncWidthToParent()
     {
-        // FlowLayoutPanel 会忽略 Dock，需手动拉满宽度，否则长标题被裁切
         if (Parent is FlowLayoutPanel flp && flp.FlowDirection == FlowDirection.TopDown)
         {
             var w = Math.Max(MinimumSize.Width, flp.ClientSize.Width - Margin.Horizontal - 4);
@@ -86,15 +85,41 @@ internal sealed class InstantToggleRow : Panel
         LayoutLabel();
     }
 
-    private void LayoutLabel() =>
-        _label.Width = Math.Max(120, ClientSize.Width - 76);
+    private void LayoutLabel()
+    {
+        if (_layouting) return;
+        _layouting = true;
+        try
+        {
+            var labelWidth = Math.Max(80, ClientSize.Width - 76);
+            _label.Width = labelWidth;
+
+            var measured = TextRenderer.MeasureText(
+                _label.Text,
+                _label.Font,
+                new Size(labelWidth, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix);
+
+            var contentH = Math.Max(26, measured.Height);
+            var rowH = Math.Max(36, contentH + 10);
+            _label.Height = rowH;
+            _label.Location = new Point(68, 0);
+            _toggle.Top = Math.Max(4, (rowH - _toggle.Height) / 2);
+            if (Height != rowH)
+                Height = rowH;
+        }
+        finally
+        {
+            _layouting = false;
+        }
+    }
 }
 
 internal static class ThemedSettingsChrome
 {
     public static Panel CreateHeader(string title, string subtitle)
     {
-        var header = new Panel { Height = 52, Dock = DockStyle.Top, BackColor = AppTheme.PrimaryDeep };
+        var header = new Panel { Height = 56, Dock = DockStyle.Top, BackColor = AppTheme.PrimaryDeep };
         header.Paint += (_, e) =>
         {
             var r = header.ClientRectangle;
@@ -106,7 +131,7 @@ internal static class ThemedSettingsChrome
         var logo = new PictureBox
         {
             Size = new Size(36, 36),
-            Location = new Point(14, 8),
+            Location = new Point(14, 10),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
         };
@@ -118,26 +143,26 @@ internal static class ThemedSettingsChrome
             Text = title,
             AutoSize = false,
             Location = new Point(54, 6),
-            Size = new Size(520, 28),
+            Size = new Size(520, 24),
             ForeColor = AppTheme.TextOnPrimary,
             Font = new Font("Microsoft YaHei UI", 12.5F, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
         };
 
         var sub = new Label
         {
             Text = subtitle,
             AutoSize = false,
-            Location = new Point(54, 32),
-            Height = 18,
+            Location = new Point(54, 30),
+            Height = 22,
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = AppTheme.TextOnPrimarySoft,
             Font = new Font("Microsoft YaHei UI", 8.5F),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
         };
 
         header.Controls.Add(sub);
@@ -171,12 +196,12 @@ internal static class ThemedSettingsChrome
         {
             Text = hint,
             AutoSize = false,
-            Location = new Point(16, 8),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - right), 36),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Location = new Point(16, 4),
+            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - right), 44),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             ForeColor = AppTheme.TextMute,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
         };
 
         if (onRefresh is not null)
@@ -227,16 +252,20 @@ internal static class ThemedSettingsChrome
         return b;
     }
 
-    /// <summary>带标题分区：标题与正文分栏，避免互相遮挡。</summary>
-    public static (Panel Card, Panel Body) CreateSectionShell(string title, int height = 0)
+    /// <summary>带标题分区：高度随正文自适应，标题完整显示。</summary>
+    public static (Panel Card, FlowLayoutPanel Body) CreateSectionShell(string title, int minHeight = 0)
     {
         var card = new Panel
         {
             BackColor = AppTheme.SurfaceCard,
             Padding = new Padding(10, 8, 10, 10),
             Margin = new Padding(0, 0, 0, 8),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
         };
-        if (height > 0) card.Height = height;
+        if (minHeight > 0)
+            card.MinimumSize = new Size(0, minHeight);
 
         card.Paint += (_, e) =>
         {
@@ -244,49 +273,48 @@ internal static class ThemedSettingsChrome
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = AppTheme.SurfaceCard,
-        };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
         var cap = new Label
         {
             Text = title,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            Height = 28,
             Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
             ForeColor = AppTheme.TextHeader,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
         };
-        var body = new Panel
+
+        var body = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
             BackColor = AppTheme.SurfaceCard,
-            AutoScroll = false,
+            Padding = new Padding(0, 2, 0, 2),
         };
-        layout.Controls.Add(cap, 0, 0);
-        layout.Controls.Add(body, 0, 1);
-        card.Controls.Add(layout);
+        body.Resize += (_, _) => StretchStackChildren(body);
+
+        // 先 body 后 cap：cap 停靠在最上，body 在其下并随内容增高
+        card.Controls.Add(body);
+        card.Controls.Add(cap);
+        card.Tag = body;
         return (card, body);
     }
 
     public static Panel CreateSection(string title, Control[] rows)
     {
-        var (card, body) = CreateSectionShell(title, 36 + rows.Length * 38 + 12);
-        for (var i = rows.Length - 1; i >= 0; i--)
+        var (card, body) = CreateSectionShell(title);
+        foreach (var row in rows)
         {
-            rows[i].Dock = DockStyle.Top;
-            body.Controls.Add(rows[i]);
+            row.Dock = DockStyle.Top;
+            body.Controls.Add(row);
         }
+        StretchStackChildren(body);
         return card;
     }
 
-    /// <summary>兼容旧调用：正文面板放在 Tag。</summary>
     public static Panel CreateSectionCard(string title, int height = 0)
     {
         var (card, body) = CreateSectionShell(title, height);
@@ -295,9 +323,7 @@ internal static class ThemedSettingsChrome
     }
 
     public static Panel SectionBody(Panel card) =>
-        card.Tag as Panel
-        ?? card.Controls.OfType<TableLayoutPanel>().FirstOrDefault()?.GetControlFromPosition(0, 1) as Panel
-        ?? card;
+        card.Tag as Panel ?? card;
 
     public static Panel CreateBodyPanel()
     {
@@ -310,7 +336,6 @@ internal static class ThemedSettingsChrome
         };
     }
 
-    /// <summary>纵向开关列表容器（自动拉满宽度）。</summary>
     public static FlowLayoutPanel CreateToggleStack()
     {
         var p = new FlowLayoutPanel
@@ -318,41 +343,57 @@ internal static class ThemedSettingsChrome
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             AutoScroll = false,
             BackColor = Color.Transparent,
         };
-        p.Resize += (_, _) =>
-        {
-            foreach (Control c in p.Controls)
-            {
-                if (c is InstantToggleRow or Panel)
-                    c.Width = Math.Max(200, p.ClientSize.Width - 4);
-            }
-        };
+        p.Resize += (_, _) => StretchStackChildren(p);
         return p;
+    }
+
+    public static void StretchStackChildren(FlowLayoutPanel p)
+    {
+        var w = Math.Max(160, p.ClientSize.Width - 4);
+        foreach (Control c in p.Controls)
+        {
+            if (c.Width != w)
+                c.Width = w;
+        }
     }
 
     public static Panel CreateComboRow(string label, ComboBox box, string[] items)
     {
-        var row = new Panel { Height = 36, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, 2) };
+        var row = new Panel
+        {
+            Height = 36,
+            Margin = new Padding(0, 0, 0, 4),
+            MinimumSize = new Size(200, 36),
+        };
         var l = new Label
         {
             Text = label,
             AutoSize = false,
             Location = new Point(4, 0),
-            Size = new Size(160, 36),
+            Size = new Size(100, 36),
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
         };
         box.DropDownStyle = ComboBoxStyle.DropDownList;
         box.Items.Clear();
         box.Items.AddRange(items);
-        box.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        box.Location = new Point(168, 5);
-        box.Width = 200;
+        box.Location = new Point(108, 5);
+        box.Width = 160;
         row.Controls.Add(box);
         row.Controls.Add(l);
-        row.Resize += (_, _) => box.Width = Math.Max(120, row.ClientSize.Width - 176);
+        row.Resize += (_, _) =>
+        {
+            // 短标签 + 下拉拉满剩余宽度，避免省略
+            var labelW = Math.Min(110, Math.Max(72, row.ClientSize.Width / 3));
+            l.Width = labelW;
+            box.Left = labelW + 8;
+            box.Width = Math.Max(100, row.ClientSize.Width - box.Left - 4);
+        };
         return row;
     }
 

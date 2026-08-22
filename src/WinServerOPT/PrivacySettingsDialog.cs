@@ -2,17 +2,17 @@ namespace WinOpt;
 
 internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 {
-    private readonly InstantToggleRow _cloud = new("搜索界面禁止云内容搜索（OneDrive / SharePoint / Outlook / 必应）");
-    private readonly InstantToggleRow _web = new("搜索界面禁止 Web 搜索（仅当前用户）");
-    private readonly InstantToggleRow _history = new("禁止本地存储搜索历史记录（仅当前用户）");
-    private readonly InstantToggleRow _ad = new("允许应用使用广告 ID 展示个性化广告");
-    private readonly InstantToggleRow _lang = new("允许网站通过访问语言列表显示本地相关内容");
-    private readonly InstantToggleRow _track = new("允许 Windows 跟踪应用启动以改进搜索结果");
-    private readonly InstantToggleRow _suggest = new("在设置应用中为我显示建议的内容");
-    private readonly InstantToggleRow _ink = new("自定义墨迹书写和键入词典");
-    private readonly InstantToggleRow _delivery = new("禁止 Windows 更新传递优化");
-    private readonly InstantToggleRow _msrt = new("Windows 更新不包括恶意软件删除工具");
-    private readonly InstantToggleRow _major = new("禁止 Win 大版本更新（暂停功能更新至 2035）");
+    private readonly InstantToggleRow _cloud = new("禁止搜索云内容");
+    private readonly InstantToggleRow _web = new("禁止搜索 Web（当前用户）");
+    private readonly InstantToggleRow _history = new("禁止本地搜索历史");
+    private readonly InstantToggleRow _ad = new("允许广告 ID 个性化");
+    private readonly InstantToggleRow _lang = new("允许网站读取语言列表");
+    private readonly InstantToggleRow _track = new("允许应用启动跟踪");
+    private readonly InstantToggleRow _suggest = new("设置中显示建议内容");
+    private readonly InstantToggleRow _ink = new("墨迹与键入个性化");
+    private readonly InstantToggleRow _delivery = new("禁止更新传递优化");
+    private readonly InstantToggleRow _msrt = new("更新不含恶意软件删除工具");
+    private readonly InstantToggleRow _major = new("暂停功能更新至 2035");
 
     public PrivacySettingsDialog()
     {
@@ -26,80 +26,68 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var (searchCard, searchHost) = ThemedSettingsChrome.CreateSectionShell("搜索与云内容", 210);
-        var searchStack = ThemedSettingsChrome.CreateToggleStack();
-        searchStack.Controls.Add(_cloud);
-        searchStack.Controls.Add(_web);
-        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Width = 700 };
+        var (searchCard, searchHost) = ThemedSettingsChrome.CreateSectionShell("搜索与云内容");
+        searchHost.Controls.Add(_cloud);
+        searchHost.Controls.Add(_web);
+        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
         fw.Controls.Add(Btn("添加防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         fw.Controls.Add(Btn("移除防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
-        searchStack.Controls.Add(fw);
+        searchHost.Controls.Add(fw);
         var warn = new Label
         {
-            Text = "搜索框输入可能上传至微软。勾选上方项并添加防火墙规则可减少上传，一般不影响 Edge 浏览器搜索。",
-            AutoSize = false,
-            Size = new Size(700, 40),
+            Text = "搜索框输入可能上传至微软。勾选上方项并添加防火墙规则可减少上传。",
+            AutoSize = true,
+            MaximumSize = new Size(700, 0),
             ForeColor = AppTheme.TextMute,
+            Margin = new Padding(4, 8, 4, 4),
         };
-        searchStack.Controls.Add(warn);
-        searchHost.Controls.Add(searchStack);
+        searchHost.Controls.Add(warn);
 
-        var (svcCard, svcBody) = ThemedSettingsChrome.CreateSectionShell("Windows Search 服务", 100);
-        var svcHost = new FlowLayoutPanel
+        var (svcCard, svcBody) = ThemedSettingsChrome.CreateSectionShell("Windows Search");
+        svcBody.Controls.Add(Btn("停止并禁止 Windows Search", () =>
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(4),
-        };
-        var stop = ThemedSettingsChrome.CreateButton("停止并禁止 Windows Search 服务", false);
-        stop.Size = new Size(320, 36);
-        stop.Click += (_, _) => { EasySettingsTweaks.SetWindowsSearchEnabled(false); LoadValues(); };
-        var start = ThemedSettingsChrome.CreateButton("恢复并允许 Windows Search 服务", false);
-        start.Size = new Size(320, 36);
-        start.Click += (_, _) => { EasySettingsTweaks.SetWindowsSearchEnabled(true); LoadValues(); };
-        svcHost.Controls.Add(stop);
-        svcHost.Controls.Add(start);
-        svcBody.Controls.Add(svcHost);
+            EasySettingsTweaks.SetWindowsSearchEnabled(false);
+            LoadValues();
+        }));
+        svcBody.Controls.Add(Btn("恢复并允许 Windows Search", () =>
+        {
+            EasySettingsTweaks.SetWindowsSearchEnabled(true);
+            LoadValues();
+        }));
 
-        var (leftCard, leftBody) = ThemedSettingsChrome.CreateSectionShell("隐私和安全（仅当前用户）", 300);
-        var leftStack = ThemedSettingsChrome.CreateToggleStack();
-        leftStack.Controls.Add(_history);
-        var tip = new Label
+        var (leftCard, leftBody) = ThemedSettingsChrome.CreateSectionShell("隐私（当前用户）");
+        leftBody.Controls.Add(_history);
+        leftBody.Controls.Add(new Label
         {
-            Text = "以下为系统默认开启项，隐私场景建议关闭：",
-            AutoSize = false,
-            Height = 28,
-            Width = 400,
+            Text = "以下默认开启，隐私场景建议关闭：",
+            AutoSize = true,
             ForeColor = AppTheme.TextMute,
-            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(4, 4, 4, 4),
+        });
+        leftBody.Controls.Add(_ad);
+        leftBody.Controls.Add(_lang);
+        leftBody.Controls.Add(_track);
+        leftBody.Controls.Add(_suggest);
+        leftBody.Controls.Add(_ink);
+
+        var (rightCard, rightBody) = ThemedSettingsChrome.CreateSectionShell("更新与其它");
+        rightBody.Controls.Add(_delivery);
+        rightBody.Controls.Add(_msrt);
+        rightBody.Controls.Add(_major);
+
+        var cols = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 2,
+            Padding = new Padding(0, 0, 0, 8),
         };
-        leftStack.Controls.Add(tip);
-        leftStack.Controls.Add(_ad);
-        leftStack.Controls.Add(_lang);
-        leftStack.Controls.Add(_track);
-        leftStack.Controls.Add(_suggest);
-        leftStack.Controls.Add(_ink);
-        leftBody.Controls.Add(leftStack);
-
-        var (rightCard, rightBody) = ThemedSettingsChrome.CreateSectionShell("更新与其它", 180);
-        var rightStack = ThemedSettingsChrome.CreateToggleStack();
-        rightStack.Controls.Add(_delivery);
-        rightStack.Controls.Add(_msrt);
-        rightStack.Controls.Add(_major);
-        rightBody.Controls.Add(rightStack);
-
-        var cols = new TableLayoutPanel { Dock = DockStyle.Top, Height = 320, ColumnCount = 2 };
         cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
         cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
         leftCard.Dock = DockStyle.Fill;
         rightCard.Dock = DockStyle.Fill;
         cols.Controls.Add(leftCard, 0, 0);
         cols.Controls.Add(rightCard, 1, 0);
-
-        searchCard.Dock = DockStyle.Top;
-        svcCard.Dock = DockStyle.Top;
-        cols.Dock = DockStyle.Top;
 
         body.Controls.Add(cols);
         body.Controls.Add(svcCard);
@@ -108,7 +96,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "隐私与搜索",
-            "搜索隐私 · 广告跟踪 · 更新传递 · 开关立即生效",
+            "搜索隐私 · 广告跟踪 · 更新传递",
             body,
             "建议同时添加防火墙规则以拦截搜索上传。",
             LoadValues);

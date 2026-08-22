@@ -4,27 +4,28 @@ namespace WinOpt;
 
 internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 {
-    private readonly InstantToggleRow _ext = new("显示所有文件的文件扩展名");
-    private readonly InstantToggleRow _fullPath = new("在标题栏中显示完整路径");
-    private readonly InstantToggleRow _hidden = new("显示隐藏的文件、文件夹和驱动器");
-    private readonly InstantToggleRow _osFiles = new("隐藏受保护的系统文件（推荐）");
-    private readonly InstantToggleRow _iconsOnly = new("始终显示图标，从不显示缩略图");
-    private readonly InstantToggleRow _emptyDrives = new("显示空的驱动器");
+    // 文案保持单行可读长度，避免窄列省略号
+    private readonly InstantToggleRow _ext = new("显示文件扩展名");
+    private readonly InstantToggleRow _fullPath = new("标题栏显示完整路径");
+    private readonly InstantToggleRow _hidden = new("显示隐藏的文件和文件夹");
+    private readonly InstantToggleRow _osFiles = new("隐藏受保护的系统文件");
+    private readonly InstantToggleRow _iconsOnly = new("始终显示图标（无缩略图）");
+    private readonly InstantToggleRow _emptyDrives = new("显示空驱动器");
     private readonly InstantToggleRow _recent = new("显示最近使用的文件");
     private readonly InstantToggleRow _frequent = new("显示常用文件夹");
-    private readonly InstantToggleRow _office = new("隐藏来自 office.com 的文件");
-    private readonly InstantToggleRow _arrow = new("去除快捷方式的小箭头");
-    private readonly InstantToggleRow _suffix = new("创建快捷方式时不加「快捷方式」文字");
-    private readonly InstantToggleRow _shield = new("去除程序图标的盾牌标识");
-    private readonly InstantToggleRow _win10Explorer = new("使用紧凑/Win10 风格间距");
+    private readonly InstantToggleRow _office = new("隐藏 office.com 云文件");
+    private readonly InstantToggleRow _arrow = new("去掉快捷方式箭头");
+    private readonly InstantToggleRow _suffix = new("快捷方式不加「快捷方式」后缀");
+    private readonly InstantToggleRow _shield = new("去掉管理员盾牌图标");
+    private readonly InstantToggleRow _win10Explorer = new("紧凑 / Win10 间距");
     private readonly InstantToggleRow _classicMenu = new("Win10 经典右键菜单");
-    private readonly InstantToggleRow _onedrive = new("禁止使用 OneDrive");
+    private readonly InstantToggleRow _onedrive = new("禁止 OneDrive");
     private readonly InstantToggleRow _autohide = new("自动隐藏任务栏");
     private readonly InstantToggleRow _taskView = new("显示任务视图按钮");
     private readonly InstantToggleRow _chat = new("隐藏任务栏聊天");
     private readonly InstantToggleRow _copilot = new("隐藏任务栏 Copilot");
     private readonly InstantToggleRow _widgets = new("关闭任务栏小组件");
-    private readonly InstantToggleRow _seconds = new("系统托盘时间显示秒");
+    private readonly InstantToggleRow _seconds = new("托盘时钟显示秒");
     private readonly ComboBox _launchTo = new();
     private readonly ComboBox _searchMode = new();
     private readonly ComboBox _align = new();
@@ -44,10 +45,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         var explorerCard = BuildExplorerCard();
-        explorerCard.Dock = DockStyle.Top;
         var taskbarCard = BuildTaskbarCard();
-        taskbarCard.Dock = DockStyle.Top;
-        // Dock Top：后添加的在上
         body.Controls.Add(taskbarCard);
         body.Controls.Add(explorerCard);
 
@@ -77,7 +75,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             _arrow, _suffix, _shield, _win10Explorer, _classicMenu, _onedrive,
         ];
 
-        var launchRow = ThemedSettingsChrome.CreateComboRow("打开资源管理器时打开：", _launchTo, ["此电脑", "快速访问"]);
+        var launchRow = ThemedSettingsChrome.CreateComboRow("打开至", _launchTo, ["此电脑", "快速访问"]);
         _launchTo.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -86,9 +84,11 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         };
 
         var left = ThemedSettingsChrome.CreateToggleStack();
+        left.Dock = DockStyle.Fill;
         foreach (var r in leftRows) left.Controls.Add(r);
 
         var right = ThemedSettingsChrome.CreateToggleStack();
+        right.Dock = DockStyle.Fill;
         right.Controls.Add(launchRow);
         foreach (var r in rightRows) right.Controls.Add(r);
 
@@ -97,50 +97,58 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
+            AutoSize = true,
             Padding = new Padding(4, 0, 0, 0),
         };
-        actions.Controls.Add(ActionBtn("刷新系统图标缓存", () => DesktopQuickActions.RefreshIconCache(this)));
-        actions.Controls.Add(ActionBtn("重启文件资源管理器", DesktopQuickActions.RestartExplorer, accent: true));
+        actions.Controls.Add(ActionBtn("刷新图标缓存", () => DesktopQuickActions.RefreshIconCache(this)));
+        actions.Controls.Add(ActionBtn("重启资源管理器", DesktopQuickActions.RestartExplorer, accent: true));
         actions.Controls.Add(ActionBtn("清空回收站", () => DesktopQuickActions.EmptyRecycleBin(this)));
         actions.Controls.Add(ActionBtn("性能选项...", () => DesktopQuickActions.OpenPerformanceOptions(this)));
-        actions.Controls.Add(ActionBtn("桌面图标设置...", () => DesktopQuickActions.OpenDesktopIconSettings(this)));
+        actions.Controls.Add(ActionBtn("桌面图标...", () => DesktopQuickActions.OpenDesktopIconSettings(this)));
 
         var rowCount = Math.Max(leftRows.Length, rightRows.Length + 1);
-        var contentH = rowCount * 38 + 8;
-        var (card, body) = ThemedSettingsChrome.CreateSectionShell("文件资源管理器", contentH + 48);
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("文件资源管理器", rowCount * 40 + 48);
 
         var cols = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
             ColumnCount = 3,
             RowCount = 1,
+            AutoSize = true,
+            Dock = DockStyle.Top,
         };
-        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
-        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
+        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44f));
+        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36f));
         cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20f));
         cols.Controls.Add(left, 0, 0);
         cols.Controls.Add(right, 1, 0);
         cols.Controls.Add(actions, 2, 0);
+        // CreateSectionShell 的 Body 是 FlowLayoutPanel
         body.Controls.Add(cols);
+        body.Resize += (_, _) =>
+        {
+            cols.Width = Math.Max(400, body.ClientSize.Width - 4);
+            ThemedSettingsChrome.StretchStackChildren(left);
+            ThemedSettingsChrome.StretchStackChildren(right);
+        };
         return card;
     }
 
     private Panel BuildTaskbarCard()
     {
-        var searchRow = ThemedSettingsChrome.CreateComboRow("搜索按钮：", _searchMode, ["隐藏", "仅图标", "搜索框"]);
+        var searchRow = ThemedSettingsChrome.CreateComboRow("搜索", _searchMode, ["隐藏", "仅图标", "搜索框"]);
         _searchMode.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
             EasySettingsTweaks.SetSearchboxMode(_searchMode.SelectedIndex);
         };
-        var alignRow = ThemedSettingsChrome.CreateComboRow("任务栏对齐：", _align, ["靠左", "居中"]);
+        var alignRow = ThemedSettingsChrome.CreateComboRow("对齐", _align, ["靠左", "居中"]);
         _align.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
             SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAl",
                 _align.SelectedIndex == 0 ? 0 : 1);
         };
-        var glomRow = ThemedSettingsChrome.CreateComboRow("任务栏按钮合并：", _glom, ["始终合并", "任务栏已满时", "从不合并"]);
+        var glomRow = ThemedSettingsChrome.CreateComboRow("合并", _glom, ["始终合并", "已满时合并", "从不合并"]);
         _glom.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -151,10 +159,8 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         [
             searchRow, _autohide, _taskView, _chat, _copilot, _widgets, alignRow, _seconds, glomRow,
         ];
-        var (card, body) = ThemedSettingsChrome.CreateSectionShell("任务栏设置", rows.Length * 38 + 48);
-        var stack = ThemedSettingsChrome.CreateToggleStack();
-        foreach (var c in rows) stack.Controls.Add(c);
-        body.Controls.Add(stack);
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("任务栏", rows.Length * 40 + 48);
+        foreach (var c in rows) body.Controls.Add(c);
         return card;
     }
 
@@ -266,7 +272,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private static Control ActionBtn(string text, Action click, bool accent = false)
     {
         var b = ThemedSettingsChrome.CreateButton(text, accent);
-        b.Width = 180;
+        b.Width = 160;
         b.Height = 34;
         b.Margin = new Padding(4);
         b.Click += (_, _) => click();

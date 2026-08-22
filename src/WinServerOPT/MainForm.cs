@@ -1768,7 +1768,7 @@ internal sealed class MainForm : Form
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
-                AutoEllipsis = true,
+                AutoEllipsis = false,
             };
             _scope = new Label
             {
@@ -1841,6 +1841,12 @@ internal sealed class MainForm : Form
             ToolTip toolTip,
             Action<SettingRow> onSelectHelp)
         {
+            // 与表头列对齐：项目 | 推荐设置(448) | 系统默认(628)
+            const int toggleX = 500;
+            const int systemX = 628;
+            const int toggleW = 56;
+            const int itemX = 36;
+
             _normalBg = bg;
             var wrap = new Panel
             {
@@ -1850,19 +1856,23 @@ internal sealed class MainForm : Form
             };
             _wrap = wrap;
             _info.SetBounds(16, (h - 18) / 2, 18, 18);
+
+            // 标签右缘必须在开关左侧留空，否则透明 Label 会盖住开关左半边
+            var textW = Math.Max(120, toggleX - itemX - 12);
             var hasScope = Help.Scope.HasBadge;
-            var textW = Math.Max(180, width - 36 - 56 - 168 - 24);
             if (hasScope)
             {
-                _item.SetBounds(36, 4, textW, 20);
-                _scope.SetBounds(36, 24, textW + 20, 16);
+                _item.SetBounds(itemX, 4, textW, 20);
+                _scope.SetBounds(itemX, 24, textW, 16);
             }
             else
             {
-                _item.SetBounds(36, 0, textW, h);
+                _item.SetBounds(itemX, 0, textW, h);
             }
-            _toggle.Location = new Point(Math.Max(200, width - 56 - 168 - 40), (h - _toggle.Height) / 2);
-            _system.SetBounds(Math.Max(280, width - 168), 0, 160, h);
+
+            _toggle.Size = new Size(toggleW, 26);
+            _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
+            _system.SetBounds(systemX, 0, 160, h);
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
@@ -1875,11 +1885,12 @@ internal sealed class MainForm : Form
             _info.Click += Select;
             if (hasScope) _scope.Click += Select;
 
+            // 先加开关再加文字，避免文字区域盖住开关
+            wrap.Controls.Add(_toggle);
+            wrap.Controls.Add(_system);
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
-            wrap.Controls.Add(_toggle);
-            wrap.Controls.Add(_system);
             wrap.Controls.Add(new Panel
             {
                 BackColor = AppTheme.BorderLight,

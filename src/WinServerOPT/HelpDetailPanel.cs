@@ -34,13 +34,13 @@ internal sealed class HelpDetailPanel : Panel
         _title.ForeColor = AppTheme.PrimaryDeep;
         _title.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
         _title.BackColor = Color.Transparent;
-        _title.AutoEllipsis = true;
+        _title.AutoEllipsis = false;
 
         _summary.SetBounds(16, 76, 260, 48);
         _summary.ForeColor = AppTheme.TextMute;
         _summary.Font = new Font("Microsoft YaHei UI", 8.75F);
         _summary.BackColor = Color.Transparent;
-        _summary.AutoEllipsis = true;
+        _summary.AutoEllipsis = false;
 
         _sections.SetBounds(16, 128, 260, 10);
         _sections.BackColor = Color.Transparent;

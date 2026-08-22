@@ -6,11 +6,11 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _fast = new("禁用快速启动");
     private readonly InstantToggleRow _rdp = new("启用远程桌面");
     private readonly InstantToggleRow _ra = new("禁用远程协助");
-    private readonly InstantToggleRow _sysmain = new("禁用 SysMain 服务");
+    private readonly InstantToggleRow _sysmain = new("禁用 SysMain");
     private readonly InstantToggleRow _memComp = new("禁用内存压缩");
     private readonly InstantToggleRow _prelaunch = new("禁用应用预启动");
     private readonly InstantToggleRow _page = new("禁用内存页面合并");
-    private readonly InstantToggleRow _ucpd = new("禁止微软 UCPD 驱动");
+    private readonly InstantToggleRow _ucpd = new("禁用 UCPD 驱动");
     private readonly InstantToggleRow _prefetchRead = new("应用启动预取（只读）");
     private readonly NumericUpDown _port = new();
     private readonly NumericUpDown _prefetch = new();
@@ -29,15 +29,10 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
         var power = ThemedSettingsChrome.CreateSection("电源与休眠", [_hibernate, _fast]);
-        power.Dock = DockStyle.Top;
         var remote = BuildRemoteSection();
-        remote.Dock = DockStyle.Top;
         var svc = ThemedSettingsChrome.CreateSection("后台服务与内存", [_sysmain, _memComp, _prelaunch, _page, _ucpd]);
-        svc.Dock = DockStyle.Top;
         var prefetch = BuildPrefetchSection();
-        prefetch.Dock = DockStyle.Top;
         var search = BuildSearchTools();
-        search.Dock = DockStyle.Top;
 
         body.Controls.Add(search);
         body.Controls.Add(prefetch);
@@ -48,9 +43,9 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "系统服务",
-            "休眠 · 远程桌面 · SysMain · 内存与预取 · 开关立即生效",
+            "休眠 · 远程桌面 · SysMain · 内存与预取",
             body,
-            "UCPD 为微软用户选择保护驱动，禁用后可修改默认浏览器等关联。",
+            "UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。",
             LoadValues);
 
         Shown += (_, _) =>
@@ -82,11 +77,11 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
         var portRow = new FlowLayoutPanel
         {
-            Height = 38,
-            Dock = DockStyle.Top,
+            AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             Padding = new Padding(4, 4, 0, 0),
+            Margin = new Padding(0, 0, 0, 4),
         };
         portRow.Controls.Add(new Label
         {
@@ -98,12 +93,10 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         portRow.Controls.Add(_port);
         portRow.Controls.Add(portBtn);
 
-        var (card, host) = ThemedSettingsChrome.CreateSectionShell("远程桌面", 34 + 3 * 38 + 16);
-        _ra.Dock = DockStyle.Top;
-        _rdp.Dock = DockStyle.Top;
-        host.Controls.Add(portRow);
-        host.Controls.Add(_ra);
+        var (card, host) = ThemedSettingsChrome.CreateSectionShell("远程桌面");
         host.Controls.Add(_rdp);
+        host.Controls.Add(_ra);
+        host.Controls.Add(portRow);
         return card;
     }
 
@@ -122,11 +115,11 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
         var pfRow = new FlowLayoutPanel
         {
-            Height = 38,
-            Dock = DockStyle.Top,
+            AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             Padding = new Padding(4, 4, 0, 0),
+            Margin = new Padding(0, 0, 0, 4),
         };
         pfRow.Controls.Add(new Label
         {
@@ -138,30 +131,21 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         pfRow.Controls.Add(pfBtn);
 
         _prefetchRead.Enabled = false;
-        var (card, host) = ThemedSettingsChrome.CreateSectionShell("预取设置", 34 + 2 * 38 + 16);
-        _prefetchRead.Dock = DockStyle.Top;
-        host.Controls.Add(pfRow);
+        var (card, host) = ThemedSettingsChrome.CreateSectionShell("预取设置");
         host.Controls.Add(_prefetchRead);
+        host.Controls.Add(pfRow);
         return card;
     }
 
     private Panel BuildSearchTools()
     {
-        var (card, body) = ThemedSettingsChrome.CreateSectionShell("搜索服务与防火墙", 120);
-        var host = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(4, 4, 4, 4),
-        };
-        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
-        row.Controls.Add(MkBtn("停止并禁止 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(false)));
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("搜索服务与防火墙");
+        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 4, 0, 0) };
+        row.Controls.Add(MkBtn("停止 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(false)));
         row.Controls.Add(MkBtn("恢复 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(true)));
         row.Controls.Add(MkBtn("添加搜索防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         row.Controls.Add(MkBtn("移除搜索防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
-        host.Controls.Add(row);
-        body.Controls.Add(host);
+        body.Controls.Add(row);
         return card;
     }
 
