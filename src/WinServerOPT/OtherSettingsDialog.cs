@@ -98,17 +98,12 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         portRow.Controls.Add(_port);
         portRow.Controls.Add(portBtn);
 
-        var card = ThemedSettingsChrome.CreateSectionCard("远程桌面");
-        card.Dock = DockStyle.Top;
-        card.Height = 34 + 3 * 38 + 16;
-        card.Padding = new Padding(10, 6, 10, 8);
-        var host = new Panel { Dock = DockStyle.Fill };
+        var (card, host) = ThemedSettingsChrome.CreateSectionShell("远程桌面", 34 + 3 * 38 + 16);
         _ra.Dock = DockStyle.Top;
         _rdp.Dock = DockStyle.Top;
         host.Controls.Add(portRow);
         host.Controls.Add(_ra);
         host.Controls.Add(_rdp);
-        card.Controls.Add(host);
         return card;
     }
 
@@ -143,36 +138,30 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         pfRow.Controls.Add(pfBtn);
 
         _prefetchRead.Enabled = false;
-        var card = ThemedSettingsChrome.CreateSectionCard("预取设置");
-        card.Dock = DockStyle.Top;
-        card.Height = 34 + 2 * 38 + 16;
-        var host = new Panel { Dock = DockStyle.Fill };
+        var (card, host) = ThemedSettingsChrome.CreateSectionShell("预取设置", 34 + 2 * 38 + 16);
         _prefetchRead.Dock = DockStyle.Top;
         host.Controls.Add(pfRow);
         host.Controls.Add(_prefetchRead);
-        card.Controls.Add(host);
         return card;
     }
 
     private Panel BuildSearchTools()
     {
-        var card = ThemedSettingsChrome.CreateSectionCard("搜索服务与防火墙");
-        card.Dock = DockStyle.Top;
-        card.Height = 120;
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("搜索服务与防火墙", 120);
         var host = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            Padding = new Padding(4, 28, 4, 4),
+            Padding = new Padding(4, 4, 4, 4),
         };
-        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
         row.Controls.Add(MkBtn("停止并禁止 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(false)));
         row.Controls.Add(MkBtn("恢复 Windows Search", () => EasySettingsTweaks.SetWindowsSearchEnabled(true)));
         row.Controls.Add(MkBtn("添加搜索防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         row.Controls.Add(MkBtn("移除搜索防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
         host.Controls.Add(row);
-        card.Controls.Add(host);
+        body.Controls.Add(host);
         return card;
     }
 
@@ -199,7 +188,6 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
     private void LoadValues()
     {
-        // 轻量读取：注册表/服务 + 一次 Get-MMAgent（带缓存），避免 Optimizer.Read 全量扫描
         _hibernate.Bind(EasySettingsTweaks.IsHibernateDisabled(), EasySettingsTweaks.SetHibernate);
         _fast.Bind(EasySettingsTweaks.IsFastStartupDisabled(), EasySettingsTweaks.SetFastStartup);
         _rdp.Bind(EasySettingsTweaks.IsRdpEnabled(), EasySettingsTweaks.SetRdpEnabled);

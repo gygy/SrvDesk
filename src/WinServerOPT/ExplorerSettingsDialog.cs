@@ -47,6 +47,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         explorerCard.Dock = DockStyle.Top;
         var taskbarCard = BuildTaskbarCard();
         taskbarCard.Dock = DockStyle.Top;
+        // Dock Top：后添加的在上
         body.Controls.Add(taskbarCard);
         body.Controls.Add(explorerCard);
 
@@ -76,8 +77,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             _arrow, _suffix, _shield, _win10Explorer, _classicMenu, _onedrive,
         ];
 
-        var left = Column(leftRows);
-        var launchRow = ComboRow("打开资源管理器时打开：", _launchTo, ["此电脑", "快速访问"]);
+        var launchRow = ThemedSettingsChrome.CreateComboRow("打开资源管理器时打开：", _launchTo, ["此电脑", "快速访问"]);
         _launchTo.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -85,22 +85,19 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
                 _launchTo.SelectedIndex == 0 ? 1 : 2);
         };
 
-        var rightHost = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            Dock = DockStyle.Fill,
-        };
-        rightHost.Controls.Add(launchRow);
-        foreach (var r in rightRows) rightHost.Controls.Add(r);
+        var left = ThemedSettingsChrome.CreateToggleStack();
+        foreach (var r in leftRows) left.Controls.Add(r);
+
+        var right = ThemedSettingsChrome.CreateToggleStack();
+        right.Controls.Add(launchRow);
+        foreach (var r in rightRows) right.Controls.Add(r);
 
         var actions = new FlowLayoutPanel
         {
+            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            AutoSize = true,
-            Width = 190,
+            Padding = new Padding(4, 0, 0, 0),
         };
         actions.Controls.Add(ActionBtn("刷新系统图标缓存", () => DesktopQuickActions.RefreshIconCache(this)));
         actions.Controls.Add(ActionBtn("重启文件资源管理器", DesktopQuickActions.RestartExplorer, accent: true));
@@ -108,42 +105,42 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         actions.Controls.Add(ActionBtn("性能选项...", () => DesktopQuickActions.OpenPerformanceOptions(this)));
         actions.Controls.Add(ActionBtn("桌面图标设置...", () => DesktopQuickActions.OpenDesktopIconSettings(this)));
 
-        var contentH = Math.Max(leftRows.Length, rightRows.Length + 1) * 38 + 48;
-        var inner = new TableLayoutPanel
-        {
-            ColumnCount = 3,
-            Dock = DockStyle.Top,
-            Height = contentH,
-            Padding = new Padding(0, 28, 0, 8),
-        };
-        inner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
-        inner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
-        inner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
-        inner.Controls.Add(left, 0, 0);
-        inner.Controls.Add(rightHost, 1, 0);
-        inner.Controls.Add(actions, 2, 0);
+        var rowCount = Math.Max(leftRows.Length, rightRows.Length + 1);
+        var contentH = rowCount * 38 + 8;
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("文件资源管理器", contentH + 48);
 
-        var card = SectionShell("文件资源管理器", contentH + 36);
-        card.Controls.Add(inner);
+        var cols = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 1,
+        };
+        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
+        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
+        cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20f));
+        cols.Controls.Add(left, 0, 0);
+        cols.Controls.Add(right, 1, 0);
+        cols.Controls.Add(actions, 2, 0);
+        body.Controls.Add(cols);
         return card;
     }
 
     private Panel BuildTaskbarCard()
     {
-        var searchRow = ComboRow("搜索按钮：", _searchMode, ["隐藏", "仅图标", "搜索框"]);
+        var searchRow = ThemedSettingsChrome.CreateComboRow("搜索按钮：", _searchMode, ["隐藏", "仅图标", "搜索框"]);
         _searchMode.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
             EasySettingsTweaks.SetSearchboxMode(_searchMode.SelectedIndex);
         };
-        var alignRow = ComboRow("任务栏对齐：", _align, ["靠左", "居中"]);
+        var alignRow = ThemedSettingsChrome.CreateComboRow("任务栏对齐：", _align, ["靠左", "居中"]);
         _align.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
             SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAl",
                 _align.SelectedIndex == 0 ? 0 : 1);
         };
-        var glomRow = ComboRow("任务栏按钮合并：", _glom, ["始终合并", "任务栏已满时", "从不合并"]);
+        var glomRow = ThemedSettingsChrome.CreateComboRow("任务栏按钮合并：", _glom, ["始终合并", "任务栏已满时", "从不合并"]);
         _glom.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -154,18 +151,10 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         [
             searchRow, _autohide, _taskView, _chat, _copilot, _widgets, alignRow, _seconds, glomRow,
         ];
-        var host = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            Padding = new Padding(0, 28, 0, 8),
-        };
-        foreach (var c in rows) host.Controls.Add(c);
-
-        var card = SectionShell("任务栏设置", rows.Length * 38 + 48);
-        card.Controls.Add(host);
+        var (card, body) = ThemedSettingsChrome.CreateSectionShell("任务栏设置", rows.Length * 38 + 48);
+        var stack = ThemedSettingsChrome.CreateToggleStack();
+        foreach (var c in rows) stack.Controls.Add(c);
+        body.Controls.Add(stack);
         return card;
     }
 
@@ -174,7 +163,6 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private void LoadValues()
     {
         _loading = true;
-        // 仅读本页需要的注册表/服务，避免 Optimizer.Read 全量扫描导致卡顿
         _ext.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt") == 0,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", v ? 0 : 1));
         _fullPath.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath") == 1,
@@ -251,28 +239,15 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private static int DwordCu(string key, string name)
     {
-        using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(key);
+        using var k = Registry.CurrentUser.OpenSubKey(key);
         return k?.GetValue(name) is int i ? i : -1;
     }
 
     private static bool IsShortcutArrowHidden()
     {
-        using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+        using var k = Registry.LocalMachine.OpenSubKey(
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons");
         return k?.GetValue("29") is not null;
-    }
-
-    private static FlowLayoutPanel Column(InstantToggleRow[] rows)
-    {
-        var p = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            Dock = DockStyle.Fill,
-        };
-        foreach (var r in rows) p.Controls.Add(r);
-        return p;
     }
 
     private static void ApplyArrow(bool hide)
@@ -286,47 +261,6 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     {
         using var k = Registry.CurrentUser.CreateSubKey(key);
         k?.SetValue(name, value, RegistryValueKind.DWord);
-    }
-
-    private static Panel SectionShell(string title, int height)
-    {
-        var card = new Panel
-        {
-            Height = height,
-            Dock = DockStyle.Top,
-            BackColor = AppTheme.SurfaceCard,
-            Margin = new Padding(0, 0, 0, 8),
-            Padding = new Padding(10, 6, 10, 8),
-        };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
-        var cap = new Label
-        {
-            Text = title,
-            Dock = DockStyle.Top,
-            Height = 26,
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
-            ForeColor = AppTheme.TextHeader,
-        };
-        card.Controls.Add(cap);
-        return card;
-    }
-
-    private static Panel ComboRow(string label, ComboBox box, string[] items)
-    {
-        var row = new Panel { Height = 36, Width = 420, Margin = new Padding(0, 0, 0, 2) };
-        var l = new Label { Text = label, Location = new Point(4, 8), AutoSize = true };
-        box.DropDownStyle = ComboBoxStyle.DropDownList;
-        box.Items.Clear();
-        box.Items.AddRange(items);
-        box.Location = new Point(200, 5);
-        box.Width = 180;
-        row.Controls.Add(l);
-        row.Controls.Add(box);
-        return row;
     }
 
     private static Control ActionBtn(string text, Action click, bool accent = false)

@@ -26,26 +26,32 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var searchCard = ThemedSettingsChrome.CreateSectionCard("搜索与云内容", 210);
-        var searchHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
-        searchHost.Controls.Add(_cloud);
-        searchHost.Controls.Add(_web);
-        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        var (searchCard, searchHost) = ThemedSettingsChrome.CreateSectionShell("搜索与云内容", 210);
+        var searchStack = ThemedSettingsChrome.CreateToggleStack();
+        searchStack.Controls.Add(_cloud);
+        searchStack.Controls.Add(_web);
+        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Width = 700 };
         fw.Controls.Add(Btn("添加防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         fw.Controls.Add(Btn("移除防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
-        searchHost.Controls.Add(fw);
+        searchStack.Controls.Add(fw);
         var warn = new Label
         {
             Text = "搜索框输入可能上传至微软。勾选上方项并添加防火墙规则可减少上传，一般不影响 Edge 浏览器搜索。",
             AutoSize = false,
-            Size = new Size(700, 36),
+            Size = new Size(700, 40),
             ForeColor = AppTheme.TextMute,
         };
-        searchHost.Controls.Add(warn);
-        searchCard.Controls.Add(searchHost);
+        searchStack.Controls.Add(warn);
+        searchHost.Controls.Add(searchStack);
 
-        var svcCard = ThemedSettingsChrome.CreateSectionCard("Windows Search 服务", 90);
-        var svcHost = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(8, 32, 8, 8) };
+        var (svcCard, svcBody) = ThemedSettingsChrome.CreateSectionShell("Windows Search 服务", 100);
+        var svcHost = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(4),
+        };
         var stop = ThemedSettingsChrome.CreateButton("停止并禁止 Windows Search 服务", false);
         stop.Size = new Size(320, 36);
         stop.Click += (_, _) => { EasySettingsTweaks.SetWindowsSearchEnabled(false); LoadValues(); };
@@ -54,35 +60,43 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         start.Click += (_, _) => { EasySettingsTweaks.SetWindowsSearchEnabled(true); LoadValues(); };
         svcHost.Controls.Add(stop);
         svcHost.Controls.Add(start);
-        svcCard.Controls.Add(svcHost);
+        svcBody.Controls.Add(svcHost);
 
-        var leftCard = ThemedSettingsChrome.CreateSectionCard("隐私和安全（仅当前用户）", 280);
-        var leftHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
-        leftHost.Controls.Add(_history);
-        var tip = new Label { Text = "以下为系统默认开启项，隐私场景建议关闭：", AutoSize = true, ForeColor = AppTheme.TextMute };
-        leftHost.Controls.Add(tip);
-        leftHost.Controls.Add(_ad);
-        leftHost.Controls.Add(_lang);
-        leftHost.Controls.Add(_track);
-        leftHost.Controls.Add(_suggest);
-        leftHost.Controls.Add(_ink);
-        leftCard.Controls.Add(leftHost);
+        var (leftCard, leftBody) = ThemedSettingsChrome.CreateSectionShell("隐私和安全（仅当前用户）", 300);
+        var leftStack = ThemedSettingsChrome.CreateToggleStack();
+        leftStack.Controls.Add(_history);
+        var tip = new Label
+        {
+            Text = "以下为系统默认开启项，隐私场景建议关闭：",
+            AutoSize = false,
+            Height = 28,
+            Width = 400,
+            ForeColor = AppTheme.TextMute,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        leftStack.Controls.Add(tip);
+        leftStack.Controls.Add(_ad);
+        leftStack.Controls.Add(_lang);
+        leftStack.Controls.Add(_track);
+        leftStack.Controls.Add(_suggest);
+        leftStack.Controls.Add(_ink);
+        leftBody.Controls.Add(leftStack);
 
-        var rightCard = ThemedSettingsChrome.CreateSectionCard("更新与其它", 180);
-        var rightHost = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 28, 0, 0) };
-        rightHost.Controls.Add(_delivery);
-        rightHost.Controls.Add(_msrt);
-        rightHost.Controls.Add(_major);
-        rightCard.Controls.Add(rightHost);
+        var (rightCard, rightBody) = ThemedSettingsChrome.CreateSectionShell("更新与其它", 180);
+        var rightStack = ThemedSettingsChrome.CreateToggleStack();
+        rightStack.Controls.Add(_delivery);
+        rightStack.Controls.Add(_msrt);
+        rightStack.Controls.Add(_major);
+        rightBody.Controls.Add(rightStack);
 
-        var cols = new TableLayoutPanel { Dock = DockStyle.Top, Height = 300, ColumnCount = 2 };
+        var cols = new TableLayoutPanel { Dock = DockStyle.Top, Height = 320, ColumnCount = 2 };
         cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
         cols.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        leftCard.Dock = DockStyle.Fill;
+        rightCard.Dock = DockStyle.Fill;
         cols.Controls.Add(leftCard, 0, 0);
         cols.Controls.Add(rightCard, 1, 0);
 
-        rightCard.Dock = DockStyle.Fill;
-        leftCard.Dock = DockStyle.Fill;
         searchCard.Dock = DockStyle.Top;
         svcCard.Dock = DockStyle.Top;
         cols.Dock = DockStyle.Top;
@@ -119,16 +133,23 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         _major.Bind(s.PauseFeatureUpdatesUntil2035, v => { s.PauseFeatureUpdatesUntil2035 = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
     }
 
-    private static Control Btn(string text, Action click)
+    private static Button Btn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         b.AutoSize = true;
-        b.Height = 32;
-        b.Margin = new Padding(4);
+        b.Height = 30;
+        b.Margin = new Padding(0, 4, 8, 4);
         b.Click += (_, _) =>
         {
-            try { click(); MessageBox.Show("已完成。", text, MessageBoxButtons.OK, MessageBoxIcon.Information); }
-            catch (Exception ex) { MessageBox.Show(ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            try
+            {
+                click();
+                MessageBox.Show("已完成。", text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         };
         return b;
     }

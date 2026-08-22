@@ -25,48 +25,29 @@ internal sealed class ContextMenuSettingsDialog : Form
         MinimumSize = new Size(600, 480);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var card = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(12),
-            AutoScroll = true,
-        };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
+        var (card, sectionBody) = ThemedSettingsChrome.CreateSectionShell("右键菜单项");
+        card.Dock = DockStyle.Fill;
 
-        var flow = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Width = 660,
-        };
         InstantToggleRow[] rows =
         [
             _takeOwn, _openCmd, _openPs, _openPsAdmin, _openWt, _openWtAdmin,
             _copyPath, _paint, _notepad, _blockShare,
         ];
-        foreach (var r in rows)
+        for (var i = rows.Length - 1; i >= 0; i--)
         {
-            r.Width = 640;
-            flow.Controls.Add(r);
+            rows[i].Dock = DockStyle.Top;
+            sectionBody.Controls.Add(rows[i]);
         }
 
-        _hint.AutoSize = true;
+        _hint.Dock = DockStyle.Bottom;
+        _hint.Height = 48;
         _hint.ForeColor = AppTheme.TextMute;
-        _hint.MaximumSize = new Size(640, 0);
-        _hint.Margin = new Padding(0, 12, 0, 0);
+        _hint.Padding = new Padding(4, 8, 4, 0);
         _hint.Text = ContextMenuTweaks.TerminalAvailable()
             ? "开关立即写入注册表。文件夹空白处与文件夹本身均可出现「在此处打开」项。"
             : "未检测到 wt.exe：Windows Terminal 相关项开启时会提示先安装终端。";
-        flow.Controls.Add(_hint);
+        sectionBody.Controls.Add(_hint);
 
-        card.Controls.Add(flow);
         body.Controls.Add(card);
 
         ThemedSettingsChrome.MountModal(

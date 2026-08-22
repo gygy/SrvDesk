@@ -1768,6 +1768,7 @@ internal sealed class MainForm : Form
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
+                AutoEllipsis = true,
             };
             _scope = new Label
             {
@@ -1850,17 +1851,18 @@ internal sealed class MainForm : Form
             _wrap = wrap;
             _info.SetBounds(16, (h - 18) / 2, 18, 18);
             var hasScope = Help.Scope.HasBadge;
+            var textW = Math.Max(180, width - 36 - 56 - 168 - 24);
             if (hasScope)
             {
-                _item.SetBounds(36, 4, 384, 20);
-                _scope.SetBounds(36, 24, 420, 16);
+                _item.SetBounds(36, 4, textW, 20);
+                _scope.SetBounds(36, 24, textW + 20, 16);
             }
             else
             {
-                _item.SetBounds(36, 0, 384, h);
+                _item.SetBounds(36, 0, textW, h);
             }
-            _toggle.Location = new Point(500, (h - _toggle.Height) / 2);
-            _system.SetBounds(628, 0, 160, h);
+            _toggle.Location = new Point(Math.Max(200, width - 56 - 168 - 40), (h - _toggle.Height) / 2);
+            _system.SetBounds(Math.Max(280, width - 168), 0, 160, h);
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
