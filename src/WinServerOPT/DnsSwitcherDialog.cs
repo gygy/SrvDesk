@@ -163,8 +163,8 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             foreach (var a in DnsAdapterHelper.ListIpEnabledAdapters())
             {
                 var i = _adapters.Items.Add(a);
-                // 默认只勾选已连接、且不像虚拟网卡的项
-                _adapters.SetItemChecked(i, a.IsUp && !a.LikelyVirtual);
+                // 默认只勾选已连接、已启用 IP、且不像虚拟网卡的项
+                _adapters.SetItemChecked(i, a.IsUp && a.IpEnabled && !a.LikelyVirtual);
             }
             if (_adapters.Items.Count == 0)
                 _hint.Text = "未找到已启用 IP 的网卡。";
@@ -186,7 +186,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         for (var i = 0; i < _adapters.Items.Count; i++)
         {
             if (_adapters.Items[i] is DnsAdapterInfo a)
-                _adapters.SetItemChecked(i, a.IsUp && !a.LikelyVirtual);
+                _adapters.SetItemChecked(i, a.IsUp && a.IpEnabled && !a.LikelyVirtual);
         }
     }
 
@@ -201,16 +201,20 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         try
         {
             var indexes = new List<int>();
+            var settingIds = new List<string>();
             var names = new List<string>();
             for (var i = 0; i < _adapters.Items.Count; i++)
             {
                 if (!_adapters.GetItemChecked(i)) continue;
                 if (_adapters.Items[i] is not DnsAdapterInfo a) continue;
-                indexes.Add(a.Index);
+                if (!a.IpEnabled)
+                    throw new InvalidOperationException($"「{a.Name}」未启用 IP，无法设置 DNS。请先在网络连接中启用该网卡。");
+                indexes.Add(a.ConfigIndex);
+                if (a.SettingId.Length > 0) settingIds.Add(a.SettingId);
                 names.Add(a.Name);
             }
 
-            if (indexes.Count == 0)
+            if (indexes.Count == 0 && settingIds.Count == 0)
                 throw new InvalidOperationException("请先勾选要修改的网卡。");
 
             string[]? servers = null;
@@ -222,7 +226,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
                 if (servers.Length == 0) throw new InvalidOperationException("请填写 DNS 地址。");
             }
 
-            var count = DnsAdapterHelper.ApplyDns(indexes, servers);
+            var count = DnsAdapterHelper.ApplyDns(indexes, settingIds, servers);
             HostsFileHelper.FlushDns();
             RefreshAdapters();
             ApplyLog.Write($"DNS → {string.Join(", ", names)} / {_preset.Text}");
