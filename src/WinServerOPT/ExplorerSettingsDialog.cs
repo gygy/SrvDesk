@@ -189,48 +189,13 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _copilot.Bind(bits.HideTaskbarCopilot, v => { bits.HideTaskbarCopilot = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
 
         _arrow.Bind(IsShortcutArrowHidden(), ApplyArrow);
-        _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), v =>
-        {
-            bits.NoShortcutSuffix = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), v =>
-        {
-            bits.RemoveAdminShield = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _win10Explorer.Bind(!Win11DesktopTweaks.IsWin11ExplorerStyleOn(), v =>
-        {
-            bits.Win11ExplorerStyle = !v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _classicMenu.Bind(Win11DesktopTweaks.IsWin10ClassicContextMenuOn(), v =>
-        {
-            bits.Win10ClassicContextMenu = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _autohide.Bind(Win11DesktopTweaks.IsTaskbarAutoHideOn(), v =>
-        {
-            bits.TaskbarAutoHide = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), v =>
-        {
-            bits.ShowTaskViewButton = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
-        _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), v =>
-        {
-            bits.DisableWidgets = v;
-            bits.TaskbarSearchMode = _searchMode.SelectedIndex;
-            Win11DesktopTweaks.Apply(bits);
-        });
+        _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), Win11DesktopTweaks.SetNoShortcutSuffix);
+        _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), Win11DesktopTweaks.SetRemoveAdminShield);
+        _win10Explorer.Bind(!Win11DesktopTweaks.IsWin11ExplorerStyleOn(), Win11DesktopTweaks.SetCompactExplorerSpacing);
+        _classicMenu.Bind(Win11DesktopTweaks.IsWin10ClassicContextMenuOn(), Win11DesktopTweaks.SetWin10ClassicContextMenu);
+        _autohide.Bind(Win11DesktopTweaks.IsTaskbarAutoHideOn(), Win11DesktopTweaks.SetTaskbarAutoHideEnabled);
+        _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), Win11DesktopTweaks.SetShowTaskViewButton);
+        _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), Win11DesktopTweaks.SetDisableWidgets);
         _seconds.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock") == 1,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", v ? 1 : 0));
 

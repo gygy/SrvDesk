@@ -350,7 +350,8 @@ internal static class ServerDesktopTweaks
     {
         foreach (var (name, state) in EnumerateDismFeatures())
         {
-            if (IsRsatFeature(name) && state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (IsRsatFeature(name) &&
+                (state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0 || state.Contains("已启用")))
                 DismDisable(name);
         }
     }
@@ -370,11 +371,16 @@ internal static class ServerDesktopTweaks
         string? current = null;
         foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
-            if (line.StartsWith("Feature Name : ", StringComparison.OrdinalIgnoreCase))
-                current = line.Substring("Feature Name : ".Length).Trim();
-            else if (line.StartsWith("State : ", StringComparison.OrdinalIgnoreCase) && current != null)
+            var trimmed = line.Trim();
+            var idx = trimmed.IndexOf(':');
+            if (idx <= 0) continue;
+            var label = trimmed.Substring(0, idx).Trim();
+            var value = trimmed.Substring(idx + 1).Trim();
+            if (label.Equals("Feature Name", StringComparison.OrdinalIgnoreCase) || label.Contains("功能名称"))
+                current = value;
+            else if ((label.Equals("State", StringComparison.OrdinalIgnoreCase) || label.Contains("状态")) && current != null)
             {
-                yield return (current, line.Substring("State : ".Length).Trim());
+                yield return (current, value);
                 current = null;
             }
         }

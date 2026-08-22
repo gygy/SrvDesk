@@ -802,7 +802,9 @@ internal sealed class MainForm : Form
         {
             var show = row.MatchesFilter(query, _systemFacts, hideDe);
             row.SetVisible(show);
-            if (show) visible++;
+            if (!show) continue;
+            row.SetLocationY(visible * rowH);
+            visible++;
         }
         _activeBody.Height = Math.Max(visible, 1) * rowH;
         _activeSection.Height = headerH + _activeBody.Height;
@@ -983,6 +985,8 @@ internal sealed class MainForm : Form
         if (!page.IsHandleCreated) page.Show();
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
+        if (page is IEmbeddedSettingsPage embedded)
+            BeginInvoke(new Action(embedded.RefreshFromSystem));
     }
 
     private void RefreshEmbeddedPageIfVisible()
@@ -1045,7 +1049,7 @@ internal sealed class MainForm : Form
     }
 
     private int ContentWidth() =>
-        Math.Max(760, _contentHost.ClientSize.Width - _contentHost.Padding.Horizontal);
+        Math.Max(800, _contentHost.ClientSize.Width - _contentHost.Padding.Horizontal);
 
     private void LayoutContent()
     {
@@ -1823,6 +1827,11 @@ internal sealed class MainForm : Form
         public void SetVisible(bool visible)
         {
             if (_wrap is not null) _wrap.Visible = visible;
+        }
+
+        public void SetLocationY(int y)
+        {
+            if (_wrap is not null) _wrap.Top = y;
         }
 
         public void SetSelected(bool selected)

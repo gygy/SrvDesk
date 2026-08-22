@@ -53,19 +53,21 @@ internal static class WindowsFeaturesHelper
         foreach (var raw in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var line = raw.Trim();
-            if (line.StartsWith("Feature Name :", StringComparison.OrdinalIgnoreCase))
-                name = line.Substring(line.IndexOf(':') + 1).Trim();
-            else if (line.StartsWith("State :", StringComparison.OrdinalIgnoreCase) && name is not null)
+            if (TryReadLabeledValue(line, out var label, out var value))
             {
-                var state = line.Substring(line.IndexOf(':') + 1).Trim();
-                list.Add(new WinFeatureItem
+                if (IsFeatureNameLabel(label))
+                    name = value;
+                else if (IsStateLabel(label) && name is not null)
                 {
-                    Name = name,
-                    State = state,
-                    Kind = WinFeatureKind.OptionalFeature,
-                    IsEnabledOrInstalled = state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0,
-                });
-                name = null;
+                    list.Add(new WinFeatureItem
+                    {
+                        Name = name,
+                        State = value,
+                        Kind = WinFeatureKind.OptionalFeature,
+                        IsEnabledOrInstalled = IsEnabledState(value),
+                    });
+                    name = null;
+                }
             }
         }
         return list;
@@ -82,23 +84,64 @@ internal static class WindowsFeaturesHelper
         foreach (var raw in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var line = raw.Trim();
-            if (line.StartsWith("Capability Identity :", StringComparison.OrdinalIgnoreCase) ||
-                line.StartsWith("Capability Name :", StringComparison.OrdinalIgnoreCase))
-                name = line.Substring(line.IndexOf(':') + 1).Trim();
-            else if (line.StartsWith("State :", StringComparison.OrdinalIgnoreCase) && name is not null)
+            if (TryReadLabeledValue(line, out var label, out var value))
             {
-                var state = line.Substring(line.IndexOf(':') + 1).Trim();
-                list.Add(new WinFeatureItem
+                if (IsCapabilityNameLabel(label))
+                    name = value;
+                else if (IsStateLabel(label) && name is not null)
                 {
-                    Name = name,
-                    State = state,
-                    Kind = WinFeatureKind.Capability,
-                    IsEnabledOrInstalled = state.IndexOf("Installed", StringComparison.OrdinalIgnoreCase) >= 0,
-                });
-                name = null;
+                    list.Add(new WinFeatureItem
+                    {
+                        Name = name,
+                        State = value,
+                        Kind = WinFeatureKind.Capability,
+                        IsEnabledOrInstalled = IsInstalledState(value),
+                    });
+                    name = null;
+                }
             }
         }
         return list;
+    }
+
+    private static bool TryReadLabeledValue(string line, out string label, out string value)
+    {
+        label = "";
+        value = "";
+        var idx = line.IndexOf(':');
+        if (idx <= 0) return false;
+        label = line.Substring(0, idx).Trim();
+        value = line.Substring(idx + 1).Trim();
+        return label.Length > 0;
+    }
+
+    private static bool IsFeatureNameLabel(string label) =>
+        label.Equals("Feature Name", StringComparison.OrdinalIgnoreCase) ||
+        label.Contains("功能名称");
+
+    private static bool IsCapabilityNameLabel(string label) =>
+        label.Equals("Capability Identity", StringComparison.OrdinalIgnoreCase) ||
+        label.Equals("Capability Name", StringComparison.OrdinalIgnoreCase) ||
+        label.Contains("功能标识") || label.Contains("功能名称") || label.Contains("能力");
+
+    private static bool IsStateLabel(string label) =>
+        label.Equals("State", StringComparison.OrdinalIgnoreCase) ||
+        label.Contains("状态");
+
+    private static bool IsEnabledState(string state)
+    {
+        if (state.Contains("未启用") || state.IndexOf("Disabled", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+        return state.IndexOf("Enabled", StringComparison.OrdinalIgnoreCase) >= 0
+            || state.Contains("已启用");
+    }
+
+    private static bool IsInstalledState(string state)
+    {
+        if (state.Contains("未安装") || state.IndexOf("Not Present", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+        return state.IndexOf("Installed", StringComparison.OrdinalIgnoreCase) >= 0
+            || state.Contains("已安装");
     }
 
     public static bool IsCritical(string name) =>

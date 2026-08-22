@@ -88,6 +88,19 @@ internal static class Win11DesktopTweaks
 
     public static bool IsPauseFeatureUpdatesUntil2035On() => IsFeatureUpdatePausedUntil2035();
 
+    public static void SetNoShortcutSuffix(bool on) => SetShortcutSuffixOff(on);
+    public static void SetRemoveAdminShield(bool on) => SetShellIconBlank(77, on);
+    public static void SetCompactExplorerSpacing(bool compactWin10) =>
+        SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", compactWin10 ? 1 : 0);
+    public static void SetWin10ClassicContextMenu(bool classic) => SetClassicContextMenu(classic);
+    public static void SetTaskbarAutoHideEnabled(bool hide) => SetTaskbarAutoHide(hide);
+    public static void SetShowTaskViewButton(bool show) =>
+        SetDword(Hive.HkCu, ExplorerAdvanced, "ShowTaskViewButton", show ? 1 : 0);
+    public static void SetDisableWidgets(bool disable) =>
+        SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarDa", disable ? 0 : 1);
+    public static void SetTaskbarAlignLeft(bool left) =>
+        SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", left ? 0 : 1);
+
     private static bool IsShellIconBlank(int index)
     {
         var val = GetValue(Hive.HkLm, ShellIcons, index.ToString()) as string;
@@ -111,7 +124,7 @@ internal static class Win11DesktopTweaks
 
     private static void SetShortcutSuffixOff(bool disable)
     {
-        using var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer", writable: true);
+        using var k = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer");
         if (k is null) return;
         if (disable)
             k.SetValue("Link", new byte[] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
