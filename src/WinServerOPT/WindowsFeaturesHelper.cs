@@ -47,8 +47,9 @@ internal static class WindowsFeaturesHelper
         var list = new List<WinFeatureItem>();
         string output;
         try { output = RunCapture("dism.exe", "/online /Get-Features /Format:List"); }
-        catch { return list; }
+        catch (Exception ex) { throw new InvalidOperationException("无法运行 DISM：" + ex.Message, ex); }
 
+        EnsureDismReadable(output);
         string? name = null;
         foreach (var raw in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -78,8 +79,9 @@ internal static class WindowsFeaturesHelper
         var list = new List<WinFeatureItem>();
         string output;
         try { output = RunCapture("dism.exe", "/online /Get-Capabilities /Format:List"); }
-        catch { return list; }
+        catch (Exception ex) { throw new InvalidOperationException("无法运行 DISM：" + ex.Message, ex); }
 
+        EnsureDismReadable(output);
         string? name = null;
         foreach (var raw in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -102,6 +104,25 @@ internal static class WindowsFeaturesHelper
             }
         }
         return list;
+    }
+
+    private static void EnsureDismReadable(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+            throw new InvalidOperationException("DISM 无输出。请确认以管理员运行本程序。");
+        if (Regex.IsMatch(output, @"Error:\s*740", RegexOptions.IgnoreCase) ||
+            output.Contains("错误: 740") || output.Contains("需要提升") ||
+            output.IndexOf("elevation", StringComparison.OrdinalIgnoreCase) >= 0)
+            throw new InvalidOperationException("DISM 需要管理员权限。请右键「以管理员身份运行」本程序后重试。");
+        if (Regex.IsMatch(output, @"Error:\s*0x", RegexOptions.IgnoreCase) ||
+            Regex.IsMatch(output, @"错误:\s*0x"))
+        {
+            var err = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(l =>
+                    l.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0 || l.Contains("错误"))
+                ?? "DISM 返回错误";
+            throw new InvalidOperationException(err.Trim());
+        }
     }
 
     private static bool TryReadLabeledValue(string line, out string label, out string value)

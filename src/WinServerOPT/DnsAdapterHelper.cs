@@ -185,7 +185,8 @@ internal static class DnsAdapterHelper
                 var index = Convert.ToInt32(mo["Index"] ?? -1);
                 var settingId = NormalizeGuid(Convert.ToString(mo["SettingID"]));
                 var matchById = settingId.Length > 0 && idSet.Contains(settingId);
-                var matchByIndex = !matchById && idSet.Count == 0 && indexSet.Contains(index);
+                var matchByIndex = index >= 0 && indexSet.Contains(index);
+                // SettingId 与 Index 可并存（部分网卡无 GUID）；同一配置对象只处理一次
                 if (!matchById && !matchByIndex) continue;
                 if (mo["IPEnabled"] is not true)
                 {

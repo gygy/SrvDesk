@@ -86,11 +86,17 @@ internal static class EasySettingsTweaks
         ReadExplorerOnly(s);
 
         s.DisableCloudSearch = DwordEquals(Hive.HkLm, SearchPol, "AllowCloudSearch", 0);
+        s.DisableWebSearch = DwordEquals(Hive.HkLm, SearchPol, "DisableWebSearch", 1)
+            || DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", 0);
+        s.DisableSearchHistory = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", 0);
         s.DisableWebsiteLangList = DwordEquals(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", 1);
         s.DisableAppLaunchTracking = DwordEquals(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", 0);
         s.DisableSettingsSuggestions = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", 0);
         s.DisableInkingPersonalization = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", 1);
+        s.DisableAdTracking = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0);
+        s.DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100);
         s.ExcludeMsrtFromWu = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", 1);
+        s.PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On();
 
         s.DisableMeltdownSpectre = IsMeltdownSpectreDisabled();
         s.DisableMemoryIntegrity = DwordEquals(Hive.HkLm, Hvci, "Enabled", 0);
