@@ -469,9 +469,10 @@ internal sealed class MainForm : Form
     {
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
+        // 资源管理器控件最多，优先预创建句柄并预读状态
         var titles = new[] { "资源管理器", "系统服务", "登录启动项", "DNS 设置" };
         var i = 0;
-        var timer = new System.Windows.Forms.Timer { Interval = 80 };
+        var timer = new System.Windows.Forms.Timer { Interval = 40 };
         timer.Tick += (_, _) =>
         {
             if (i >= titles.Length)
@@ -498,6 +499,10 @@ internal sealed class MainForm : Form
                 page.ControlBox = false;
                 page.Dock = DockStyle.Fill;
                 page.Visible = false;
+                // 空闲时创建窗口句柄，避免首次点开时同步 CreateHandle
+                page.CreateControl();
+                if (page is IEmbeddedSettingsPage embedded)
+                    embedded.RefreshFromSystem();
                 _pageCache[title] = page;
             }
             catch
@@ -987,8 +992,13 @@ internal sealed class MainForm : Form
         if (!page.IsHandleCreated) page.Show();
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
+        // 预热已读过值时跳过紧挨着的二次刷新，避免与首次布局叠卡；再次进入仍刷新
         if (page is IEmbeddedSettingsPage embedded)
-            BeginInvoke(new Action(embedded.RefreshFromSystem));
+        {
+            var needRefresh = page is not ExplorerSettingsDialog ex || !ex.ConsumeWarmLoadSkip();
+            if (needRefresh)
+                BeginInvoke(new Action(embedded.RefreshFromSystem));
+        }
     }
 
     private void RefreshEmbeddedPageIfVisible()

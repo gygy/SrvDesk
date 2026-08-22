@@ -32,6 +32,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly ComboBox _glom = new();
     private bool _loading;
     private bool _loaded;
+    private bool _warmLoadSkip;
 
     public ExplorerSettingsDialog()
     {
@@ -59,9 +60,16 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         Shown += (_, _) =>
         {
             if (_loaded) return;
-            _loaded = true;
             BeginInvoke(new Action(LoadValues));
         };
+    }
+
+    /// <summary>预热已加载过：首次挂到主界面时跳过立刻再刷一次。</summary>
+    public bool ConsumeWarmLoadSkip()
+    {
+        if (!_warmLoadSkip) return false;
+        _warmLoadSkip = false;
+        return true;
     }
 
     private Panel BuildExplorerCard()
@@ -164,16 +172,34 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         return card;
     }
 
-    public void RefreshFromSystem() => LoadValues();
+    public void RefreshFromSystem()
+    {
+        LoadValues();
+        _warmLoadSkip = true;
+    }
 
     private void LoadValues()
     {
         _loading = true;
-        _ext.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt") == 0,
+        // 合并 Advanced 键读取，减少反复 OpenSubKey
+        int hideExt = -1, fullPath = -1, hidden = -1, seconds = -1, launchTo = -1;
+        using (var adv = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"))
+        {
+            if (adv is not null)
+            {
+                hideExt = adv.GetValue("HideFileExt") is int a ? a : -1;
+                fullPath = adv.GetValue("FullPath") is int b ? b : -1;
+                hidden = adv.GetValue("Hidden") is int c ? c : -1;
+                seconds = adv.GetValue("ShowSecondsInSystemClock") is int d ? d : -1;
+                launchTo = adv.GetValue("LaunchTo") is int e ? e : -1;
+            }
+        }
+
+        _ext.Bind(hideExt == 0,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", v ? 0 : 1));
-        _fullPath.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath") == 1,
+        _fullPath.Bind(fullPath == 1,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", v ? 1 : 0));
-        _hidden.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden") == 1,
+        _hidden.Bind(hidden == 1,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", v ? 1 : 2));
 
         var bits = new Optimizer.State();
@@ -196,16 +222,17 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _autohide.Bind(Win11DesktopTweaks.IsTaskbarAutoHideOn(), Win11DesktopTweaks.SetTaskbarAutoHideEnabled);
         _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), Win11DesktopTweaks.SetShowTaskViewButton);
         _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), Win11DesktopTweaks.SetDisableWidgets);
-        _seconds.Bind(DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock") == 1,
+        _seconds.Bind(seconds == 1,
             v => SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock", v ? 1 : 0));
 
-        _launchTo.SelectedIndex = DwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo") == 1 ? 0 : 1;
+        _launchTo.SelectedIndex = launchTo == 1 ? 0 : 1;
         var mode = EasySettingsTweaks.GetSearchboxMode();
         _searchMode.SelectedIndex = mode is 0 or 1 or 2 ? mode : 1;
         _align.SelectedIndex = Win11DesktopTweaks.IsTaskbarAlignLeftOn() ? 0 : 1;
         var glom = EasySettingsTweaks.GetTaskbarGlomLevel();
         _glom.SelectedIndex = glom is 0 or 1 or 2 ? glom : 0;
         _loading = false;
+        _loaded = true;
     }
 
     private static int DwordCu(string key, string name)

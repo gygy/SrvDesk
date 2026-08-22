@@ -70,15 +70,23 @@ internal static class EasySettingsTweaks
     /// <summary>仅读资源管理器页开关（纯注册表，无 PowerShell/netsh）。</summary>
     public static void ReadExplorerOnly(Optimizer.State s)
     {
-        s.HideProtectedOsFiles = DwordEquals(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", 0);
-        s.AlwaysShowIconsNeverThumbnails = DwordEquals(Hive.HkCu, ExplorerAdv, "IconsOnly", 1);
-        s.ShowEmptyDrives = !DwordEquals(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", 1);
-        s.ShowRecentFiles = !DwordEquals(Hive.HkCu, Explorer, "ShowRecent", 0);
-        s.ShowFrequentPlaces = !DwordEquals(Hive.HkCu, Explorer, "ShowFrequent", 0);
-        s.HideOfficeCloudFiles = DwordEquals(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", 0);
+        using (var adv = OpenKey(Hive.HkCu, ExplorerAdv))
+        {
+            s.HideProtectedOsFiles = DwordEquals(adv, "ShowSuperHidden", 0);
+            s.AlwaysShowIconsNeverThumbnails = DwordEquals(adv, "IconsOnly", 1);
+            s.ShowEmptyDrives = !DwordEquals(adv, "HideDrivesWithNoMedia", 1);
+            s.HideOfficeCloudFiles = DwordEquals(adv, "ShowCloudFilesInQuickAccess", 0);
+            s.HideTaskbarChat = DwordEquals(adv, "TaskbarMn", 0);
+            s.HideTaskbarCopilot = DwordEquals(adv, "TaskbarCo", 0);
+        }
+
+        using (var exp = OpenKey(Hive.HkCu, Explorer))
+        {
+            s.ShowRecentFiles = !DwordEquals(exp, "ShowRecent", 0);
+            s.ShowFrequentPlaces = !DwordEquals(exp, "ShowFrequent", 0);
+        }
+
         s.DisableOneDrive = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", 1);
-        s.HideTaskbarChat = DwordEquals(Hive.HkCu, ExplorerAdv, "TaskbarMn", 0);
-        s.HideTaskbarCopilot = DwordEquals(Hive.HkCu, ExplorerAdv, "TaskbarCo", 0);
     }
 
     public static void ReadInto(Optimizer.State s)
@@ -373,12 +381,20 @@ internal static class EasySettingsTweaks
     private static bool DwordEquals(Hive hive, string key, string name, int expected) =>
         GetDword(hive, key, name) == expected;
 
-    private static int GetDword(Hive hive, string key, string name)
+    private static bool DwordEquals(RegistryKey? key, string name, int expected) =>
+        key?.GetValue(name) is int i && i == expected;
+
+    private static RegistryKey? OpenKey(Hive hive, string key)
     {
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
-        using var k = baseKey.OpenSubKey(key);
+        return baseKey.OpenSubKey(key);
+    }
+
+    private static int GetDword(Hive hive, string key, string name)
+    {
+        using var k = OpenKey(hive, key);
         return k?.GetValue(name) switch
         {
             int i => i,

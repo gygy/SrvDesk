@@ -93,29 +93,18 @@ internal sealed class InstantToggleRow : Panel
         try
         {
             const int gap = 10;
+            const int rowH = 36;
             var toggleW = _toggle.Width;
             var labelLeft = 4;
             var labelWidth = Math.Max(80, ClientSize.Width - labelLeft - toggleW - gap - 4);
 
-            _label.Left = labelLeft;
-            _label.Width = labelWidth;
-
-            var measured = TextRenderer.MeasureText(
-                _label.Text,
-                _label.Font,
-                new Size(labelWidth, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix);
-
-            var contentH = Math.Max(26, measured.Height);
-            var rowH = Math.Max(36, contentH + 10);
-            _label.Height = rowH;
-            _label.Top = 0;
-
+            _label.SetBounds(labelLeft, 0, labelWidth, rowH);
             _toggle.Left = labelLeft + labelWidth + gap;
             _toggle.Top = Math.Max(4, (rowH - _toggle.Height) / 2);
             if (_toggle.Right > ClientSize.Width - 2)
                 _toggle.Left = Math.Max(labelLeft, ClientSize.Width - toggleW - 2);
 
+            // 固定行高：避免 MeasureText + 改 Height 触发 FlowLayout 连锁重排（首次打开卡顿主因）
             if (Height != rowH)
                 Height = rowH;
         }
