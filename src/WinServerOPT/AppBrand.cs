@@ -7,6 +7,24 @@ namespace WinOpt;
 /// </summary>
 internal static class AppBrand
 {
+    public const string ProductName = "Windows server优化助手SrvDesk";
+    public const string ShortName = "SrvDesk";
+
+    public static string ExeFileName => $"{ShortName}.exe";
+
+    public static string AboutDialogTitle => $"关于 {ProductName}";
+
+    public static string VersionText
+    {
+        get
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                ?? asm.GetName().Version?.ToString(3)
+                ?? "1.0";
+        }
+    }
+
     private static Icon? _applicationIcon;
 
     public static Icon ApplicationIcon => _applicationIcon ??= LoadApplicationIcon();

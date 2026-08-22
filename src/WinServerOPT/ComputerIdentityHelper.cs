@@ -106,7 +106,7 @@ internal static class ComputerIdentityHelper
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
             FileName = "shutdown.exe",
-            Arguments = $"/r /t {seconds} /c \"Win一键优化：计算机名/工作组已更改，系统即将重启\"",
+            Arguments = $"/r /t {seconds} /c \"{AppBrand.ProductName}：计算机名/工作组已更改，系统即将重启\"",
             UseShellExecute = false,
             CreateNoWindow = true,
         });

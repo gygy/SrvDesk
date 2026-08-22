@@ -9,10 +9,10 @@
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <AssemblyName>Win一键优化</AssemblyName>
+    <AssemblyName>SrvDesk</AssemblyName>
     <RootNamespace>WinOpt</RootNamespace>
-    <Title>Win一键优化</Title>
-    <Product>Win一键优化</Product>
+    <Title>Windows server优化助手SrvDesk</Title>
+    <Product>Windows server优化助手SrvDesk</Product>
     <Company>WinOpt</Company>
     <Authors>WinOpt</Authors>
     <Copyright>Copyright (c) 2026 WinOpt</Copyright>

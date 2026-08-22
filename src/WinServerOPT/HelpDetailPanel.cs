@@ -90,7 +90,7 @@ internal sealed class HelpDetailPanel : Panel
     public void ShowUsageGuide()
     {
         _caption.Text = "帮助 · 使用说明";
-        _title.Text = "Win一键优化 使用说明";
+        _title.Text = $"{AppBrand.ProductName} 使用说明";
         _summary.Text = "面向 Windows Server 桌面化场景的一键注册表/服务/DISM 优化工具。";
         BuildSections([
             ("工作流程", "1. 选择左侧分类 → 2. 勾选推荐项或载入预设 → 3. 点击「应用推荐」写入系统。"),

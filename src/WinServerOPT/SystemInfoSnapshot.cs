@@ -30,7 +30,7 @@ internal static class SystemInfoSnapshot
     public static string ToText(IReadOnlyList<SystemInfoRow> rows)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Win一键优化 · 系统信息");
+        sb.AppendLine($"{AppBrand.ProductName} · 系统信息");
         sb.AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
         string? group = null;
         foreach (var r in rows)

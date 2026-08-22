@@ -90,7 +90,7 @@ internal sealed class AppMenuStrip : MenuStrip
         HelpUsage = new ToolStripMenuItem("使用说明", null, null, Keys.F1);
         HelpLegend = new ToolStripMenuItem("标识图例...");
         HelpLog = new ToolStripMenuItem("打开操作日志");
-        HelpAbout = new ToolStripMenuItem("关于 Win一键优化...");
+        HelpAbout = new ToolStripMenuItem($"关于 {AppBrand.ProductName}...");
         help.DropDownItems.AddRange([HelpUsage, HelpLegend, new ToolStripSeparator(), HelpLog, HelpAbout]);
 
         Items.AddRange([file, preset, tools, view, help]);

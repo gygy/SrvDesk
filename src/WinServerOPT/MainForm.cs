@@ -235,7 +235,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Win一键优化";
+        Text = AppBrand.ProductName;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(980, 720);
         ClientSize = new Size(1080, 760);
@@ -675,8 +675,8 @@ internal sealed class MainForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = "WinOpt 配置 (*.json)|*.json",
-            FileName = "WinOpt-配置.json",
+            Filter = "SrvDesk 配置 (*.json)|*.json",
+            FileName = "SrvDesk-配置.json",
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
@@ -696,7 +696,7 @@ internal sealed class MainForm : Form
     {
         using var dlg = new OpenFileDialog
         {
-            Filter = "WinOpt 配置 (*.json)|*.json",
+            Filter = "SrvDesk 配置 (*.json)|*.json",
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
@@ -886,12 +886,12 @@ internal sealed class MainForm : Form
 
         var brand = new Label
         {
-            Text = "Win一键优化",
+            Text = AppBrand.ProductName,
             AutoSize = false,
-            Location = new Point(54, 6),
-            Size = new Size(200, 28),
+            Location = new Point(54, 8),
+            Size = new Size(420, 24),
             ForeColor = AppTheme.TextOnPrimary,
-            Font = new Font("Microsoft YaHei UI", 12.5F, FontStyle.Bold),
+            Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
         };
@@ -909,7 +909,11 @@ internal sealed class MainForm : Form
         header.Controls.Add(_headerSubtitle);
         header.Controls.Add(brand);
         header.Controls.Add(logo);
-        header.Resize += (_, _) => _headerSubtitle.Width = Math.Max(200, header.Width - 68);
+        header.Resize += (_, _) =>
+        {
+            brand.Width = Math.Max(280, header.Width - 68);
+            _headerSubtitle.Width = Math.Max(200, header.Width - 68);
+        };
         return header;
     }
 
@@ -1859,15 +1863,15 @@ internal sealed class MainForm : Form
     private void ShowAboutDialog()
     {
         MessageBox.Show(
-            "Win一键优化 v1.0\r\n" +
+            $"{AppBrand.ProductName} v{AppBrand.VersionText}\r\n" +
             "针对 Windows Server 2022/2025 个人桌面场景。\r\n\r\n" +
             "系统：" + _systemFacts.Summary + "\r\n" +
             "计算机：" + ComputerIdentityHelper.Read().Summary + "\r\n" +
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
             "操作日志：" + ApplyLog.LogFilePath + "\r\n\r\n" +
             "预设方案对标 WinUtil；配置 JSON 导入导出。\r\n" +
-            "CLI：Win一键优化.exe --apply-preset server-desktop",
-            "关于 Win一键优化",
+            $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
+            AppBrand.AboutDialogTitle,
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
     }

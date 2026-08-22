@@ -13,7 +13,7 @@ internal static class SystemToolLauncher
     public static void OpenWindowsPowerShell(IWin32Window? owner) =>
         OpenExecutable(owner,
             Path.Combine(SystemDir, "WindowsPowerShell", "v1.0", "powershell.exe"),
-            "-NoExit -Command \"Write-Host 'Win一键优化 · Windows PowerShell' -ForegroundColor Cyan\"",
+            $"-NoExit -Command \"Write-Host '{AppBrand.ProductName} · Windows PowerShell' -ForegroundColor Cyan\"",
             "Windows PowerShell");
 
     public static void OpenTaskScheduler(IWin32Window? owner) =>

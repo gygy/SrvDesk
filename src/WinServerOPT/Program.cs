@@ -37,7 +37,7 @@ static class Program
                 case "--help":
                 case "-h":
                     Console.WriteLine(
-                        "Win一键优化 CLI（需管理员）\r\n\r\n" +
+                        $"{AppBrand.ProductName} CLI（需管理员）\r\n\r\n" +
                         "  --apply-preset <id>      应用预设（server-desktop/security/remote-work/minimal）\r\n" +
                         "  --load-profile <file>    从 JSON 配置应用\r\n" +
                         "  --export-profile <file>  导出当前系统状态为配置\r\n" +
