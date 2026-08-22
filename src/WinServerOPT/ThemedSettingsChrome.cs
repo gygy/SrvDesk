@@ -6,29 +6,36 @@ internal sealed class InstantToggleRow : Panel
     private readonly Label _label;
     private bool _suppress;
     private Action<bool>? _apply;
-    private bool _layouting;
 
     public InstantToggleRow(string title)
     {
         Title = title;
         Height = 36;
-        Dock = DockStyle.Top;
         MinimumSize = new Size(200, 36);
         Margin = new Padding(0, 0, 0, 4);
         Padding = new Padding(4, 0, 8, 0);
         BackColor = Color.Transparent;
 
-        // 文字在左、开关在右（避免贴左被裁切，也避免 Label 盖住开关）
+        // Dock 布局：右侧固定槽放开关，文字填满左侧；行高恒定，不在 Resize 里改尺寸
+        var right = new Panel
+        {
+            Dock = DockStyle.Right,
+            Width = 64,
+            Padding = new Padding(4, 5, 0, 5),
+            BackColor = Color.Transparent,
+        };
+        _toggle.Dock = DockStyle.Fill;
+        right.Controls.Add(_toggle);
+
         _label = new Label
         {
             Text = title,
-            AutoSize = false,
-            Location = new Point(4, 0),
-            Size = new Size(200, 36),
+            Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
             Cursor = Cursors.Hand,
             BackColor = Color.Transparent,
             AutoEllipsis = false,
+            Padding = new Padding(0, 0, 8, 0),
         };
         _label.Click += (_, _) => _toggle.Checked = !_toggle.Checked;
         _toggle.CheckedChanged += (_, _) =>
@@ -44,8 +51,7 @@ internal sealed class InstantToggleRow : Panel
             }
         };
         Controls.Add(_label);
-        Controls.Add(_toggle); // 后添加 = 最上层
-        Resize += (_, _) => LayoutLabel();
+        Controls.Add(right);
         ParentChanged += (_, _) =>
         {
             if (Parent is null) return;
@@ -78,40 +84,13 @@ internal sealed class InstantToggleRow : Panel
 
     private void SyncWidthToParent()
     {
-        if (Parent is FlowLayoutPanel flp && flp.FlowDirection == FlowDirection.TopDown)
-        {
-            var w = Math.Max(MinimumSize.Width, flp.ClientSize.Width - Margin.Horizontal - 4);
-            if (Width != w) Width = w;
-        }
-        LayoutLabel();
-    }
-
-    private void LayoutLabel()
-    {
-        if (_layouting) return;
-        _layouting = true;
-        try
-        {
-            const int gap = 10;
-            const int rowH = 36;
-            var toggleW = _toggle.Width;
-            var labelLeft = 4;
-            var labelWidth = Math.Max(80, ClientSize.Width - labelLeft - toggleW - gap - 4);
-
-            _label.SetBounds(labelLeft, 0, labelWidth, rowH);
-            _toggle.Left = labelLeft + labelWidth + gap;
-            _toggle.Top = Math.Max(4, (rowH - _toggle.Height) / 2);
-            if (_toggle.Right > ClientSize.Width - 2)
-                _toggle.Left = Math.Max(labelLeft, ClientSize.Width - toggleW - 2);
-
-            // 固定行高：避免 MeasureText + 改 Height 触发 FlowLayout 连锁重排（首次打开卡顿主因）
-            if (Height != rowH)
-                Height = rowH;
-        }
-        finally
-        {
-            _layouting = false;
-        }
+        if (Parent is not FlowLayoutPanel flp || flp.FlowDirection != FlowDirection.TopDown)
+            return;
+        var w = Math.Max(MinimumSize.Width, flp.ClientSize.Width - Margin.Horizontal - 4);
+        if (Width != w)
+            Width = w;
+        if (Height != 36)
+            Height = 36;
     }
 }
 
@@ -306,12 +285,11 @@ internal static class ThemedSettingsChrome
     public static Panel CreateSection(string title, Control[] rows)
     {
         var (card, body) = CreateSectionShell(title);
+        body.SuspendLayout();
         foreach (var row in rows)
-        {
-            row.Dock = DockStyle.Top;
             body.Controls.Add(row);
-        }
         StretchStackChildren(body);
+        body.ResumeLayout(true);
         return card;
     }
 
@@ -369,30 +347,43 @@ internal static class ThemedSettingsChrome
             Height = 36,
             Margin = new Padding(0, 0, 0, 4),
             MinimumSize = new Size(200, 36),
+            Padding = new Padding(4, 0, 8, 0),
+            BackColor = Color.Transparent,
         };
         var l = new Label
         {
             Text = label,
-            AutoSize = false,
-            Location = new Point(4, 0),
-            Size = new Size(100, 36),
+            Dock = DockStyle.Left,
+            Width = 88,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = false,
+            BackColor = Color.Transparent,
         };
         box.DropDownStyle = ComboBoxStyle.DropDownList;
         box.Items.Clear();
         box.Items.AddRange(items);
-        box.Location = new Point(108, 5);
-        box.Width = 160;
-        row.Controls.Add(box);
-        row.Controls.Add(l);
-        row.Resize += (_, _) =>
+        var host = new Panel
         {
-            // 短标签 + 下拉拉满剩余宽度，避免省略
-            var labelW = Math.Min(110, Math.Max(72, row.ClientSize.Width / 3));
-            l.Width = labelW;
-            box.Left = labelW + 8;
-            box.Width = Math.Max(100, row.ClientSize.Width - box.Left - 4);
+            Dock = DockStyle.Fill,
+            Padding = new Padding(8, 5, 0, 5),
+            BackColor = Color.Transparent,
+        };
+        box.Dock = DockStyle.Fill;
+        host.Controls.Add(box);
+        row.Controls.Add(host);
+        row.Controls.Add(l);
+        row.ParentChanged += (_, _) =>
+        {
+            if (row.Parent is not FlowLayoutPanel flp || flp.FlowDirection != FlowDirection.TopDown)
+                return;
+            void Sync(object? s, EventArgs e)
+            {
+                var w = Math.Max(row.MinimumSize.Width, flp.ClientSize.Width - row.Margin.Horizontal - 4);
+                if (row.Width != w) row.Width = w;
+            }
+            flp.Resize -= Sync;
+            flp.Resize += Sync;
+            Sync(null, EventArgs.Empty);
         };
         return row;
     }
