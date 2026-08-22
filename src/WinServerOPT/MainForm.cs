@@ -334,7 +334,6 @@ internal sealed class MainForm : Form
 
         _menu.SelectedIndex = 0;
         ShowHelpPlaceholder();
-        ShowGroup(0);
         Load += (_, _) => InitializeRuntime();
         FormClosed += (_, _) =>
         {
@@ -1057,7 +1056,24 @@ internal sealed class MainForm : Form
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
         if (page is IEmbeddedSettingsPage embedded && !embedded.ConsumeWarmLoadSkip())
-            BeginInvoke(new Action(embedded.RefreshFromSystem));
+            RunWhenHandleReady(embedded.RefreshFromSystem);
+    }
+
+    private void RunWhenHandleReady(Action action)
+    {
+        if (IsHandleCreated)
+        {
+            BeginInvoke(action);
+            return;
+        }
+
+        void OnLoad(object? sender, EventArgs e)
+        {
+            Load -= OnLoad;
+            BeginInvoke(action);
+        }
+
+        Load += OnLoad;
     }
 
     private void RefreshEmbeddedPageIfVisible()
