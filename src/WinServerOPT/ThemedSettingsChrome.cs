@@ -54,12 +54,20 @@ internal sealed class InstantToggleRow : Panel
         Controls.Add(right);
         ParentChanged += (_, _) =>
         {
+            // 先从旧父级卸载，避免重复 Resize 与泄漏
+            if (_boundParent is not null)
+            {
+                _boundParent.Resize -= OnParentResize;
+                _boundParent = null;
+            }
             if (Parent is null) return;
-            Parent.Resize -= OnParentResize;
-            Parent.Resize += OnParentResize;
+            _boundParent = Parent;
+            _boundParent.Resize += OnParentResize;
             SyncWidthToParent();
         };
     }
+
+    private Control? _boundParent;
 
     public string Title { get; }
 

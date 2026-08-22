@@ -100,6 +100,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         _adapters.BorderStyle = BorderStyle.FixedSingle;
         _adapters.BackColor = AppTheme.Surface;
         _adapters.HorizontalScrollbar = true;
+        _adapters.ItemCheck += (_, _) => _userCheckedAdapters = true;
 
         var actions = new FlowLayoutPanel
         {
@@ -147,7 +148,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             "仅修改勾选的网卡 · 虚拟网卡默认不选",
             body,
             "DHCP 模式会对勾选网卡恢复自动获取 DNS。",
-            RefreshAdapters);
+            () => RefreshAdapters(preserveChecks: _userCheckedAdapters || _adapters.Items.Count > 0));
 
         Shown += (_, _) =>
         {
@@ -155,10 +156,35 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         };
     }
 
-    public void RefreshFromSystem() => RefreshAdapters();
+    private bool _userCheckedAdapters;
+    private bool _warmLoadSkip;
 
-    private void RefreshAdapters()
+    public bool ConsumeWarmLoadSkip()
     {
+        if (!_warmLoadSkip) return false;
+        _warmLoadSkip = false;
+        return true;
+    }
+
+    public void RefreshFromSystem()
+    {
+        RefreshAdapters(preserveChecks: _userCheckedAdapters);
+        _warmLoadSkip = true;
+    }
+
+    private void RefreshAdapters(bool preserveChecks = false)
+    {
+        var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (preserveChecks)
+        {
+            for (var i = 0; i < _adapters.Items.Count; i++)
+            {
+                if (!_adapters.GetItemChecked(i)) continue;
+                if (_adapters.Items[i] is DnsAdapterInfo a && a.SettingId.Length > 0)
+                    keep.Add(a.SettingId);
+            }
+        }
+
         _adapters.BeginUpdate();
         _adapters.Items.Clear();
         try
@@ -166,11 +192,15 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             foreach (var a in DnsAdapterHelper.ListIpEnabledAdapters())
             {
                 var i = _adapters.Items.Add(a);
-                // 默认只勾选已连接、已启用 IP、且不像虚拟网卡的项
-                _adapters.SetItemChecked(i, a.IsUp && a.IpEnabled && !a.LikelyVirtual);
+                var check = preserveChecks && a.SettingId.Length > 0
+                    ? keep.Contains(a.SettingId)
+                    : a.IsUp && a.IpEnabled && !a.LikelyVirtual;
+                _adapters.SetItemChecked(i, check);
             }
             if (_adapters.Items.Count == 0)
                 _hint.Text = "未找到已启用 IP 的网卡。";
+            else if (preserveChecks)
+                _hint.Text = $"共 {_adapters.Items.Count} 块网卡（已保留你的勾选）。";
             else
                 _hint.Text = $"共 {_adapters.Items.Count} 块网卡。默认勾选已连接的物理网卡；可改选后点「应用到勾选网卡」。";
         }
@@ -186,6 +216,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
 
     private void SelectConnectedOnly()
     {
+        _userCheckedAdapters = true;
         for (var i = 0; i < _adapters.Items.Count; i++)
         {
             if (_adapters.Items[i] is DnsAdapterInfo a)
@@ -195,6 +226,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
 
     private void SetAllChecked(bool on)
     {
+        _userCheckedAdapters = true;
         for (var i = 0; i < _adapters.Items.Count; i++)
             _adapters.SetItemChecked(i, on);
     }
@@ -227,6 +259,11 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
                     .Where(x => x.Length > 0)
                     .ToArray();
                 if (servers.Length == 0) throw new InvalidOperationException("请填写 DNS 地址。");
+                foreach (var ip in servers)
+                {
+                    if (!System.Net.IPAddress.TryParse(ip, out _))
+                        throw new InvalidOperationException($"DNS 地址无效：{ip}");
+                }
             }
 
             var count = DnsAdapterHelper.ApplyDns(indexes, settingIds, servers);

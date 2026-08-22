@@ -188,7 +188,7 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
-        "资源管理器", "系统服务", "登录启动项", "DNS 设置",
+        "资源管理器", "电源与服务", "登录启动项", "DNS 设置",
     ];
 
     private static readonly string[] MenuItems =
@@ -200,7 +200,7 @@ internal sealed class MainForm : Form
         "系统组件",
         "账户策略",
         "资源管理器",
-        "系统服务",
+        "电源与服务",
         "登录启动项",
         "DNS 设置",
     ];
@@ -265,7 +265,7 @@ internal sealed class MainForm : Form
             _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
             _insider, _storeUpd
         ]));
-        _groups.Add(("远程与网络", [_rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting]));
+        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _ra, _netDiscovery, _smRemoting]));
         _groups.Add(("系统组件", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
         _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter]));
 
@@ -330,7 +330,7 @@ internal sealed class MainForm : Form
         {
             using var d = new ContextMenuSettingsDialog();
             d.ShowDialog(this);
-            // 对话框即时写入后，同步批量页开关，避免之后「应用推荐」用旧勾选覆盖
+            // 对话框即时写入后，同步批量页所有相关开关，避免「应用推荐」覆盖
             SyncContextMenuRowsFromSystem();
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
@@ -470,7 +470,7 @@ internal sealed class MainForm : Form
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
         // 资源管理器控件最多，优先预创建句柄并预读状态
-        var titles = new[] { "资源管理器", "系统服务", "登录启动项", "DNS 设置" };
+        var titles = new[] { "资源管理器", "电源与服务", "登录启动项", "DNS 设置" };
         var i = 0;
         var timer = new System.Windows.Forms.Timer { Interval = 40 };
         timer.Tick += (_, _) =>
@@ -489,7 +489,7 @@ internal sealed class MainForm : Form
                 Form page = title switch
                 {
                     "资源管理器" => new ExplorerSettingsDialog(),
-                    "系统服务" => new OtherSettingsDialog(),
+                    "电源与服务" => new OtherSettingsDialog(),
                     "登录启动项" => new StartupManagerDialog(),
                     "DNS 设置" => new DnsSwitcherDialog(),
                     _ => throw new InvalidOperationException(title),
@@ -815,6 +815,10 @@ internal sealed class MainForm : Form
         }
         _activeBody.Height = Math.Max(visible, 1) * rowH;
         _activeSection.Height = headerH + _activeBody.Height;
+        if (visible == 0 && !string.IsNullOrWhiteSpace(query))
+            _status.Text = "无匹配项，请调整搜索关键词。";
+        else if (_status.Text.StartsWith("无匹配项", StringComparison.Ordinal))
+            _status.Text = _defaultStatusText;
     }
 
     private Panel BuildHeader()
@@ -967,7 +971,7 @@ internal sealed class MainForm : Form
             page = title switch
             {
                 "资源管理器" => new ExplorerSettingsDialog(),
-                "系统服务" => new OtherSettingsDialog(),
+                "电源与服务" => new OtherSettingsDialog(),
                 "登录启动项" => new StartupManagerDialog(),
                 "DNS 设置" => new DnsSwitcherDialog(),
                 _ => throw new InvalidOperationException(title),
@@ -992,13 +996,8 @@ internal sealed class MainForm : Form
         if (!page.IsHandleCreated) page.Show();
         _contentHost.ResumeLayout(true);
         ShowHelpPlaceholder(title);
-        // 预热已读过值时跳过紧挨着的二次刷新，避免与首次布局叠卡；再次进入仍刷新
-        if (page is IEmbeddedSettingsPage embedded)
-        {
-            var needRefresh = page is not ExplorerSettingsDialog ex || !ex.ConsumeWarmLoadSkip();
-            if (needRefresh)
-                BeginInvoke(new Action(embedded.RefreshFromSystem));
-        }
+        if (page is IEmbeddedSettingsPage embedded && !embedded.ConsumeWarmLoadSkip())
+            BeginInvoke(new Action(embedded.RefreshFromSystem));
     }
 
     private void RefreshEmbeddedPageIfVisible()
@@ -1211,7 +1210,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开关=是否采用推荐。「应用推荐」写入推荐项；「恢复默认」将全部项还原为右侧系统默认值。"
+            ? "开关=推荐设置。即时页改动立即生效；分组页改完后点「应用推荐」。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 
@@ -1227,8 +1226,8 @@ internal sealed class MainForm : Form
         };
         _bottomActions = actions;
 
-        var allOn = ToolButton("全部推荐", () => SetAll(true));
-        var allOff = ToolButton("关闭全部推荐", () => SetAll(false));
+        var allOn = ToolButton("全部推荐", () => SetVisibleAll(true));
+        var allOff = ToolButton("关闭全部推荐", () => SetVisibleAll(false));
         var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
         var commonSoftware = ToolButton("常用软件", ShowCommonSoftware);
         var refresh = ToolButton("刷新", () => LoadState(fullScan: true));
@@ -1495,7 +1494,6 @@ internal sealed class MainForm : Form
         _autologon.Checked = s.EnableAutologon;
         _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
-        RefreshEmbeddedPageIfVisible();
     }
 
     private Optimizer.State CaptureState() => new()
@@ -1656,6 +1654,78 @@ internal sealed class MainForm : Form
         foreach (var row in AllRows) row.Checked = on;
     }
 
+    /// <summary>仅操作左侧分组中可见的项，避免改到即时页专属的「幽灵开关」。</summary>
+    private void SetVisibleAll(bool on)
+    {
+        foreach (var (_, rows) in _groups)
+            foreach (var row in rows)
+                row.Checked = on;
+    }
+
+    private HashSet<SettingRow> VisibleRowSet()
+    {
+        var set = new HashSet<SettingRow>();
+        foreach (var (_, rows) in _groups)
+            foreach (var row in rows)
+                set.Add(row);
+        return set;
+    }
+
+    /// <summary>
+    /// 应用前：把未出现在分组里的开关从系统重读，防止即时页已改、批量页旧勾选把系统改回去。
+    /// </summary>
+    private void SyncInvisibleRowsFromSystem()
+    {
+        Optimizer.State s;
+        try { s = Optimizer.Read(fullScan: false); }
+        catch { return; }
+
+        var vis = VisibleRowSet();
+        void Sync(SettingRow row, bool value)
+        {
+            if (!vis.Contains(row)) row.Checked = value;
+        }
+
+        Sync(_sysMain, s.DisableSysMain);
+        Sync(_hibernate, s.DisableHibernate);
+        Sync(_fastStartup, s.DisableFastStartup);
+        Sync(_memComp, s.DisableMemoryCompression);
+        Sync(_prelaunch, s.DisableAppPrelaunch);
+        Sync(_pageCombine, s.DisablePageCombining);
+        Sync(_ucpd, s.DisableUcpdDriver);
+        Sync(_ra, s.DisableRemoteAssistance);
+        Sync(_rdp, s.EnableRdp);
+        Sync(_fileExt, s.ShowFileExtensions);
+        Sync(_hiddenFiles, s.ShowHiddenFiles);
+        Sync(_noArrow, s.NoShortcutArrow);
+        Sync(_fullPath, s.ExplorerFullPath);
+        Sync(_taskbarClock, s.TaskbarClockWeekdaySeconds);
+        Sync(_launchThisPc, s.LaunchExplorerThisPc);
+        Sync(_itemCheckboxes, s.ShowItemCheckboxes);
+        Sync(_commonFolders, s.ShowCommonFolders);
+        Sync(_noShield, s.RemoveAdminShield);
+        Sync(_noSuffix, s.NoShortcutSuffix);
+        Sync(_win11Explorer, s.Win11ExplorerStyle);
+        Sync(_classicMenu, s.Win10ClassicContextMenu);
+        Sync(_tbSearch, s.TaskbarSearchBox);
+        Sync(_tbLeft, s.TaskbarAlignLeft);
+        Sync(_tbCombine, s.TaskbarCombineAlways);
+        Sync(_tbAutohide, s.TaskbarAutoHide);
+        Sync(_taskView, s.ShowTaskViewButton);
+        Sync(_widgets, s.DisableWidgets);
+        Sync(_hideOs, s.HideProtectedOsFiles);
+        Sync(_iconsOnly, s.AlwaysShowIconsNeverThumbnails);
+        Sync(_emptyDrives, s.ShowEmptyDrives);
+        Sync(_recentFiles, s.ShowRecentFiles);
+        Sync(_frequent, s.ShowFrequentPlaces);
+        Sync(_officeCloud, s.HideOfficeCloudFiles);
+        Sync(_onedrive, s.DisableOneDrive);
+        Sync(_tbChat, s.HideTaskbarChat);
+        Sync(_tbCopilot, s.HideTaskbarCopilot);
+        Sync(_takeOwn, s.ContextMenuTakeOwnership);
+        Sync(_openCmd, s.ContextMenuOpenCmd);
+    }
+
     private void SetRowsChecked(IEnumerable<SettingRow> rows, bool on)
     {
         foreach (var row in rows) row.Checked = on;
@@ -1708,6 +1778,7 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            SyncInvisibleRowsFromSystem();
             var errors = Optimizer.Apply(CaptureState());
             ApplyLog.WriteApply(working, errors);
             LoadState(fullScan: true);

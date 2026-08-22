@@ -105,6 +105,8 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 
     public void RefreshFromSystem() => LoadValues();
 
+    public bool ConsumeWarmLoadSkip() => false;
+
     private void LoadValues()
     {
         var s = Optimizer.Read(fullScan: false);

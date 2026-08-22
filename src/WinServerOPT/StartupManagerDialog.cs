@@ -80,7 +80,20 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         };
     }
 
-    public void RefreshFromSystem() => RefreshList();
+    public void RefreshFromSystem()
+    {
+        RefreshList();
+        _warmLoadSkip = true;
+    }
+
+    private bool _warmLoadSkip;
+
+    public bool ConsumeWarmLoadSkip()
+    {
+        if (!_warmLoadSkip) return false;
+        _warmLoadSkip = false;
+        return true;
+    }
 
     private Panel BuildSidebar()
     {

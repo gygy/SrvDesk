@@ -18,7 +18,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
     public OtherSettingsDialog()
     {
-        Text = "系统服务";
+        Text = "电源与服务";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -42,7 +42,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
         ThemedSettingsChrome.MountEmbedded(
             this,
-            "系统服务",
+            "电源与服务",
             "休眠 · 远程桌面 · SysMain · 内存与预取",
             body,
             "UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。",
@@ -56,7 +56,20 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         };
     }
 
-    public void RefreshFromSystem() => LoadValues();
+    private bool _warmLoadSkip;
+
+    public bool ConsumeWarmLoadSkip()
+    {
+        if (!_warmLoadSkip) return false;
+        _warmLoadSkip = false;
+        return true;
+    }
+
+    public void RefreshFromSystem()
+    {
+        LoadValues();
+        _warmLoadSkip = true;
+    }
 
     private Panel BuildRemoteSection()
     {
@@ -184,5 +197,6 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         _prefetchRead.Bind(EasySettingsTweaks.IsAppLaunchPrefetchOn(), _ => { });
         _port.Value = Math.Min(_port.Maximum, Math.Max(_port.Minimum, EasySettingsTweaks.GetRdpPort()));
         _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));
+        _loaded = true;
     }
 }

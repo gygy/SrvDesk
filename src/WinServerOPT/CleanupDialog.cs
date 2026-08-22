@@ -67,6 +67,12 @@ internal sealed class CleanupDialog : Form
 
     private void RunCleanup()
     {
+        if (!_temp.Checked && !_recent.Checked && !_recycle.Checked && !_prefetch.Checked && !_thumb.Checked)
+        {
+            MessageBox.Show(this, "请先勾选要清理的项目。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         var files = 0;
         var bytes = 0L;
         try
