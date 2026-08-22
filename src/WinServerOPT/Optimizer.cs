@@ -567,7 +567,7 @@ internal static class Optimizer
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338388Enabled", on);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", on);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", on);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", on);
+        // 不写 SystemPaneSuggestionsEnabled：该键由「关闭设置应用建议内容」独立控制，避免互相覆盖。
     }
 
     private static void SetActivityHistory(bool enable)

@@ -95,6 +95,11 @@ internal sealed class WindowsFeaturesDialog : Form
         body.Controls.Add(actions);
         body.Controls.Add(_status);
         body.Controls.Add(tools);
+        // Dock 顺序：后添加先占位。确保状态栏在动作栏下方。
+        _status.BringToFront();
+        actions.BringToFront();
+        tools.BringToFront();
+        _list.SendToBack();
 
         ThemedSettingsChrome.MountModal(
             this,

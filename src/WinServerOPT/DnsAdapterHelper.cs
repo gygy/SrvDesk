@@ -133,7 +133,7 @@ internal static class DnsAdapterHelper
 
                     list.Add(new DnsAdapterInfo
                     {
-                        ConfigIndex = cfg?.Index ?? adapterIndex,
+                        ConfigIndex = cfg?.Index ?? -1,
                         SettingId = settingId,
                         Name = name,
                         Description = string.IsNullOrWhiteSpace(cfg?.Description) ? desc : cfg!.Description,
@@ -167,7 +167,7 @@ internal static class DnsAdapterHelper
 
     public static int ApplyDns(IEnumerable<int> indexes, IEnumerable<string>? settingIds, string[]? servers)
     {
-        var indexSet = indexes.ToHashSet();
+        var indexSet = indexes.Where(i => i >= 0).ToHashSet();
         var idSet = new HashSet<string>(
             (settingIds ?? []).Select(NormalizeGuid).Where(s => s.Length > 0),
             StringComparer.OrdinalIgnoreCase);
@@ -175,6 +175,7 @@ internal static class DnsAdapterHelper
             throw new InvalidOperationException("请至少勾选一块网卡。");
 
         var ok = 0;
+        var errors = new List<string>();
         using var searcher = new ManagementObjectSearcher(
             "SELECT Index, SettingID, IPEnabled FROM Win32_NetworkAdapterConfiguration");
         foreach (ManagementObject mo in searcher.Get())
@@ -183,19 +184,39 @@ internal static class DnsAdapterHelper
             {
                 var index = Convert.ToInt32(mo["Index"] ?? -1);
                 var settingId = NormalizeGuid(Convert.ToString(mo["SettingID"]));
-                var match = (settingId.Length > 0 && idSet.Contains(settingId)) || indexSet.Contains(index);
-                if (!match) continue;
+                var matchById = settingId.Length > 0 && idSet.Contains(settingId);
+                var matchByIndex = !matchById && idSet.Count == 0 && indexSet.Contains(index);
+                if (!matchById && !matchByIndex) continue;
                 if (mo["IPEnabled"] is not true)
-                    throw new InvalidOperationException($"网卡配置 Index={index} 未启用 IP，无法设置 DNS。");
+                {
+                    errors.Add($"Index={index} 未启用 IP");
+                    continue;
+                }
 
-                var result = (uint)mo.InvokeMethod("SetDNSServerSearchOrder", new object?[] { servers });
-                if (result is not 0 and not 1)
-                    throw new InvalidOperationException($"网卡 Index={index} 设置失败，WMI 返回 {result}。");
-                ok++;
+                try
+                {
+                    var result = (uint)mo.InvokeMethod("SetDNSServerSearchOrder", new object?[] { servers });
+                    if (result is not 0 and not 1)
+                    {
+                        errors.Add($"Index={index} WMI 返回 {result}");
+                        continue;
+                    }
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Index={index} {ex.Message}");
+                }
             }
         }
 
-        if (ok == 0) throw new InvalidOperationException("未找到勾选的网卡（可能已断开）。请刷新后重试。");
+        if (ok == 0)
+            throw new InvalidOperationException(
+                errors.Count > 0
+                    ? "DNS 设置失败：" + string.Join("；", errors.Take(3))
+                    : "未找到勾选的网卡（可能已断开）。请刷新后重试。");
+        if (errors.Count > 0)
+            ApplyLog.Write($"DNS 部分失败：{string.Join("；", errors)}");
         return ok;
     }
 

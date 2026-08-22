@@ -182,12 +182,16 @@ internal static class WindowsFeaturesHelper
 
     private static string SummarizeDism(string output, string action)
     {
-        if (Regex.IsMatch(output, @"Error:\s*0x", RegexOptions.IgnoreCase) ||
-            output.IndexOf("Error:", StringComparison.OrdinalIgnoreCase) >= 0 &&
-            output.IndexOf("0x00000000", StringComparison.OrdinalIgnoreCase) < 0)
+        var hasError = Regex.IsMatch(output, @"Error:\s*0x", RegexOptions.IgnoreCase)
+            || Regex.IsMatch(output, @"错误:\s*0x")
+            || (output.IndexOf("Error:", StringComparison.OrdinalIgnoreCase) >= 0
+                && output.IndexOf("0x00000000", StringComparison.OrdinalIgnoreCase) < 0)
+            || (output.Contains("错误:") && !output.Contains("0x00000000"));
+        if (hasError)
         {
             var err = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .FirstOrDefault(l => l.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
+                .FirstOrDefault(l =>
+                    l.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0 || l.Contains("错误"))
                 ?? "DISM 返回错误";
             throw new InvalidOperationException($"{action}失败：{err.Trim()}");
         }
@@ -196,7 +200,7 @@ internal static class WindowsFeaturesHelper
             output.IndexOf("操作成功完成", StringComparison.Ordinal) >= 0)
             return action + "成功（可能需重启）";
 
-        return action + "已提交（请查看 DISM 输出，可能需重启）";
+        return action + "已提交（可能需重启）";
     }
 
     private static string RunCapture(string fileName, string arguments)

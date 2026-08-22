@@ -79,8 +79,10 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         form.Controls.Add(_secondary, 1, 2);
 
         _hint.Dock = DockStyle.Top;
-        _hint.Height = 40;
+        _hint.AutoSize = false;
+        _hint.Height = 44;
         _hint.ForeColor = AppTheme.TextMute;
+        _hint.AutoEllipsis = true;
         _hint.Text = "勾选要修改的网卡。默认勾选「已连接」的物理网卡；虚拟网卡默认不勾选。";
 
         var listCap = new Label
@@ -97,13 +99,14 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         _adapters.IntegralHeight = false;
         _adapters.BorderStyle = BorderStyle.FixedSingle;
         _adapters.BackColor = AppTheme.Surface;
+        _adapters.HorizontalScrollbar = true;
 
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 44,
+            Height = 80,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             Padding = new Padding(0, 8, 0, 0),
         };
         var selectUp = ThemedSettingsChrome.CreateButton("仅勾选已连接", false);

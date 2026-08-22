@@ -6,11 +6,16 @@ namespace WinOpt;
 internal static class ContextMenuTweaks
 {
     public static bool IsTakeOwnershipOn() => KeyExists(@"*\shell\WinOptTakeOwnership");
-    public static bool IsOpenCmdOn() => KeyExists(@"Directory\shell\WinOptOpenCmd");
-    public static bool IsOpenPowerShellOn() => KeyExists(@"Directory\shell\WinOptOpenPS");
-    public static bool IsOpenPowerShellAdminOn() => KeyExists(@"Directory\shell\WinOptOpenPSAdmin");
-    public static bool IsOpenTerminalOn() => KeyExists(@"Directory\shell\WinOptOpenWT");
-    public static bool IsOpenTerminalAdminOn() => KeyExists(@"Directory\shell\WinOptOpenWTAdmin");
+    public static bool IsOpenCmdOn() =>
+        KeyExists(@"Directory\shell\WinOptOpenCmd") || KeyExists(@"Directory\Background\shell\WinOptOpenCmd");
+    public static bool IsOpenPowerShellOn() =>
+        KeyExists(@"Directory\shell\WinOptOpenPS") || KeyExists(@"Directory\Background\shell\WinOptOpenPS");
+    public static bool IsOpenPowerShellAdminOn() =>
+        KeyExists(@"Directory\shell\WinOptOpenPSAdmin") || KeyExists(@"Directory\Background\shell\WinOptOpenPSAdmin");
+    public static bool IsOpenTerminalOn() =>
+        KeyExists(@"Directory\shell\WinOptOpenWT") || KeyExists(@"Directory\Background\shell\WinOptOpenWT");
+    public static bool IsOpenTerminalAdminOn() =>
+        KeyExists(@"Directory\shell\WinOptOpenWTAdmin") || KeyExists(@"Directory\Background\shell\WinOptOpenWTAdmin");
     public static bool IsCopyPathOn() => KeyExists(@"AllFilesystemObjects\shell\WinOptCopyPath");
     public static bool IsEditWithPaintOn() => KeyExists(@"SystemFileAssociations\image\shell\WinOptEditPaint");
     public static bool IsEditWithNotepadOn() => KeyExists(@"*\shell\WinOptEditNotepad");

@@ -330,6 +330,8 @@ internal sealed class MainForm : Form
         {
             using var d = new ContextMenuSettingsDialog();
             d.ShowDialog(this);
+            // 对话框即时写入后，同步批量页开关，避免之后「应用推荐」用旧勾选覆盖
+            SyncContextMenuRowsFromSystem();
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
@@ -1194,9 +1196,10 @@ internal sealed class MainForm : Form
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
-        _status.SetBounds(12, 10, 420, 38);
+        _status.SetBounds(12, 10, 280, 38);
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
+        _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
             ? "开关=是否采用推荐。「应用推荐」写入推荐项；「恢复默认」将全部项还原为右侧系统默认值。"
             : "当前系统可能不是 Windows Server。";
@@ -1252,6 +1255,11 @@ internal sealed class MainForm : Form
         _bottomPanel.Controls.Add(actions);
         _bottomPanel.Controls.Add(_status);
         _bottomPanel.Controls.Add(rule);
+        _bottomPanel.Resize += (_, _) =>
+        {
+            var right = actions.Width + 24;
+            _status.Width = Math.Max(120, _bottomPanel.ClientSize.Width - right - 12);
+        };
         return _bottomPanel;
     }
 
@@ -1322,6 +1330,12 @@ internal sealed class MainForm : Form
                 }));
             }
         });
+    }
+
+    private void SyncContextMenuRowsFromSystem()
+    {
+        _takeOwn.Checked = ContextMenuTweaks.IsTakeOwnershipOn();
+        _openCmd.Checked = ContextMenuTweaks.IsOpenCmdOn();
     }
 
     private void Bind(Optimizer.State s)
@@ -1893,12 +1907,13 @@ internal sealed class MainForm : Form
             _info.Click += Select;
             if (hasScope) _scope.Click += Select;
 
-            // 先加开关再加文字，避免文字区域盖住开关
-            wrap.Controls.Add(_toggle);
+            // 开关最后添加并置顶，避免被透明 Label 盖住
             wrap.Controls.Add(_system);
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
+            wrap.Controls.Add(_toggle);
+            _toggle.BringToFront();
             wrap.Controls.Add(new Panel
             {
                 BackColor = AppTheme.BorderLight,

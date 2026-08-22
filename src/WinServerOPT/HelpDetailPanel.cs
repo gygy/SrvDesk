@@ -176,7 +176,17 @@ internal sealed class HelpDetailPanel : Panel
         _summary.Width = w;
         _sections.Width = w;
         _footer.Width = w;
-        _footer.Top = _sections.Bottom + 8;
+
+        var titleH = Math.Max(28, TextRenderer.MeasureText(
+            _title.Text, _title.Font, new Size(w, int.MaxValue),
+            TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
+        _title.Height = Math.Min(titleH, 72);
+        _summary.Top = _title.Bottom + 4;
+        var summaryH = Math.Max(24, TextRenderer.MeasureText(
+            _summary.Text, _summary.Font, new Size(w, int.MaxValue),
+            TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
+        _summary.Height = Math.Min(summaryH, 96);
+        _sections.Top = _summary.Bottom + 8;
 
         foreach (Control c in _sections.Controls)
         {
@@ -186,6 +196,7 @@ internal sealed class HelpDetailPanel : Panel
                 body.MaximumSize = new Size(w, 0);
         }
 
+        _footer.Top = _sections.Bottom + 8;
         var contentH = _footer.Bottom + 12;
         AutoScrollMinSize = new Size(0, contentH);
     }
