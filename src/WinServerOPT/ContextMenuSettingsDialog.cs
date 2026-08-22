@@ -25,42 +25,39 @@ internal sealed class ContextMenuSettingsDialog : Form
         MinimumSize = new Size(600, 480);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var (card, sectionBody) = ThemedSettingsChrome.CreateSectionShell("右键菜单项");
-        card.Dock = DockStyle.Top;
 
-        InstantToggleRow[] rows =
-        [
-            _takeOwn, _openCmd, _openPs, _openPsAdmin, _openWt, _openWtAdmin,
-            _copyPath, _paint, _notepad, _blockShare,
-        ];
-        foreach (var r in rows)
-            sectionBody.Controls.Add(r);
+        var common = ThemedSettingsChrome.CreateSection("常用", [_takeOwn, _openCmd, _copyPath]);
+        var terminal = ThemedSettingsChrome.CreateSection("终端", [
+            _openPs, _openPsAdmin, _openWt, _openWtAdmin,
+        ]);
+        var edit = ThemedSettingsChrome.CreateSection("用…打开", [_paint, _notepad]);
+        var other = ThemedSettingsChrome.CreateSection("其它", [_blockShare]);
 
         _hint.AutoSize = true;
         _hint.MaximumSize = new Size(640, 0);
         _hint.ForeColor = AppTheme.TextMute;
-        _hint.Margin = new Padding(4, 12, 4, 4);
+        _hint.Margin = new Padding(4, 8, 4, 4);
         _hint.Text = ContextMenuTweaks.TerminalAvailable()
             ? "开关立即写入注册表。文件夹空白处与文件夹本身均可出现「在此处打开」项。"
             : "未检测到 wt.exe：开启 Terminal 相关项前请先安装 Windows 终端。";
-        sectionBody.Controls.Add(_hint);
 
-        body.Controls.Add(card);
+        body.Controls.Add(_hint);
+        body.Controls.Add(other);
+        body.Controls.Add(edit);
+        body.Controls.Add(terminal);
+        body.Controls.Add(common);
 
         ThemedSettingsChrome.MountModal(
             this,
             "右键菜单",
-            "终端管理员 · 画图 · 复制路径",
+            "常用 · 终端 · 编辑",
             body,
             "部分项需刷新资源管理器后可见。",
             LoadValues);
 
         Shown += (_, _) => LoadValues();
         Resize += (_, _) =>
-        {
             _hint.MaximumSize = new Size(Math.Max(280, ClientSize.Width - 80), 0);
-            ThemedSettingsChrome.StretchStackChildren(sectionBody);
-        };
     }
 
     private void LoadValues()

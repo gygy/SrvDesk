@@ -46,27 +46,28 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var files = ThemedSettingsChrome.CreateSection("文件与显示", [
-            _ext, _fullPath, _hidden, _osFiles, _iconsOnly, _emptyDrives, _recent, _frequent, _office,
+        // 分区：常用 → 快速访问 → 快捷方式/云 → 任务栏 → 工具
+        var common = ThemedSettingsChrome.CreateSection("常用显示", [
+            _ext, _hidden, _fullPath, _osFiles, BuildLaunchRow(),
         ]);
-        var desktop = ThemedSettingsChrome.CreateSection("桌面与快捷方式", [
-            BuildLaunchRow(),
+        var quickAccess = ThemedSettingsChrome.CreateSection("快速访问", [
+            _recent, _frequent, _office, _emptyDrives, _iconsOnly,
+        ]);
+        var shortcuts = ThemedSettingsChrome.CreateSection("快捷方式与布局", [
             _arrow, _suffix, _shield, _win10Explorer, _classicMenu, _onedrive,
         ]);
         var taskbar = ThemedSettingsChrome.CreateSection("任务栏", [
-            BuildSearchRow(),
-            _autohide, _taskView, _chat, _copilot, _widgets,
-            BuildAlignRow(),
-            _seconds,
-            BuildGlomRow(),
+            BuildSearchRow(), BuildAlignRow(),
+            _widgets, _chat, _copilot,
+            _autohide, _taskView, _seconds, BuildGlomRow(),
         ]);
         var tools = BuildToolsSection();
 
-        // Dock.Top 后添加的在上：先加工具，再任务栏…最终「文件与显示」在最上
         body.Controls.Add(tools);
         body.Controls.Add(taskbar);
-        body.Controls.Add(desktop);
-        body.Controls.Add(files);
+        body.Controls.Add(shortcuts);
+        body.Controls.Add(quickAccess);
+        body.Controls.Add(common);
 
         ThemedSettingsChrome.MountEmbedded(
             this,

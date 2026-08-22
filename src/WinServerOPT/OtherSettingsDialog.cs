@@ -28,22 +28,23 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var power = ThemedSettingsChrome.CreateSection("电源与休眠", [_hibernate, _fast]);
         var remote = BuildRemoteSection();
+        var power = ThemedSettingsChrome.CreateSection("电源与休眠", [_hibernate, _fast]);
         var svc = ThemedSettingsChrome.CreateSection("后台服务与内存", [_sysmain, _memComp, _prelaunch, _page, _ucpd]);
         var prefetch = BuildPrefetchSection();
         var search = BuildSearchTools();
 
+        // Dock.Top：后添加在上；远程桌面 Server 最高频放最上
         body.Controls.Add(search);
         body.Controls.Add(prefetch);
         body.Controls.Add(svc);
-        body.Controls.Add(remote);
         body.Controls.Add(power);
+        body.Controls.Add(remote);
 
         ThemedSettingsChrome.MountEmbedded(
             this,
             "电源与服务",
-            "休眠 · 远程桌面 · SysMain · 内存与预取",
+            "远程桌面 · 休眠 · SysMain · 内存与预取",
             body,
             "UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。",
             LoadValues);

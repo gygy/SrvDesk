@@ -193,16 +193,18 @@ internal sealed class MainForm : Form
 
     private static readonly string[] MenuItems =
     [
-        "性能及安全",
-        "桌面外观",
-        "隐私与体验",
-        "远程与网络",
-        "系统组件",
-        "账户策略",
+        // 即时页：高频操作放最前
         "资源管理器",
         "电源与服务",
         "登录启动项",
         "DNS 设置",
+        // 批量分组：同类聚合，组内高频项靠前
+        "性能及安全",
+        "桌面外观",
+        "远程与网络",
+        "隐私与体验",
+        "系统组件",
+        "账户策略",
     ];
 
     private SettingRow[] AllRows =>
@@ -244,30 +246,71 @@ internal sealed class MainForm : Form
         KeyPreview = true;
         MainMenuStrip = _appMenu;
 
+        // 批量分组顺序与 MenuItems 中分组项一致；组内：高频 → 同类成块 → 进阶
         _groups.Add(("性能及安全", [
-            _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _wuNotify,
-            _visualPerf, _powerThrottle, _tcp, _qosSpeed, _errorReport,
-            _longPaths, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-            _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca,
-            _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
-            _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare
+            // Server 桌面必备
+            _ie, _uac, _highPerf,
+            // 遥测与诊断
+            _telemetry, _dps, _ceip, _errorReport,
+            // 性能与显卡
+            _visualPerf, _powerThrottle, _gpuSched, _largeCache, _pca,
+            // Windows 更新
+            _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035,
+            // 网络栈
+            _tcp, _qosSpeed, _bbr2, _netThrottle,
+            // 安全服务
+            _smb1, _remoteReg, _spooler,
+            // 进阶安全（低频）
+            _dep, _cpu, _meltdown, _hvci, _wdac, _vbs, _sysRestore,
+            // 存储与文件系统
+            _longPaths, _ntfsStamp, _reservedStorage, _srvSplit,
+            // 维护与启动
+            _autoMaint, _utc, _hpet, _loginVerbose, _f8,
+            // 少见服务
+            _xbox, _fax, _wmpShare,
         ]));
         _groups.Add(("桌面外观", [
-            _thisPc, _taskbar, _confirmDel, _audio, _themes, _search,
-            _feedback, _noLockScreen, _allTrayIcons, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
-            _tbEndTask, _takeOwn, _openCmd, _news
+            // 桌面与任务栏常用
+            _thisPc, _desktopIcons, _taskbar, _confirmDel,
+            _themes, _audio, _search,
+            // 安全与反馈
+            _smartScreen, _noLockScreen, _feedback,
+            // 搜索模式
+            _classicSearch, _searchEngine,
+            // 任务栏扩展
+            _allTrayIcons, _tbEndTask, _news,
+            // 右键菜单
+            _takeOwn, _openCmd,
+        ]));
+        _groups.Add(("远程与网络", [
+            // RDP 常用放前
+            _rdp, _rdpGpu, _rdpFps, _rdpNla,
+            _netDiscovery, _ra, _smRemoting,
         ]));
         _groups.Add(("隐私与体验", [
-            _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
-            _searchHighlights, _recommended, _stickyKeys,
-            _cloudSearch, _webSearch, _searchHistory, _adTracking, _langList, _trackApps, _settingsSuggest, _inking,
-            _deliveryOpt, _msrt, _wuPause2035,
-            _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
-            _insider, _storeUpd
+            // 开始菜单/搜索打扰（高频）
+            _tips, _recommended, _searchHighlights, _cortana, _copilotAi,
+            // 隐私与跟踪
+            _adTracking, _cloudSearch, _webSearch, _searchHistory,
+            _trackApps, _langList, _location, _activityHist, _clipCloud,
+            // 界面效果
+            _animations, _transparency, _stickyKeys, _backgroundApps,
+            _storageSense, _autoplay,
+            // 设置建议
+            _settingsSuggest, _inking, _consumer, _edgePre,
+            // 更新与推送
+            _deliveryOpt, _msrt, _insider, _storeUpd,
+            // 应用与网络
+            _gameDvr, _officeTel, _teredo,
         ]));
-        _groups.Add(("远程与网络", [_rdp, _rdpGpu, _rdpFps, _rdpNla, _ra, _netDiscovery, _smRemoting]));
-        _groups.Add(("系统组件", [_svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures]));
-        _groups.Add(("账户策略", [_pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter]));
+        _groups.Add(("系统组件", [
+            _svrMgr, _mediaFeatures, _bloatFeatures,
+            _installer, _wia, _azure,
+        ]));
+        _groups.Add(("账户策略", [
+            _autologon, _pwd, _pwdExpire, _noCad,
+            _shutdownLogon, _shutdownReason, _keyboardFilter,
+        ]));
 
         WireAppMenu();
         var header = BuildHeader();
@@ -469,7 +512,6 @@ internal sealed class MainForm : Form
     {
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
-        // 资源管理器控件最多，优先预创建句柄并预读状态
         var titles = new[] { "资源管理器", "电源与服务", "登录启动项", "DNS 设置" };
         var i = 0;
         var timer = new System.Windows.Forms.Timer { Interval = 40 };
@@ -903,15 +945,29 @@ internal sealed class MainForm : Form
         _contentHost.AutoScroll = true;
     }
 
+    private static bool IsEmbeddedMenuTitle(string title) =>
+        Array.IndexOf(EmbeddedPageTitles, title) >= 0;
+
+    private int FindBatchGroupIndex(string title)
+    {
+        for (var i = 0; i < _groups.Count; i++)
+            if (_groups[i].Title == title) return i;
+        return -1;
+    }
+
     private void ShowGroup(int index)
     {
         if (index < 0 || index >= MenuItems.Length) return;
 
-        if (index >= _groups.Count)
+        var title = MenuItems[index];
+        if (IsEmbeddedMenuTitle(title))
         {
             ShowEmbeddedPage(index);
             return;
         }
+
+        var groupIndex = FindBatchGroupIndex(title);
+        if (groupIndex < 0) return;
 
         SetBatchMode(batch: true);
         var fromPage = _embeddedPage is not null;
@@ -937,7 +993,7 @@ internal sealed class MainForm : Form
         var header = BuildTableHeader();
         wrap.Controls.Add(header);
 
-        var group = _groups[index];
+        var group = _groups[groupIndex];
         var section = BuildGroupSection(group.Title, group.Rows);
         wrap.Controls.Add(section);
         section.Location = new Point(0, header.Bottom);
