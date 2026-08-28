@@ -8,7 +8,9 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $RepoRoot).Path
 Set-Location $Root
 
-$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { "ssh://git@192.168.80.3:8022/sheng/win-yijian-youhua.git" }
+$GiteaRemoteUrl = "ssh://git@192.168.80.3:8022/sheng/win-yijian-youhua.git"
+$GithubRemoteUrl = "https://github.com/gygy/SrvDesk.git"
+$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { $GiteaRemoteUrl }
 $Branch = if ($env:GIT_BRANCH) { $env:GIT_BRANCH } else { "main" }
 $SshKey = if ($env:GIT_SSH_KEY) { $env:GIT_SSH_KEY } else { Join-Path $env:USERPROFILE ".ssh\id_ed25519_gitea" }
 if (-not $env:GIT_SSH_COMMAND) {
@@ -52,3 +54,15 @@ if ($status) {
 }
 Invoke-Git push -u origin $Branch
 Write-Host "Pushed to origin/$Branch"
+
+$prevEa = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+$githubUrl = & $git @GitConfig remote get-url github 2>$null
+$ErrorActionPreference = $prevEa
+if (-not $githubUrl) {
+    Invoke-Git remote add github $GithubRemoteUrl
+} else {
+    Invoke-Git remote set-url github $GithubRemoteUrl
+}
+Invoke-Git push -u github $Branch
+Write-Host "Pushed to github/$Branch"
