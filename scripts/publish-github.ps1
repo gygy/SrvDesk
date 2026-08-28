@@ -42,6 +42,15 @@ if ($current -ne "main") {
 
 Invoke-Git checkout -B public main
 
+foreach ($dir in @("src", "scripts")) {
+    if (Test-Path (Join-Path $Root $dir)) {
+        Invoke-Git rm -r --cached --ignore-unmatch -- $dir
+    }
+}
+foreach ($extra in @(".gitignore", "CHANGELOG.md", "RELEASE_NOTES.md")) {
+    Invoke-Git rm --cached --ignore-unmatch -- $extra
+}
+
 $tracked = & $git @GitConfig ls-files
 foreach ($path in $tracked) {
     if ($PublicFiles -notcontains $path) {
@@ -72,8 +81,8 @@ if (-not $githubUrl) {
     Invoke-Git remote set-url github $GithubRemoteUrl
 }
 
-Invoke-Git push github public:main
+Invoke-Git push --force github public:main
 Write-Host "Pushed public branch (README + LICENSE) to github/main"
 
-Invoke-Git checkout main
+Invoke-Git checkout -f main
 Write-Host "Back on main (full source for Gitea)"
