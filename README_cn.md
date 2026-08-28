@@ -32,22 +32,9 @@ SrvDesk 帮助把 **Windows Server 2022/2025** 配置成适合日常桌面使用
 1. 打开 [Releases](https://github.com/gygy/SrvDesk/releases) 下载最新 **`SrvDesk.exe`**（单文件，无需安装）。
 2. 放到任意目录（建议路径不含特殊字符）。
 3. **右键 → 以管理员身份运行**。
-4. 若 SmartScreen 提示，选「仍要运行」（开源未签名 exe 常见现象）。
+4. 若 SmartScreen 提示，选「仍要运行」（未签名 exe 常见现象）。
 
-### 从源码编译
-
-完整源码在私有 Gitea 仓库维护。GitHub 公开仓库仅含文档与 Release，不含 `src/`。
-
-若你有源码访问权限：
-
-```powershell
-git clone ssh://git@你的Gitea地址/sheng/win-yijian-youhua.git
-cd win-yijian-youhua
-.\scripts\publish.ps1
-# 输出：dist\SrvDesk.exe
-```
-
-需要本机已安装 [.NET SDK](https://dotnet.microsoft.com/download)（用于编译 net48 项目）。
+> GitHub 公开仓库仅提供 **使用说明**（本页）与 **版权说明**（[LICENSE](LICENSE)）；程序请从 [Releases](https://github.com/gygy/SrvDesk/releases) 下载。
 
 ---
 

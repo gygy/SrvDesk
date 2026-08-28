@@ -5,6 +5,8 @@
 **Download:** [Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`  
 **Requirements:** Windows Server 2016+ (2022/2025 recommended), .NET Framework 4.8, **Run as Administrator**
 
+This public repo contains the **user guide** and **license** only. Get the compiled app from [Releases](https://github.com/gygy/SrvDesk/releases).
+
 ## Quick start
 
 1. Run `SrvDesk.exe` **as Administrator**
@@ -19,8 +21,6 @@
 - **Presets:** server-desktop, security, remote-work, minimal
 - **JSON profiles** import/export, CLI, operation log
 
-Full source is maintained privately; the public GitHub repo contains docs and releases only (no `src/`).
-
-See [README_cn.md](README_cn.md) for the complete guide (中文).
+Full guide (中文): [README_cn.md](README_cn.md)
 
 License: [MIT](LICENSE) · Issues: [github.com/gygy/SrvDesk/issues](https://github.com/gygy/SrvDesk/issues)
