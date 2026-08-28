@@ -19,6 +19,8 @@
 - **Presets:** server-desktop, security, remote-work, minimal
 - **JSON profiles** import/export, CLI, operation log
 
-Full guide (中文): [README_cn.md](README_cn.md)
+Full source is maintained privately; the public GitHub repo contains docs and releases only (no `src/`).
+
+See [README_cn.md](README_cn.md) for the complete guide (中文).
 
 License: [MIT](LICENSE) · Issues: [github.com/gygy/SrvDesk/issues](https://github.com/gygy/SrvDesk/issues)

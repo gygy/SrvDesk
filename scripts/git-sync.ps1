@@ -55,14 +55,4 @@ if ($status) {
 Invoke-Git push -u origin $Branch
 Write-Host "Pushed to origin/$Branch"
 
-$prevEa = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
-$githubUrl = & $git @GitConfig remote get-url github 2>$null
-$ErrorActionPreference = $prevEa
-if (-not $githubUrl) {
-    Invoke-Git remote add github $GithubRemoteUrl
-} else {
-    Invoke-Git remote set-url github $GithubRemoteUrl
-}
-Invoke-Git push -u github $Branch
-Write-Host "Pushed to github/$Branch"
+& (Join-Path $PSScriptRoot "publish-github.ps1") -RepoRoot $Root

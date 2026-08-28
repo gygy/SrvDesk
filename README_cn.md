@@ -36,9 +36,13 @@ SrvDesk 帮助把 **Windows Server 2022/2025** 配置成适合日常桌面使用
 
 ### 从源码编译
 
+完整源码在私有 Gitea 仓库维护。GitHub 公开仓库仅含文档与 Release，不含 `src/`。
+
+若你有源码访问权限：
+
 ```powershell
-git clone https://github.com/gygy/SrvDesk.git
-cd SrvDesk
+git clone ssh://git@你的Gitea地址/sheng/win-yijian-youhua.git
+cd win-yijian-youhua
 .\scripts\publish.ps1
 # 输出：dist\SrvDesk.exe
 ```
