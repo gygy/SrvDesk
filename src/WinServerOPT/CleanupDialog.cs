@@ -17,36 +17,69 @@ internal sealed class CleanupDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 360);
+        ClientSize = new Size(540, 400);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 8), BackColor = AppTheme.Surface };
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 3,
+            Padding = new Padding(4, 4, 4, 4),
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
         var opts = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Fill,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
+            Margin = new Padding(0, 0, 0, 8),
         };
         opts.Controls.AddRange([_temp, _recent, _recycle, _prefetch, _thumb]);
+
         var run = ThemedSettingsChrome.CreateButton("开始清理", true);
         run.Size = new Size(120, 34);
+        run.Margin = new Padding(0, 0, 8, 0);
         run.Click += (_, _) => RunCleanup();
+
         var repair = ThemedSettingsChrome.CreateButton("修复被锁系统组件", false);
         repair.Size = new Size(160, 34);
+        repair.Margin = new Padding(0);
         repair.Click += (_, _) =>
         {
             CompetitorTweaks.RepairLockedComponents();
             MessageBox.Show(this, "已尝试恢复任务管理器、CMD、注册表编辑器、控制面板等。", "策略修复",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
-        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+
+        var row = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(0, 0, 0, 8),
+        };
         row.Controls.Add(run);
         row.Controls.Add(repair);
-        _result.AutoSize = true;
+
+        _result.Dock = DockStyle.Fill;
+        _result.AutoSize = false;
         _result.ForeColor = AppTheme.TextMute;
-        body.Controls.Add(_result);
-        body.Controls.Add(row);
-        body.Controls.Add(opts);
+        _result.TextAlign = ContentAlignment.TopLeft;
+
+        layout.Controls.Add(opts, 0, 0);
+        layout.Controls.Add(row, 0, 1);
+        layout.Controls.Add(_result, 0, 2);
+        body.Controls.Add(layout);
 
         ThemedSettingsChrome.MountModal(
             this,
@@ -62,7 +95,8 @@ internal sealed class CleanupDialog : Form
         AutoSize = true,
         Checked = on,
         ForeColor = AppTheme.TextMain,
-        Margin = new Padding(4, 6, 4, 6),
+        Margin = new Padding(0, 4, 0, 4),
+        MaximumSize = new Size(480, 0),
     };
 
     private void RunCleanup()
