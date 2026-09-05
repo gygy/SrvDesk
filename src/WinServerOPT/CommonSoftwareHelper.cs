@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -954,8 +955,8 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         // 优先直接下载 AppX/msixbundle（可靠）；勿先跑 Install-Module，PSGallery 在 Server/内网常永久卡住
         Report(onProgress,
             Optimizer.IsWindowsServer()
-                ? "下载并安装 App Installer（Server）…"
-                : "下载并安装 App Installer…",
+                ? "下载并安装 App Installer（Server，多镜像）…"
+                : "下载并安装 App Installer（多镜像）…",
             18);
         var bootstrap = TryBootstrapWingetPackages(
             preferProvisioned: Optimizer.IsWindowsServer(),
@@ -996,12 +997,23 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             notes.Add("已跳过 PowerShell 模块修复（Server 上 PSGallery 常会长时间无响应）。");
         }
 
-        var wingetItem = CommonSoftwareCatalog.Find("winget");
-        if (wingetItem is not null)
-            OpenDownloadPage(wingetItem);
+        try
+        {
+            Directory.CreateDirectory(DownloadDir);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = DownloadDir,
+                UseShellExecute = true,
+            });
+        }
+        catch { /* ignore */ }
 
-        notes.Add("自动修复未完成。已打开官方下载页。");
-        notes.Add("下载目录：" + DownloadDir);
+        notes.Add("自动修复未完成：当前环境无法连上下载源（GitHub/aka.ms）。");
+        notes.Add("请在能上网的电脑打开：https://github.com/microsoft/winget-cli/releases/latest");
+        notes.Add("下载并拷到本机目录：" + DownloadDir);
+        notes.Add("  · Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle");
+        notes.Add("  · DesktopAppInstaller_Dependencies.zip（解压后把 x64 下的 .appx 一并放入该目录）");
+        notes.Add("然后再次点击「一键安装 winget」。");
         notes.Add("也可在「设置 → 应用 → 应用执行别名」中开启 winget.exe。");
         Report(onProgress, "自动修复未完成", 100);
         return string.Join("\r\n", notes);
@@ -1265,59 +1277,295 @@ Repair-WinGetPackageManager -AllUsers -Force
     {
         Directory.CreateDirectory(DownloadDir);
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        EnsureAppxSideloadAllowed();
 
         var vcLibs = Path.Combine(DownloadDir, "Microsoft.VCLibs.x64.14.00.Desktop.appx");
         var uiXaml = Path.Combine(DownloadDir, "Microsoft.UI.Xaml.2.8.x64.appx");
         var bundle = Path.Combine(DownloadDir, "Microsoft.DesktopAppInstaller.msixbundle");
+        // 兼容用户从 GitHub 原名拷贝的文件
+        var bundleAlt = Path.Combine(DownloadDir,
+            "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle");
+        if (!File.Exists(bundle) && File.Exists(bundleAlt))
+        {
+            try { File.Copy(bundleAlt, bundle, overwrite: true); } catch { bundle = bundleAlt; }
+        }
+
+        var depsZip = Path.Combine(DownloadDir, "DesktopAppInstaller_Dependencies.zip");
+        var errors = new List<string>();
 
         try
         {
-            DownloadPackage(
-                "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx",
-                vcLibs,
-                minBytes: 500_000,
-                onProgress,
-                percentBase: 20,
-                percentSpan: 15);
-            DownloadPackage(
-                "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx",
-                uiXaml,
-                minBytes: 500_000,
-                onProgress,
-                percentBase: 35,
-                percentSpan: 15);
+            // 1) 尽量下载官方 Dependencies.zip（含 VCLibs/UI.Xaml），再下主包
+            try
+            {
+                DownloadFromMirrors(
+                    depsZip,
+                    minBytes: 1_000_000,
+                    onProgress,
+                    percentBase: 20,
+                    percentSpan: 20,
+                    requireZipMagic: true,
+                    WingetDependencyZipMirrors());
+                TryExtractWingetDependencies(depsZip, DownloadDir, onProgress);
+            }
+            catch (Exception ex)
+            {
+                errors.Add("Dependencies.zip：" + ShortNetError(ex));
+                ApplyLog.Write("Dependencies.zip 下载失败：" + ex.Message);
+            }
 
             try
             {
-                DownloadPackage(
-                    "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle",
+                DownloadFromMirrors(
+                    vcLibs,
+                    minBytes: 500_000,
+                    onProgress,
+                    percentBase: 40,
+                    percentSpan: 10,
+                    requireZipMagic: true,
+                    WingetVcLibsMirrors());
+            }
+            catch (Exception ex)
+            {
+                errors.Add("VCLibs：" + ShortNetError(ex));
+            }
+
+            try
+            {
+                DownloadFromMirrors(
+                    uiXaml,
+                    minBytes: 500_000,
+                    onProgress,
+                    percentBase: 50,
+                    percentSpan: 10,
+                    requireZipMagic: true,
+                    WingetUiXamlMirrors());
+            }
+            catch (Exception ex)
+            {
+                errors.Add("UI.Xaml：" + ShortNetError(ex));
+            }
+
+            try
+            {
+                DownloadFromMirrors(
                     bundle,
                     minBytes: 1_000_000,
                     onProgress,
-                    percentBase: 50,
-                    percentSpan: 25);
+                    percentBase: 60,
+                    percentSpan: 20,
+                    requireZipMagic: true,
+                    WingetBundleMirrors());
+            }
+            catch (Exception ex)
+            {
+                errors.Add("AppInstaller：" + ShortNetError(ex));
+            }
+
+            // 本机已有缓存包时，即使部分下载失败也可继续安装
+            var hasVc = File.Exists(vcLibs) && LooksLikeBinaryPackage(vcLibs);
+            var hasXaml = File.Exists(uiXaml) && LooksLikeBinaryPackage(uiXaml);
+            var hasBundle = File.Exists(bundle) && LooksLikeBinaryPackage(bundle);
+            if (!hasBundle && File.Exists(bundleAlt) && LooksLikeBinaryPackage(bundleAlt))
+            {
+                bundle = bundleAlt;
+                hasBundle = true;
+            }
+
+            if (!hasBundle)
+            {
+                var detail = errors.Count > 0 ? string.Join("；", errors) : "未知网络错误";
+                return "离线包安装失败：无法下载 App Installer（" + detail + "）。可将安装包手动放入：" + DownloadDir;
+            }
+
+            if (hasVc)
+            {
+                Report(onProgress, "安装 VCLibs…", 82);
+                try { AddAppxPackage(vcLibs, provisioned: false); }
+                catch (Exception ex) { ApplyLog.Write("VCLibs 安装：" + ex.Message); }
+            }
+
+            if (hasXaml)
+            {
+                Report(onProgress, "安装 UI.Xaml…", 86);
+                try { AddAppxPackage(uiXaml, provisioned: false); }
+                catch (Exception ex) { ApplyLog.Write("UI.Xaml 安装：" + ex.Message); }
+            }
+
+            Report(onProgress, "安装 App Installer…", 90);
+            // 优先带 DependencyPath，减少依赖遗漏
+            var depPaths = new List<string>();
+            if (hasVc) depPaths.Add(vcLibs);
+            if (hasXaml) depPaths.Add(uiXaml);
+            try
+            {
+                if (depPaths.Count > 0)
+                    AddAppxPackageWithDependencies(bundle, depPaths);
+                else
+                    AddAppxPackage(bundle, provisioned: preferProvisioned);
             }
             catch
             {
-                DownloadPackage("https://aka.ms/getwinget", bundle, minBytes: 1_000_000,
-                    onProgress, percentBase: 50, percentSpan: 25);
+                AddAppxPackage(bundle, provisioned: preferProvisioned);
             }
 
-            Report(onProgress, "安装 VCLibs…", 78);
-            AddAppxPackage(vcLibs, provisioned: false);
-            Report(onProgress, "安装 UI.Xaml…", 84);
-            AddAppxPackage(uiXaml, provisioned: false);
-            Report(onProgress, "安装 App Installer…", 90);
-            AddAppxPackage(bundle, provisioned: preferProvisioned);
+            // Server：再尝试带许可证的 provision（若目录里有 License xml）
+            if (preferProvisioned)
+            {
+                var license = Directory.EnumerateFiles(DownloadDir, "*License*.xml")
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(license))
+                {
+                    try
+                    {
+                        var escBundle = bundle.Replace("'", "''");
+                        var escLic = license!.Replace("'", "''");
+                        RunPowerShell($@"
+$ErrorActionPreference = 'Stop'
+Add-AppxProvisionedPackage -Online -PackagePath '{escBundle}' -LicensePath '{escLic}' | Out-Null
+", timeoutMs: 180_000);
+                    }
+                    catch (Exception ex)
+                    {
+                        ApplyLog.Write("Provision+License：" + ex.Message);
+                    }
+                }
+            }
 
             return preferProvisioned
-                ? "已按 Server 路径下载并安装 App Installer（含依赖）。"
+                ? "已按 Server 路径安装 App Installer（含依赖；本机缓存/多镜像）。"
                 : "已下载并安装 App Installer 依赖与主包。";
         }
         catch (Exception ex)
         {
-            return "离线包安装失败：" + ex.Message;
+            return "离线包安装失败：" + ShortNetError(ex);
         }
+    }
+
+    private static string ShortNetError(Exception ex)
+    {
+        var msg = ex.Message ?? "";
+        if (ex.InnerException is not null && msg.IndexOf("远程", StringComparison.Ordinal) < 0)
+            msg = ex.InnerException.Message;
+        if (msg.IndexOf("无法连接到远程服务器", StringComparison.Ordinal) >= 0
+            || msg.IndexOf("Unable to connect", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "无法连接到远程服务器（请检查外网/代理，或改用手动拷贝安装包）";
+        if (msg.Length > 120) msg = msg.Substring(0, 117) + "…";
+        return msg;
+    }
+
+    private static IEnumerable<string> WithGithubMirrors(string githubUrl)
+    {
+        yield return githubUrl;
+        // 国内常见加速（失败则跳过）
+        yield return "https://ghproxy.net/" + githubUrl;
+        yield return "https://mirror.ghproxy.com/" + githubUrl;
+        yield return "https://ghfast.top/" + githubUrl;
+    }
+
+    private static string[] WingetBundleMirrors() =>
+        WithGithubMirrors(
+                "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle")
+            .Concat([
+                "https://aka.ms/getwinget",
+            ])
+            .ToArray();
+
+    private static string[] WingetDependencyZipMirrors() =>
+        WithGithubMirrors(
+                "https://github.com/microsoft/winget-cli/releases/latest/download/DesktopAppInstaller_Dependencies.zip")
+            .ToArray();
+
+    private static string[] WingetVcLibsMirrors() =>
+    [
+        "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx",
+        "https://aka.ms/Microsoft.VCLibs.x64.14.00.appx",
+    ];
+
+    private static string[] WingetUiXamlMirrors() =>
+        WithGithubMirrors(
+                "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx")
+            .ToArray();
+
+    private static void TryExtractWingetDependencies(
+        string zipPath,
+        string destDir,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        if (!File.Exists(zipPath)) return;
+        Report(onProgress, "解压 Dependencies…", 38);
+        var extractDir = Path.Combine(destDir, "winget-deps");
+        try
+        {
+            if (Directory.Exists(extractDir))
+                Directory.Delete(extractDir, recursive: true);
+        }
+        catch { /* ignore */ }
+
+        Directory.CreateDirectory(extractDir);
+        System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractDir);
+
+        // 把 x64 依赖拷到下载目录，供后续安装复用
+        foreach (var file in Directory.EnumerateFiles(extractDir, "*.*", SearchOption.AllDirectories))
+        {
+            var name = Path.GetFileName(file);
+            var ext = Path.GetExtension(file);
+            if (!ext.Equals(".appx", StringComparison.OrdinalIgnoreCase) &&
+                !ext.Equals(".msix", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var targetName = name;
+            if (name.IndexOf("VCLibs", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                name.IndexOf("Desktop", StringComparison.OrdinalIgnoreCase) >= 0)
+                targetName = "Microsoft.VCLibs.x64.14.00.Desktop.appx";
+            else if (name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0)
+                targetName = "Microsoft.UI.Xaml.2.8.x64.appx";
+
+            var target = Path.Combine(destDir, targetName);
+            try { File.Copy(file, target, overwrite: true); }
+            catch { /* ignore one file */ }
+        }
+    }
+
+    private static void DownloadFromMirrors(
+        string dest,
+        long minBytes,
+        Action<SoftwareInstallProgress>? onProgress,
+        int percentBase,
+        int percentSpan,
+        bool requireZipMagic,
+        params string[] urls)
+    {
+        if (File.Exists(dest))
+        {
+            var len = new FileInfo(dest).Length;
+            if (len >= minBytes && (requireZipMagic ? LooksLikeBinaryPackage(dest) : LooksLikeExeOrMsi(dest)))
+            {
+                Report(onProgress, "已缓存 " + Path.GetFileName(dest), percentBase + percentSpan);
+                return;
+            }
+        }
+
+        Exception? last = null;
+        foreach (var url in urls)
+        {
+            if (string.IsNullOrWhiteSpace(url)) continue;
+            try
+            {
+                Report(onProgress, "尝试下载 " + Path.GetFileName(dest) + "…", percentBase);
+                DownloadToFile(url, dest, minBytes, onProgress, percentBase, percentSpan, requireZipMagic);
+                return;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                ApplyLog.Write("下载失败 [" + url + "]：" + ex.Message);
+                try { if (File.Exists(dest)) File.Delete(dest); } catch { /* ignore */ }
+            }
+        }
+
+        throw last ?? new InvalidOperationException("无可用下载地址：" + Path.GetFileName(dest));
     }
 
     private static string TryRegisterAppInstaller()

@@ -217,13 +217,14 @@ internal static class ServerDesktopTweaks
         if (enable)
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", 0);
-            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 0);
+            // 与「隐藏任务栏搜索栏」一致：写 Cache，避免被 Taskbar 迁移逻辑改回搜索框
+            Win11DesktopTweaks.SetTaskbarSearchMode(0);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation", 0);
         }
         else
         {
             DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana");
-            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
+            // 不删除 SearchboxTaskbarMode：交由「隐藏任务栏搜索栏」开关单独控制
             DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "AllowSearchToUseLocation");
         }
     }

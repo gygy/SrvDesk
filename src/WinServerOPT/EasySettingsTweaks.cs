@@ -146,10 +146,10 @@ internal static class EasySettingsTweaks
         SetService("UCPD", !disable);
 
     public static int GetSearchboxMode() =>
-        GetDword(Hive.HkCu, ExplorerAdv, "SearchboxTaskbarMode");
+        Win11DesktopTweaks.GetTaskbarSearchMode();
 
     public static void SetSearchboxMode(int mode) =>
-        SetDword(Hive.HkCu, ExplorerAdv, "SearchboxTaskbarMode", mode);
+        Win11DesktopTweaks.SetTaskbarSearchMode(mode);
 
     public static int GetTaskbarGlomLevel() =>
         GetDword(Hive.HkCu, ExplorerAdv, "TaskbarGlomLevel");

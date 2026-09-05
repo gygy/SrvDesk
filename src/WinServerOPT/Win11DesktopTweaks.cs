@@ -19,10 +19,7 @@ internal static class Win11DesktopTweaks
         SetShortcutSuffixOff(s.NoShortcutSuffix);
         SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", s.Win11ExplorerStyle ? 0 : 1);
         SetClassicContextMenu(s.Win10ClassicContextMenu);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode",
-            s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
-        // 部分系统读 Search 键；两处一并写入，确保能隐藏搜索栏
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode",
+        SetTaskbarSearchMode(
             s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
@@ -54,8 +51,52 @@ internal static class Win11DesktopTweaks
 
     public static bool IsWin10ClassicContextMenuOn() => IsClassicContextMenuOn();
 
-    public static bool IsTaskbarSearchBoxOn() =>
-        DwordEquals(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode", 2);
+    public static bool IsTaskbarSearchBoxOn() => GetTaskbarSearchMode() == 2;
+
+    /// <summary>
+    /// 0=隐藏 1=仅图标 2=搜索框。
+    /// 必须同时写 Search + Advanced，并设置 SearchboxTaskbarModeCache，
+    /// 否则 Taskbar.dll 会在资源管理器启动时把模式“迁移”回默认搜索框。
+    /// </summary>
+    public static int GetTaskbarSearchMode()
+    {
+        const string searchKey = @"Software\Microsoft\Windows\CurrentVersion\Search";
+        var search = GetDword(Hive.HkCu, searchKey, "SearchboxTaskbarMode");
+        if (search is 0 or 1 or 2) return search;
+        var adv = GetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode");
+        return adv is 0 or 1 or 2 ? adv : -1;
+    }
+
+    public static void SetTaskbarSearchMode(int mode)
+    {
+        if (mode is not (0 or 1 or 2))
+            mode = 1;
+
+        const string searchKey = @"Software\Microsoft\Windows\CurrentVersion\Search";
+        SetDword(Hive.HkCu, searchKey, "SearchboxTaskbarMode", mode);
+        // Cache=1：标记为用户已设定，阻止开机/重启资源管理器时被重置为搜索框(2)
+        SetDword(Hive.HkCu, searchKey, "SearchboxTaskbarModeCache", 1);
+        SetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode", mode);
+
+        // 可选策略加固（需管理员）；非隐藏时删除策略，避免把界面选项锁死
+        const string policy = @"SOFTWARE\Policies\Microsoft\Windows\Windows Search";
+        try
+        {
+            if (mode == 0)
+            {
+                // 0=隐藏 1=仅图标 2=图标+标签 3=搜索框
+                SetDword(Hive.HkLm, policy, "ConfigureSearchOnTaskbarMode", 0);
+            }
+            else
+            {
+                DeleteValue(Hive.HkLm, policy, "ConfigureSearchOnTaskbarMode");
+            }
+        }
+        catch
+        {
+            /* 无管理员权限时跳过策略 */
+        }
+    }
 
     public static bool IsTaskbarAlignLeftOn() =>
         DwordEquals(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", 0);

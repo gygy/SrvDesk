@@ -610,12 +610,12 @@ internal static class SettingCatalog
         "右键菜单恢复 Win10 经典完整菜单。", "CLSID 86ca1aa0 InprocServer32。", "更多项一步可见。", "习惯经典菜单时开启。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo HideTaskbarSearch = H(
         "完全隐藏任务栏搜索栏（不显示搜索框和图标）。",
-        "SearchboxTaskbarMode=0（资源管理器 Advanced / Search）。",
+        "SearchboxTaskbarMode=0，并写 SearchboxTaskbarModeCache=1（Advanced + Search）。",
         "任务栏更干净，少占空间。",
         "Server 桌面或追求极简任务栏建议开启；仍要搜索可按 Win 键。",
-        "重启资源管理器后生效。",
+        "应用到系统后会重启资源管理器生效。",
         W10De,
-        uiPlace: "任务栏右键→任务栏设置→搜索",
+        uiPlace: "任务栏右键→任务栏设置→搜索→隐藏",
         whenHint: "想干净任务栏就开");
 
     public static readonly SettingHelpInfo TaskbarSearchBox = H(
