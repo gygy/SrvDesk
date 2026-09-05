@@ -16,14 +16,17 @@ internal sealed class CommonSoftwareStatus
 /// <summary>软件安装/卸载实时进度（Percent 为 0–100 估算）。</summary>
 internal sealed class SoftwareInstallProgress
 {
-    public string Message { get; init; } = "";
-    public int Percent { get; init; }
+    public string Message { get; set; } = "";
+    public int Percent { get; set; }
 }
 
 internal static class CommonSoftwareHelper
 {
     private static string? _wingetPath;
     private static bool _wingetDiscoveryDone;
+    private static string? _wingetVersionCache;
+    private static bool _speedSettingsApplied;
+    private static bool _warmUpStarted;
 
     private static readonly string[] KnownWingetPaths =
     [
@@ -45,6 +48,116 @@ internal static class CommonSoftwareHelper
     {
         _wingetPath = null;
         _wingetDiscoveryDone = false;
+        _wingetVersionCache = null;
+    }
+
+    /// <summary>打开常用软件时后台预热：写入加速设置并更新源索引，避免首次安装卡住。</summary>
+    public static void WarmUpInBackground()
+    {
+        if (_warmUpStarted) return;
+        _warmUpStarted = true;
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                EnsureWingetSpeedSettings();
+                if (!IsWingetAvailable()) return;
+                // 安装时关闭自动源更新；此处后台刷一次索引
+                Run(ResolveWingetPath(), "source update --disable-interactivity", setWorkingDirForExe: true);
+            }
+            catch
+            {
+                /* ignore */
+            }
+        });
+    }
+
+    /// <summary>降低每次 install 前同步源索引的等待；静默安装更顺畅。</summary>
+    public static void EnsureWingetSpeedSettings()
+    {
+        if (_speedSettingsApplied) return;
+        _speedSettingsApplied = true;
+        try
+        {
+            foreach (var path in WingetSettingsPaths())
+            {
+                try
+                {
+                    var dir = Path.GetDirectoryName(path);
+                    if (string.IsNullOrWhiteSpace(dir)) continue;
+                    Directory.CreateDirectory(dir!);
+                    MergeWingetSpeedSettings(path!);
+                }
+                catch
+                {
+                    /* ignore one path */
+                }
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+    }
+
+    private static IEnumerable<string> WingetSettingsPaths()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        yield return Path.Combine(local, "Microsoft", "WinGet", "Settings", "settings.json");
+        yield return Path.Combine(local, "Packages",
+            "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe", "LocalState", "settings.json");
+    }
+
+    private static void MergeWingetSpeedSettings(string path)
+    {
+        // 关闭安装前自动源更新（0）；后台 WarmUp 会手动 update
+        // downloader=do 通常比默认更快；telemetry 关闭略减开销
+        const string optimized = @"{
+  ""$schema"": ""https://aka.ms/winget-settings.schema.json"",
+  ""source"": {
+    ""autoUpdateIntervalInMinutes"": 0
+  },
+  ""network"": {
+    ""downloader"": ""do""
+  },
+  ""telemetry"": {
+    ""disable"": true
+  },
+  ""installBehavior"": {
+    ""preferences"": {
+      ""scope"": ""machine""
+    }
+  }
+}
+";
+        if (!File.Exists(path))
+        {
+            File.WriteAllText(path, optimized, Encoding.UTF8);
+            ApplyLog.Write("已写入 winget 加速设置：" + path);
+            return;
+        }
+
+        var text = File.ReadAllText(path, Encoding.UTF8);
+        if (text.IndexOf("\"autoUpdateIntervalInMinutes\": 0", StringComparison.Ordinal) >= 0 ||
+            text.IndexOf("\"autoUpdateIntervalInMinutes\":0", StringComparison.Ordinal) >= 0)
+            return;
+
+        var updated = Regex.Replace(
+            text,
+            "\"autoUpdateIntervalInMinutes\"\\s*:\\s*\\d+",
+            "\"autoUpdateIntervalInMinutes\": 0");
+        if (updated == text)
+        {
+            // 无该键：在首个 { 后插入 source 段
+            var idx = text.IndexOf('{');
+            if (idx < 0) return;
+            updated = text.Substring(0, idx + 1) +
+                      "\r\n  \"source\": { \"autoUpdateIntervalInMinutes\": 0 }," +
+                      text.Substring(idx + 1);
+        }
+
+        File.WriteAllText(path, updated, Encoding.UTF8);
+        ApplyLog.Write("已优化 winget 源更新间隔：" + path);
     }
 
     public static string ResolveWingetPath()
@@ -243,9 +356,13 @@ internal static class CommonSoftwareHelper
         Report(onProgress, "准备安装 " + item.Title, 2);
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
-            Report(onProgress, "正在调用 winget…", 5);
+            EnsureWingetSpeedSettings();
+            Report(onProgress, "正在调用 winget（静默）…", 5);
+            // --silent：跳过安装包 UI；--source winget：避开较慢的 msstore；
+            // 源自动更新已在设置中关闭，避免每次 install 先同步索引
             var code = RunWinget(
-                $"install -e --id {item.WingetId} --accept-package-agreements --accept-source-agreements --disable-interactivity",
+                $"install -e --id {item.WingetId} --source winget --silent " +
+                "--accept-package-agreements --accept-source-agreements --disable-interactivity",
                 onProgress);
             if (code == 0)
             {
@@ -253,6 +370,23 @@ internal static class CommonSoftwareHelper
                 return "";
             }
             if (code == -1978335189) // 0x8A150013 already installed
+            {
+                Report(onProgress, "已安装", 100);
+                return "软件已安装或无需重复安装。";
+            }
+
+            // 部分包仅在 msstore：回退默认源再试一次
+            Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
+            code = RunWinget(
+                $"install -e --id {item.WingetId} --silent " +
+                "--accept-package-agreements --accept-source-agreements --disable-interactivity",
+                onProgress);
+            if (code == 0)
+            {
+                Report(onProgress, "安装完成", 100);
+                return "";
+            }
+            if (code == -1978335189)
             {
                 Report(onProgress, "已安装", 100);
                 return "软件已安装或无需重复安装。";
@@ -436,7 +570,6 @@ internal static class CommonSoftwareHelper
 
     private static CommonSoftwareStatus QueryWingetStatus()
     {
-        ResetWingetDiscovery();
         if (!IsWingetAvailable())
         {
             // 包已装但别名坏了：再尝试直接定位 WindowsApps 内 winget.exe
@@ -445,9 +578,7 @@ internal static class CommonSoftwareHelper
             {
                 _wingetPath = direct;
                 _wingetDiscoveryDone = true;
-                var ver = RunCaptureWinget("--version").Trim();
-                if (ver.StartsWith("v", StringComparison.OrdinalIgnoreCase) && ver.Length > 1)
-                    ver = ver.Substring(1).Trim();
+                var ver = CachedWingetVersion();
                 return new CommonSoftwareStatus
                 {
                     Installed = true,
@@ -466,14 +597,24 @@ internal static class CommonSoftwareHelper
             return new CommonSoftwareStatus();
         }
 
-        var version = RunCaptureWinget("--version").Trim();
-        if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase) && version.Length > 1)
-            version = version.Substring(1).Trim();
+        var version = CachedWingetVersion();
         return new CommonSoftwareStatus
         {
             Installed = true,
             Version = version.Length > 0 ? "v" + version : "已就绪",
         };
+    }
+
+    private static string CachedWingetVersion()
+    {
+        if (!string.IsNullOrWhiteSpace(_wingetVersionCache))
+            return _wingetVersionCache!;
+
+        var version = RunCaptureWinget("--version").Trim();
+        if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase) && version.Length > 1)
+            version = version.Substring(1).Trim();
+        _wingetVersionCache = version;
+        return version;
     }
 
     private static bool IsAppInstallerPackagePresent()
@@ -778,8 +919,6 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
         };
         if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
         {
@@ -793,32 +932,57 @@ Add-AppxPackage -Path '{escaped}'
         var lastReport = DateTime.MinValue;
         var lastPercent = -1;
         var lastMessage = "";
+        var lineBuf = new StringBuilder();
+        var sync = new object();
 
         void HandleText(string text)
         {
-            foreach (var line in SplitProgressLines(text))
+            lock (sync)
             {
-                var update = parser.Feed(line);
-                if (update is null) continue;
-                var now = DateTime.UtcNow;
-                if (update.Percent == lastPercent &&
-                    update.Message == lastMessage &&
-                    (now - lastReport).TotalMilliseconds < 120)
-                    continue;
-                if (update.Percent < lastPercent && update.Percent < 100)
-                    continue; // 进度只前进
-
-                lastPercent = update.Percent;
-                lastMessage = update.Message;
-                lastReport = now;
-                onProgress?.Invoke(update);
+                foreach (var ch in text)
+                {
+                    if (ch is '\r' or '\n')
+                    {
+                        if (lineBuf.Length == 0) continue;
+                        var line = lineBuf.ToString();
+                        lineBuf.Clear();
+                        Emit(line);
+                    }
+                    else
+                    {
+                        lineBuf.Append(ch);
+                    }
+                }
             }
+        }
+
+        void Emit(string line)
+        {
+            var update = parser.Feed(line);
+            if (update is null) return;
+            var now = DateTime.UtcNow;
+            if (update.Percent == lastPercent &&
+                update.Message == lastMessage &&
+                (now - lastReport).TotalMilliseconds < 120)
+                return;
+            if (update.Percent < lastPercent && update.Percent < 100)
+                return;
+
+            lastPercent = update.Percent;
+            lastMessage = update.Message;
+            lastReport = now;
+            onProgress?.Invoke(update);
         }
 
         var stdout = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardOutput, HandleText));
         var stderr = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardError, HandleText));
         p.WaitForExit(600_000);
         System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 15_000);
+        lock (sync)
+        {
+            if (lineBuf.Length > 0)
+                Emit(lineBuf.ToString());
+        }
         return p.ExitCode;
     }
 
@@ -837,29 +1001,6 @@ Add-AppxPackage -Path '{escaped}'
         }
     }
 
-    private static IEnumerable<string> SplitProgressLines(string text)
-    {
-        var sb = new StringBuilder();
-        foreach (var ch in text)
-        {
-            if (ch is '\r' or '\n')
-            {
-                if (sb.Length > 0)
-                {
-                    yield return sb.ToString();
-                    sb.Clear();
-                }
-            }
-            else
-            {
-                sb.Append(ch);
-            }
-        }
-
-        if (sb.Length > 0)
-            yield return sb.ToString();
-    }
-
     private sealed class WingetProgressParser
     {
         private int _percent = 5;
@@ -873,7 +1014,6 @@ Add-AppxPackage -Path '{escaped}'
         {
             var line = Ansi.Replace(raw, "").Trim();
             if (line.Length == 0) return null;
-            // 去掉进度条字符噪音
             line = Regex.Replace(line, @"[█▒░■□▪▫]+", " ").Trim();
             if (line.Length == 0) return null;
 
@@ -926,7 +1066,7 @@ Add-AppxPackage -Path '{escaped}'
             }
 
             var pctMatch = Pct.Match(line);
-            if (pctMatch.Success && int.TryParse(pctMatch.Groups[1].Value, out var pct) && pct is >= 0 and <= 100)
+            if (pctMatch.Success && int.TryParse(pctMatch.Groups[1].Value, out var pct) && pct >= 0 && pct <= 100)
             {
                 int mapped;
                 if (_phase.StartsWith("下载", StringComparison.Ordinal) || _phase == "下载中")

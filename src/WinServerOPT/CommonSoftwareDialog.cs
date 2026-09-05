@@ -97,7 +97,11 @@ internal sealed class CommonSoftwareDialog : Form
             "安装前请确认来源可信；Server 环境 winget 需先安装应用安装程序。",
             RefreshAll);
 
-        Load += (_, _) => RefreshAll();
+        Load += (_, _) =>
+        {
+            CommonSoftwareHelper.WarmUpInBackground();
+            RefreshAll();
+        };
         _categoryMenu.SelectedIndexChanged += (_, _) =>
         {
             if (_categoryMenu.SelectedItem is string cat)
@@ -137,8 +141,10 @@ internal sealed class CommonSoftwareDialog : Form
 
         _progressBar.Dock = DockStyle.Bottom;
         _progressBar.Height = 14;
-        _progressBar.Style = ProgressBarStyle.Marquee;
-        _progressBar.MarqueeAnimationSpeed = 30;
+        _progressBar.Style = ProgressBarStyle.Continuous;
+        _progressBar.Minimum = 0;
+        _progressBar.Maximum = 100;
+        _progressBar.Value = 0;
 
         _progressHost.Controls.Add(_progressBar);
         _progressHost.Controls.Add(_progressLabel);
@@ -253,7 +259,7 @@ internal sealed class CommonSoftwareDialog : Form
         _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
         _askBeforeInstall.Text = "安装前询问确认";
-        _askBeforeInstall.Checked = true;
+        _askBeforeInstall.Checked = false;
         _askBeforeInstall.AutoSize = true;
         _askBeforeInstall.Margin = new Padding(0, 8, 0, 0);
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
@@ -332,11 +338,11 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void RefreshAll()
     {
-        CommonSoftwareHelper.ResetWingetDiscovery();
+        // 不每次重置探测：重复 Probe winget 很慢；安装/修复后再 Reset
         var wingetOk = CommonSoftwareHelper.IsWingetAvailable();
         _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
-            ? "已检测到 winget，可一键静默安装其它软件。"
+            ? "已检测到 winget · 静默安装 · 源索引后台预热"
             : "未检测到 winget，请先安装后再使用一键安装其它软件。";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
@@ -347,7 +353,7 @@ internal sealed class CommonSoftwareDialog : Form
 
     private bool _installBusy;
 
-    private void SetInstallBusy(bool busy, string? progress = null, int current = -1, int total = -1, string? itemId = null)
+    private void SetInstallBusy(bool busy, string? progress = null, int current = -1, int total = -1, string? itemId = null, int percent = -1)
     {
         _installBusy = busy;
         _installWingetBtn.Enabled = !busy;
@@ -355,6 +361,9 @@ internal sealed class CommonSoftwareDialog : Form
             btn.Enabled = !busy;
 
         var text = string.IsNullOrWhiteSpace(progress) ? (busy ? "处理中…" : "") : progress!;
+        if (busy && percent >= 0 && text.IndexOf('%') < 0)
+            text += "  " + percent + "%";
+
         Text = busy ? "常用软件 — " + text : "常用软件";
         Cursor = Cursors.Default;
         UseWaitCursor = false;
@@ -374,12 +383,23 @@ internal sealed class CommonSoftwareDialog : Form
         _busyItemId = itemId;
         _progressHost.Visible = true;
         _progressLabel.Text = text;
-        if (total > 0 && current >= 0)
+
+        if (percent >= 0)
         {
             _progressBar.Style = ProgressBarStyle.Continuous;
             _progressBar.Minimum = 0;
-            _progressBar.Maximum = Math.Max(1, total);
-            _progressBar.Value = Math.Max(0, Math.Min(current, total));
+            _progressBar.Maximum = 100;
+            var v = Math.Max(0, Math.Min(100, percent));
+            if (v < _progressBar.Value && v < 100)
+                v = _progressBar.Value; // 避免回退闪烁
+            _progressBar.Value = v;
+        }
+        else if (total > 0 && current >= 0)
+        {
+            _progressBar.Style = ProgressBarStyle.Continuous;
+            _progressBar.Minimum = 0;
+            _progressBar.Maximum = Math.Max(1, total * 100);
+            _progressBar.Value = Math.Max(0, Math.Min(_progressBar.Maximum, current * 100));
         }
         else
         {
@@ -390,15 +410,30 @@ internal sealed class CommonSoftwareDialog : Form
         foreach (var row in _rows.Values)
         {
             var on = itemId is not null && row.Item.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase);
-            row.SetBusy(on, on ? DeriveRowBusyText(text) : null);
+            row.SetBusy(on, on ? DeriveRowBusyText(text, percent) : null);
         }
     }
 
-    private static string DeriveRowBusyText(string progress)
+    private static string DeriveRowBusyText(string progress, int percent)
     {
-        if (progress.IndexOf("卸载", StringComparison.Ordinal) >= 0)
-            return "卸载中…";
-        return "安装中…";
+        var baseText = progress.IndexOf("卸载", StringComparison.Ordinal) >= 0 ? "卸载中" : "安装中";
+        return percent >= 0 ? baseText + " " + percent + "%" : baseText + "…";
+    }
+
+    private Action<SoftwareInstallProgress> MakeProgressHandler(string title, string itemId, int batchIndex = -1, int batchTotal = -1)
+    {
+        return p =>
+        {
+            var overall = p.Percent;
+            if (batchTotal > 0 && batchIndex >= 0)
+                overall = (int)Math.Min(99, (batchIndex + p.Percent / 100.0) / batchTotal * 100);
+
+            var text = batchTotal > 0
+                ? $"{title}（{batchIndex + 1}/{batchTotal}）· {p.Message}"
+                : $"{title} · {p.Message}";
+
+            Ui(() => SetInstallBusy(true, text, itemId: itemId, percent: overall));
+        };
     }
 
     private void Ui(Action action)
@@ -425,12 +460,12 @@ internal sealed class CommonSoftwareDialog : Form
             if (answer != DialogResult.Yes) return;
         }
 
-        SetInstallBusy(true, "正在安装 winget（下载/注册可能需要几分钟）…", itemId: "winget");
+        SetInstallBusy(true, "正在安装 winget…", itemId: "winget", percent: 1);
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg;
             Exception? error = null;
-            try { msg = CommonSoftwareHelper.InstallWinget(); }
+            try { msg = CommonSoftwareHelper.InstallWinget(MakeProgressHandler("winget", "winget")); }
             catch (Exception ex)
             {
                 error = ex;
@@ -439,6 +474,7 @@ internal sealed class CommonSoftwareDialog : Form
 
             Ui(() =>
             {
+                CommonSoftwareHelper.ResetWingetDiscovery();
                 SetInstallBusy(false);
                 RefreshAll();
                 if (error is not null)
@@ -477,12 +513,12 @@ internal sealed class CommonSoftwareDialog : Form
             if (answer != DialogResult.Yes) return;
         }
 
-        SetInstallBusy(true, "正在安装 " + item.Title + "…", itemId: item.Id);
+        SetInstallBusy(true, "正在安装 " + item.Title + "…", itemId: item.Id, percent: 1);
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg = "";
             Exception? error = null;
-            try { msg = CommonSoftwareHelper.Install(item); }
+            try { msg = CommonSoftwareHelper.Install(item, MakeProgressHandler(item.Title, item.Id)); }
             catch (Exception ex) { error = ex; }
 
             Ui(() =>
@@ -517,12 +553,12 @@ internal sealed class CommonSoftwareDialog : Form
             "卸载确认", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
 
-        SetInstallBusy(true, "正在卸载 " + item.Title + "…", itemId: item.Id);
+        SetInstallBusy(true, "正在卸载 " + item.Title + "…", itemId: item.Id, percent: 1);
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg = "";
             Exception? error = null;
-            try { msg = CommonSoftwareHelper.Uninstall(item); }
+            try { msg = CommonSoftwareHelper.Uninstall(item, MakeProgressHandler("卸载 " + item.Title, item.Id)); }
             catch (Exception ex) { error = ex; }
 
             Ui(() =>
@@ -577,7 +613,7 @@ internal sealed class CommonSoftwareDialog : Form
     private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
     {
         if (_installBusy) return;
-        SetInstallBusy(true, $"准备安装（共 {items.Count} 项）…", current: 0, total: items.Count);
+        SetInstallBusy(true, $"准备安装（共 {items.Count} 项）…", percent: 0);
         System.Threading.Tasks.Task.Run(() =>
         {
             var notes = new List<string>();
@@ -585,16 +621,16 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 var item = items[i];
                 var n = i + 1;
+                var progress = MakeProgressHandler(item.Title, item.Id, i, items.Count);
                 Ui(() => SetInstallBusy(true,
                     $"正在安装 {item.Title}（{n}/{items.Count}）…",
-                    current: n - 1,
-                    total: items.Count,
-                    itemId: item.Id));
+                    itemId: item.Id,
+                    percent: (int)((i / (double)items.Count) * 100)));
                 try
                 {
                     var msg = item.IsWingetBootstrap
-                        ? CommonSoftwareHelper.InstallWinget()
-                        : CommonSoftwareHelper.Install(item);
+                        ? CommonSoftwareHelper.InstallWinget(progress)
+                        : CommonSoftwareHelper.Install(item, progress);
                     notes.Add(item.Title + "：" + (string.IsNullOrWhiteSpace(msg) ? "完成" : msg));
                 }
                 catch (Exception ex)
@@ -605,7 +641,7 @@ internal sealed class CommonSoftwareDialog : Form
 
             Ui(() =>
             {
-                SetInstallBusy(true, $"全部完成（{items.Count}/{items.Count}）", current: items.Count, total: items.Count);
+                SetInstallBusy(true, $"全部完成（{items.Count}/{items.Count}）", percent: 100);
                 SetInstallBusy(false);
                 RefreshAll();
                 MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
