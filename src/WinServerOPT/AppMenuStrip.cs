@@ -23,6 +23,9 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolContextMenu { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
+    public ToolStripMenuItem ToolRestoreDefaults { get; }
+    public ToolStripMenuItem ViewAllOn { get; }
+    public ToolStripMenuItem ViewAllOff { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
     public ToolStripMenuItem ViewHelpPanel { get; }
     public ToolStripMenuItem HelpUsage { get; }
@@ -70,18 +73,24 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolContextMenu = new ToolStripMenuItem("右键菜单...");
         ToolQuick = new ToolStripMenuItem("快速工具...");
         ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
+        ToolRestoreDefaults = new ToolStripMenuItem("恢复出厂默认...");
         tools.DropDownItems.AddRange([
             ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts,
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
             ToolFlushDns, ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance,
             ToolWindowsFeatures, ToolContextMenu,
-            new ToolStripSeparator(), ToolQuick, ToolRefresh
+            new ToolStripSeparator(), ToolQuick, ToolRefresh, ToolRestoreDefaults
         ]);
 
         var view = new ToolStripMenuItem("视图(&V)");
+        ViewAllOn = new ToolStripMenuItem("全部开启当前页");
+        ViewAllOff = new ToolStripMenuItem("全部关闭当前页");
         ViewHideIncompatible = new ToolStripMenuItem("隐藏不适用项") { CheckOnClick = true };
         ViewHelpPanel = new ToolStripMenuItem("显示帮助面板") { CheckOnClick = true, Checked = false };
-        view.DropDownItems.AddRange([ViewHideIncompatible, ViewHelpPanel]);
+        view.DropDownItems.AddRange([
+            ViewAllOn, ViewAllOff, new ToolStripSeparator(),
+            ViewHideIncompatible, ViewHelpPanel
+        ]);
 
         var help = new ToolStripMenuItem("帮助(&H)");
         HelpUsage = new ToolStripMenuItem("使用说明", null, null, Keys.F1);

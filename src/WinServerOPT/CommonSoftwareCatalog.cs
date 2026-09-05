@@ -96,7 +96,10 @@ internal static class CommonSoftwareCatalog
 
     private static CommonSoftwareItem Item(
         string id, string title, string category, string wingetId,
-        string[] detect, string downloadUrl, bool essential) => new()
+        string[] detect, string downloadUrl, bool essential,
+        string offlineInstallerUrl = "",
+        string offlineInstallArgs = "",
+        bool preferOfflineInstall = false) => new()
     {
         Id = id,
         Title = title,
@@ -105,5 +108,8 @@ internal static class CommonSoftwareCatalog
         DetectPatterns = detect,
         DownloadUrl = downloadUrl,
         Essential = essential,
+        OfflineInstallerUrl = offlineInstallerUrl,
+        OfflineInstallArgs = offlineInstallArgs,
+        PreferOfflineInstall = preferOfflineInstall,
     };
 }

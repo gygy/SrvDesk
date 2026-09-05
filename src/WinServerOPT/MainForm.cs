@@ -168,6 +168,7 @@ internal sealed class MainForm : Form
     private Optimizer.State? _baselineState;
     private readonly Button _apply = new();
     private readonly Button _restore = new();
+    private Button? _refreshBottom;
     private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
@@ -399,6 +400,9 @@ internal sealed class MainForm : Form
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
+        _appMenu.ToolRestoreDefaults.Click += (_, _) => RestoreDefaults();
+        _appMenu.ViewAllOn.Click += (_, _) => SetVisibleAll(true);
+        _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
         _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
@@ -1171,20 +1175,23 @@ internal sealed class MainForm : Form
         _commandFlow.Visible = batch;
         _commandHint.Visible = !batch;
         _commandBar.Height = 44;
+        _apply.Visible = batch;
         _apply.Enabled = batch;
+        _restore.Visible = batch;
         _restore.Enabled = batch;
-        if (_bottomActions is not null)
+        if (_refreshBottom is not null)
         {
-            foreach (Control c in _bottomActions.Controls)
-            {
-                if (c is Button b && b is not null && b.Text is "全部开启" or "全部关闭")
-                    b.Enabled = batch;
-            }
+            _refreshBottom.Visible = !batch;
+            _refreshBottom.Enabled = !batch;
         }
+
+        _appMenu.ViewAllOn.Enabled = batch;
+        _appMenu.ViewAllOff.Enabled = batch;
+        _appMenu.ToolRestoreDefaults.Enabled = batch;
 
         _status.Text = batch
             ? _defaultStatusText
-            : "此页修改立即生效，无需点击「应用到系统」。";
+            : "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
     }
 
     private int ContentWidth() =>
@@ -1360,11 +1367,9 @@ internal sealed class MainForm : Form
         };
         _bottomActions = actions;
 
-        var allOn = ToolButton("全部开启", () => SetVisibleAll(true));
-        var allOff = ToolButton("全部关闭", () => SetVisibleAll(false));
-        var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
-        var commonSoftware = ToolButton("常用软件", ShowCommonSoftware);
-        var refresh = ToolButton("刷新", () => LoadState(fullScan: true));
+        // 批量页：应用到系统 / 恢复默认；即时页：仅刷新。其余入口在菜单。
+        _refreshBottom = ToolButton("刷新", () => LoadState(fullScan: true));
+        _refreshBottom.Visible = false;
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -1382,7 +1387,7 @@ internal sealed class MainForm : Form
 
         _apply.Text = "应用到系统";
         _apply.AutoSize = false;
-        _apply.Size = new Size(92, 36);
+        _apply.Size = new Size(108, 36);
         _apply.Margin = new Padding(8, 0, 0, 0);
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
@@ -1394,7 +1399,7 @@ internal sealed class MainForm : Form
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
-        actions.Controls.AddRange([allOn, allOff, quickTools, commonSoftware, refresh, _restore, _apply]);
+        actions.Controls.AddRange([_refreshBottom, _restore, _apply]);
         _bottomPanel.Controls.Add(actions);
         _bottomPanel.Controls.Add(_status);
         _bottomPanel.Controls.Add(rule);

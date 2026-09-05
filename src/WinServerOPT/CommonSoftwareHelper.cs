@@ -430,6 +430,23 @@ internal static class CommonSoftwareHelper
             return InstallWinget(onProgress);
 
         Report(onProgress, "准备安装 " + item.Title, 2);
+
+        // Server 等环境无法使用微软商店：优先离线安装包
+        if (item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+        {
+            try
+            {
+                var offlineMsg = InstallFromOfflinePackage(item, onProgress);
+                if (offlineMsg is not null)
+                    return offlineMsg;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("离线安装失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "离线安装失败，尝试其它方式…", 40);
+            }
+        }
+
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
             EnsureWingetSpeedSettings();
@@ -453,23 +470,41 @@ internal static class CommonSoftwareHelper
                 return "软件已安装或无需重复安装。";
             }
 
-            // 部分包仅在 msstore：回退默认源再试一次
-            Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
-            code = RunWinget(
-                $"install -e --id {item.WingetId} --silent " +
-                "--accept-package-agreements --accept-source-agreements --disable-interactivity",
-                onProgress);
-            if (code == 0)
+            // 部分包仅在 msstore：回退默认源再试一次（PreferOffline 的包跳过商店，避免 Server 失败）
+            if (!item.PreferOfflineInstall)
             {
-                Report(onProgress, "安装完成", 100);
-                InvalidateStatusCache();
-                return "";
+                Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
+                code = RunWinget(
+                    $"install -e --id {item.WingetId} --silent " +
+                    "--accept-package-agreements --accept-source-agreements --disable-interactivity",
+                    onProgress);
+                if (code == 0)
+                {
+                    Report(onProgress, "安装完成", 100);
+                    InvalidateStatusCache();
+                    return "";
+                }
+                if (code == -1978335189)
+                {
+                    Report(onProgress, "已安装", 100);
+                    InvalidateStatusCache();
+                    return "软件已安装或无需重复安装。";
+                }
             }
-            if (code == -1978335189)
+        }
+
+        // 未标记 PreferOffline 但配置了离线包：winget 失败后再试
+        if (!item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+        {
+            try
             {
-                Report(onProgress, "已安装", 100);
-                InvalidateStatusCache();
-                return "软件已安装或无需重复安装。";
+                var offlineMsg = InstallFromOfflinePackage(item, onProgress);
+                if (offlineMsg is not null)
+                    return offlineMsg;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("离线安装失败：" + ex.Message);
             }
         }
 
@@ -480,6 +515,50 @@ internal static class CommonSoftwareHelper
             : string.IsNullOrWhiteSpace(item.WingetId)
                 ? "该软件暂无 winget 包，已在浏览器打开官方下载页。"
                 : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
+    }
+
+    /// <summary>下载并静默运行离线安装包。成功返回提示文案（空串=成功）；失败返回 null 以便上层回退。</summary>
+    private static string? InstallFromOfflinePackage(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var url = item.OfflineInstallerUrl.Trim();
+        if (url.Length == 0) return null;
+
+        Directory.CreateDirectory(DownloadDir);
+        var fileName = Path.GetFileName(new Uri(url).LocalPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+            fileName = item.Id + "-setup.exe";
+        var dest = Path.Combine(DownloadDir, fileName);
+
+        Report(onProgress, "下载离线安装包…", 5);
+        // iCloudSetup 约 150MB+；其它包按 1MB 下限防误下 HTML
+        DownloadInstaller(url, dest, minBytes: 1_000_000, onProgress, percentBase: 5, percentSpan: 55);
+
+        var args = string.IsNullOrWhiteSpace(item.OfflineInstallArgs)
+            ? "/quiet /norestart"
+            : item.OfflineInstallArgs.Trim();
+        Report(onProgress, "正在静默安装离线包…", 65);
+        ApplyLog.Write("离线安装：" + dest + " " + args);
+
+        var code = Run(dest, args);
+        InvalidateStatusCache();
+        if (code == 0)
+        {
+            Report(onProgress, "安装完成", 100);
+            return "";
+        }
+
+        // 部分安装程序用非 0 表示需重启等；若已能检测到则视为成功
+        var status = Query(item);
+        if (status.Installed)
+        {
+            Report(onProgress, "安装完成（需按提示重启时请自行安排）", 100);
+            return code != 0 ? "安装已完成；退出码 " + code + "（如提示重启请自行安排）。" : "";
+        }
+
+        ApplyLog.Write("离线安装退出码：" + code);
+        return null;
     }
 
     public static string Uninstall(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
@@ -526,7 +605,7 @@ internal static class CommonSoftwareHelper
 
         if (IsAppInstallerPackagePresent())
         {
-            Report(onProgress, "注册 App Installer 别名…", 15);
+            Report(onProgress, "注册 App Installer 别名…", 12);
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
@@ -537,32 +616,16 @@ internal static class CommonSoftwareHelper
             }
         }
 
-        if (Optimizer.IsWindowsServer())
-        {
-            Report(onProgress, "下载并安装 App Installer（Server）…", 20);
-            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: true, onProgress);
-            if (bootstrap.Length > 0) notes.Add(bootstrap);
-            ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx())
-            {
-                Report(onProgress, "winget 已就绪", 100);
-                return FormatWingetReady(notes);
-            }
-
-            Report(onProgress, "再次注册别名…", 88);
-            var register = TryRegisterAppInstaller();
-            if (register.Length > 0) notes.Add(register);
-            ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx())
-            {
-                Report(onProgress, "winget 已就绪", 100);
-                return FormatWingetReady(notes);
-            }
-        }
-
-        Report(onProgress, "通过 WinGet 模块修复…", 55);
-        var repair = TryRepairWinGetPackageManager();
-        if (repair.Length > 0) notes.Add(repair);
+        // 优先直接下载 AppX/msixbundle（可靠）；勿先跑 Install-Module，PSGallery 在 Server/内网常永久卡住
+        Report(onProgress,
+            Optimizer.IsWindowsServer()
+                ? "下载并安装 App Installer（Server）…"
+                : "下载并安装 App Installer…",
+            18);
+        var bootstrap = TryBootstrapWingetPackages(
+            preferProvisioned: Optimizer.IsWindowsServer(),
+            onProgress);
+        if (bootstrap.Length > 0) notes.Add(bootstrap);
         ResetWingetDiscovery();
         if (IsWingetAvailable() || TryBindWingetFromAppx())
         {
@@ -570,26 +633,32 @@ internal static class CommonSoftwareHelper
             return FormatWingetReady(notes);
         }
 
+        Report(onProgress, "注册别名…", 82);
+        var registerAgain = TryRegisterAppInstaller();
+        if (registerAgain.Length > 0) notes.Add(registerAgain);
+        ResetWingetDiscovery();
+        if (IsWingetAvailable() || TryBindWingetFromAppx())
+        {
+            Report(onProgress, "winget 已就绪", 100);
+            return FormatWingetReady(notes);
+        }
+
+        // 桌面可选：PowerShell 模块修复（短超时）；Server 跳过——Install-Module 极易挂死
         if (!Optimizer.IsWindowsServer())
         {
-            Report(onProgress, "下载并安装 App Installer…", 60);
-            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: false, onProgress);
-            if (bootstrap.Length > 0) notes.Add(bootstrap);
+            Report(onProgress, "通过 WinGet 模块快速修复（最多 90 秒）…", 88);
+            var repair = TryRepairWinGetPackageManager(onProgress);
+            if (repair.Length > 0) notes.Add(repair);
             ResetWingetDiscovery();
             if (IsWingetAvailable() || TryBindWingetFromAppx())
             {
                 Report(onProgress, "winget 已就绪", 100);
                 return FormatWingetReady(notes);
             }
-
-            var register = TryRegisterAppInstaller();
-            if (register.Length > 0) notes.Add(register);
-            ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx())
-            {
-                Report(onProgress, "winget 已就绪", 100);
-                return FormatWingetReady(notes);
-            }
+        }
+        else
+        {
+            notes.Add("已跳过 PowerShell 模块修复（Server 上 PSGallery 常会长时间无响应）。");
         }
 
         var wingetItem = CommonSoftwareCatalog.Find("winget");
@@ -818,24 +887,35 @@ internal static class CommonSoftwareHelper
         }
     }
 
-    private static string TryRepairWinGetPackageManager()
+    private static string TryRepairWinGetPackageManager(Action<SoftwareInstallProgress>? onProgress = null)
     {
+        // 全非交互：禁止 NuGet/PSGallery 弹确认；短超时，避免永久卡住 UI
         const string script = @"
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$ConfirmPreference = 'None'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+try {
+  Get-PackageProvider -Name NuGet -ErrorAction Stop | Out-Null
+} catch {
+  Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ForceBootstrap | Out-Null
+}
 if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
   Register-PSRepository -Default -ErrorAction SilentlyContinue
 }
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
 if (-not (Get-Module -ListAvailable -Name Microsoft.WinGet.Client)) {
-  Install-Module Microsoft.WinGet.Client -Force -AllowClobber -Scope AllUsers
+  Install-Module Microsoft.WinGet.Client -Force -AllowClobber -Scope CurrentUser -Confirm:$false
 }
 Import-Module Microsoft.WinGet.Client -Force
-Repair-WinGetPackageManager -AllUsers
+Repair-WinGetPackageManager -AllUsers -Force
 ";
         try
         {
-            var code = RunPowerShell(script);
+            Report(onProgress, "WinGet 模块修复中（超时将跳过）…", 90);
+            var code = RunPowerShell(script, timeoutMs: 90_000);
+            if (code == -2)
+                return "Microsoft.WinGet.Client 修复超时已跳过。";
             return code == 0
                 ? "已通过 Microsoft.WinGet.Client 修复 winget。"
                 : "Microsoft.WinGet.Client 修复返回码 " + code + "。";
@@ -939,10 +1019,34 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         int percentBase = 0,
         int percentSpan = 20)
     {
+        DownloadToFile(url, dest, minBytes, onProgress, percentBase, percentSpan, requireZipMagic: true);
+    }
+
+    /// <summary>下载 EXE/MSI 等安装程序（校验 MZ 头，而非 AppX 的 PK）。</summary>
+    private static void DownloadInstaller(
+        string url,
+        string dest,
+        long minBytes,
+        Action<SoftwareInstallProgress>? onProgress = null,
+        int percentBase = 0,
+        int percentSpan = 20)
+    {
+        DownloadToFile(url, dest, minBytes, onProgress, percentBase, percentSpan, requireZipMagic: false);
+    }
+
+    private static void DownloadToFile(
+        string url,
+        string dest,
+        long minBytes,
+        Action<SoftwareInstallProgress>? onProgress,
+        int percentBase,
+        int percentSpan,
+        bool requireZipMagic)
+    {
         if (File.Exists(dest))
         {
             var len = new FileInfo(dest).Length;
-            if (len >= minBytes && LooksLikeBinaryPackage(dest))
+            if (len >= minBytes && (requireZipMagic ? LooksLikeBinaryPackage(dest) : LooksLikeExeOrMsi(dest)))
             {
                 Report(onProgress, "已缓存 " + Path.GetFileName(dest), percentBase + percentSpan);
                 return;
@@ -975,13 +1079,33 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         }
 
         var size = new FileInfo(dest).Length;
-        if (size < minBytes || !LooksLikeBinaryPackage(dest))
+        var looksOk = requireZipMagic ? LooksLikeBinaryPackage(dest) : LooksLikeExeOrMsi(dest);
+        if (size < minBytes || !looksOk)
         {
             try { File.Delete(dest); } catch { /* ignore */ }
             throw new InvalidOperationException("下载文件无效或过小：" + Path.GetFileName(dest) + "（" + size + " 字节）");
         }
 
         Report(onProgress, "下载完成 " + name, percentBase + percentSpan);
+    }
+
+    private static bool LooksLikeExeOrMsi(string path)
+    {
+        try
+        {
+            using var fs = File.OpenRead(path);
+            if (fs.Length < 2) return false;
+            var b0 = fs.ReadByte();
+            var b1 = fs.ReadByte();
+            // PE EXE: MZ；MSI 为复合文档，常见 D0 CF，此处放宽到非纯文本即可
+            if (b0 == 'M' && b1 == 'Z') return true;
+            if (b0 == 0xD0 && b1 == 0xCF) return true;
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool LooksLikeBinaryPackage(string path)
@@ -1060,7 +1184,7 @@ Add-AppxPackage -Path '{escaped}'
         })?.WaitForExit(600_000);
     }
 
-    private static int RunPowerShell(string script)
+    private static int RunPowerShell(string script, int timeoutMs = 600_000)
     {
         var file = Path.Combine(DownloadDir, "winget-install-" + Guid.NewGuid().ToString("N") + ".ps1");
         Directory.CreateDirectory(DownloadDir);
@@ -1068,7 +1192,8 @@ Add-AppxPackage -Path '{escaped}'
         try
         {
             return Run("powershell.exe",
-                "-NoProfile -File \"" + file + "\"");
+                "-NoProfile -ExecutionPolicy Bypass -File \"" + file + "\"",
+                timeoutMs: timeoutMs);
         }
         finally
         {
@@ -1293,7 +1418,7 @@ Add-AppxPackage -Path '{escaped}'
         }
     }
 
-    private static int Run(string file, string args, bool setWorkingDirForExe = false)
+    private static int Run(string file, string args, bool setWorkingDirForExe = false, int timeoutMs = 600_000)
     {
         var psi = new ProcessStartInfo
         {
@@ -1315,7 +1440,18 @@ Add-AppxPackage -Path '{escaped}'
         // 避免管道缓冲区塞满导致死锁
         var stdout = System.Threading.Tasks.Task.Run(() => p.StandardOutput.ReadToEnd());
         var stderr = System.Threading.Tasks.Task.Run(() => p.StandardError.ReadToEnd());
-        p.WaitForExit(600_000);
+        if (!p.WaitForExit(Math.Max(5_000, timeoutMs)))
+        {
+            try
+            {
+                p.Kill();
+                p.WaitForExit(5_000);
+            }
+            catch { /* ignore */ }
+            ApplyLog.Write("进程超时已终止：" + file + "（" + timeoutMs + "ms）");
+            return -2;
+        }
+
         System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 10_000);
         return p.ExitCode;
     }

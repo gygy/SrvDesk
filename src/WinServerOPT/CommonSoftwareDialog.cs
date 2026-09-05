@@ -399,8 +399,9 @@ internal sealed class CommonSoftwareDialog : Form
         {
             _busyItemId = null;
             _progressHost.Visible = false;
-            _progressBar.Style = ProgressBarStyle.Marquee;
+            _progressBar.Style = ProgressBarStyle.Continuous;
             _progressBar.MarqueeAnimationSpeed = 0;
+            _progressBar.Value = 0;
             _progressLabel.Text = "";
             foreach (var row in _rows.Values)
                 row.SetBusy(false);
