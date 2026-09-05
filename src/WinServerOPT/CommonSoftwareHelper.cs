@@ -396,6 +396,12 @@ internal static class CommonSoftwareHelper
         if (item.IsWingetBootstrap)
             return QueryWingetStatus();
 
+        if (!string.IsNullOrWhiteSpace(item.AppxPackageName))
+        {
+            var appx = QueryAppxStatus(item.AppxPackageName);
+            if (appx.Installed) return appx;
+        }
+
         foreach (var keyPath in UninstallKeyPaths())
         {
             using var baseKey = RegistryKey.OpenBaseKey(
@@ -423,6 +429,24 @@ internal static class CommonSoftwareHelper
         return new CommonSoftwareStatus();
     }
 
+    private static CommonSoftwareStatus QueryAppxStatus(string packageName)
+    {
+        try
+        {
+            var output = RunCapture("powershell.exe",
+                "-NoProfile -Command \"Get-AppxPackage -Name '" +
+                packageName.Replace("'", "''") +
+                "*' | Select-Object -First 1 -ExpandProperty Version\"");
+            output = output.Trim();
+            if (output.Length == 0) return new CommonSoftwareStatus();
+            return new CommonSoftwareStatus { Installed = true, Version = output };
+        }
+        catch
+        {
+            return new CommonSoftwareStatus();
+        }
+    }
+
     public static string Install(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
     {
         ApplyLog.Write("常用软件安装：" + item.Title);
@@ -431,7 +455,23 @@ internal static class CommonSoftwareHelper
 
         Report(onProgress, "准备安装 " + item.Title, 2);
 
-        // Server 等环境无法使用微软商店：优先离线安装包
+        // Server 无商店：优先 Appx/Msix 旁加载（与手工安装的 .Appx + 依赖一致）
+        if (item.PreferAppxSideload && !string.IsNullOrWhiteSpace(item.StoreProductId))
+        {
+            try
+            {
+                var appxMsg = InstallFromAppxSideload(item, onProgress);
+                if (appxMsg is not null)
+                    return appxMsg;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("Appx 旁加载失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "Appx 旁加载失败，尝试其它方式…", 35);
+            }
+        }
+
+        // 次选：传统 EXE 离线包（如 iCloudSetup 遗留版）
         if (item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
         {
             try
@@ -442,8 +482,8 @@ internal static class CommonSoftwareHelper
             }
             catch (Exception ex)
             {
-                ApplyLog.Write("离线安装失败，尝试其它方式：" + ex.Message);
-                Report(onProgress, "离线安装失败，尝试其它方式…", 40);
+                ApplyLog.Write("离线 EXE 安装失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "离线 EXE 安装失败，尝试其它方式…", 45);
             }
         }
 
@@ -470,8 +510,8 @@ internal static class CommonSoftwareHelper
                 return "软件已安装或无需重复安装。";
             }
 
-            // 部分包仅在 msstore：回退默认源再试一次（PreferOffline 的包跳过商店，避免 Server 失败）
-            if (!item.PreferOfflineInstall)
+            // PreferAppx/Offline 的包跳过 msstore，避免 Server 挂死
+            if (!item.PreferOfflineInstall && !item.PreferAppxSideload)
             {
                 Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
                 code = RunWinget(
@@ -493,7 +533,6 @@ internal static class CommonSoftwareHelper
             }
         }
 
-        // 未标记 PreferOffline 但配置了离线包：winget 失败后再试
         if (!item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
         {
             try

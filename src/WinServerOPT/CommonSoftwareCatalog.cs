@@ -10,14 +10,23 @@ internal sealed class CommonSoftwareItem
     public string DownloadUrl { get; set; } = "";
     public bool Essential { get; set; }
 
-    /// <summary>官方离线安装包直链（优先于 winget/商店，适合 Server）。</summary>
+    /// <summary>官方离线 EXE 安装包直链（Appx 旁加载失败时回退）。</summary>
     public string OfflineInstallerUrl { get; set; } = "";
 
-    /// <summary>离线安装参数，如 /quiet /norestart。</summary>
+    /// <summary>离线 EXE 安装参数，如 /quiet /norestart。</summary>
     public string OfflineInstallArgs { get; set; } = "";
 
-    /// <summary>为 true 时先下载并运行离线包，失败再尝试 winget。</summary>
+    /// <summary>为 true 时先尝试 EXE 离线包（无 Appx 旁加载时）。</summary>
     public bool PreferOfflineInstall { get; set; }
+
+    /// <summary>微软商店 ProductId（如 9PKTQ5699M62），用于解析 Appx 直链。</summary>
+    public string StoreProductId { get; set; } = "";
+
+    /// <summary>Appx 包族名前缀，如 AppleInc.iCloud。</summary>
+    public string AppxPackageName { get; set; } = "";
+
+    /// <summary>优先 Appx/Msix 旁加载（Server 无商店时推荐）。</summary>
+    public bool PreferAppxSideload { get; set; }
 
     public bool IsWingetBootstrap => Id.Equals("winget", StringComparison.OrdinalIgnoreCase);
 }
@@ -76,9 +85,12 @@ internal static class CommonSoftwareCatalog
             ["阿里云盘"], "https://www.aliyundrive.com/download", essential: false),
         Item("tianyiyun", "天翼云盘", "网盘", "",
             ["天翼云盘", "Cloud189", "eCloud"], "https://cloud.189.cn/", essential: false),
-        // Server 无微软商店：优先 Apple CDN 离线安装包（遗留桌面版 7.21）；勿走 msstore
-        Item("icloud", "iCloud for Windows（离线安装）", "网盘", "Apple.iCloud",
+        // Server 无商店：优先 Appx/Msix 旁加载（与手工下载的 AppleInc.iCloud_*.Appx + 依赖一致）
+        Item("icloud", "iCloud for Windows（Appx 旁加载）", "网盘", "Apple.iCloud",
             ["iCloud"], "https://support.apple.com/zh-cn/103232", essential: false,
+            storeProductId: "9PKTQ5699M62",
+            appxPackageName: "AppleInc.iCloud",
+            preferAppxSideload: true,
             offlineInstallerUrl: "https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe",
             offlineInstallArgs: "/quiet /norestart",
             preferOfflineInstall: true),
@@ -99,7 +111,10 @@ internal static class CommonSoftwareCatalog
         string[] detect, string downloadUrl, bool essential,
         string offlineInstallerUrl = "",
         string offlineInstallArgs = "",
-        bool preferOfflineInstall = false) => new()
+        bool preferOfflineInstall = false,
+        string storeProductId = "",
+        string appxPackageName = "",
+        bool preferAppxSideload = false) => new()
     {
         Id = id,
         Title = title,
@@ -111,5 +126,8 @@ internal static class CommonSoftwareCatalog
         OfflineInstallerUrl = offlineInstallerUrl,
         OfflineInstallArgs = offlineInstallArgs,
         PreferOfflineInstall = preferOfflineInstall,
+        StoreProductId = storeProductId,
+        AppxPackageName = appxPackageName,
+        PreferAppxSideload = preferAppxSideload,
     };
 }
