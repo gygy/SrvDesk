@@ -3,24 +3,28 @@ using System.Globalization;
 namespace WinOpt;
 
 /// <summary>
-/// 操作日志：记录每次修改的项名、旧值→新值、注册表完整路径与类型。
-/// 文件：%LocalAppData%\WinOpt\apply.log
+/// 日志分两类：
+/// - 操作日志 apply.log：启动、打开工具、导入导出等一般事件
+/// - 变更日志 变更日志.log：用户优化时真正改动的值（原值 → 新值、注册表路径）
+/// 目录：%LocalAppData%\WinOpt\
 /// </summary>
 internal static class ApplyLog
 {
     [ThreadStatic]
     private static string? _context;
 
-    private static string LogPath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "apply.log");
+    private static string LogDir =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt");
 
-    public static string LogFilePath => LogPath;
+    private static string OpsLogPath => Path.Combine(LogDir, "apply.log");
 
+    /// <summary>用户优化变更专用日志文件名。</summary>
+    private static string ChangeLogPath => Path.Combine(LogDir, "变更日志.log");
+
+    public static string LogFilePath => OpsLogPath;
+    public static string ChangeLogFilePath => ChangeLogPath;
     public static string? CurrentContext => _context;
 
-    /// <summary>为当前线程设置「修改项」上下文（如「禁用 UAC」），写入日志时自动带上。</summary>
     public static IDisposable PushContext(string itemName)
     {
         var previous = _context;
@@ -28,163 +32,170 @@ internal static class ApplyLog
         return new ContextScope(previous);
     }
 
+    /// <summary>一般操作日志（非优化变更）。</summary>
     public static void Write(string message)
     {
-        try
-        {
-            var dir = Path.GetDirectoryName(LogPath)!;
-            Directory.CreateDirectory(dir);
-            var prefix = string.IsNullOrEmpty(_context) ? "" : $"[{_context}] ";
-            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {prefix}{message}{Environment.NewLine}";
-            File.AppendAllText(LogPath, line);
-        }
-        catch { /* ignore */ }
+        Append(OpsLogPath, FormatLine(message));
     }
 
     public static void WriteApply(string action, IReadOnlyList<string> errors)
     {
-        Write("──── " + (errors.Count == 0
+        var summary = errors.Count == 0
             ? $"{action} 结束（成功）"
-            : $"{action} 结束（部分失败：{string.Join("; ", errors)}）") + " ────");
+            : $"{action} 结束（部分失败：{string.Join("; ", errors)}）";
+        Write("──── " + summary + " ────");
+        WriteChange("──── " + summary + " ────");
     }
 
     public static void BeginBatch(string action)
     {
         Write("════ " + action + " 开始 ════");
+        WriteChange("════ " + action + " 开始 ════");
     }
 
-    /// <summary>注册表 DWORD：记录路径、值名、旧值→新值。</summary>
+    /// <summary>写入变更日志（优化改动明细）。</summary>
+    public static void WriteChange(string message)
+    {
+        Append(ChangeLogPath, FormatLine(message));
+    }
+
     public static void RegistryDword(string hive, string key, string valueName, object? oldValue, int newValue)
     {
         var path = FormatRegPath(hive, key);
+        var oldText = FormatValue(oldValue);
+        var newText = FormatDword(newValue);
         if (SameValue(oldValue, newValue))
         {
-            Write($"跳过（未变化） DWORD  {path}\\{valueName} = {FormatValue(oldValue)}");
+            WriteChange($"【未变更】{ItemLabel()} {path}\\{valueName} 仍为 {oldText}");
             return;
         }
 
-        Write(
-            $"修改注册表 DWORD\r\n" +
-            $"    修改项：{_context ?? "（未指定）"}\r\n" +
-            $"    位置：{path}\r\n" +
-            $"    值名：{valueName}\r\n" +
-            $"    类型：REG_DWORD\r\n" +
-            $"    原值：{FormatValue(oldValue)}\r\n" +
-            $"    新值：{newValue} (0x{newValue:X8})");
+        WriteChange(
+            $"【注册表变更】DWORD\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{path}\r\n" +
+            $"    值名称：{valueName}\r\n" +
+            $"    值类型：REG_DWORD\r\n" +
+            $"    变更：原来从 {oldText} 变成 {newText}");
     }
 
-    /// <summary>注册表字符串。</summary>
     public static void RegistryString(string hive, string key, string valueName, object? oldValue, string newValue, bool maskSecret = false)
     {
         var path = FormatRegPath(hive, key);
-        var displayNew = maskSecret ? Mask(newValue) : Quote(newValue);
-        var displayOld = maskSecret ? Mask(oldValue?.ToString()) : FormatValue(oldValue);
+        var oldText = maskSecret ? Mask(oldValue?.ToString()) : FormatValue(oldValue);
+        var newText = maskSecret ? Mask(newValue) : Quote(newValue);
         if (!maskSecret && SameValue(oldValue, newValue))
         {
-            Write($"跳过（未变化） SZ  {path}\\{valueName} = {displayOld}");
+            WriteChange($"【未变更】{ItemLabel()} {path}\\{valueName} 仍为 {oldText}");
             return;
         }
 
-        Write(
-            $"修改注册表 字符串\r\n" +
-            $"    修改项：{_context ?? "（未指定）"}\r\n" +
-            $"    位置：{path}\r\n" +
-            $"    值名：{valueName}\r\n" +
-            $"    类型：REG_SZ\r\n" +
-            $"    原值：{displayOld}\r\n" +
-            $"    新值：{displayNew}");
+        WriteChange(
+            $"【注册表变更】字符串\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{path}\r\n" +
+            $"    值名称：{valueName}\r\n" +
+            $"    值类型：REG_SZ\r\n" +
+            $"    变更：原来从 {oldText} 变成 {newText}");
     }
 
-    /// <summary>删除注册表值。</summary>
     public static void RegistryDelete(string hive, string key, string valueName, object? oldValue)
     {
         var path = FormatRegPath(hive, key);
         if (oldValue is null)
         {
-            Write($"跳过（值不存在）删除  {path}\\{valueName}");
+            WriteChange($"【未变更】{ItemLabel()} 删除 {path}\\{valueName}（值本来就不存在）");
             return;
         }
 
-        Write(
-            $"删除注册表值\r\n" +
-            $"    修改项：{_context ?? "（未指定）"}\r\n" +
-            $"    位置：{path}\r\n" +
-            $"    值名：{valueName}\r\n" +
-            $"    原值：{FormatValue(oldValue)}\r\n" +
-            $"    新值：（已删除）");
+        WriteChange(
+            $"【注册表变更】删除值\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{path}\r\n" +
+            $"    值名称：{valueName}\r\n" +
+            $"    变更：原来从 {FormatValue(oldValue)} 变成 （已删除）");
     }
 
-    /// <summary>删除注册表整键。</summary>
     public static void RegistryDeleteTree(string hive, string key, bool existed)
     {
         var path = FormatRegPath(hive, key);
         if (!existed)
         {
-            Write($"跳过（键不存在）删除键  {path}");
+            WriteChange($"【未变更】{ItemLabel()} 删除键 {path}（键本来就不存在）");
             return;
         }
 
-        Write(
-            $"删除注册表键\r\n" +
-            $"    修改项：{_context ?? "（未指定）"}\r\n" +
-            $"    位置：{path}\r\n" +
-            $"    操作：DeleteSubKeyTree");
+        WriteChange(
+            $"【注册表变更】删除键\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{path}\r\n" +
+            $"    变更：原来从 （键存在） 变成 （整键已删除）");
     }
 
-    /// <summary>创建/设置默认值的壳扩展键等。</summary>
     public static void RegistryKeyWrite(string hive, string key, string detail)
     {
-        Write(
-            $"写入注册表键\r\n" +
-            $"    修改项：{_context ?? "（未指定）"}\r\n" +
-            $"    位置：{FormatRegPath(hive, key)}\r\n" +
-            $"    详情：{detail}");
+        WriteChange(
+            $"【注册表变更】写入键\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{FormatRegPath(hive, key)}\r\n" +
+            $"    变更详情：{detail}");
     }
 
-    /// <summary>Windows 服务启停 / 启动类型。</summary>
     public static void ServiceChange(string serviceName, string detail, string? oldStart = null, string? newStart = null)
     {
+        var reg = $@"HKLM\SYSTEM\CurrentControlSet\Services\{serviceName}\Start";
         if (oldStart is not null && newStart is not null)
         {
-            Write(
-                $"修改系统服务\r\n" +
-                $"    修改项：{_context ?? "（未指定）"}\r\n" +
+            if (string.Equals(oldStart, newStart, StringComparison.Ordinal))
+            {
+                WriteChange($"【未变更】{ItemLabel()} 服务 {serviceName} 启动类型仍为 {oldStart}");
+                return;
+            }
+
+            WriteChange(
+                $"【服务变更】\r\n" +
+                $"    优化项：{ItemLabel()}\r\n" +
                 $"    服务名：{serviceName}\r\n" +
-                $"    注册表：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\\Start\r\n" +
-                $"    原启动类型：{oldStart}\r\n" +
-                $"    新启动类型：{newStart}\r\n" +
+                $"    注册表位置：{reg}\r\n" +
+                $"    变更：原来从 {oldStart} 变成 {newStart}\r\n" +
                 $"    操作：{detail}");
         }
         else
         {
-            Write(
-                $"修改系统服务\r\n" +
-                $"    修改项：{_context ?? "（未指定）"}\r\n" +
+            WriteChange(
+                $"【服务变更】\r\n" +
+                $"    优化项：{ItemLabel()}\r\n" +
                 $"    服务名：{serviceName}\r\n" +
-                $"    注册表：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\r\n" +
+                $"    注册表位置：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\r\n" +
                 $"    操作：{detail}");
         }
     }
 
-    /// <summary>命令行 / DISM / 其它系统修改。</summary>
     public static void SystemChange(string target, string detail, string? oldValue = null, string? newValue = null)
     {
         if (oldValue is not null || newValue is not null)
         {
-            Write(
-                $"修改系统设置\r\n" +
-                $"    修改项：{_context ?? "（未指定）"}\r\n" +
-                $"    目标：{target}\r\n" +
-                $"    原值：{oldValue ?? "（未知）"}\r\n" +
-                $"    新值：{newValue ?? "（未知）"}\r\n" +
+            var from = oldValue ?? "（未知）";
+            var to = newValue ?? "（未知）";
+            if (string.Equals(from, to, StringComparison.Ordinal))
+            {
+                WriteChange($"【未变更】{ItemLabel()} {target} 仍为 {from}");
+                return;
+            }
+
+            WriteChange(
+                $"【系统设置变更】\r\n" +
+                $"    优化项：{ItemLabel()}\r\n" +
+                $"    修改位置：{target}\r\n" +
+                $"    变更：原来从 {from} 变成 {to}\r\n" +
                 $"    详情：{detail}");
         }
         else
         {
-            Write(
-                $"修改系统设置\r\n" +
-                $"    修改项：{_context ?? "（未指定）"}\r\n" +
-                $"    目标：{target}\r\n" +
+            WriteChange(
+                $"【系统设置变更】\r\n" +
+                $"    优化项：{ItemLabel()}\r\n" +
+                $"    修改位置：{target}\r\n" +
                 $"    详情：{detail}");
         }
     }
@@ -206,7 +217,7 @@ internal static class ApplyLog
         if (value is null) return "（不存在）";
         return value switch
         {
-            int i => $"{i} (0x{i:X8})",
+            int i => FormatDword(i),
             uint u => $"{u} (0x{u:X8})",
             long l => l.ToString(CultureInfo.InvariantCulture),
             byte[] bytes => $"二进制[{bytes.Length}字节] {BitConverter.ToString(bytes, 0, Math.Min(16, bytes.Length))}" +
@@ -218,14 +229,35 @@ internal static class ApplyLog
 
     public static string StartTypeLabel(int? start) => start switch
     {
-        0 => "0 Boot",
-        1 => "1 System",
-        2 => "2 Automatic",
-        3 => "3 Manual",
-        4 => "4 Disabled",
+        0 => "0 Boot（引导）",
+        1 => "1 System（系统）",
+        2 => "2 Automatic（自动）",
+        3 => "3 Manual（手动）",
+        4 => "4 Disabled（禁用）",
         null => "（不存在）",
         _ => start.Value.ToString(CultureInfo.InvariantCulture),
     };
+
+    private static string FormatDword(int value) => $"{value} (0x{value:X8})";
+
+    private static string ItemLabel() =>
+        string.IsNullOrWhiteSpace(_context) ? "（未指定优化项）" : _context!;
+
+    private static string FormatLine(string message)
+    {
+        var prefix = string.IsNullOrEmpty(_context) ? "" : $"[{_context}] ";
+        return $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {prefix}{message}{Environment.NewLine}";
+    }
+
+    private static void Append(string path, string line)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, line);
+        }
+        catch { /* ignore */ }
+    }
 
     private static string Quote(string s) => "\"" + s.Replace("\"", "\\\"") + "\"";
 
