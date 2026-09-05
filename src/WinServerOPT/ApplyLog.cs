@@ -12,6 +12,7 @@ namespace WinOpt;
 internal static class ApplyLog
 {
     private static readonly Encoding Utf8Bom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     [ThreadStatic]
     private static string? _context;
@@ -284,15 +285,25 @@ internal static class ApplyLog
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             if (!File.Exists(path))
             {
-                var header = path.EndsWith("变更日志.log", StringComparison.OrdinalIgnoreCase)
-                    ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
-                      "# 请先点击「应用推荐」或切换即时页开关后再查看。\r\n\r\n"
+                var header = path.IndexOf("变更日志", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n\r\n"
                     : "# 操作日志\r\n\r\n";
                 File.WriteAllText(path, header, Utf8Bom);
             }
-            File.AppendAllText(path, line, Utf8Bom);
+            // 追加时不用 BOM，避免中间插入 BOM
+            File.AppendAllText(path, line, Utf8NoBom);
         }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            try
+            {
+                var fallback = Path.Combine(LogDir, "changelog-fallback.log");
+                File.AppendAllText(fallback,
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 写入失败 path={path} err={ex.Message}\r\n{line}",
+                    Utf8NoBom);
+            }
+            catch { /* ignore */ }
+        }
     }
 
     private static string Quote(string s) => "\"" + s.Replace("\"", "\\\"") + "\"";

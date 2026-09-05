@@ -41,7 +41,11 @@ internal sealed class InstantToggleRow : Panel
         _toggle.CheckedChanged += (_, _) =>
         {
             if (_suppress || _apply is null) return;
-            try { _apply(_toggle.Checked); }
+            try
+            {
+                using (ApplyLog.PushContext(Title))
+                    _apply(_toggle.Checked);
+            }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);

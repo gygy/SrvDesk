@@ -119,7 +119,11 @@ internal static class HostsFileHelper
         File.Copy(temp, path, overwrite: true);
         TryDelete(temp);
 
-        ApplyLog.Write("已保存 hosts：" + path);
+        ApplyLog.SystemChange(
+            path,
+            "保存 hosts 文件",
+            "（旧内容）",
+            "（已写入新内容）");
         if (flushDns)
             FlushDns();
     }
@@ -130,7 +134,7 @@ internal static class HostsFileHelper
         Directory.CreateDirectory(BackupDir);
         var dest = Path.Combine(BackupDir, $"hosts.{DateTime.Now:yyyyMMdd-HHmmss}.bak");
         File.Copy(path, dest, overwrite: false);
-        ApplyLog.Write("已备份 hosts → " + dest);
+        ApplyLog.SystemChange(path, "备份 hosts", path, dest);
         return dest;
     }
 

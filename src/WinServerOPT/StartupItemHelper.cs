@@ -59,27 +59,56 @@ internal static class StartupItemHelper
         if (entry.Kind == StartupKind.RegistryRunOnce)
             throw new InvalidOperationException("RunOnce 为一次性启动项，请直接删除，不能切换启用状态。");
 
+        var hive = entry.Hive == RegistryHive.LocalMachine ? "HKLM" : "HKCU";
+        var approvedKey = $@"{ApprovedRoot}\{entry.ApprovedStore}";
+        var valueName = ApprovedValueName(entry);
+        var from = entry.Enabled ? "启用" : "禁用";
+        var to = enabled ? "启用" : "禁用";
+        using (ApplyLog.PushContext("登录启动项"))
+        {
+            ApplyLog.SystemChange(
+                $"{hive}\\{approvedKey}\\{valueName}",
+                $"启动项「{entry.Name}」({entry.Scope} / {entry.KindText})",
+                from,
+                to);
+        }
         SetApproved(entry, enabled);
-        ApplyLog.Write($"{(enabled ? "启用" : "禁用")}启动项：{entry.Name}");
+        entry.Enabled = enabled;
     }
 
     public static void Delete(StartupEntry entry)
     {
+        var hive = entry.Hive == RegistryHive.LocalMachine ? "HKLM" : "HKCU";
         if (entry.Kind == StartupKind.StartupFolder)
         {
             if (string.IsNullOrWhiteSpace(entry.FolderPath) || !File.Exists(entry.FolderPath))
                 throw new InvalidOperationException("找不到启动文件夹中的文件。");
+            using (ApplyLog.PushContext("登录启动项"))
+            {
+                ApplyLog.SystemChange(
+                    entry.FolderPath,
+                    $"删除启动文件夹快捷方式「{entry.Name}」",
+                    "文件存在",
+                    "已删除");
+            }
             File.Delete(entry.FolderPath);
         }
         else
         {
-            using var baseKey = RegistryKey.OpenBaseKey(entry.Hive, entry.View);
-            using var key = baseKey.OpenSubKey(entry.RunKeyPath, writable: true);
-            key?.DeleteValue(entry.Name, throwOnMissingValue: false);
+            object? old;
+            using (var baseKey = RegistryKey.OpenBaseKey(entry.Hive, entry.View))
+            using (var key = baseKey.OpenSubKey(entry.RunKeyPath))
+                old = key?.GetValue(entry.Name);
+            using (ApplyLog.PushContext("登录启动项"))
+            {
+                ApplyLog.RegistryDelete(hive, entry.RunKeyPath, entry.Name, old);
+            }
+            using var writeBase = RegistryKey.OpenBaseKey(entry.Hive, entry.View);
+            using var writeKey = writeBase.OpenSubKey(entry.RunKeyPath, writable: true);
+            writeKey?.DeleteValue(entry.Name, throwOnMissingValue: false);
         }
 
         DeleteApproved(entry);
-        ApplyLog.Write("删除启动项：" + entry.Name);
     }
 
     public static void AddUserRun(string name, string command)
@@ -89,11 +118,18 @@ internal static class StartupItemHelper
         if (name.Length == 0 || command.Length == 0)
             throw new ArgumentException("名称和命令不能为空。");
 
-        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default);
-        using var key = baseKey.CreateSubKey(Run, true)
+        object? old;
+        using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default))
+        using (var key = baseKey.OpenSubKey(Run))
+            old = key?.GetValue(name);
+        using (ApplyLog.PushContext("登录启动项"))
+        {
+            ApplyLog.RegistryString("HKCU", Run, name, old, command);
+        }
+        using var writeBase = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default);
+        using var writeKey = writeBase.CreateSubKey(Run, true)
             ?? throw new InvalidOperationException("无法写入当前用户 Run。");
-        key.SetValue(name, command, RegistryValueKind.String);
-        ApplyLog.Write("添加启动项：" + name);
+        writeKey.SetValue(name, command, RegistryValueKind.String);
     }
 
     public static void OpenLocation(StartupEntry entry)

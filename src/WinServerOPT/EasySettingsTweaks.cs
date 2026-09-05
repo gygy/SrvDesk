@@ -186,7 +186,6 @@ internal static class EasySettingsTweaks
     {
         if (count < 1) count = 1;
         SetDword(Hive.HkLm, Prefetch, "MaxPrefetchFiles", count);
-        ApplyLog.Write("最大预取文件数：" + count);
     }
 
     public static bool IsAppLaunchPrefetchOn()
@@ -197,8 +196,8 @@ internal static class EasySettingsTweaks
 
     public static void SetWindowsSearchEnabled(bool enable)
     {
-        SetService("WSearch", enable);
-        ApplyLog.Write(enable ? "已恢复 Windows Search" : "已停止并禁用 Windows Search");
+        using (ApplyLog.PushContext("Windows Search"))
+            SetService("WSearch", enable);
     }
 
     public static bool IsWindowsSearchEnabled() => !ServiceDisabled("WSearch");
@@ -212,14 +211,16 @@ internal static class EasySettingsTweaks
             Run("netsh",
                 $"advfirewall firewall add rule name=\"{name}\" dir=out action=block program=\"{program}\" enable=yes");
         }
-        ApplyLog.Write("已添加搜索相关防火墙出站拦截规则");
+        using (ApplyLog.PushContext("搜索防火墙"))
+            ApplyLog.SystemChange("Windows 防火墙出站规则", "添加 SearchHost/SearchApp/Cortana 拦截", "无/旧规则", "已添加拦截规则");
     }
 
     public static void RemoveSearchFirewallRules()
     {
         foreach (var (name, _) in SearchFirewallTargets())
             Run("netsh", $"advfirewall firewall delete rule name=\"{name}\"");
-        ApplyLog.Write("已移除搜索相关防火墙规则");
+        using (ApplyLog.PushContext("搜索防火墙"))
+            ApplyLog.SystemChange("Windows 防火墙出站规则", "移除搜索相关拦截规则", "拦截规则存在", "已删除");
     }
 
     public static void OpenFirewallStatus() =>
@@ -237,11 +238,21 @@ internal static class EasySettingsTweaks
     {
         foreach (var log in new[] { "Application", "System", "Setup" })
             Run("wevtutil.exe", "cl " + log);
-        ApplyLog.Write("已清除 Application/System/Setup 日志");
+        using (ApplyLog.PushContext("事件日志"))
+            ApplyLog.SystemChange("Application/System/Setup", "wevtutil cl 清空事件日志", "有日志记录", "已清空");
     }
 
-    public static void SetHibernate(bool disable) =>
+    public static void SetHibernate(bool disable)
+    {
+        var from = IsHibernateDisabled() ? "已禁用休眠" : "已启用休眠";
+        var to = disable ? "已禁用休眠" : "已启用休眠";
         Run("powercfg.exe", disable ? "-h off" : "-h on");
+        ApplyLog.SystemChange(
+            @"HKLM\SYSTEM\CurrentControlSet\Control\Power\HibernateEnabled（powercfg -h）",
+            "修改系统休眠",
+            from,
+            to);
+    }
 
     public static void SetFastStartup(bool disable) =>
         SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", disable ? 0 : 1);

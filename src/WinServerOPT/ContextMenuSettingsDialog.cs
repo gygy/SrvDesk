@@ -76,10 +76,6 @@ internal sealed class ContextMenuSettingsDialog : Form
 
     private static void Bind(InstantToggleRow row, bool on, Action<bool> apply)
     {
-        row.Bind(on, v =>
-        {
-            apply(v);
-            ApplyLog.Write($"右键菜单 {row.Title} → {(v ? "开" : "关")}");
-        });
+        row.Bind(on, apply);
     }
 }

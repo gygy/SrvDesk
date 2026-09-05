@@ -224,7 +224,11 @@ internal sealed class WindowsFeaturesDialog : Form
                     var msg = disable
                         ? WindowsFeaturesHelper.DisableOrRemove(item)
                         : WindowsFeaturesHelper.EnableOrAdd(item);
-                    ApplyLog.Write($"DISM {(disable ? "卸载" : "安装")} {item.Name} → {msg}");
+                    ApplyLog.SystemChange(
+                        item.Name,
+                        $"DISM {(disable ? "卸载" : "安装")} 可选功能",
+                        disable ? "已安装" : "未安装",
+                        msg);
                     ok++;
                 }
                 catch (Exception ex)
