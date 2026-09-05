@@ -1423,7 +1423,7 @@ internal sealed class MainForm : Form
                 var state = Optimizer.Read(fullScan);
                 BeginInvoke(new Action(() =>
                 {
-                    try { Bind(state); }
+                    try { Bind(state, updateCurrentValues: true); }
                     catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
                     finally
                     {
@@ -1452,9 +1452,11 @@ internal sealed class MainForm : Form
     {
         _takeOwn.Checked = ContextMenuTweaks.IsTakeOwnershipOn();
         _openCmd.Checked = ContextMenuTweaks.IsOpenCmdOn();
+        _takeOwn.SyncCurrentValueFromState();
+        _openCmd.SyncCurrentValueFromState();
     }
 
-    private void Bind(Optimizer.State s)
+    private void Bind(Optimizer.State s, bool updateCurrentValues = false)
     {
         _cpu.Checked = s.CpuProgramPriority;
         _dep.Checked = s.Dep;
@@ -1601,8 +1603,11 @@ internal sealed class MainForm : Form
         _autologon.Checked = s.EnableAutologon;
         _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
-        foreach (var row in AllRows)
-            row.SyncCurrentValueFromState();
+        if (updateCurrentValues)
+        {
+            foreach (var row in AllRows)
+                row.SyncCurrentValueFromState();
+        }
     }
 
     private Optimizer.State CaptureState() => new()
@@ -1962,6 +1967,7 @@ internal sealed class MainForm : Form
         private readonly Label _scope;
         private readonly Label _info;
         private readonly Label _system;
+        private readonly Label _current;
         private Panel? _wrap;
         private Color _normalBg;
 
@@ -2011,6 +2017,15 @@ internal sealed class MainForm : Form
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
             };
+            _current = new Label
+            {
+                Text = "—",
+                AutoSize = false,
+                ForeColor = AppTheme.TextMain,
+                Font = new Font("Microsoft YaHei UI", 9F),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent,
+            };
         }
 
         public bool Checked
@@ -2021,6 +2036,28 @@ internal sealed class MainForm : Form
 
         public void SetSystemDefault(string text) => _system.Text = text;
 
+        /// <summary>
+        /// 根据开关是否已是优化建议，刷新「系统当前值」列。
+        /// Checked=true 表示系统当前已是优化建议状态。
+        /// </summary>
+        public void SyncCurrentValueFromState()
+        {
+            _current.Text = FormatCurrentValue(Checked, _system.Text);
+            _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
+        }
+
+        private static string FormatCurrentValue(bool matchesRecommended, string systemDefault)
+        {
+            if (!matchesRecommended)
+                return string.IsNullOrWhiteSpace(systemDefault) ? "系统默认值" : systemDefault;
+
+            if (string.Equals(systemDefault, "开启", StringComparison.Ordinal))
+                return "关闭";
+            if (string.Equals(systemDefault, "关闭", StringComparison.Ordinal))
+                return "开启";
+            return "已是优化建议";
+        }
+
         public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
         {
             if (hideIncompatibleDesktop && !facts.HasDesktopExperience && Help.Scope.RequiresDesktopExperience)
@@ -2029,7 +2066,9 @@ internal sealed class MainForm : Form
             var q = query.Trim();
             return ItemText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.Summary.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+                || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || _system.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || _current.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public void SetVisible(bool visible)
@@ -2058,9 +2097,9 @@ internal sealed class MainForm : Form
             ToolTip toolTip,
             Action<SettingRow> onSelectHelp)
         {
-            // 与表头列对齐（SettingListLayout），文字不得盖住开关
             var toggleX = SettingListLayout.ToggleX;
             var systemX = SettingListLayout.SystemX;
+            var currentX = SettingListLayout.CurrentX;
             var toggleW = SettingListLayout.ToggleW;
             var itemX = SettingListLayout.ItemX;
 
@@ -2089,19 +2128,22 @@ internal sealed class MainForm : Form
             _toggle.Size = new Size(toggleW, 26);
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
+            _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
+            toolTip.SetToolTip(_system, "系统默认值（出厂）");
+            toolTip.SetToolTip(_current, "系统当前值（读取自本机）");
 
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
             _info.Click += Select;
             if (hasScope) _scope.Click += Select;
 
-            // 开关最后添加并置顶，避免被透明 Label 盖住
+            wrap.Controls.Add(_current);
             wrap.Controls.Add(_system);
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
