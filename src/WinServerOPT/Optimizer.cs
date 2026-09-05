@@ -810,6 +810,7 @@ internal static class Optimizer
         {
             errors.Add($"{name}：{ex.Message}");
             ApplyLog.Write($"失败：{name} — {ex.Message}");
+            ApplyLog.WriteChange($"【失败】{name}：{ex.Message}");
         }
     }
 

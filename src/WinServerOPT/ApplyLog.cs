@@ -1,29 +1,36 @@
 using System.Globalization;
+using System.Text;
 
 namespace WinOpt;
 
 /// <summary>
 /// 日志分两类：
-/// - 操作日志 apply.log：启动、打开工具、导入导出等一般事件
-/// - 变更日志 变更日志.log：用户优化时真正改动的值（原值 → 新值、注册表路径）
+/// - 操作日志 apply.log：启动、打开工具等一般事件
+/// - 变更日志 变更日志.log：仅记录真正改动的值（原来从 xx 变成 yy）
 /// 目录：%LocalAppData%\WinOpt\
 /// </summary>
 internal static class ApplyLog
 {
+    private static readonly Encoding Utf8Bom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+
     [ThreadStatic]
     private static string? _context;
+
+    [ThreadStatic]
+    private static int _batchRealChanges;
 
     private static string LogDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt");
 
     private static string OpsLogPath => Path.Combine(LogDir, "apply.log");
-
-    /// <summary>用户优化变更专用日志文件名。</summary>
     private static string ChangeLogPath => Path.Combine(LogDir, "变更日志.log");
 
     public static string LogFilePath => OpsLogPath;
     public static string ChangeLogFilePath => ChangeLogPath;
     public static string? CurrentContext => _context;
+
+    /// <summary>当前批次中「真正发生变更」的条数（不含未变化跳过）。</summary>
+    public static int LastBatchRealChangeCount { get; private set; }
 
     public static IDisposable PushContext(string itemName)
     {
@@ -32,28 +39,29 @@ internal static class ApplyLog
         return new ContextScope(previous);
     }
 
-    /// <summary>一般操作日志（非优化变更）。</summary>
     public static void Write(string message)
     {
         Append(OpsLogPath, FormatLine(message));
     }
 
-    public static void WriteApply(string action, IReadOnlyList<string> errors)
-    {
-        var summary = errors.Count == 0
-            ? $"{action} 结束（成功）"
-            : $"{action} 结束（部分失败：{string.Join("; ", errors)}）";
-        Write("──── " + summary + " ────");
-        WriteChange("──── " + summary + " ────");
-    }
-
     public static void BeginBatch(string action)
     {
+        _batchRealChanges = 0;
         Write("════ " + action + " 开始 ════");
         WriteChange("════ " + action + " 开始 ════");
     }
 
-    /// <summary>写入变更日志（优化改动明细）。</summary>
+    public static void WriteApply(string action, IReadOnlyList<string> errors)
+    {
+        LastBatchRealChangeCount = _batchRealChanges;
+        var summary = errors.Count == 0
+            ? $"{action} 结束（成功），实际变更 {_batchRealChanges} 条"
+            : $"{action} 结束（部分失败：{string.Join("; ", errors)}），实际变更 {_batchRealChanges} 条";
+        Write("──── " + summary + " ────");
+        WriteChange("──── " + summary + " ────");
+        Write($"变更明细见：{ChangeLogPath}");
+    }
+
     public static void WriteChange(string message)
     {
         Append(ChangeLogPath, FormatLine(message));
@@ -66,12 +74,13 @@ internal static class ApplyLog
         var newText = FormatDword(newValue);
         if (SameValue(oldValue, newValue))
         {
-            WriteChange($"【未变更】{ItemLabel()} {path}\\{valueName} 仍为 {oldText}");
+            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
             return;
         }
 
+        _batchRealChanges++;
         WriteChange(
-            $"【注册表变更】DWORD\r\n" +
+            $"【注册表变更】\r\n" +
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{path}\r\n" +
             $"    值名称：{valueName}\r\n" +
@@ -86,12 +95,13 @@ internal static class ApplyLog
         var newText = maskSecret ? Mask(newValue) : Quote(newValue);
         if (!maskSecret && SameValue(oldValue, newValue))
         {
-            WriteChange($"【未变更】{ItemLabel()} {path}\\{valueName} 仍为 {oldText}");
+            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
             return;
         }
 
+        _batchRealChanges++;
         WriteChange(
-            $"【注册表变更】字符串\r\n" +
+            $"【注册表变更】\r\n" +
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{path}\r\n" +
             $"    值名称：{valueName}\r\n" +
@@ -104,12 +114,13 @@ internal static class ApplyLog
         var path = FormatRegPath(hive, key);
         if (oldValue is null)
         {
-            WriteChange($"【未变更】{ItemLabel()} 删除 {path}\\{valueName}（值本来就不存在）");
+            Write($"跳过未变：{ItemLabel()} 删除 {path}\\{valueName}（本来就不存在）");
             return;
         }
 
+        _batchRealChanges++;
         WriteChange(
-            $"【注册表变更】删除值\r\n" +
+            $"【注册表变更】\r\n" +
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{path}\r\n" +
             $"    值名称：{valueName}\r\n" +
@@ -121,12 +132,13 @@ internal static class ApplyLog
         var path = FormatRegPath(hive, key);
         if (!existed)
         {
-            WriteChange($"【未变更】{ItemLabel()} 删除键 {path}（键本来就不存在）");
+            Write($"跳过未变：{ItemLabel()} 删除键 {path}（本来就不存在）");
             return;
         }
 
+        _batchRealChanges++;
         WriteChange(
-            $"【注册表变更】删除键\r\n" +
+            $"【注册表变更】\r\n" +
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{path}\r\n" +
             $"    变更：原来从 （键存在） 变成 （整键已删除）");
@@ -134,11 +146,12 @@ internal static class ApplyLog
 
     public static void RegistryKeyWrite(string hive, string key, string detail)
     {
+        _batchRealChanges++;
         WriteChange(
-            $"【注册表变更】写入键\r\n" +
+            $"【注册表变更】\r\n" +
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{FormatRegPath(hive, key)}\r\n" +
-            $"    变更详情：{detail}");
+            $"    变更：写入键 — {detail}");
     }
 
     public static void ServiceChange(string serviceName, string detail, string? oldStart = null, string? newStart = null)
@@ -148,10 +161,11 @@ internal static class ApplyLog
         {
             if (string.Equals(oldStart, newStart, StringComparison.Ordinal))
             {
-                WriteChange($"【未变更】{ItemLabel()} 服务 {serviceName} 启动类型仍为 {oldStart}");
+                Write($"跳过未变：{ItemLabel()} 服务 {serviceName} = {oldStart}");
                 return;
             }
 
+            _batchRealChanges++;
             WriteChange(
                 $"【服务变更】\r\n" +
                 $"    优化项：{ItemLabel()}\r\n" +
@@ -159,16 +173,16 @@ internal static class ApplyLog
                 $"    注册表位置：{reg}\r\n" +
                 $"    变更：原来从 {oldStart} 变成 {newStart}\r\n" +
                 $"    操作：{detail}");
+            return;
         }
-        else
-        {
-            WriteChange(
-                $"【服务变更】\r\n" +
-                $"    优化项：{ItemLabel()}\r\n" +
-                $"    服务名：{serviceName}\r\n" +
-                $"    注册表位置：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\r\n" +
-                $"    操作：{detail}");
-        }
+
+        _batchRealChanges++;
+        WriteChange(
+            $"【服务变更】\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    服务名：{serviceName}\r\n" +
+            $"    注册表位置：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\r\n" +
+            $"    变更：{detail}");
     }
 
     public static void SystemChange(string target, string detail, string? oldValue = null, string? newValue = null)
@@ -179,25 +193,26 @@ internal static class ApplyLog
             var to = newValue ?? "（未知）";
             if (string.Equals(from, to, StringComparison.Ordinal))
             {
-                WriteChange($"【未变更】{ItemLabel()} {target} 仍为 {from}");
+                Write($"跳过未变：{ItemLabel()} {target} = {from}");
                 return;
             }
 
+            _batchRealChanges++;
             WriteChange(
                 $"【系统设置变更】\r\n" +
                 $"    优化项：{ItemLabel()}\r\n" +
                 $"    修改位置：{target}\r\n" +
                 $"    变更：原来从 {from} 变成 {to}\r\n" +
                 $"    详情：{detail}");
+            return;
         }
-        else
-        {
-            WriteChange(
-                $"【系统设置变更】\r\n" +
-                $"    优化项：{ItemLabel()}\r\n" +
-                $"    修改位置：{target}\r\n" +
-                $"    详情：{detail}");
-        }
+
+        _batchRealChanges++;
+        WriteChange(
+            $"【系统设置变更】\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    修改位置：{target}\r\n" +
+            $"    变更：{detail}");
     }
 
     public static string FormatRegPath(string hive, string key)
@@ -238,23 +253,44 @@ internal static class ApplyLog
         _ => start.Value.ToString(CultureInfo.InvariantCulture),
     };
 
+    public static bool HasRealChangeEntries()
+    {
+        try
+        {
+            if (!File.Exists(ChangeLogPath)) return false;
+            var text = File.ReadAllText(ChangeLogPath, Utf8Bom);
+            return text.IndexOf("【注册表变更】", StringComparison.Ordinal) >= 0
+                || text.IndexOf("【服务变更】", StringComparison.Ordinal) >= 0
+                || text.IndexOf("【系统设置变更】", StringComparison.Ordinal) >= 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static string FormatDword(int value) => $"{value} (0x{value:X8})";
 
     private static string ItemLabel() =>
         string.IsNullOrWhiteSpace(_context) ? "（未指定优化项）" : _context!;
 
-    private static string FormatLine(string message)
-    {
-        var prefix = string.IsNullOrEmpty(_context) ? "" : $"[{_context}] ";
-        return $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {prefix}{message}{Environment.NewLine}";
-    }
+    private static string FormatLine(string message) =>
+        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
 
     private static void Append(string path, string line)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.AppendAllText(path, line);
+            if (!File.Exists(path))
+            {
+                var header = path.EndsWith("变更日志.log", StringComparison.OrdinalIgnoreCase)
+                    ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
+                      "# 请先点击「应用推荐」或切换即时页开关后再查看。\r\n\r\n"
+                    : "# 操作日志\r\n\r\n";
+                File.WriteAllText(path, header, Utf8Bom);
+            }
+            File.AppendAllText(path, line, Utf8Bom);
         }
         catch { /* ignore */ }
     }

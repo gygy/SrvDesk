@@ -185,7 +185,7 @@ internal static class QuickToolsCatalog
                 Path.Combine(sys, "WindowsPowerShell", "v1.0", "powershell.exe"),
                 arguments: $"-NoExit -Command \"Write-Host '{AppBrand.ShortName} 快速工具' -ForegroundColor Cyan\""),
             T("账户与维护", "操作日志",
-                $"{AppBrand.ShortName} 写入的 apply.log 所在文件夹。",
+                $"{AppBrand.ShortName} 变更日志、操作日志所在文件夹。",
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt"),
                 arguments: ""),
         ];

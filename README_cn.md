@@ -114,7 +114,8 @@ SrvDesk 帮助把 **Windows Server 2022/2025** 配置成适合日常桌面使用
 - 垃圾清理、桌面维护、Windows 可选功能
 - 右键菜单扩展（取得所有权、在此处打开 Terminal 等）
 - **快速工具**：计算机管理、计划任务、PowerShell 等
-- **帮助 → 打开操作日志**：查看 `%LocalAppData%\WinOpt\apply.log`
+- **帮助 → 打开变更日志**：查看优化改动明细 `%LocalAppData%\WinOpt\变更日志.log`
+- **帮助 → 打开操作日志**：查看一般事件 `%LocalAppData%\WinOpt\apply.log`
 
 ---
 
@@ -140,7 +141,8 @@ SrvDesk.exe --export-profile D:\current.json
 2. **Server Core**（无桌面体验）下，勾选 **视图 → 隐藏不适用项**。
 3. 修改前建议在虚拟机或测试机验证；重要生产环境请先导出配置。
 4. 本工具直接修改系统设置，**无自动完整回滚**；可用 **恢复** 按钮或导入旧 JSON 尽量还原。
-5. 操作日志：`%LocalAppData%\WinOpt\apply.log`
+5. 变更日志：`%LocalAppData%\WinOpt\变更日志.log`（原来从 xx 变成 yy）
+6. 操作日志：`%LocalAppData%\WinOpt\apply.log`
 
 ---
 

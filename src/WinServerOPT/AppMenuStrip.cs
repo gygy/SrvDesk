@@ -28,6 +28,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ViewHelpPanel { get; }
     public ToolStripMenuItem HelpUsage { get; }
     public ToolStripMenuItem HelpLegend { get; }
+    public ToolStripMenuItem HelpChangeLog { get; }
     public ToolStripMenuItem HelpLog { get; }
     public ToolStripMenuItem HelpAbout { get; }
 
@@ -89,9 +90,13 @@ internal sealed class AppMenuStrip : MenuStrip
         var help = new ToolStripMenuItem("帮助(&H)");
         HelpUsage = new ToolStripMenuItem("使用说明", null, null, Keys.F1);
         HelpLegend = new ToolStripMenuItem("标识图例...");
-        HelpLog = new ToolStripMenuItem("打开操作日志");
+        HelpChangeLog = new ToolStripMenuItem("打开变更日志...");
+        HelpLog = new ToolStripMenuItem("打开操作日志...");
         HelpAbout = new ToolStripMenuItem($"关于 {AppBrand.ProductName}...");
-        help.DropDownItems.AddRange([HelpUsage, HelpLegend, new ToolStripSeparator(), HelpLog, HelpAbout]);
+        help.DropDownItems.AddRange([
+            HelpUsage, HelpLegend, new ToolStripSeparator(),
+            HelpChangeLog, HelpLog, HelpAbout
+        ]);
 
         Items.AddRange([file, preset, tools, view, help]);
     }

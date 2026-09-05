@@ -379,7 +379,8 @@ internal sealed class MainForm : Form
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
         _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
         _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
-        _appMenu.HelpLog.Click += (_, _) => OpenApplyLog();
+        _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
+        _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
         _appMenu.HelpAbout.Click += (_, _) => ShowAboutDialog();
 
         _appMenu.ViewHideIncompatible.CheckedChanged += (_, _) =>
@@ -421,16 +422,37 @@ internal sealed class MainForm : Form
         ApplySelectedPreset();
     }
 
-    private void OpenApplyLog()
+    private void OpenLogFile(string path, string title)
     {
         try
         {
-            var path = ApplyLog.LogFilePath;
+            var dir = Path.GetDirectoryName(path)!;
+            Directory.CreateDirectory(dir);
+
+            var isChangeLog = string.Equals(path, ApplyLog.ChangeLogFilePath, StringComparison.OrdinalIgnoreCase);
             if (!File.Exists(path))
             {
-                MessageBox.Show("日志文件尚不存在：" + path, "操作日志", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                var tip = isChangeLog
+                    ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
+                      "# 当前尚无变更记录。\r\n" +
+                      "# 请先：勾选推荐项 → 点击底部「应用推荐」→ 再打开本文件。\r\n" +
+                      "# 即时页（资源管理器/DNS 等）开关切换后也会写入。\r\n"
+                    : $"# {title}\r\n# 尚无记录。\r\n";
+                File.WriteAllText(path, tip, new System.Text.UTF8Encoding(true));
             }
+
+            if (isChangeLog && !ApplyLog.HasRealChangeEntries())
+            {
+                MessageBox.Show(
+                    "变更日志里还没有「原来从 xx 变成 yy」的记录。\r\n\r\n" +
+                    "请先点击底部「应用推荐」（或以管理员运行新版 SrvDesk.exe），\r\n" +
+                    "应用成功后再打开「帮助 → 打开变更日志」。\r\n\r\n" +
+                    "路径：\r\n" + path,
+                    "变更日志为空",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+
             Process.Start(new ProcessStartInfo
             {
                 FileName = path,
@@ -439,7 +461,7 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "无法打开日志", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(ex.Message, "无法打开" + title, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -1861,9 +1883,11 @@ internal sealed class MainForm : Form
             LoadState(fullScan: true);
             if (!_autologon.Checked) _autologonSettings = null;
             RefreshAutologonDisplay();
+            var changed = ApplyLog.LastBatchRealChangeCount;
             _status.Text = errors.Count == 0
-                ? success + " 部分项目需注销或重启后生效。"
-                : "部分失败：\r\n" + string.Join("\r\n", errors);
+                ? $"{success} 实际变更 {changed} 条 → 帮助「打开变更日志」。部分项需注销/重启。"
+                : "部分失败：\r\n" + string.Join("\r\n", errors) +
+                  $"\r\n（已写入变更 {changed} 条，见帮助 → 打开变更日志）";
         }
         catch (Exception ex)
         {
@@ -1885,7 +1909,8 @@ internal sealed class MainForm : Form
             "系统：" + _systemFacts.Summary + "\r\n" +
             "计算机：" + ComputerIdentityHelper.Read().Summary + "\r\n" +
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
-            "操作日志：" + ApplyLog.LogFilePath + "\r\n\r\n" +
+            "操作日志：" + ApplyLog.LogFilePath + "\r\n" +
+            "变更日志：" + ApplyLog.ChangeLogFilePath + "\r\n\r\n" +
             "预设方案对标 WinUtil；配置 JSON 导入导出。\r\n" +
             $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
             AppBrand.AboutDialogTitle,

@@ -169,7 +169,11 @@ internal static class EasySettingsTweaks
         var old = GetRdpPort();
         SetDword(Hive.HkLm, RdpTcp, "PortNumber", port);
         Run("netsh", $"advfirewall firewall set rule name=\"Remote Desktop\" new localport={port}");
-        ApplyLog.Write($"RDP 端口 {old} → {port}");
+        ApplyLog.SystemChange(
+            $@"HKLM\{RdpTcp}\PortNumber + 防火墙 Remote Desktop 规则",
+            "修改 RDP 监听端口",
+            old.ToString(),
+            port.ToString());
     }
 
     public static int GetMaxPrefetchFiles()
