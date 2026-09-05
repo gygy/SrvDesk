@@ -68,6 +68,28 @@ internal static class ApplyLog
         Append(ChangeLogPath, FormatLine(message));
     }
 
+    public static void RegistryBinary(string hive, string key, string valueName, byte[]? oldValue, byte[] newValue, string? meaning = null)
+    {
+        var path = FormatRegPath(hive, key);
+        var oldText = FormatValue(oldValue);
+        var newText = FormatValue(newValue);
+        if (oldValue is not null && oldValue.Length == newValue.Length && oldValue.SequenceEqual(newValue))
+        {
+            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
+            return;
+        }
+
+        _batchRealChanges++;
+        var extra = string.IsNullOrWhiteSpace(meaning) ? "" : $"\r\n    含义：{meaning}";
+        WriteChange(
+            $"【注册表变更】\r\n" +
+            $"    优化项：{ItemLabel()}\r\n" +
+            $"    注册表位置：{path}\r\n" +
+            $"    值名称：{valueName}\r\n" +
+            $"    值类型：REG_BINARY\r\n" +
+            $"    变更：原来从 {oldText} 变成 {newText}{extra}");
+    }
+
     public static void RegistryDword(string hive, string key, string valueName, object? oldValue, int newValue)
     {
         var path = FormatRegPath(hive, key);
@@ -236,8 +258,7 @@ internal static class ApplyLog
             int i => FormatDword(i),
             uint u => $"{u} (0x{u:X8})",
             long l => l.ToString(CultureInfo.InvariantCulture),
-            byte[] bytes => $"二进制[{bytes.Length}字节] {BitConverter.ToString(bytes, 0, Math.Min(16, bytes.Length))}" +
-                            (bytes.Length > 16 ? "…" : ""),
+            byte[] bytes => FormatBinary(bytes),
             string s => Quote(s),
             _ => Quote(Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.ToString() ?? ""),
         };
@@ -269,6 +290,13 @@ internal static class ApplyLog
         {
             return false;
         }
+    }
+
+    private static string FormatBinary(byte[] bytes)
+    {
+        var hex = BitConverter.ToString(bytes);
+        var first = bytes.Length > 0 ? $"首字节=0x{bytes[0]:X2}" : "空";
+        return $"REG_BINARY[{bytes.Length}字节] {hex}（{first}）";
     }
 
     private static string FormatDword(int value) => $"{value} (0x{value:X8})";

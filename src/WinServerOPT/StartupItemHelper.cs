@@ -62,17 +62,22 @@ internal static class StartupItemHelper
         var hive = entry.Hive == RegistryHive.LocalMachine ? "HKLM" : "HKCU";
         var approvedKey = $@"{ApprovedRoot}\{entry.ApprovedStore}";
         var valueName = ApprovedValueName(entry);
-        var from = entry.Enabled ? "启用" : "禁用";
-        var to = enabled ? "启用" : "禁用";
+        var oldBytes = GetApprovedBytes(entry);
+        var newBytes = BuildApprovedBytes(enabled);
+
         using (ApplyLog.PushContext("登录启动项"))
         {
-            ApplyLog.SystemChange(
-                $"{hive}\\{approvedKey}\\{valueName}",
-                $"启动项「{entry.Name}」({entry.Scope} / {entry.KindText})",
-                from,
-                to);
+            ApplyLog.RegistryBinary(
+                hive,
+                approvedKey,
+                valueName,
+                oldBytes,
+                newBytes,
+                $"启动项「{entry.Name}」({entry.Scope} / {entry.KindText})；" +
+                $"StartupApproved 首字节：0x02=启用，0x03=禁用；" +
+                $"语义原来从「{(entry.Enabled ? "启用" : "禁用")}」变成「{(enabled ? "启用" : "禁用")}」");
         }
-        SetApproved(entry, enabled);
+        WriteApprovedBytes(entry, newBytes);
         entry.Enabled = enabled;
     }
 
@@ -259,18 +264,26 @@ internal static class StartupItemHelper
         }
     }
 
-    private static void SetApproved(StartupEntry entry, bool enabled)
+    private static void SetApproved(StartupEntry entry, bool enabled) =>
+        WriteApprovedBytes(entry, BuildApprovedBytes(enabled));
+
+    private static byte[] BuildApprovedBytes(bool enabled)
+    {
+        // StartupApproved：首字节 0x02=启用，0x03=禁用；后 8 字节为 FILETIME
+        var data = new byte[12];
+        data[0] = (byte)(enabled ? 0x02 : 0x03);
+        var ticks = (ulong)DateTime.Now.ToFileTimeUtc();
+        var time = BitConverter.GetBytes(ticks);
+        Array.Copy(time, 0, data, 4, Math.Min(8, time.Length));
+        return data;
+    }
+
+    private static void WriteApprovedBytes(StartupEntry entry, byte[] data)
     {
         using var baseKey = RegistryKey.OpenBaseKey(entry.Hive,
             entry.Hive == RegistryHive.LocalMachine ? RegistryView.Registry64 : RegistryView.Default);
         using var key = baseKey.CreateSubKey(ApprovedRoot + "\\" + entry.ApprovedStore, true)
             ?? throw new InvalidOperationException("无法写入 StartupApproved。");
-        var flag = (byte)(enabled ? 0x02 : 0x03);
-        var data = new byte[12];
-        data[0] = flag;
-        var ticks = (ulong)DateTime.Now.ToFileTimeUtc();
-        var time = BitConverter.GetBytes(ticks);
-        Array.Copy(time, 0, data, 4, Math.Min(8, time.Length));
         key.SetValue(ApprovedValueName(entry), data, RegistryValueKind.Binary);
     }
 

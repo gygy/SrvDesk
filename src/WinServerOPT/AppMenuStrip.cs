@@ -84,7 +84,7 @@ internal sealed class AppMenuStrip : MenuStrip
 
         var view = new ToolStripMenuItem("视图(&V)");
         ViewHideIncompatible = new ToolStripMenuItem("隐藏不适用项") { CheckOnClick = true };
-        ViewHelpPanel = new ToolStripMenuItem("显示帮助面板") { CheckOnClick = true, Checked = true };
+        ViewHelpPanel = new ToolStripMenuItem("显示帮助面板") { CheckOnClick = true, Checked = false };
         view.DropDownItems.AddRange([ViewHideIncompatible, ViewHelpPanel]);
 
         var help = new ToolStripMenuItem("帮助(&H)");

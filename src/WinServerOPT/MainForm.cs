@@ -395,6 +395,7 @@ internal sealed class MainForm : Form
         _appMenu.ViewHelpPanel.CheckedChanged += (_, _) =>
         {
             _helpDetail.Visible = _appMenu.ViewHelpPanel.Checked;
+            UiPrefs.SetShowHelpPanel(_appMenu.ViewHelpPanel.Checked);
             LayoutContent();
         };
 
@@ -469,6 +470,10 @@ internal sealed class MainForm : Form
     {
         if (e.KeyCode == Keys.F1)
         {
+            if (!_helpDetail.Visible)
+            {
+                _appMenu.ViewHelpPanel.Checked = true;
+            }
             _helpDetail.ShowUsageGuide();
             e.Handled = true;
         }
@@ -480,6 +485,9 @@ internal sealed class MainForm : Form
         sidebar.Dock = DockStyle.Left;
         _helpDetail.Dock = DockStyle.Right;
         _contentHost.Dock = DockStyle.Fill;
+        var showHelp = UiPrefs.Load().ShowHelpPanel;
+        _helpDetail.Visible = showHelp;
+        _appMenu.ViewHelpPanel.Checked = showHelp;
         _workArea.Controls.Add(_contentHost);
         _workArea.Controls.Add(_helpDetail);
         _workArea.Controls.Add(sidebar);
