@@ -572,6 +572,7 @@ internal sealed class CommonSoftwareDialog : Form
         private readonly Button _install;
         private readonly Button _uninstall;
         private readonly Label _status;
+        private readonly ToolTip _statusTip = new() { ShowAlways = true };
         private readonly Action<CommonSoftwareItem> _onInstall;
         private readonly Action<CommonSoftwareItem> _onUninstall;
 
@@ -628,6 +629,7 @@ internal sealed class CommonSoftwareDialog : Form
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Microsoft YaHei UI", 8.75F),
                 Padding = new Padding(8, 0, 8, 0),
+                AutoEllipsis = true,
             };
 
             Controls.AddRange([_select, name, _install, _uninstall, _status]);
@@ -644,7 +646,12 @@ internal sealed class CommonSoftwareDialog : Form
         {
             var s = CommonSoftwareHelper.Query(_item);
             if (_item.IsWingetBootstrap)
+            {
+                // 包在但命令不可用：提示点「修复安装」
                 _install.Text = CommonSoftwareHelper.IsWingetAvailable() ? "修复安装" : "一键安装";
+                if (!CommonSoftwareHelper.IsWingetAvailable() && s.Version.Length > 0)
+                    _install.Text = "修复安装";
+            }
 
             if (s.Installed)
             {
@@ -670,6 +677,8 @@ internal sealed class CommonSoftwareDialog : Form
                 _status.ForeColor = AppTheme.TextMute;
                 _status.BackColor = AppTheme.Surface;
             }
+
+            _statusTip.SetToolTip(_status, _status.Text);
         }
 
         private static Button RowButton(string text, int x)

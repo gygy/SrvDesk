@@ -163,7 +163,7 @@ internal static class CommonSoftwareHelper
 
         try
         {
-            using var p = Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = path,
                 Arguments = "--version",
@@ -171,7 +171,16 @@ internal static class CommonSoftwareHelper
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-            });
+            };
+            // WindowsApps 内的 winget 依赖同目录 DLL，必须指定工作目录
+            if (path != "winget.exe")
+            {
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(dir))
+                    psi.WorkingDirectory = dir!;
+            }
+
+            using var p = Process.Start(psi);
             if (p is null) return false;
             var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
             p.WaitForExit(15_000);
@@ -225,7 +234,7 @@ internal static class CommonSoftwareHelper
 
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
-            var code = Run(ResolveWingetPath(),
+            var code = RunWinget(
                 $"install -e --id {item.WingetId} --accept-package-agreements --accept-source-agreements");
             if (code == 0) return "";
             if (code == -1978335189) // 0x8A150013 already installed
@@ -248,7 +257,7 @@ internal static class CommonSoftwareHelper
 
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
-            var code = Run(ResolveWingetPath(), $"uninstall -e --id {item.WingetId}");
+            var code = RunWinget($"uninstall -e --id {item.WingetId}");
             if (code == 0) return "";
         }
 
@@ -266,9 +275,19 @@ internal static class CommonSoftwareHelper
         if (IsWingetAvailable())
             return "";
 
-        ApplyLog.Write("安装 winget（App Installer）" + (Optimizer.IsWindowsServer() ? " [Server]" : ""));
+        ApplyLog.Write("安装/修复 winget（App Installer）" + (Optimizer.IsWindowsServer() ? " [Server]" : ""));
         ResetWingetDiscovery();
         var notes = new List<string>();
+
+        // 包已装但别名坏了：先注册 + 直接定位 winget.exe
+        if (IsAppInstallerPackagePresent())
+        {
+            var register = TryRegisterAppInstaller();
+            if (register.Length > 0) notes.Add(register);
+            ResetWingetDiscovery();
+            if (TryBindWingetFromAppx())
+                return FormatWingetReady(notes);
+        }
 
         // Server：优先离线包 + 机器级 ProvisionedPackage，再尝试修复模块
         if (Optimizer.IsWindowsServer())
@@ -276,40 +295,52 @@ internal static class CommonSoftwareHelper
             var bootstrap = TryBootstrapWingetPackages(preferProvisioned: true);
             if (bootstrap.Length > 0) notes.Add(bootstrap);
             ResetWingetDiscovery();
-            if (IsWingetAvailable()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
 
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
-            if (IsWingetAvailable()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
         }
 
         var repair = TryRepairWinGetPackageManager();
         if (repair.Length > 0) notes.Add(repair);
         ResetWingetDiscovery();
-        if (IsWingetAvailable()) return FormatWingetReady(notes);
+        if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
 
         if (!Optimizer.IsWindowsServer())
         {
             var bootstrap = TryBootstrapWingetPackages(preferProvisioned: false);
             if (bootstrap.Length > 0) notes.Add(bootstrap);
             ResetWingetDiscovery();
-            if (IsWingetAvailable()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
 
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
-            if (IsWingetAvailable()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
         }
 
         var wingetItem = CommonSoftwareCatalog.Find("winget");
         if (wingetItem is not null)
             OpenDownloadPage(wingetItem);
 
-        notes.Add("自动安装未完成。已打开官方下载页。");
+        notes.Add("自动修复未完成。已打开官方下载页。");
         notes.Add("下载目录：" + DownloadDir);
-        notes.Add("Server 也可手动：以管理员 PowerShell 执行 Add-AppxPackage / Add-AppxProvisionedPackage 安装该目录下的 msixbundle。");
+        notes.Add("也可在「设置 → 应用 → 应用执行别名」中开启 winget.exe。");
         return string.Join("\r\n", notes);
+    }
+
+    /// <summary>从 AppX 安装目录绑定 winget 完整路径（不依赖 WindowsApps 别名）。</summary>
+    private static bool TryBindWingetFromAppx()
+    {
+        var direct = TryGetAppxWingetPath();
+        if (string.IsNullOrWhiteSpace(direct)) return false;
+        if (!ProbeWinget(direct!)) return false;
+        _wingetPath = direct;
+        _wingetDiscoveryDone = true;
+        ApplyLog.Write("已绑定 AppX winget：" + direct);
+        return true;
     }
 
     public static void OpenDownloadPage(CommonSoftwareItem item)
@@ -334,7 +365,7 @@ internal static class CommonSoftwareHelper
         if (!IsWingetAvailable())
             return "未检测到 winget，无法批量检查更新。可在必备列表中安装 winget，或逐一点击「一键安装」。";
 
-        var output = RunCapture(ResolveWingetPath(), "upgrade --include-unknown");
+        var output = RunCaptureWinget("upgrade --include-unknown");
         var upgradable = items.Count(i =>
         {
             if (i.IsWingetBootstrap || string.IsNullOrWhiteSpace(i.WingetId)) return false;
@@ -352,18 +383,34 @@ internal static class CommonSoftwareHelper
         ResetWingetDiscovery();
         if (!IsWingetAvailable())
         {
+            // 包已装但别名坏了：再尝试直接定位 WindowsApps 内 winget.exe
+            var direct = TryGetAppxWingetPath();
+            if (!string.IsNullOrWhiteSpace(direct) && ProbeWinget(direct!))
+            {
+                _wingetPath = direct;
+                _wingetDiscoveryDone = true;
+                var ver = RunCaptureWinget("--version").Trim();
+                if (ver.StartsWith("v", StringComparison.OrdinalIgnoreCase) && ver.Length > 1)
+                    ver = ver.Substring(1).Trim();
+                return new CommonSoftwareStatus
+                {
+                    Installed = true,
+                    Version = ver.Length > 0 ? "v" + ver : "已就绪",
+                };
+            }
+
             if (IsAppInstallerPackagePresent())
             {
                 return new CommonSoftwareStatus
                 {
                     Installed = false,
-                    Version = "已安装应用安装程序，winget 别名不可用（可点一键安装修复）",
+                    Version = "需修复 winget（点「修复安装」）",
                 };
             }
             return new CommonSoftwareStatus();
         }
 
-        var version = RunCapture(ResolveWingetPath(), "--version").Trim();
+        var version = RunCaptureWinget("--version").Trim();
         if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase) && version.Length > 1)
             version = version.Substring(1).Trim();
         return new CommonSoftwareStatus
@@ -603,9 +650,15 @@ Add-AppxPackage -Path '{escaped}'
         }
     }
 
-    private static int Run(string file, string args)
+    private static int RunWinget(string args) =>
+        Run(ResolveWingetPath(), args, setWorkingDirForExe: true);
+
+    private static string RunCaptureWinget(string args) =>
+        RunCapture(ResolveWingetPath(), args, setWorkingDirForExe: true);
+
+    private static int Run(string file, string args, bool setWorkingDirForExe = false)
     {
-        using var p = Process.Start(new ProcessStartInfo
+        var psi = new ProcessStartInfo
         {
             FileName = file,
             Arguments = args,
@@ -613,14 +666,22 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-        }) ?? throw new InvalidOperationException("无法启动 " + file);
+        };
+        if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            var dir = Path.GetDirectoryName(file);
+            if (!string.IsNullOrWhiteSpace(dir))
+                psi.WorkingDirectory = dir!;
+        }
+
+        using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
         p.WaitForExit(600_000);
         return p.ExitCode;
     }
 
-    private static string RunCapture(string file, string args)
+    private static string RunCapture(string file, string args, bool setWorkingDirForExe = false)
     {
-        using var p = Process.Start(new ProcessStartInfo
+        var psi = new ProcessStartInfo
         {
             FileName = file,
             Arguments = args,
@@ -628,7 +689,15 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-        }) ?? throw new InvalidOperationException("无法启动 " + file);
+        };
+        if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            var dir = Path.GetDirectoryName(file);
+            if (!string.IsNullOrWhiteSpace(dir))
+                psi.WorkingDirectory = dir!;
+        }
+
+        using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
         var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
         p.WaitForExit(120_000);
         return output;
