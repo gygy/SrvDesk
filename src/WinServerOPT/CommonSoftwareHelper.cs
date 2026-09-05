@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace WinOpt;
@@ -10,6 +11,13 @@ internal sealed class CommonSoftwareStatus
     public bool Installed { get; set; }
     public string Version { get; set; } = "";
     public string? UninstallCommand { get; set; }
+}
+
+/// <summary>软件安装/卸载实时进度（Percent 为 0–100 估算）。</summary>
+internal sealed class SoftwareInstallProgress
+{
+    public string Message { get; init; } = "";
+    public int Percent { get; init; }
 }
 
 internal static class CommonSoftwareHelper
@@ -226,21 +234,32 @@ internal static class CommonSoftwareHelper
         return new CommonSoftwareStatus();
     }
 
-    public static string Install(CommonSoftwareItem item)
+    public static string Install(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
     {
         ApplyLog.Write("常用软件安装：" + item.Title);
         if (item.IsWingetBootstrap)
-            return InstallWinget();
+            return InstallWinget(onProgress);
 
+        Report(onProgress, "准备安装 " + item.Title, 2);
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
+            Report(onProgress, "正在调用 winget…", 5);
             var code = RunWinget(
-                $"install -e --id {item.WingetId} --accept-package-agreements --accept-source-agreements");
-            if (code == 0) return "";
+                $"install -e --id {item.WingetId} --accept-package-agreements --accept-source-agreements --disable-interactivity",
+                onProgress);
+            if (code == 0)
+            {
+                Report(onProgress, "安装完成", 100);
+                return "";
+            }
             if (code == -1978335189) // 0x8A150013 already installed
+            {
+                Report(onProgress, "已安装", 100);
                 return "软件已安装或无需重复安装。";
+            }
         }
 
+        Report(onProgress, "打开官方下载页…", 95);
         OpenDownloadPage(item);
         return IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId)
             ? "winget 安装未成功，已在浏览器打开官方下载页，请手动安装。"
@@ -249,16 +268,21 @@ internal static class CommonSoftwareHelper
                 : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
     }
 
-    public static string Uninstall(CommonSoftwareItem item)
+    public static string Uninstall(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
     {
         ApplyLog.Write("常用软件卸载：" + item.Title);
         if (item.IsWingetBootstrap)
             return "winget（应用安装程序）为系统组件，不建议在此卸载。请在「设置 → 应用」中操作。";
 
+        Report(onProgress, "准备卸载 " + item.Title, 5);
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
-            var code = RunWinget($"uninstall -e --id {item.WingetId}");
-            if (code == 0) return "";
+            var code = RunWinget($"uninstall -e --id {item.WingetId} --disable-interactivity", onProgress);
+            if (code == 0)
+            {
+                Report(onProgress, "卸载完成", 100);
+                return "";
+            }
         }
 
         var status = Query(item);
@@ -266,59 +290,90 @@ internal static class CommonSoftwareHelper
         if (string.IsNullOrWhiteSpace(cmd))
             return "未找到可用的卸载命令。请在「设置 → 应用」中手动卸载。";
 
+        Report(onProgress, "执行卸载命令…", 40);
         RunShell(cmd!);
+        Report(onProgress, "卸载命令已执行", 100);
         return "";
     }
 
-    public static string InstallWinget()
+    public static string InstallWinget(Action<SoftwareInstallProgress>? onProgress = null)
     {
         if (IsWingetAvailable())
+        {
+            Report(onProgress, "winget 已可用", 100);
             return "";
+        }
 
         ApplyLog.Write("安装/修复 winget（App Installer）" + (Optimizer.IsWindowsServer() ? " [Server]" : ""));
         ResetWingetDiscovery();
         var notes = new List<string>();
 
-        // 包已装但别名坏了：先注册 + 直接定位 winget.exe
         if (IsAppInstallerPackagePresent())
         {
+            Report(onProgress, "注册 App Installer 别名…", 15);
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
             if (TryBindWingetFromAppx())
+            {
+                Report(onProgress, "winget 已就绪", 100);
                 return FormatWingetReady(notes);
+            }
         }
 
-        // Server：优先离线包 + 机器级 ProvisionedPackage，再尝试修复模块
         if (Optimizer.IsWindowsServer())
         {
-            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: true);
+            Report(onProgress, "下载并安装 App Installer（Server）…", 20);
+            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: true, onProgress);
             if (bootstrap.Length > 0) notes.Add(bootstrap);
             ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx())
+            {
+                Report(onProgress, "winget 已就绪", 100);
+                return FormatWingetReady(notes);
+            }
 
+            Report(onProgress, "再次注册别名…", 88);
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx())
+            {
+                Report(onProgress, "winget 已就绪", 100);
+                return FormatWingetReady(notes);
+            }
         }
 
+        Report(onProgress, "通过 WinGet 模块修复…", 55);
         var repair = TryRepairWinGetPackageManager();
         if (repair.Length > 0) notes.Add(repair);
         ResetWingetDiscovery();
-        if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
+        if (IsWingetAvailable() || TryBindWingetFromAppx())
+        {
+            Report(onProgress, "winget 已就绪", 100);
+            return FormatWingetReady(notes);
+        }
 
         if (!Optimizer.IsWindowsServer())
         {
-            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: false);
+            Report(onProgress, "下载并安装 App Installer…", 60);
+            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: false, onProgress);
             if (bootstrap.Length > 0) notes.Add(bootstrap);
             ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx())
+            {
+                Report(onProgress, "winget 已就绪", 100);
+                return FormatWingetReady(notes);
+            }
 
             var register = TryRegisterAppInstaller();
             if (register.Length > 0) notes.Add(register);
             ResetWingetDiscovery();
-            if (IsWingetAvailable() || TryBindWingetFromAppx()) return FormatWingetReady(notes);
+            if (IsWingetAvailable() || TryBindWingetFromAppx())
+            {
+                Report(onProgress, "winget 已就绪", 100);
+                return FormatWingetReady(notes);
+            }
         }
 
         var wingetItem = CommonSoftwareCatalog.Find("winget");
@@ -328,6 +383,7 @@ internal static class CommonSoftwareHelper
         notes.Add("自动修复未完成。已打开官方下载页。");
         notes.Add("下载目录：" + DownloadDir);
         notes.Add("也可在「设置 → 应用 → 应用执行别名」中开启 winget.exe。");
+        Report(onProgress, "自动修复未完成", 100);
         return string.Join("\r\n", notes);
     }
 
@@ -462,7 +518,7 @@ Repair-WinGetPackageManager -AllUsers
         }
     }
 
-    private static string TryBootstrapWingetPackages(bool preferProvisioned)
+    private static string TryBootstrapWingetPackages(bool preferProvisioned, Action<SoftwareInstallProgress>? onProgress = null)
     {
         Directory.CreateDirectory(DownloadDir);
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
@@ -476,27 +532,39 @@ Repair-WinGetPackageManager -AllUsers
             DownloadPackage(
                 "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx",
                 vcLibs,
-                minBytes: 500_000);
+                minBytes: 500_000,
+                onProgress,
+                percentBase: 20,
+                percentSpan: 15);
             DownloadPackage(
                 "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx",
                 uiXaml,
-                minBytes: 500_000);
+                minBytes: 500_000,
+                onProgress,
+                percentBase: 35,
+                percentSpan: 15);
 
-            // 优先 GitHub release 直链，再回退 aka.ms（避免短链下到 HTML）
             try
             {
                 DownloadPackage(
                     "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle",
                     bundle,
-                    minBytes: 1_000_000);
+                    minBytes: 1_000_000,
+                    onProgress,
+                    percentBase: 50,
+                    percentSpan: 25);
             }
             catch
             {
-                DownloadPackage("https://aka.ms/getwinget", bundle, minBytes: 1_000_000);
+                DownloadPackage("https://aka.ms/getwinget", bundle, minBytes: 1_000_000,
+                    onProgress, percentBase: 50, percentSpan: 25);
             }
 
+            Report(onProgress, "安装 VCLibs…", 78);
             AddAppxPackage(vcLibs, provisioned: false);
+            Report(onProgress, "安装 UI.Xaml…", 84);
             AddAppxPackage(uiXaml, provisioned: false);
+            Report(onProgress, "安装 App Installer…", 90);
             AddAppxPackage(bundle, provisioned: preferProvisioned);
 
             return preferProvisioned
@@ -535,20 +603,48 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         return string.Join("\r\n", notes.Where(n => n.Length > 0));
     }
 
-    private static void DownloadPackage(string url, string dest, long minBytes)
+    private static void DownloadPackage(
+        string url,
+        string dest,
+        long minBytes,
+        Action<SoftwareInstallProgress>? onProgress = null,
+        int percentBase = 0,
+        int percentSpan = 20)
     {
         if (File.Exists(dest))
         {
             var len = new FileInfo(dest).Length;
             if (len >= minBytes && LooksLikeBinaryPackage(dest))
+            {
+                Report(onProgress, "已缓存 " + Path.GetFileName(dest), percentBase + percentSpan);
                 return;
+            }
             try { File.Delete(dest); } catch { /* ignore */ }
         }
 
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        var name = Path.GetFileName(dest);
+        Report(onProgress, "开始下载 " + name, percentBase);
+
         using var wc = new WebClient();
         wc.Headers[HttpRequestHeader.UserAgent] = "SrvDesk/1.0";
-        wc.DownloadFile(url, dest);
+        var lastPct = -1;
+        wc.DownloadProgressChanged += (_, e) =>
+        {
+            if (e.ProgressPercentage == lastPct) return;
+            lastPct = e.ProgressPercentage;
+            var mapped = percentBase + (int)(e.ProgressPercentage / 100.0 * percentSpan);
+            Report(onProgress, $"下载 {name} {e.ProgressPercentage}%", mapped);
+        };
+        try
+        {
+            wc.DownloadFileTaskAsync(new Uri(url), dest).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // 部分环境 TaskAsync 异常时回退同步下载
+            wc.DownloadFile(url, dest);
+        }
 
         var size = new FileInfo(dest).Length;
         if (size < minBytes || !LooksLikeBinaryPackage(dest))
@@ -556,6 +652,8 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
             try { File.Delete(dest); } catch { /* ignore */ }
             throw new InvalidOperationException("下载文件无效或过小：" + Path.GetFileName(dest) + "（" + size + " 字节）");
         }
+
+        Report(onProgress, "下载完成 " + name, percentBase + percentSpan);
     }
 
     private static bool LooksLikeBinaryPackage(string path)
@@ -650,11 +748,223 @@ Add-AppxPackage -Path '{escaped}'
         }
     }
 
-    private static int RunWinget(string args) =>
-        Run(ResolveWingetPath(), args, setWorkingDirForExe: true);
+    private static void Report(Action<SoftwareInstallProgress>? onProgress, string message, int percent)
+    {
+        if (onProgress is null) return;
+        onProgress(new SoftwareInstallProgress
+        {
+            Message = message,
+            Percent = Math.Max(0, Math.Min(100, percent)),
+        });
+    }
+
+    private static int RunWinget(string args, Action<SoftwareInstallProgress>? onProgress = null) =>
+        RunStreaming(ResolveWingetPath(), args, setWorkingDirForExe: true, onProgress);
 
     private static string RunCaptureWinget(string args) =>
         RunCapture(ResolveWingetPath(), args, setWorkingDirForExe: true);
+
+    private static int RunStreaming(
+        string file,
+        string args,
+        bool setWorkingDirForExe,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = file,
+            Arguments = args,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            var dir = Path.GetDirectoryName(file);
+            if (!string.IsNullOrWhiteSpace(dir))
+                psi.WorkingDirectory = dir!;
+        }
+
+        using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
+        var parser = new WingetProgressParser();
+        var lastReport = DateTime.MinValue;
+        var lastPercent = -1;
+        var lastMessage = "";
+
+        void HandleText(string text)
+        {
+            foreach (var line in SplitProgressLines(text))
+            {
+                var update = parser.Feed(line);
+                if (update is null) continue;
+                var now = DateTime.UtcNow;
+                if (update.Percent == lastPercent &&
+                    update.Message == lastMessage &&
+                    (now - lastReport).TotalMilliseconds < 120)
+                    continue;
+                if (update.Percent < lastPercent && update.Percent < 100)
+                    continue; // 进度只前进
+
+                lastPercent = update.Percent;
+                lastMessage = update.Message;
+                lastReport = now;
+                onProgress?.Invoke(update);
+            }
+        }
+
+        var stdout = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardOutput, HandleText));
+        var stderr = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardError, HandleText));
+        p.WaitForExit(600_000);
+        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 15_000);
+        return p.ExitCode;
+    }
+
+    private static void DrainStream(StreamReader reader, Action<string> onChunk)
+    {
+        var buffer = new char[1024];
+        try
+        {
+            int n;
+            while ((n = reader.Read(buffer, 0, buffer.Length)) > 0)
+                onChunk(new string(buffer, 0, n));
+        }
+        catch
+        {
+            /* ignore */
+        }
+    }
+
+    private static IEnumerable<string> SplitProgressLines(string text)
+    {
+        var sb = new StringBuilder();
+        foreach (var ch in text)
+        {
+            if (ch is '\r' or '\n')
+            {
+                if (sb.Length > 0)
+                {
+                    yield return sb.ToString();
+                    sb.Clear();
+                }
+            }
+            else
+            {
+                sb.Append(ch);
+            }
+        }
+
+        if (sb.Length > 0)
+            yield return sb.ToString();
+    }
+
+    private sealed class WingetProgressParser
+    {
+        private int _percent = 5;
+        private string _phase = "准备";
+        private static readonly Regex Ansi = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
+        private static readonly Regex Pct = new(@"(\d{1,3})\s*%", RegexOptions.Compiled);
+        private static readonly Regex Size =
+            new(@"([\d.,]+)\s*(K|M|G)i?B\s*/\s*([\d.,]+)\s*(K|M|G)i?B", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        public SoftwareInstallProgress? Feed(string raw)
+        {
+            var line = Ansi.Replace(raw, "").Trim();
+            if (line.Length == 0) return null;
+            // 去掉进度条字符噪音
+            line = Regex.Replace(line, @"[█▒░■□▪▫]+", " ").Trim();
+            if (line.Length == 0) return null;
+
+            var lower = line.ToLowerInvariant();
+            if (lower.Contains("found "))
+            {
+                _phase = "已找到包";
+                _percent = Math.Max(_percent, 8);
+            }
+            else if (lower.Contains("downloading") || lower.Contains("download"))
+            {
+                _phase = "下载中";
+                _percent = Math.Max(_percent, 15);
+            }
+            else if (lower.Contains("hash") || lower.Contains("verif") || lower.Contains("校验"))
+            {
+                _phase = "校验中";
+                _percent = Math.Max(_percent, 72);
+            }
+            else if (lower.Contains("starting package install") || lower.Contains("installing") ||
+                     lower.Contains("正在安装") || lower.Contains("extract"))
+            {
+                _phase = "安装中";
+                _percent = Math.Max(_percent, 78);
+            }
+            else if (lower.Contains("successfully installed") || lower.Contains("已成功安装") ||
+                     lower.Contains("successfully uninstalled") || lower.Contains("已成功卸载"))
+            {
+                _phase = "完成";
+                _percent = 100;
+            }
+            else if (lower.Contains("uninstall"))
+            {
+                _phase = "卸载中";
+                _percent = Math.Max(_percent, 30);
+            }
+
+            var sizeMatch = Size.Match(line);
+            if (sizeMatch.Success)
+            {
+                var cur = ToBytes(sizeMatch.Groups[1].Value, sizeMatch.Groups[2].Value);
+                var total = ToBytes(sizeMatch.Groups[3].Value, sizeMatch.Groups[4].Value);
+                if (total > 0)
+                {
+                    var ratio = Math.Max(0, Math.Min(1, cur / total));
+                    var mapped = 15 + (int)(ratio * 55);
+                    _percent = Math.Max(_percent, mapped);
+                    _phase = $"下载 {sizeMatch.Groups[1].Value}{sizeMatch.Groups[2].Value}B / {sizeMatch.Groups[3].Value}{sizeMatch.Groups[4].Value}B";
+                }
+            }
+
+            var pctMatch = Pct.Match(line);
+            if (pctMatch.Success && int.TryParse(pctMatch.Groups[1].Value, out var pct) && pct is >= 0 and <= 100)
+            {
+                int mapped;
+                if (_phase.StartsWith("下载", StringComparison.Ordinal) || _phase == "下载中")
+                    mapped = 15 + (int)(pct / 100.0 * 55);
+                else if (_phase == "安装中" || _phase == "卸载中")
+                    mapped = 78 + (int)(pct / 100.0 * 18);
+                else
+                    mapped = pct;
+                _percent = Math.Max(_percent, Math.Min(99, mapped));
+            }
+
+            var msg = _phase;
+            if (pctMatch.Success)
+                msg = _phase + " " + pctMatch.Groups[1].Value + "%";
+            else if (line.Length is > 0 and < 80 &&
+                     !line.StartsWith("─", StringComparison.Ordinal) &&
+                     line.IndexOf("http", StringComparison.OrdinalIgnoreCase) < 0)
+                msg = _phase + " · " + line;
+
+            return new SoftwareInstallProgress { Message = msg, Percent = _percent };
+        }
+
+        private static double ToBytes(string num, string unit)
+        {
+            if (!double.TryParse(num.Replace(",", "."),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var n))
+                return 0;
+            return unit.ToUpperInvariant() switch
+            {
+                "K" => n * 1024,
+                "M" => n * 1024 * 1024,
+                "G" => n * 1024 * 1024 * 1024,
+                _ => n,
+            };
+        }
+    }
 
     private static int Run(string file, string args, bool setWorkingDirForExe = false)
     {
@@ -675,7 +985,11 @@ Add-AppxPackage -Path '{escaped}'
         }
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
+        // 避免管道缓冲区塞满导致死锁
+        var stdout = System.Threading.Tasks.Task.Run(() => p.StandardOutput.ReadToEnd());
+        var stderr = System.Threading.Tasks.Task.Run(() => p.StandardError.ReadToEnd());
         p.WaitForExit(600_000);
+        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 10_000);
         return p.ExitCode;
     }
 
@@ -698,8 +1012,10 @@ Add-AppxPackage -Path '{escaped}'
         }
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
-        var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+        var stdout = System.Threading.Tasks.Task.Run(() => p.StandardOutput.ReadToEnd());
+        var stderr = System.Threading.Tasks.Task.Run(() => p.StandardError.ReadToEnd());
         p.WaitForExit(120_000);
-        return output;
+        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 10_000);
+        return stdout.Result + stderr.Result;
     }
 }
