@@ -179,6 +179,7 @@ internal sealed class MainForm : Form
     private SettingRow[] _activeRows = [];
     private Panel? _activeBody;
     private Panel? _activeSection;
+    private Panel? _activeWrap;
     private readonly Panel _bottomPanel = new();
     private FlowLayoutPanel? _bottomActions;
     private string _defaultStatusText = "";
@@ -868,10 +869,19 @@ internal sealed class MainForm : Form
         }
         _activeBody.Height = Math.Max(visible, 1) * rowH;
         _activeSection.Height = headerH + _activeBody.Height;
+        RelayoutActiveWrap();
         if (visible == 0 && !string.IsNullOrWhiteSpace(query))
             _status.Text = "无匹配项，请调整搜索关键词。";
         else if (_status.Text.StartsWith("无匹配项", StringComparison.Ordinal))
             _status.Text = _defaultStatusText;
+    }
+
+    private void RelayoutActiveWrap()
+    {
+        if (_activeWrap is null || _activeSection is null) return;
+        _activeWrap.Width = ContentWidth();
+        _activeWrap.Height = Math.Max(_activeSection.Bottom, 1);
+        _activeSection.Width = _activeWrap.Width;
     }
 
     private Panel BuildHeader()
@@ -987,16 +997,17 @@ internal sealed class MainForm : Form
         SetBatchMode(batch: true);
         var fromPage = _embeddedPage is not null;
         DisposeEmbeddedPage();
-        _contentHost.Padding = new Padding(12, 8, 12, 8);
-        _contentHost.AutoScroll = true;
         _contentHost.SuspendLayout();
         _contentHost.Controls.Clear();
+        // 先关滚动再重建，避免从即时页切回时残留滚动偏移，把列表顶到下方留白
+        _contentHost.AutoScroll = false;
+        _contentHost.Padding = new Padding(12, 8, 12, 8);
 
         var wrap = new Panel
         {
             Location = new Point(0, 0),
             Width = ContentWidth(),
-            AutoSize = true,
+            AutoSize = false,
             BackColor = AppTheme.SurfaceCard,
         };
         wrap.Paint += (_, e) =>
@@ -1010,16 +1021,21 @@ internal sealed class MainForm : Form
 
         var group = _groups[groupIndex];
         var section = BuildGroupSection(group.Title, group.Rows);
+        section.Location = new Point(0, header.Height);
         wrap.Controls.Add(section);
-        section.Location = new Point(0, header.Bottom);
 
         _activeRows = group.Rows;
         _activeSection = section;
         _activeBody = section.Tag as Panel;
+        _activeWrap = wrap;
 
         wrap.Height = section.Bottom;
         _contentHost.Controls.Add(wrap);
+        _contentHost.AutoScrollMinSize = Size.Empty;
+        _contentHost.AutoScroll = true;
         _contentHost.ResumeLayout(true);
+        try { _contentHost.AutoScrollPosition = Point.Empty; }
+        catch { /* ignore */ }
         ShowHelpPlaceholder(group.Title);
         ApplySearchFilter();
         // 从即时页返回时异步刷新批量开关，不阻塞切换
@@ -1057,6 +1073,7 @@ internal sealed class MainForm : Form
         _activeRows = [];
         _activeSection = null;
         _activeBody = null;
+        _activeWrap = null;
         _contentHost.Padding = new Padding(0);
         _contentHost.AutoScroll = false;
         _contentHost.SuspendLayout();
@@ -1131,6 +1148,7 @@ internal sealed class MainForm : Form
     {
         _commandFlow.Visible = batch;
         _commandHint.Visible = !batch;
+        _commandBar.Height = 44;
         _apply.Enabled = batch;
         _restore.Enabled = batch;
         if (_bottomActions is not null)
@@ -1153,9 +1171,15 @@ internal sealed class MainForm : Form
     private void LayoutContent()
     {
         if (_embeddedPage is not null) return;
-        if (_contentHost.Controls.Count == 0) return;
-        if (_contentHost.Controls[0] is Panel wrap)
-            wrap.Width = ContentWidth();
+        RelayoutActiveWrap();
+        if (_activeWrap is not null)
+        {
+            foreach (Control c in _activeWrap.Controls)
+            {
+                if (c.Tag as string == "table-header")
+                    c.Width = _activeWrap.Width;
+            }
+        }
     }
 
     private Panel BuildTableHeader()
@@ -1164,9 +1188,9 @@ internal sealed class MainForm : Form
         var header = new Panel
         {
             Location = new Point(0, 0),
-            Height = h,
+            Size = new Size(ContentWidth(), h),
             BackColor = AppTheme.PrimaryLight,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Tag = "table-header",
         };
         header.Paint += (_, e) =>
         {
@@ -1177,8 +1201,6 @@ internal sealed class MainForm : Form
         header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
-        header.Resize += (_, _) => header.Width = ContentWidth();
-        header.Width = ContentWidth();
         return header;
     }
 
