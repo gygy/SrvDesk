@@ -393,7 +393,7 @@ internal sealed class MainForm : Form
         {
             using var d = new ContextMenuSettingsDialog();
             d.ShowDialog(this);
-            // 对话框即时写入后，同步批量页所有相关开关，避免「应用推荐」覆盖
+            // 对话框即时写入后，同步批量页所有相关开关，避免「应用到系统」覆盖
             SyncContextMenuRowsFromSystem();
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
@@ -441,7 +441,7 @@ internal sealed class MainForm : Form
         if (answer != DialogResult.Yes) return;
 
         Bind(preset.Build());
-        _status.Text = $"已载入预设「{preset.Title}」，点击「应用推荐」写入系统。";
+        _status.Text = $"已载入预设「{preset.Title}」，点击「应用到系统」即可生效。";
         ApplyLog.Write("载入预设 " + preset.Title);
         ApplySearchFilter();
     }
@@ -459,7 +459,7 @@ internal sealed class MainForm : Form
                 var tip = isChangeLog
                     ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
                       "# 当前尚无变更记录。\r\n" +
-                      "# 请先：勾选推荐项 → 点击底部「应用推荐」→ 再打开本文件。\r\n" +
+                      "# 请先：勾选推荐项 → 点击底部「应用到系统」→ 再打开本文件。\r\n" +
                       "# 即时页（资源管理器/DNS 等）开关切换后也会写入。\r\n"
                     : $"# {title}\r\n# 尚无记录。\r\n";
                 File.WriteAllText(path, tip, new System.Text.UTF8Encoding(true));
@@ -469,7 +469,7 @@ internal sealed class MainForm : Form
             {
                 MessageBox.Show(
                     "变更日志里还没有「原来从 xx 变成 yy」的记录。\r\n\r\n" +
-                    "请先点击底部「应用推荐」（或以管理员运行新版 SrvDesk.exe），\r\n" +
+                    "请先点击底部「应用到系统」（或以管理员运行新版 SrvDesk.exe），\r\n" +
                     "应用成功后再打开「帮助 → 打开变更日志」。\r\n\r\n" +
                     "路径：\r\n" + path,
                     "变更日志为空",
@@ -521,8 +521,8 @@ internal sealed class MainForm : Form
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
-            _status.Text = "警告：当前未以管理员运行，应用设置可能失败。请右键「以管理员身份运行」。";
-            _headerSubtitle.Text = "未以管理员运行 · " + _systemFacts.Summary;
+            _status.Text = "提示：当前进程未提升权限时，部分系统级项可能写入失败（失败项会显示在状态栏）。";
+            _headerSubtitle.Text = _systemFacts.Summary;
         }
         else if (!_systemFacts.IsServer)
         {
@@ -722,7 +722,7 @@ internal sealed class MainForm : Form
         {
             var state = ProfileStore.Load(dlg.FileName);
             Bind(state);
-            _status.Text = "已导入配置到界面：" + dlg.FileName + "（点击「应用推荐」写入）";
+            _status.Text = "已导入配置到界面：" + dlg.FileName + "（点击「应用到系统」生效）";
             ApplyLog.Write("导入配置 " + dlg.FileName);
         }
         catch (Exception ex)
@@ -735,7 +735,7 @@ internal sealed class MainForm : Form
     {
         if (!ConfigureAutologonDialog()) return;
         _autologon.Checked = true;
-        _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用推荐后下次重启生效）";
+        _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用到系统后下次重启生效）";
     }
 
     private void ConfigureComputerIdentity() => PromptComputerIdentity();
@@ -1160,14 +1160,14 @@ internal sealed class MainForm : Form
         {
             foreach (Control c in _bottomActions.Controls)
             {
-                if (c is Button b && b is not null && b.Text is "全部推荐" or "关闭全部推荐")
+                if (c is Button b && b is not null && b.Text is "全部开启" or "全部关闭")
                     b.Enabled = batch;
             }
         }
 
         _status.Text = batch
             ? _defaultStatusText
-            : "此页修改立即生效，无需点击「应用推荐」。";
+            : "此页修改立即生效，无需点击「应用到系统」。";
     }
 
     private int ContentWidth() =>
@@ -1326,7 +1326,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开=优化建议值。即时页改动立即生效；分组页改完后点「应用推荐」。"
+            ? "开=优化建议值。即时页改动立即生效；分组页改完后点「应用到系统」。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 
@@ -1342,8 +1342,8 @@ internal sealed class MainForm : Form
         };
         _bottomActions = actions;
 
-        var allOn = ToolButton("全部推荐", () => SetVisibleAll(true));
-        var allOff = ToolButton("关闭全部推荐", () => SetVisibleAll(false));
+        var allOn = ToolButton("全部开启", () => SetVisibleAll(true));
+        var allOff = ToolButton("全部关闭", () => SetVisibleAll(false));
         var quickTools = ToolButton("快速工具", ShowQuickToolsDialog);
         var commonSoftware = ToolButton("常用软件", ShowCommonSoftware);
         var refresh = ToolButton("刷新", () => LoadState(fullScan: true));
@@ -1362,7 +1362,7 @@ internal sealed class MainForm : Form
         _restore.MouseEnter += (_, _) => _restore.BackColor = AppTheme.PrimaryPale;
         _restore.MouseLeave += (_, _) => _restore.BackColor = AppTheme.SurfaceCard;
 
-        _apply.Text = "应用推荐";
+        _apply.Text = "应用到系统";
         _apply.AutoSize = false;
         _apply.Size = new Size(92, 36);
         _apply.Margin = new Padding(8, 0, 0, 0);
@@ -1888,11 +1888,11 @@ internal sealed class MainForm : Form
 
     private void ApplyRecommended()
     {
-        RunApply("正在应用推荐设置…", "已应用。开启项为优化建议值，关闭项保持系统默认值。");
+        RunApply("正在写入系统…", "已写入系统。开启项为优化建议值，关闭项保持系统默认值。");
         PromptComputerIdentity();
     }
 
-    /// <summary>应用推荐后引导修改计算机名/工作组。</summary>
+    /// <summary>写入系统后引导修改计算机名/工作组。</summary>
     private void PromptComputerIdentity()
     {
         try
@@ -1922,17 +1922,6 @@ internal sealed class MainForm : Form
         Application.DoEvents();
         try
         {
-            if (!AdminHelper.IsRunningAsAdministrator())
-            {
-                MessageBox.Show(
-                    "当前未以管理员运行，注册表/服务等写入会失败。\n\n请右键本程序 →「以管理员身份运行」后再点「应用推荐」。",
-                    "需要管理员权限",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                _status.Text = "已取消：需要管理员权限。";
-                return;
-            }
-
             if (!EnsureAutologonReady())
             {
                 _status.Text = "已取消：启用自动登录需先配置账户。";

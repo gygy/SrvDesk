@@ -460,8 +460,16 @@ internal static class EasySettingsTweaks
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-        });
-        p?.WaitForExit(30_000);
+        }) ?? throw new InvalidOperationException("无法启动 " + file);
+        var stdout = p.StandardOutput.ReadToEnd();
+        var stderr = p.StandardError.ReadToEnd();
+        p.WaitForExit(30_000);
+        if (p.ExitCode == 0) return;
+        var detail = (stderr + " " + stdout).Trim();
+        if (detail.Length > 200) detail = detail.Substring(0, 200) + "…";
+        throw new InvalidOperationException(
+            Path.GetFileName(file) + " 退出码 " + p.ExitCode +
+            (detail.Length > 0 ? "：" + detail : ""));
     }
 
     private static string RunCapture(string file, string args)
