@@ -237,8 +237,8 @@ internal sealed class MainForm : Form
     {
         Text = AppBrand.ProductName;
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(980, 720);
-        ClientSize = new Size(1080, 760);
+        MinimumSize = new Size(1080, 720);
+        ClientSize = new Size(1180, 760);
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
@@ -525,7 +525,7 @@ internal sealed class MainForm : Form
                     BeginInvoke(() =>
                     {
                         var identity = t.Result;
-                        _status.Text = _systemFacts.Summary + " · " + identity + "。开关=推荐；关闭=恢复系统默认。";
+                        _status.Text = _systemFacts.Summary + " · " + identity + "。开=采用优化建议；关=恢复系统默认值。";
                         _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
                     });
                 });
@@ -1192,8 +1192,9 @@ internal sealed class MainForm : Form
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
         header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX));
-        header.Controls.Add(MakeHeaderLabel("推荐设置", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统默认", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
         header.Resize += (_, _) => header.Width = ContentWidth();
         header.Width = ContentWidth();
         return header;
@@ -1316,7 +1317,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开关=推荐设置。即时页改动立即生效；分组页改完后点「应用推荐」。"
+            ? "开=优化建议值。即时页改动立即生效；分组页改完后点「应用推荐」。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 
@@ -1600,6 +1601,8 @@ internal sealed class MainForm : Form
         _autologon.Checked = s.EnableAutologon;
         _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
+        foreach (var row in AllRows)
+            row.SyncCurrentValueFromState();
     }
 
     private Optimizer.State CaptureState() => new()
@@ -1840,8 +1843,8 @@ internal sealed class MainForm : Form
     private void RestoreDefaults()
     {
         var answer = MessageBox.Show(
-            "将把全部设置项恢复为 Windows Server 出厂默认值（右侧「系统默认」列）。\n\n" +
-            "所有推荐开关将关闭并立即写入系统。部分项目需注销或重启后生效。\n\n是否继续？",
+            "将把全部设置项恢复为 Windows Server 出厂默认值（「系统默认值」列）。\n\n" +
+            "所有优化建议开关将关闭并立即写入系统。部分项目需注销或重启后生效。\n\n是否继续？",
             "恢复出厂默认",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
@@ -1867,7 +1870,7 @@ internal sealed class MainForm : Form
     }
 
     private void ApplyRecommended() =>
-        RunApply("正在应用推荐设置…", "已应用。开启项为推荐设置，关闭项保持系统默认。");
+        RunApply("正在应用推荐设置…", "已应用。开启项为优化建议值，关闭项保持系统默认值。");
 
     private void RunApply(string working, string success)
     {

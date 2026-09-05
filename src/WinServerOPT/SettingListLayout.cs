@@ -5,12 +5,17 @@ internal static class SettingListLayout
 {
     public const int InfoX = 16;
     public const int ItemX = 36;
-    public const int RecommendHeaderX = 448;
-    public const int RecommendHeaderW = 160;
-    public const int ToggleX = 500;
+    /// <summary>「优化建议值」表头起点（开关居中对齐其下）。</summary>
+    public const int RecommendHeaderX = 420;
+    public const int RecommendHeaderW = 100;
+    public const int ToggleX = 442;
     public const int ToggleW = 56;
-    public const int SystemX = 628;
-    public const int SystemW = 160;
+    /// <summary>系统默认值列。</summary>
+    public const int SystemX = 560;
+    public const int SystemW = 120;
+    /// <summary>系统当前值列。</summary>
+    public const int CurrentX = 700;
+    public const int CurrentW = 120;
     /// <summary>项目文字右缘与开关左缘的间隙。</summary>
     public const int TextToggleGap = 12;
 }
