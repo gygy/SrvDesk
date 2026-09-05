@@ -1008,12 +1008,34 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         }
         catch { /* ignore */ }
 
-        notes.Add("自动修复未完成：当前环境无法连上下载源（GitHub/aka.ms）。");
-        notes.Add("请在能上网的电脑打开：https://github.com/microsoft/winget-cli/releases/latest");
-        notes.Add("下载并拷到本机目录：" + DownloadDir);
-        notes.Add("  · Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle");
-        notes.Add("  · DesktopAppInstaller_Dependencies.zip（解压后把 x64 下的 .appx 一并放入该目录）");
-        notes.Add("然后再次点击「一键安装 winget」。");
+        var hasBundle = Directory.EnumerateFiles(DownloadDir, "*DesktopAppInstaller*.msixbundle")
+            .Any(f => new FileInfo(f).Length > 1_000_000);
+        var appxPresent = IsAppInstallerPackagePresent();
+        var appxPath = TryGetAppxWingetPath();
+
+        notes.Add("自动修复未完成。");
+        if (appxPresent || !string.IsNullOrWhiteSpace(appxPath))
+        {
+            notes.Add("已检测到 App Installer 包，但未能启动 winget.exe（常见于 Server 缺许可证/别名）。");
+            notes.Add("请再试：设置 → 应用 → 应用执行别名 → 打开 winget.exe；或注销后重开本程序。");
+            if (!string.IsNullOrWhiteSpace(appxPath))
+                notes.Add("检测到路径：" + appxPath);
+        }
+        else if (hasBundle)
+        {
+            notes.Add("下载目录里已有安装包，但安装后仍不可用。可删除目录内损坏文件后重试，或手动 Add-AppxPackage。");
+            notes.Add("目录：" + DownloadDir);
+        }
+        else
+        {
+            notes.Add("程序自动下载失败（浏览器能打开≠进程能下载：常见于管理员进程未走系统代理）。");
+            notes.Add("请在浏览器打开：https://github.com/microsoft/winget-cli/releases/latest");
+            notes.Add("下载并拷到：" + DownloadDir);
+            notes.Add("  · Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle");
+            notes.Add("  · DesktopAppInstaller_Dependencies.zip（解压后把 x64 下 .appx 放入同目录）");
+            notes.Add("然后再次点击「一键安装 winget」。");
+        }
+
         notes.Add("也可在「设置 → 应用 → 应用执行别名」中开启 winget.exe。");
         Report(onProgress, "自动修复未完成", 100);
         return string.Join("\r\n", notes);
@@ -1409,29 +1431,20 @@ Repair-WinGetPackageManager -AllUsers -Force
                 AddAppxPackage(bundle, provisioned: preferProvisioned);
             }
 
-            // Server：再尝试带许可证的 provision（若目录里有 License xml）
-            if (preferProvisioned)
+            // 下载许可证（Server 上无商店时常缺 license，导致 winget 装上却不可用）
+            try
             {
-                var license = Directory.EnumerateFiles(DownloadDir, "*License*.xml")
-                    .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(license))
-                {
-                    try
-                    {
-                        var escBundle = bundle.Replace("'", "''");
-                        var escLic = license!.Replace("'", "''");
-                        RunPowerShell($@"
-$ErrorActionPreference = 'Stop'
-Add-AppxProvisionedPackage -Online -PackagePath '{escBundle}' -LicensePath '{escLic}' | Out-Null
-", timeoutMs: 180_000);
-                    }
-                    catch (Exception ex)
-                    {
-                        ApplyLog.Write("Provision+License：" + ex.Message);
-                    }
-                }
+                TryInstallWingetLicense(bundle, onProgress);
             }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("License：" + ex.Message);
+            }
+
+            System.Threading.Thread.Sleep(800);
+            ResetWingetDiscovery();
+            TryBindWingetFromAppx();
+            TryEnableWingetAppAlias();
 
             return preferProvisioned
                 ? "已按 Server 路径安装 App Installer（含依赖；本机缓存/多镜像）。"
@@ -1441,6 +1454,81 @@ Add-AppxProvisionedPackage -Online -PackagePath '{escBundle}' -LicensePath '{esc
         {
             return "离线包安装失败：" + ShortNetError(ex);
         }
+    }
+
+    private static void TryInstallWingetLicense(string bundlePath, Action<SoftwareInstallProgress>? onProgress)
+    {
+        Report(onProgress, "安装 App Installer 许可证…", 94);
+        var license = Directory.EnumerateFiles(DownloadDir, "*License*.xml")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(license))
+        {
+            // GitHub release 里带 *_License1.xml；用 API 解析最新资源名较稳，这里尝试常见镜像下载 zip 外的 xml 较难。
+            // 退路：从 Dependencies 同页的 license 不固定；用 powershell 调 GitHub API。
+            try
+            {
+                var api = RunCapture("powershell.exe",
+                    "-NoProfile -Command \"$ProgressPreference='SilentlyContinue'; " +
+                    "$r=Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/winget-cli/releases/latest' " +
+                    "-Headers @{ 'User-Agent'='SrvDesk' }; " +
+                    "($r.assets | Where-Object { $_.name -like '*License*.xml' } | Select-Object -First 1).browser_download_url\"");
+                api = api.Trim();
+                if (api.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    license = Path.Combine(DownloadDir, "DesktopAppInstaller_License.xml");
+                    ConfigureHttps();
+                    Exception? last = null;
+                    foreach (var u in WithGithubMirrors(api))
+                    {
+                        try
+                        {
+                            if (TryDownloadHttpClient(u, license!, null, 94, 2) &&
+                                File.Exists(license) && new FileInfo(license!).Length > 100)
+                            {
+                                last = null;
+                                break;
+                            }
+                        }
+                        catch (Exception ex) { last = ex; }
+                    }
+                    if (last is not null && (!File.Exists(license) || new FileInfo(license!).Length < 100))
+                        throw last;
+                }
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("获取 License URL 失败：" + ex.Message);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(license) || !File.Exists(license))
+            return;
+
+        var escBundle = bundlePath.Replace("'", "''");
+        var escLic = license!.Replace("'", "''");
+        RunPowerShell($@"
+$ErrorActionPreference = 'Stop'
+Add-AppxProvisionedPackage -Online -PackagePath '{escBundle}' -LicensePath '{escLic}' | Out-Null
+", timeoutMs: 180_000);
+    }
+
+    private static void TryEnableWingetAppAlias()
+    {
+        try
+        {
+            // 应用执行别名：部分系统用此开关控制 WindowsApps\winget.exe 桩
+            using var k = Registry.CurrentUser.CreateSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\App Paths\winget.exe", true);
+            var appx = TryGetAppxWingetPath();
+            if (!string.IsNullOrWhiteSpace(appx) && k is not null)
+            {
+                k.SetValue("", appx);
+                k.SetValue("Path", Path.GetDirectoryName(appx!) ?? "");
+            }
+        }
+        catch { /* ignore */ }
     }
 
     private static string ShortNetError(Exception ex)
@@ -1637,19 +1725,153 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
             try { File.Delete(dest); } catch { /* ignore */ }
         }
 
-        ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        ConfigureHttps();
         var name = Path.GetFileName(dest);
         Report(onProgress, "开始下载 " + name, percentBase);
+        Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? DownloadDir);
 
+        Exception? last = null;
+        // 1) HttpClient（浏览器 UA + 系统代理）  2) curl.exe  3) WebClient
+        foreach (var attempt in new Func<bool>[]
+                 {
+                     () => TryDownloadHttpClient(url, dest, onProgress, percentBase, percentSpan),
+                     () => TryDownloadCurl(url, dest),
+                     () => TryDownloadWebClient(url, dest, onProgress, percentBase, percentSpan),
+                 })
+        {
+            try
+            {
+                if (!attempt()) continue;
+                var size = new FileInfo(dest).Length;
+                var looksOk = requireZipMagic ? LooksLikeBinaryPackage(dest) : LooksLikeExeOrMsi(dest);
+                if (size >= minBytes && looksOk)
+                {
+                    Report(onProgress, "下载完成 " + name, percentBase + percentSpan);
+                    return;
+                }
+
+                try { File.Delete(dest); } catch { /* ignore */ }
+                last = new InvalidOperationException("下载文件无效或过小：" + name + "（" + size + " 字节）");
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                try { if (File.Exists(dest)) File.Delete(dest); } catch { /* ignore */ }
+            }
+        }
+
+        throw last ?? new InvalidOperationException("下载失败：" + name);
+    }
+
+    private static void ConfigureHttps()
+    {
+        try
+        {
+            ServicePointManager.SecurityProtocol |=
+                SecurityProtocolType.Tls12 | (SecurityProtocolType)3072 /*Tls13*/;
+        }
+        catch
+        {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        }
+
+        try
+        {
+            // 管理员进程常丢用户代理：强制使用系统代理 + 默认凭据
+            var proxy = WebRequest.GetSystemWebProxy();
+            proxy.Credentials = CredentialCache.DefaultCredentials;
+            WebRequest.DefaultWebProxy = proxy;
+        }
+        catch { /* ignore */ }
+    }
+
+    private const string BrowserUa =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+    private static bool TryDownloadHttpClient(
+        string url,
+        string dest,
+        Action<SoftwareInstallProgress>? onProgress,
+        int percentBase,
+        int percentSpan)
+    {
+        var handler = new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            UseProxy = true,
+            Proxy = WebRequest.GetSystemWebProxy(),
+            UseDefaultCredentials = true,
+        };
+        try { handler.Proxy!.Credentials = CredentialCache.DefaultCredentials; }
+        catch { /* ignore */ }
+
+        using var client = new System.Net.Http.HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromMinutes(15),
+        };
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", BrowserUa);
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
+
+        using var resp = client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead)
+            .GetAwaiter().GetResult();
+        resp.EnsureSuccessStatusCode();
+        var total = resp.Content.Headers.ContentLength ?? -1L;
+        using var input = resp.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+        using var output = File.Create(dest);
+        var buffer = new byte[81920];
+        long readTotal = 0;
+        var lastPct = -1;
+        int n;
+        while ((n = input.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            output.Write(buffer, 0, n);
+            readTotal += n;
+            if (total <= 0 || onProgress is null) continue;
+            var pct = (int)(readTotal * 100 / total);
+            if (pct == lastPct) continue;
+            lastPct = pct;
+            Report(onProgress, $"下载 {Path.GetFileName(dest)} {pct}%",
+                percentBase + (int)(pct / 100.0 * percentSpan));
+        }
+
+        return File.Exists(dest) && new FileInfo(dest).Length > 0;
+    }
+
+    private static bool TryDownloadCurl(string url, string dest)
+    {
+        var curl = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "curl.exe");
+        if (!File.Exists(curl))
+            curl = "curl.exe";
+
+        // -L 跟随跳转；-A 浏览器 UA；--proxy-default 跟随系统（Win10+ curl）
+        var args =
+            "-L --retry 3 --connect-timeout 20 --max-time 900 " +
+            "-A \"" + BrowserUa + "\" " +
+            "-o \"" + dest + "\" \"" + url + "\"";
+        var code = Run(curl, args, timeoutMs: 920_000);
+        return code == 0 && File.Exists(dest) && new FileInfo(dest).Length > 0;
+    }
+
+    private static bool TryDownloadWebClient(
+        string url,
+        string dest,
+        Action<SoftwareInstallProgress>? onProgress,
+        int percentBase,
+        int percentSpan)
+    {
         using var wc = new WebClient();
-        wc.Headers[HttpRequestHeader.UserAgent] = "SrvDesk/1.0";
+        wc.Proxy = WebRequest.GetSystemWebProxy();
+        wc.Proxy.Credentials = CredentialCache.DefaultCredentials;
+        wc.Headers[HttpRequestHeader.UserAgent] = BrowserUa;
+        wc.Headers[HttpRequestHeader.Accept] = "*/*";
         var lastPct = -1;
         wc.DownloadProgressChanged += (_, e) =>
         {
             if (e.ProgressPercentage == lastPct) return;
             lastPct = e.ProgressPercentage;
-            var mapped = percentBase + (int)(e.ProgressPercentage / 100.0 * percentSpan);
-            Report(onProgress, $"下载 {name} {e.ProgressPercentage}%", mapped);
+            Report(onProgress, $"下载 {Path.GetFileName(dest)} {e.ProgressPercentage}%",
+                percentBase + (int)(e.ProgressPercentage / 100.0 * percentSpan));
         };
         try
         {
@@ -1657,19 +1879,10 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         }
         catch
         {
-            // 部分环境 TaskAsync 异常时回退同步下载
             wc.DownloadFile(url, dest);
         }
 
-        var size = new FileInfo(dest).Length;
-        var looksOk = requireZipMagic ? LooksLikeBinaryPackage(dest) : LooksLikeExeOrMsi(dest);
-        if (size < minBytes || !looksOk)
-        {
-            try { File.Delete(dest); } catch { /* ignore */ }
-            throw new InvalidOperationException("下载文件无效或过小：" + Path.GetFileName(dest) + "（" + size + " 字节）");
-        }
-
-        Report(onProgress, "下载完成 " + name, percentBase + percentSpan);
+        return File.Exists(dest) && new FileInfo(dest).Length > 0;
     }
 
     private static bool LooksLikeExeOrMsi(string path)
