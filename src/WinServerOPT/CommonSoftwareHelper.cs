@@ -380,6 +380,15 @@ internal static class CommonSoftwareHelper
             }
         }
 
+        foreach (var item in items)
+        {
+            if (item.IsWingetBootstrap) continue;
+            if (string.IsNullOrWhiteSpace(item.AppxPackageName)) continue;
+            if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
+            var appx = QueryAppxStatus(item.AppxPackageName);
+            if (appx.Installed) map[item.Id] = appx;
+        }
+
         lock (StatusCacheLock)
             _statusCache = map;
     }
@@ -600,6 +609,271 @@ internal static class CommonSoftwareHelper
         return null;
     }
 
+    /// <summary>
+    /// 商店 Appx/Msix 旁加载：与手工安装的 AppleInc.iCloud_*.Appx + VCLibs/WindowsAppRuntime 一致。
+    /// 成功返回提示；失败返回 null 以便回退 EXE/winget。
+    /// </summary>
+    private static string? InstallFromAppxSideload(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var productId = item.StoreProductId.Trim();
+        var packageName = string.IsNullOrWhiteSpace(item.AppxPackageName)
+            ? item.Id
+            : item.AppxPackageName.Trim();
+        if (productId.Length == 0) return null;
+
+        EnsureAppxSideloadAllowed();
+        var dir = Path.Combine(DownloadDir, item.Id + "-appx");
+        Directory.CreateDirectory(dir);
+
+        Report(onProgress, "解析商店 Appx 直链（旁加载）…", 8);
+        var files = ResolveStoreAppxFiles(productId, packageName);
+        if (files.Count == 0)
+        {
+            // 复用已下载到目录的包（与用户手工放置的文件兼容）
+            files = DiscoverLocalAppxFiles(dir, packageName);
+        }
+
+        if (files.Count == 0)
+            throw new InvalidOperationException("未能解析到 Appx 安装包，请检查网络或将 .Appx/.Msix 放入：" + dir);
+
+        Report(onProgress, $"准备下载 {files.Count} 个包…", 12);
+        var localPaths = new List<string>();
+        for (var i = 0; i < files.Count; i++)
+        {
+            var f = files[i];
+            var dest = Path.Combine(dir, f.FileName);
+            var basePct = 12 + (int)(i / (double)files.Count * 55);
+            var span = Math.Max(5, 55 / files.Count);
+            if (!string.IsNullOrWhiteSpace(f.Url))
+            {
+                Report(onProgress, "下载 " + f.FileName, basePct);
+                DownloadPackage(f.Url!, dest, minBytes: 50_000, onProgress, basePct, span);
+            }
+            else if (!File.Exists(dest))
+            {
+                continue;
+            }
+
+            if (File.Exists(dest) && LooksLikeBinaryPackage(dest))
+                localPaths.Add(dest);
+        }
+
+        if (localPaths.Count == 0)
+            throw new InvalidOperationException("Appx 下载失败或目录为空：" + dir);
+
+        var main = localPaths.FirstOrDefault(p =>
+            Path.GetFileName(p).StartsWith(packageName, StringComparison.OrdinalIgnoreCase));
+        if (main is null)
+            throw new InvalidOperationException("未找到主包 " + packageName + "_*.Appx，目录：" + dir);
+
+        var deps = localPaths
+            .Where(p => !p.Equals(main, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(AppxInstallOrder)
+            .ToList();
+
+        Report(onProgress, "正在旁加载安装 Appx（含依赖）…", 72);
+        ApplyLog.Write("Appx 旁加载：" + main + " deps=" + deps.Count);
+        AddAppxPackageWithDependencies(main, deps);
+
+        InvalidateStatusCache();
+        var status = Query(item);
+        if (status.Installed)
+        {
+            Report(onProgress, "安装完成", 100);
+            return "已通过 Appx 旁加载安装（无需微软商店）。";
+        }
+
+        // 安装命令成功但检测延迟时仍视为完成
+        Report(onProgress, "安装命令已执行", 100);
+        return "Appx 旁加载命令已执行。若列表未刷新，请点刷新。";
+    }
+
+    private static int AppxInstallOrder(string path)
+    {
+        var name = Path.GetFileName(path);
+        if (name.StartsWith("Microsoft.VCLibs.140.00.UWPDesktop", StringComparison.OrdinalIgnoreCase)) return 2;
+        if (name.StartsWith("Microsoft.VCLibs", StringComparison.OrdinalIgnoreCase)) return 1;
+        if (name.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0) return 3;
+        if (name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0) return 4;
+        return 10;
+    }
+
+    private static void EnsureAppxSideloadAllowed()
+    {
+        try
+        {
+            using var k = Registry.LocalMachine.CreateSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock");
+            k?.SetValue("AllowAllTrustedApps", 1, RegistryValueKind.DWord);
+            k?.SetValue("AllowDevelopmentWithoutDevLicense", 1, RegistryValueKind.DWord);
+        }
+        catch
+        {
+            /* 非管理员时忽略，后续安装可能仍成功 */
+        }
+    }
+
+    private sealed class StoreAppxFile
+    {
+        public string FileName { get; set; } = "";
+        public string? Url { get; set; }
+        public Version? Version { get; set; }
+    }
+
+    /// <summary>通过 store.rg-adguard 解析商店包直链（需先访问首页拿 Cookie）。</summary>
+    private static List<StoreAppxFile> ResolveStoreAppxFiles(string productId, string mainPackageName)
+    {
+        ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        const string ua =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+        var cookies = new CookieContainer();
+        var handler = new System.Net.Http.HttpClientHandler
+        {
+            CookieContainer = cookies,
+            UseCookies = true,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        };
+        using var client = new System.Net.Http.HttpClient(handler) { Timeout = TimeSpan.FromMinutes(2) };
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", ua);
+
+        client.GetAsync("https://store.rg-adguard.net/").GetAwaiter().GetResult().Dispose();
+
+        using var form = new System.Net.Http.FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["type"] = "ProductId",
+            ["url"] = productId,
+            ["ring"] = "Retail",
+        });
+        using var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post,
+            "https://store.rg-adguard.net/api/GetFiles")
+        {
+            Content = form,
+        };
+        req.Headers.Referrer = new Uri("https://store.rg-adguard.net/");
+        req.Headers.TryAddWithoutValidation("Origin", "https://store.rg-adguard.net");
+
+        using var resp = client.SendAsync(req).GetAwaiter().GetResult();
+        var html = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        if (!resp.IsSuccessStatusCode || html.IndexOf(mainPackageName, StringComparison.OrdinalIgnoreCase) < 0)
+            throw new InvalidOperationException("解析商店直链失败（HTTP " + (int)resp.StatusCode + "）。");
+
+        var all = new List<StoreAppxFile>();
+        var re = new Regex(
+            @"href\s*=\s*""(?<url>https?://[^""]+)""[^>]*>\s*(?<name>[^<]+\.(?:appx|msix|appxbundle|msixbundle))\s*<",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        foreach (Match m in re.Matches(html))
+        {
+            var name = m.Groups["name"].Value.Trim();
+            var url = m.Groups["url"].Value.Trim();
+            if (name.IndexOf(".eappx", StringComparison.OrdinalIgnoreCase) >= 0) continue; // 加密包跳过
+            if (name.IndexOf("_arm64_", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+            if (name.IndexOf("_x86_", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                name.IndexOf(mainPackageName, StringComparison.OrdinalIgnoreCase) >= 0)
+                continue; // 主包只要 x64
+
+            all.Add(new StoreAppxFile
+            {
+                FileName = name,
+                Url = url,
+                Version = ParseVersionFromAppxName(name),
+            });
+        }
+
+        return SelectLatestAppxSet(all, mainPackageName);
+    }
+
+    private static List<StoreAppxFile> DiscoverLocalAppxFiles(string dir, string mainPackageName)
+    {
+        if (!Directory.Exists(dir)) return [];
+        var all = Directory.EnumerateFiles(dir)
+            .Where(p =>
+            {
+                var ext = Path.GetExtension(p);
+                return ext.Equals(".appx", StringComparison.OrdinalIgnoreCase)
+                       || ext.Equals(".msix", StringComparison.OrdinalIgnoreCase)
+                       || ext.Equals(".appxbundle", StringComparison.OrdinalIgnoreCase)
+                       || ext.Equals(".msixbundle", StringComparison.OrdinalIgnoreCase);
+            })
+            .Select(p => new StoreAppxFile
+            {
+                FileName = Path.GetFileName(p),
+                Url = null,
+                Version = ParseVersionFromAppxName(Path.GetFileName(p)),
+            })
+            .ToList();
+        return SelectLatestAppxSet(all, mainPackageName);
+    }
+
+    private static List<StoreAppxFile> SelectLatestAppxSet(List<StoreAppxFile> all, string mainPackageName)
+    {
+        if (all.Count == 0) return [];
+
+        // 依赖：每个包族取最新 x64/neutral
+        string FamilyKey(string name)
+        {
+            var idx = name.IndexOf('_');
+            return idx > 0 ? name.Substring(0, idx) : name;
+        }
+
+        bool IsUsefulDep(string name) =>
+            name.StartsWith("Microsoft.VCLibs", StringComparison.OrdinalIgnoreCase)
+            || name.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0
+            || name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0
+            || name.StartsWith(mainPackageName, StringComparison.OrdinalIgnoreCase);
+
+        var picked = new List<StoreAppxFile>();
+        foreach (var group in all.Where(f => IsUsefulDep(f.FileName)).GroupBy(f => FamilyKey(f.FileName), StringComparer.OrdinalIgnoreCase))
+        {
+            var best = group
+                .OrderByDescending(f => f.FileName.IndexOf("_x64_", StringComparison.OrdinalIgnoreCase) >= 0)
+                .ThenByDescending(f => f.Version ?? new Version(0, 0))
+                .ThenByDescending(f => f.FileName, StringComparer.OrdinalIgnoreCase)
+                .First();
+            picked.Add(best);
+        }
+
+        if (!picked.Any(f => f.FileName.StartsWith(mainPackageName, StringComparison.OrdinalIgnoreCase)))
+            return [];
+
+        return picked;
+    }
+
+    private static Version? ParseVersionFromAppxName(string name)
+    {
+        var m = Regex.Match(name, @"_(\d+\.\d+\.\d+\.\d+)_");
+        if (!m.Success) return null;
+        return Version.TryParse(m.Groups[1].Value, out var v) ? v : null;
+    }
+
+    private static void AddAppxPackageWithDependencies(string mainPath, List<string> dependencyPaths)
+    {
+        var mainEsc = mainPath.Replace("'", "''");
+        string script;
+        if (dependencyPaths.Count == 0)
+        {
+            script = $@"
+$ErrorActionPreference = 'Stop'
+Add-AppxPackage -Path '{mainEsc}'
+";
+        }
+        else
+        {
+            var deps = string.Join(",", dependencyPaths.Select(p => "'" + p.Replace("'", "''") + "'"));
+            script = $@"
+$ErrorActionPreference = 'Stop'
+$deps = @({deps})
+Add-AppxPackage -Path '{mainEsc}' -DependencyPath $deps -ErrorAction Stop
+";
+        }
+
+        var code = RunPowerShell(script, timeoutMs: 600_000);
+        if (code != 0)
+            throw new InvalidOperationException("Add-AppxPackage 失败，退出码 " + code);
+    }
+
     public static string Uninstall(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
     {
         ApplyLog.Write("常用软件卸载：" + item.Title);
@@ -607,6 +881,28 @@ internal static class CommonSoftwareHelper
             return "winget（应用安装程序）为系统组件，不建议在此卸载。请在「设置 → 应用」中操作。";
 
         Report(onProgress, "准备卸载 " + item.Title, 5);
+        if (!string.IsNullOrWhiteSpace(item.AppxPackageName))
+        {
+            try
+            {
+                var name = item.AppxPackageName.Replace("'", "''");
+                var code = RunPowerShell($@"
+$ErrorActionPreference = 'Stop'
+Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
+", timeoutMs: 180_000);
+                if (code == 0)
+                {
+                    Report(onProgress, "卸载完成", 100);
+                    InvalidateStatusCache();
+                    return "";
+                }
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("Appx 卸载失败：" + ex.Message);
+            }
+        }
+
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
             var code = RunWinget($"uninstall -e --id {item.WingetId} --disable-interactivity", onProgress);

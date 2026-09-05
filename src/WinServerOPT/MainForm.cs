@@ -1242,7 +1242,7 @@ internal sealed class MainForm : Form
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
         header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX - 4));
-        header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("设置操作", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
         var noteHeader = MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
@@ -1370,7 +1370,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开=优化建议值。即时页立即生效；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
+            ? "开=采用优化建议。即时页立即生效；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 

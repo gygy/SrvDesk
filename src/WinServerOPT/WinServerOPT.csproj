@@ -28,6 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
