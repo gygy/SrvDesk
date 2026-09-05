@@ -801,8 +801,16 @@ internal static class Optimizer
 
     private static void Try(List<string> errors, string name, Action action)
     {
-        try { action(); }
-        catch (Exception ex) { errors.Add($"{name}：{ex.Message}"); }
+        try
+        {
+            using (ApplyLog.PushContext(name))
+                action();
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"{name}：{ex.Message}");
+            ApplyLog.Write($"失败：{name} — {ex.Message}");
+        }
     }
 
     private static RegistryKey OpenBase(Hive hive) =>
@@ -831,6 +839,8 @@ internal static class Optimizer
 
     private static void SetDword(Hive hive, string key, string name, int value)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryDword(HiveName(hive), key, name, old, value);
         using var baseKey = OpenBase(hive);
         using var k = baseKey.CreateSubKey(key, writable: true)
             ?? throw new InvalidOperationException("无法写入注册表：" + key);
@@ -839,6 +849,8 @@ internal static class Optimizer
 
     private static void SetString(Hive hive, string key, string name, string value)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryString(HiveName(hive), key, name, old, value);
         using var baseKey = OpenBase(hive);
         using var k = baseKey.CreateSubKey(key, writable: true)
             ?? throw new InvalidOperationException("无法写入注册表：" + key);
@@ -847,13 +859,23 @@ internal static class Optimizer
 
     private static void DeleteValue(Hive hive, string key, string name)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryDelete(HiveName(hive), key, name, old);
         using var baseKey = OpenBase(hive);
         using var k = baseKey.OpenSubKey(key, writable: true);
         k?.DeleteValue(name, throwOnMissingValue: false);
     }
 
+    private static string HiveName(Hive hive) => hive == Hive.HkLm ? "HKLM" : "HKCU";
+
     private static void SetService(string name, bool enable, bool disableWhenOff)
     {
+        var oldStart = GetDword(Hive.HkLm, $@"SYSTEM\CurrentControlSet\Services\{name}", "Start");
+        var newStart = enable ? 2 : (disableWhenOff ? 4 : 3);
+        var detail = enable
+            ? "sc config start= auto + start"
+            : $"sc stop + config start= {(disableWhenOff ? "disabled" : "demand")}";
+        ApplyLog.ServiceChange(name, detail, ApplyLog.StartTypeLabel(oldStart), ApplyLog.StartTypeLabel(newStart));
         if (enable)
         {
             Run("sc.exe", $"config {name} start= auto");
@@ -868,6 +890,8 @@ internal static class Optimizer
 
     private static void SetAudio(bool enable)
     {
+        ApplyLog.ServiceChange("AudioSrv/AudioEndpointBuilder",
+            enable ? "启用音频服务" : "禁用音频服务");
         if (enable)
         {
             Run("sc.exe", "config AudioSrv start= auto");

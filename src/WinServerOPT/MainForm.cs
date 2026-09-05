@@ -1855,6 +1855,7 @@ internal sealed class MainForm : Form
             }
 
             SyncInvisibleRowsFromSystem();
+            ApplyLog.BeginBatch(working);
             var errors = Optimizer.Apply(CaptureState());
             ApplyLog.WriteApply(working, errors);
             LoadState(fullScan: true);

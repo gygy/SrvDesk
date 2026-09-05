@@ -413,6 +413,8 @@ internal static class ServerDesktopTweaks
 
     private static void SetDword(Hive hive, string key, string name, int value)
     {
+        var old = GetDword(hive, key, name);
+        ApplyLog.RegistryDword(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
@@ -423,20 +425,34 @@ internal static class ServerDesktopTweaks
 
     private static void SetString(Hive hive, string key, string name, string value)
     {
-        using var baseKey = RegistryKey.OpenBaseKey(
+        object? old = null;
+        using (var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            RegistryView.Default))
+        using (var r = baseKey.OpenSubKey(key))
+            old = r?.GetValue(name);
+        ApplyLog.RegistryString(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
+        using var writeBase = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             RegistryView.Default);
-        using var k = baseKey.CreateSubKey(key, true)
+        using var k = writeBase.CreateSubKey(key, true)
             ?? throw new InvalidOperationException("无法写入注册表：" + key);
         k.SetValue(name, value, RegistryValueKind.String);
     }
 
     private static void DeleteValue(Hive hive, string key, string name)
     {
-        using var baseKey = RegistryKey.OpenBaseKey(
+        object? old = null;
+        using (var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default))
+        using (var r = baseKey.OpenSubKey(key))
+            old = r?.GetValue(name);
+        ApplyLog.RegistryDelete(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old);
+        using var writeBase = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
-        using var k = baseKey.OpenSubKey(key, writable: true);
+        using var k = writeBase.OpenSubKey(key, writable: true);
         k?.DeleteValue(name, throwOnMissingValue: false);
     }
 

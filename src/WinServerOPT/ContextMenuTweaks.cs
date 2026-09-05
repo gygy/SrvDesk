@@ -130,6 +130,16 @@ internal static class ContextMenuTweaks
     {
         const string key = @"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked";
         const string clsid = "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}";
+        object? old;
+        using (var r = Registry.LocalMachine.OpenSubKey(key))
+            old = r?.GetValue(clsid);
+        using (ApplyLog.PushContext("屏蔽共享/授予访问权限菜单"))
+        {
+            if (block)
+                ApplyLog.RegistryDword("HKLM", key, clsid, old, 1);
+            else
+                ApplyLog.RegistryDelete("HKLM", key, clsid, old);
+        }
         using var k = Registry.LocalMachine.CreateSubKey(key);
         if (block) k?.SetValue(clsid, 1, RegistryValueKind.DWord);
         else k?.DeleteValue(clsid, throwOnMissingValue: false);
@@ -155,6 +165,8 @@ internal static class ContextMenuTweaks
 
     private static void SetShell(string path, string title, string command, bool luaShield = false)
     {
+        ApplyLog.RegistryKeyWrite("HKCR", path,
+            $"默认值=\"{title}\"; command=\"{command}\"" + (luaShield ? "; HasLUAShield" : ""));
         using var k = Registry.ClassesRoot.CreateSubKey(path)
             ?? throw new InvalidOperationException("无法写入：" + path);
         k.SetValue("", title);
@@ -171,6 +183,8 @@ internal static class ContextMenuTweaks
 
     private static void DeleteTree(string relative)
     {
+        var existed = KeyExists(relative);
+        ApplyLog.RegistryDeleteTree("HKCR", relative, existed);
         try { Registry.ClassesRoot.DeleteSubKeyTree(relative, throwOnMissingSubKey: false); }
         catch { /* ignore */ }
     }

@@ -372,6 +372,12 @@ internal static class EasySettingsTweaks
 
     private static void SetService(string name, bool enable)
     {
+        var oldStart = GetDword(Hive.HkLm, $@"SYSTEM\CurrentControlSet\Services\{name}", "Start");
+        var newStart = enable ? 2 : 4;
+        ApplyLog.ServiceChange(name,
+            enable ? "sc config start= auto + start" : "sc config start= disabled + stop",
+            ApplyLog.StartTypeLabel(oldStart < 0 ? null : oldStart),
+            ApplyLog.StartTypeLabel(newStart));
         Run("sc.exe", enable ? $"config {name} start= auto" : $"config {name} start= disabled");
         Run("sc.exe", enable ? $"start {name}" : $"stop {name}");
     }
@@ -404,21 +410,29 @@ internal static class EasySettingsTweaks
 
     private static void SetDword(Hive hive, string key, string name, int value)
     {
+        object? old;
+        using (var k = OpenKey(hive, key))
+            old = k?.GetValue(name);
+        ApplyLog.RegistryDword(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
-        using var k = baseKey.CreateSubKey(key, true)
+        using var w = baseKey.CreateSubKey(key, true)
             ?? throw new InvalidOperationException("无法写入：" + key);
-        k.SetValue(name, value, RegistryValueKind.DWord);
+        w.SetValue(name, value, RegistryValueKind.DWord);
     }
 
     private static void DeleteValue(Hive hive, string key, string name)
     {
+        object? old;
+        using (var k = OpenKey(hive, key))
+            old = k?.GetValue(name);
+        ApplyLog.RegistryDelete(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
-        using var k = baseKey.OpenSubKey(key, true);
-        k?.DeleteValue(name, throwOnMissingValue: false);
+        using var w = baseKey.OpenSubKey(key, true);
+        w?.DeleteValue(name, throwOnMissingValue: false);
     }
 
     private static void Run(string file, string args)

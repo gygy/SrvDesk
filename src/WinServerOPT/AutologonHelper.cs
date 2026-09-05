@@ -65,6 +65,16 @@ internal static class AutologonHelper
         using var key = Registry.LocalMachine.OpenSubKey(WinlogonKey, writable: true)
             ?? throw new InvalidOperationException("无法打开 Winlogon 注册表项。");
 
+        using (ApplyLog.PushContext("自动登录"))
+        {
+            ApplyLog.RegistryString("HKLM", WinlogonKey, "AutoAdminLogon", key.GetValue("AutoAdminLogon"), "1");
+            ApplyLog.RegistryString("HKLM", WinlogonKey, "DefaultUserName", key.GetValue("DefaultUserName"), settings.Username.Trim());
+            ApplyLog.RegistryString("HKLM", WinlogonKey, "DefaultDomainName", key.GetValue("DefaultDomainName"), domain);
+            ApplyLog.RegistryDelete("HKLM", WinlogonKey, "DefaultPassword", key.GetValue("DefaultPassword"));
+            if (settings.UpdatePassword)
+                ApplyLog.SystemChange("LSA DefaultPassword", "更新自动登录密码（密文存储，日志不记录明文）");
+        }
+
         key.SetValue("AutoAdminLogon", "1", RegistryValueKind.String);
         key.SetValue("DefaultUserName", settings.Username.Trim(), RegistryValueKind.String);
         key.SetValue("DefaultDomainName", domain, RegistryValueKind.String);
@@ -87,6 +97,12 @@ internal static class AutologonHelper
         using var key = Registry.LocalMachine.OpenSubKey(WinlogonKey, writable: true);
         if (key is not null)
         {
+            using (ApplyLog.PushContext("自动登录"))
+            {
+                ApplyLog.RegistryString("HKLM", WinlogonKey, "AutoAdminLogon", key.GetValue("AutoAdminLogon"), "0");
+                ApplyLog.RegistryDelete("HKLM", WinlogonKey, "DefaultPassword", key.GetValue("DefaultPassword"));
+                ApplyLog.SystemChange("LSA DefaultPassword", "清除自动登录密码");
+            }
             key.SetValue("AutoAdminLogon", "0", RegistryValueKind.String);
             key.DeleteValue("DefaultPassword", throwOnMissingValue: false);
         }

@@ -229,13 +229,29 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private static void ApplyArrow(bool hide)
     {
-        using var k = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons");
-        if (hide) k?.SetValue("29", "", RegistryValueKind.String);
-        else k?.DeleteValue("29", throwOnMissingValue: false);
+        const string key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons";
+        object? old;
+        using (var r = Registry.LocalMachine.OpenSubKey(key))
+            old = r?.GetValue("29");
+        using var k = Registry.LocalMachine.CreateSubKey(key);
+        if (hide)
+        {
+            ApplyLog.RegistryString("HKLM", key, "29", old, "");
+            k?.SetValue("29", "", RegistryValueKind.String);
+        }
+        else
+        {
+            ApplyLog.RegistryDelete("HKLM", key, "29", old);
+            k?.DeleteValue("29", throwOnMissingValue: false);
+        }
     }
 
     private static void SetDwordCu(string key, string name, int value)
     {
+        object? old;
+        using (var r = Registry.CurrentUser.OpenSubKey(key))
+            old = r?.GetValue(name);
+        ApplyLog.RegistryDword("HKCU", key, name, old, value);
         using var k = Registry.CurrentUser.CreateSubKey(key);
         k?.SetValue(name, value, RegistryValueKind.DWord);
     }

@@ -124,29 +124,37 @@ internal static class Win11DesktopTweaks
 
     private static void SetShortcutSuffixOff(bool disable)
     {
-        using var k = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer");
+        const string key = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
+        object? old;
+        using (var r = Registry.CurrentUser.OpenSubKey(key))
+            old = r?.GetValue("Link");
+        using var k = Registry.CurrentUser.CreateSubKey(key);
         if (k is null) return;
         if (disable)
+        {
+            ApplyLog.SystemChange($"HKCU\\{key}\\Link", "REG_BINARY → 00-00-00-00（去掉「快捷方式」后缀）",
+                ApplyLog.FormatValue(old), "00-00-00-00");
             k.SetValue("Link", new byte[] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
+        }
         else
+        {
+            ApplyLog.RegistryDelete("HKCU", key, "Link", old);
             k.DeleteValue("Link", throwOnMissingValue: false);
-    }
-
-    private static bool IsClassicContextMenuOn()
-    {
-        using var k = Registry.CurrentUser.OpenSubKey(ClassicMenuClsid);
-        return (k?.GetValue(null) as string)?.Length == 0;
+        }
     }
 
     private static void SetClassicContextMenu(bool classic)
     {
         if (classic)
         {
+            ApplyLog.RegistryKeyWrite("HKCU", ClassicMenuClsid, "创建键（默认值空字符串）启用经典右键菜单");
             using var k = Registry.CurrentUser.CreateSubKey(ClassicMenuClsid);
             k?.SetValue(null, "", RegistryValueKind.String);
         }
         else
         {
+            var existed = Registry.CurrentUser.OpenSubKey(ClassicMenuClsid) is not null;
+            ApplyLog.RegistryDeleteTree("HKCU", ClassicMenuClsid, existed);
             try { Registry.CurrentUser.DeleteSubKeyTree(ClassicMenuClsid, throwOnMissingSubKey: false); }
             catch { /* ignore */ }
         }
@@ -229,6 +237,8 @@ internal static class Win11DesktopTweaks
 
     private static void SetDword(Hive hive, string key, string name, int value)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryDword(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
@@ -239,6 +249,8 @@ internal static class Win11DesktopTweaks
 
     private static void SetString(Hive hive, string key, string name, string value)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryString(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
@@ -249,6 +261,8 @@ internal static class Win11DesktopTweaks
 
     private static void DeleteValue(Hive hive, string key, string name)
     {
+        var old = GetValue(hive, key, name);
+        ApplyLog.RegistryDelete(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old);
         using var baseKey = RegistryKey.OpenBaseKey(
             hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);

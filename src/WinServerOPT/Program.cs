@@ -68,6 +68,7 @@ static class Program
         var preset = OptPresets.Find(id) ?? throw new InvalidOperationException("未知预设：" + id);
         var state = preset.Build();
         if (!apply) return 0;
+        ApplyLog.BeginBatch($"CLI 预设 {preset.Title}");
         var errors = Optimizer.Apply(state);
         ApplyLog.WriteApply($"CLI 预设 {preset.Title}", errors);
         if (errors.Count > 0)
@@ -84,6 +85,7 @@ static class Program
         EnsureAdmin();
         var state = ProfileStore.Load(path);
         if (!apply) return 0;
+        ApplyLog.BeginBatch($"CLI 配置 {path}");
         var errors = Optimizer.Apply(state);
         ApplyLog.WriteApply($"CLI 配置 {path}", errors);
         if (errors.Count > 0)
