@@ -165,6 +165,7 @@ internal sealed class MainForm : Form
     private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
     private readonly Panel _contentHost = new();
     private readonly Label _status = new();
+    private Optimizer.State? _baselineState;
     private readonly Button _apply = new();
     private readonly Button _restore = new();
     private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
@@ -1210,11 +1211,11 @@ internal sealed class MainForm : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.NoteX - SettingListLayout.InfoX - 4));
-        header.Controls.Add(MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteW));
+        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX - 4));
         header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteW));
         return header;
     }
 
@@ -1624,6 +1625,8 @@ internal sealed class MainForm : Form
         {
             foreach (var row in AllRows)
                 row.SyncCurrentValueFromState();
+            // 仅从系统读取时刷新基线；载入预设/导入配置不改基线，以便「应用到系统」能写出差异
+            _baselineState = CaptureState();
         }
         ApplySearchFilter();
     }
@@ -1895,7 +1898,7 @@ internal sealed class MainForm : Form
 
     private void ApplyRecommended()
     {
-        if (!RunApply("正在写入系统…", "已写入系统。开启项为优化建议值，关闭项保持系统默认值。"))
+        if (!RunApply("正在写入系统…", "已写入本次改动。仅同步有变化的开关。"))
             return;
 
         // 改名是独立操作，不强制打断「应用到系统」流程
@@ -1951,16 +1954,26 @@ internal sealed class MainForm : Form
 
             SyncInvisibleRowsFromSystem();
             ApplyLog.BeginBatch(working);
-            var errors = Optimizer.Apply(CaptureState());
+            var target = CaptureState();
+            var errors = Optimizer.Apply(target, _baselineState);
             ApplyLog.WriteApply(working, errors);
+
+            if (Optimizer.LastApplyActionCount == 0 && errors.Count == 0)
+            {
+                _status.Text = "没有需要写入的更改（开关相对当前系统未改动）。";
+                ok = true;
+                return true;
+            }
+
             LoadState(fullScan: true);
             if (!_autologon.Checked) _autologonSettings = null;
             RefreshAutologonDisplay();
             var changed = ApplyLog.LastBatchRealChangeCount;
+            var attempted = Optimizer.LastApplyActionCount;
             _status.Text = errors.Count == 0
-                ? $"{success} 实际变更 {changed} 条 → 帮助「打开变更日志」。部分项需注销/重启。"
+                ? $"{success} 本次写入 {attempted} 项（实际变更 {changed} 条）→ 帮助「打开变更日志」。部分项需注销/重启。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors) +
-                  $"\r\n（已写入变更 {changed} 条，见帮助 → 打开变更日志）";
+                  $"\r\n（本次尝试 {attempted} 项，已写入变更 {changed} 条，见帮助 → 打开变更日志）";
             ok = true;
         }
         catch (Exception ex)
@@ -2202,7 +2215,7 @@ internal sealed class MainForm : Form
             _wrap = wrap;
             _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
 
-            var textW = Math.Max(100, noteX - itemX - SettingListLayout.TextNoteGap);
+            var textW = Math.Max(160, toggleX - itemX - SettingListLayout.TextToggleGap);
             var hasScope = Help.Scope.HasBadge;
             if (hasScope)
             {
@@ -2214,11 +2227,12 @@ internal sealed class MainForm : Form
                 _item.SetBounds(itemX, 0, textW, h);
             }
 
-            _note.SetBounds(noteX, 0, SettingListLayout.NoteW, h);
             _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
+            var noteW = Math.Max(SettingListLayout.NoteW, width - noteX - 8);
+            _note.SetBounds(noteX, 0, noteW, h);
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";

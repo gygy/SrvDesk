@@ -332,173 +332,286 @@ internal static class Optimizer
         return state;
     }
 
-    public static List<string> Apply(State s)
+    /// <summary>上次 Apply 实际尝试写入的项数（相对 baseline 有差异才会计入；baseline 为 null 则全部写入）。</summary>
+    public static int LastApplyActionCount { get; private set; }
+
+    /// <param name="baseline">为 null 时写入全部；否则只写入与 baseline 不同的项（本次改过的开关）。</param>
+    public static List<string> Apply(State s, State? baseline = null)
     {
         var errors = new List<string>();
-        Try(errors, "CPU资源分配", () =>
+        LastApplyActionCount = 0;
+        bool Ch(Func<State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool ChS(Func<State, string> f) =>
+            baseline is null || !string.Equals(f(baseline), f(s), StringComparison.Ordinal);
+
+        void Do(bool need, string name, Action action)
+        {
+            if (!need) return;
+            LastApplyActionCount++;
+            Try(errors, name, action);
+        }
+
+        Do(Ch(x => x.CpuProgramPriority), "CPU资源分配", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", s.CpuProgramPriority ? 38 : 2));
-        Try(errors, "DEP", () =>
+        Do(Ch(x => x.Dep), "DEP", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", s.Dep ? 1 : 0));
-        Try(errors, "UAC", () =>
+        Do(Ch(x => x.DisableUac), "UAC", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", s.DisableUac ? 0 : 1));
-        Try(errors, "IE增强安全", () =>
+        Do(Ch(x => x.DisableIeEsc), "IE增强安全", () =>
         {
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscUser}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
         });
-        Try(errors, "电源计划", () => SetPowerPlan(s.HighPerfPower ? PowerPlanHighPerf : PowerPlanBalanced));
-        Try(errors, "遥测", () => SetTelemetry(!s.DisableTelemetry));
-        Try(errors, "更新重启", () =>
+        Do(Ch(x => x.HighPerfPower), "电源计划", () => SetPowerPlan(s.HighPerfPower ? PowerPlanHighPerf : PowerPlanBalanced));
+        Do(Ch(x => x.DisableTelemetry), "遥测", () => SetTelemetry(!s.DisableTelemetry));
+        Do(Ch(x => x.NoUpdateReboot), "更新重启", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", s.NoUpdateReboot ? 1 : 0));
-        Try(errors, "传递优化", () =>
+        Do(Ch(x => x.DisableDeliveryOpt), "传递优化", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1));
-        Try(errors, "更新通知", () =>
+        Do(Ch(x => x.WuNotifyOnly), "更新通知", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", s.WuNotifyOnly ? 2 : 4));
-        Try(errors, "SysMain", () => SetService("SysMain", !s.DisableSysMain, disableWhenOff: true));
-        Try(errors, "视觉效果", () =>
+        Do(Ch(x => x.DisableSysMain), "SysMain", () => SetService("SysMain", !s.DisableSysMain, disableWhenOff: true));
+        Do(Ch(x => x.VisualBestPerf), "视觉效果", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", s.VisualBestPerf ? 2 : 3));
-        Try(errors, "电源节流", () =>
+        Do(Ch(x => x.PowerThrottlingOff), "电源节流", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
-        Try(errors, "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
-        Try(errors, "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
-        Try(errors, "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));
-        Try(errors, "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
+        Do(Ch(x => x.DisableHibernate), "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
+        Do(Ch(x => x.TcpOptimized), "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
+        Do(Ch(x => x.QosSpeedOptimize), "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));
+        Do(Ch(x => x.DisableErrorReport), "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
 
-        Try(errors, "桌面此电脑", () =>
+        Do(Ch(x => x.ShowThisPcIcon), "桌面此电脑", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel", ClsidMyComputer, s.ShowThisPcIcon ? 0 : 1));
-        Try(errors, "打开此电脑", () =>
+        Do(Ch(x => x.LaunchExplorerThisPc), "打开此电脑", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo", s.LaunchExplorerThisPc ? 1 : 2));
-        Try(errors, "小按钮任务栏", () =>
+        Do(Ch(x => x.SmallTaskbar), "小按钮任务栏", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSmallIcons", s.SmallTaskbar ? 1 : 0));
-        Try(errors, "删除确认", () =>
+        Do(Ch(x => x.ConfirmDelete), "删除确认", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "ConfirmFileDelete", s.ConfirmDelete ? 1 : 0));
-        Try(errors, "音频服务", () => SetAudio(s.EnableAudio));
-        Try(errors, "文件扩展名", () =>
+        Do(Ch(x => x.EnableAudio), "音频服务", () => SetAudio(s.EnableAudio));
+        Do(Ch(x => x.ShowFileExtensions), "文件扩展名", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", s.ShowFileExtensions ? 0 : 1));
-        Try(errors, "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
-        Try(errors, "Windows搜索", () =>
+        Do(Ch(x => x.EnableThemes), "主题服务", () => SetService("Themes", s.EnableThemes, disableWhenOff: false));
+        Do(Ch(x => x.DisableSearchEngineFeature) || Ch(x => x.EnableSearch), "Windows搜索", () =>
         {
             if (s.DisableSearchEngineFeature)
                 ServerDesktopTweaks.ApplySearchEngineFeature(true);
             else
                 SetService("WSearch", s.EnableSearch, disableWhenOff: false);
         });
-        Try(errors, "Bing搜索", () =>
+        Do(Ch(x => x.DisableWebSearch), "Bing搜索", () =>
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", s.DisableWebSearch ? 0 : 1);
         });
-        Try(errors, "体验反馈", () =>
+        Do(Ch(x => x.DisableFeedback), "体验反馈", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod", s.DisableFeedback ? 0 : 1));
-        Try(errors, "锁屏", () =>
+        Do(Ch(x => x.NoLockScreen), "锁屏", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", s.NoLockScreen ? 1 : 0));
 
-        Try(errors, "远程桌面", () => SetRdp(s.EnableRdp));
-        Try(errors, "RDP图形加速", () =>
+        Do(Ch(x => x.EnableRdp), "远程桌面", () => SetRdp(s.EnableRdp));
+        Do(Ch(x => x.RdpGpuAccel), "RDP图形加速", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", s.RdpGpuAccel ? 1 : 0));
-        Try(errors, "RDP帧率", () =>
+        Do(Ch(x => x.RdpHighRefresh), "RDP帧率", () =>
         {
             if (s.RdpHighRefresh)
                 SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations", "DWMFRAMEINTERVAL", 15);
             else
                 DeleteValue(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations", "DWMFRAMEINTERVAL");
         });
-        Try(errors, "RDP NLA", () =>
+        Do(Ch(x => x.RdpDisableNla), "RDP NLA", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp", "UserAuthentication", s.RdpDisableNla ? 0 : 1));
-        Try(errors, "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
-        Try(errors, "Server远程管理", () => SetSmRemoting(!s.DisableSmRemoting));
+        Do(Ch(x => x.EnableNetworkDiscovery), "网络发现", () => SetNetworkDiscovery(s.EnableNetworkDiscovery));
+        Do(Ch(x => x.DisableSmRemoting), "Server远程管理", () => SetSmRemoting(!s.DisableSmRemoting));
 
-        Try(errors, "服务管理器", () => SetServerManager(s.SkipServerManager));
-        Try(errors, "WAC推广提示", () =>
+        Do(Ch(x => x.SkipServerManager), "服务管理器", () => SetServerManager(s.SkipServerManager));
+        Do(Ch(x => x.HideServerManagerWacPrompt), "WAC推广提示", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch",
                 s.HideServerManagerWacPrompt ? 1 : 0));
-        Try(errors, "Azure Arc", () =>
+        Do(Ch(x => x.DisableAzureArc), "Azure Arc", () =>
         {
             if (s.DisableAzureArc)
                 DeleteValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup");
             else
                 SetString(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup", AzureArcCommand);
         });
-        Try(errors, "Windows Installer", () => SetService("msiserver", s.EnableInstaller, disableWhenOff: false));
-        Try(errors, "WIA图像采集", () => SetService("stisvc", s.EnableWia, disableWhenOff: false));
+        Do(Ch(x => x.EnableInstaller), "Windows Installer", () => SetService("msiserver", s.EnableInstaller, disableWhenOff: false));
+        Do(Ch(x => x.EnableWia), "WIA图像采集", () => SetService("stisvc", s.EnableWia, disableWhenOff: false));
 
-        Try(errors, "账户策略", () => ApplyAccountPolicy(s.DisablePasswordComplexity, s.PasswordNeverExpire));
+        Do(Ch(x => x.DisablePasswordComplexity) || Ch(x => x.PasswordNeverExpire), "账户策略", () =>
+            ApplyAccountPolicy(s.DisablePasswordComplexity, s.PasswordNeverExpire));
 
-        Try(errors, "未登录关机", () =>
+        Do(Ch(x => x.ShutdownWithoutLogon), "未登录关机", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", s.ShutdownWithoutLogon ? 1 : 0));
-        Try(errors, "关机事件跟踪", () => SetShutdownReason(!s.DisableShutdownReason));
-        Try(errors, "Ctrl+Alt+Del", () =>
+        Do(Ch(x => x.DisableShutdownReason), "关机事件跟踪", () => SetShutdownReason(!s.DisableShutdownReason));
+        Do(Ch(x => x.DisableCad), "Ctrl+Alt+Del", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", s.DisableCad ? 1 : 0));
 
-        Try(errors, "自动登录", () =>
-        {
-            if (s.EnableAutologon)
+        Do(Ch(x => x.EnableAutologon)
+           || (s.EnableAutologon && (
+               ChS(x => x.AutologonDomain) || ChS(x => x.AutologonUser)
+               || Ch(x => x.AutologonUpdatePassword)
+               || (s.AutologonUpdatePassword && ChS(x => x.AutologonPassword)))),
+            "自动登录", () =>
             {
-                AutologonHelper.Enable(new AutologonSettings
+                if (s.EnableAutologon)
                 {
-                    Domain = s.AutologonDomain,
-                    Username = s.AutologonUser,
-                    Password = s.AutologonPassword,
-                    UpdatePassword = s.AutologonUpdatePassword,
-                });
-            }
-            else
-            {
-                AutologonHelper.Disable();
-            }
-        });
+                    AutologonHelper.Enable(new AutologonSettings
+                    {
+                        Domain = s.AutologonDomain,
+                        Username = s.AutologonUser,
+                        Password = s.AutologonPassword,
+                        UpdatePassword = s.AutologonUpdatePassword,
+                    });
+                }
+                else
+                {
+                    AutologonHelper.Disable();
+                }
+            });
 
-        Try(errors, "长路径支持", () =>
+        Do(Ch(x => x.LongPathsEnabled), "长路径支持", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", s.LongPathsEnabled ? 1 : 0));
-        Try(errors, "快速启动", () =>
+        Do(Ch(x => x.DisableFastStartup), "快速启动", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", s.DisableFastStartup ? 0 : 1));
-        Try(errors, "自动维护", () =>
+        Do(Ch(x => x.DisableAutoMaintenance), "自动维护", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled", s.DisableAutoMaintenance ? 1 : 0));
-        Try(errors, "驱动自动更新", () =>
+        Do(Ch(x => x.ExcludeDriverUpdates), "驱动自动更新", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate", s.ExcludeDriverUpdates ? 1 : 0));
-        Try(errors, "SMB1 协议", () => SetSmb1(!s.DisableSmb1));
-        Try(errors, "Remote Registry", () => SetService("RemoteRegistry", !s.DisableRemoteRegistry, disableWhenOff: true));
-        Try(errors, "打印后台处理", () => SetService("Spooler", !s.DisablePrintSpooler, disableWhenOff: true));
+        Do(Ch(x => x.DisableSmb1), "SMB1 协议", () => SetSmb1(!s.DisableSmb1));
+        Do(Ch(x => x.DisableRemoteRegistry), "Remote Registry", () => SetService("RemoteRegistry", !s.DisableRemoteRegistry, disableWhenOff: true));
+        Do(Ch(x => x.DisablePrintSpooler), "打印后台处理", () => SetService("Spooler", !s.DisablePrintSpooler, disableWhenOff: true));
 
-        Try(errors, "显示隐藏文件", () =>
+        Do(Ch(x => x.ShowHiddenFiles), "显示隐藏文件", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Hidden", s.ShowHiddenFiles ? 1 : 2));
-        Try(errors, "快捷方式箭头", () => SetShortcutArrow(!s.NoShortcutArrow));
-        Try(errors, "标题栏完整路径", () =>
+        Do(Ch(x => x.NoShortcutArrow), "快捷方式箭头", () => SetShortcutArrow(!s.NoShortcutArrow));
+        Do(Ch(x => x.ExplorerFullPath), "标题栏完整路径", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", s.ExplorerFullPath ? 1 : 0));
-        Try(errors, "任务栏全部图标", () =>
+        Do(Ch(x => x.TaskbarAllIcons), "任务栏全部图标", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableAutoTray", s.TaskbarAllIcons ? 0 : 1));
-        Try(errors, "任务栏时钟", () => SetTaskbarClockEnhanced(s.TaskbarClockWeekdaySeconds));
+        Do(Ch(x => x.TaskbarClockWeekdaySeconds), "任务栏时钟", () => SetTaskbarClockEnhanced(s.TaskbarClockWeekdaySeconds));
 
-        Try(errors, "窗口动画", () => SetAnimations(!s.DisableAnimations));
-        Try(errors, "透明效果", () =>
+        Do(Ch(x => x.DisableAnimations), "窗口动画", () => SetAnimations(!s.DisableAnimations));
+        Do(Ch(x => x.DisableTransparency), "透明效果", () =>
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", s.DisableTransparency ? 0 : 1));
-        Try(errors, "Windows 提示", () => SetTips(!s.DisableTips));
-        Try(errors, "自动播放", () =>
+        Do(Ch(x => x.DisableTips), "Windows 提示", () => SetTips(!s.DisableTips));
+        Do(Ch(x => x.DisableAutoplay), "自动播放", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDriveTypeAutoRun", s.DisableAutoplay ? 255 : 145));
-        Try(errors, "活动历史", () => SetActivityHistory(!s.DisableActivityHistory));
-        Try(errors, "存储感知", () =>
+        Do(Ch(x => x.DisableActivityHistory), "活动历史", () => SetActivityHistory(!s.DisableActivityHistory));
+        Do(Ch(x => x.DisableStorageSense), "存储感知", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", s.DisableStorageSense ? 0 : 1));
 
-        Try(errors, "SmartScreen与打开警告", () => ServerDesktopTweaks.ApplySmartScreenAndOpenWarning(s.DisableSmartScreenWarning));
-        Try(errors, "控制面板与回收站", () => ServerDesktopTweaks.ApplyDesktopIcons(s.ShowControlPanelRecycleBin));
-        Try(errors, "大系统缓存", () => ServerDesktopTweaks.ApplyLargeSystemCache(s.LargeSystemCacheOptimize));
-        Try(errors, "保留存储", () => ServerDesktopTweaks.ApplyReservedStorage(s.DisableReservedStorage));
-        Try(errors, "LanmanServer拆分", () => ServerDesktopTweaks.ApplySrvSplitThreshold(s.DisableSrvSplit));
-        Try(errors, "GPU硬件调度", () => ServerDesktopTweaks.ApplyGpuHwScheduling(s.EnableGpuHwScheduling));
-        Try(errors, "登录键盘筛选", () => ServerDesktopTweaks.ApplyLoginKeyboardFilters(s.DisableLoginKeyboardFilters));
-        Try(errors, "后台应用", () => ServerDesktopTweaks.ApplyBackgroundApps(s.DisableBackgroundApps));
-        Try(errors, "传统搜索", () => ServerDesktopTweaks.ApplyClassicSearch(s.ClassicFileSearch));
-        Try(errors, "桌面媒体组件", () => ServerDesktopTweaks.ApplyDesktopMediaFeatures(s.EnableDesktopMediaFeatures));
-        Try(errors, "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
-        Try(errors, "Win11桌面体验", () =>
+        Do(Ch(x => x.DisableSmartScreenWarning), "SmartScreen与打开警告", () => ServerDesktopTweaks.ApplySmartScreenAndOpenWarning(s.DisableSmartScreenWarning));
+        Do(Ch(x => x.ShowControlPanelRecycleBin), "控制面板与回收站", () => ServerDesktopTweaks.ApplyDesktopIcons(s.ShowControlPanelRecycleBin));
+        Do(Ch(x => x.LargeSystemCacheOptimize), "大系统缓存", () => ServerDesktopTweaks.ApplyLargeSystemCache(s.LargeSystemCacheOptimize));
+        Do(Ch(x => x.DisableReservedStorage), "保留存储", () => ServerDesktopTweaks.ApplyReservedStorage(s.DisableReservedStorage));
+        Do(Ch(x => x.DisableSrvSplit), "LanmanServer拆分", () => ServerDesktopTweaks.ApplySrvSplitThreshold(s.DisableSrvSplit));
+        Do(Ch(x => x.EnableGpuHwScheduling), "GPU硬件调度", () => ServerDesktopTweaks.ApplyGpuHwScheduling(s.EnableGpuHwScheduling));
+        Do(Ch(x => x.DisableLoginKeyboardFilters), "登录键盘筛选", () => ServerDesktopTweaks.ApplyLoginKeyboardFilters(s.DisableLoginKeyboardFilters));
+        Do(Ch(x => x.DisableBackgroundApps), "后台应用", () => ServerDesktopTweaks.ApplyBackgroundApps(s.DisableBackgroundApps));
+        Do(Ch(x => x.ClassicFileSearch), "传统搜索", () => ServerDesktopTweaks.ApplyClassicSearch(s.ClassicFileSearch));
+        Do(Ch(x => x.EnableDesktopMediaFeatures), "桌面媒体组件", () => ServerDesktopTweaks.ApplyDesktopMediaFeatures(s.EnableDesktopMediaFeatures));
+        Do(Ch(x => x.DisableServerBloatFeatures), "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
+        Do(AnyWin11DesktopChanged(baseline, s), "Win11桌面体验", () =>
         {
             Win11DesktopTweaks.Apply(s);
             DesktopQuickActions.RestartExplorer();
         });
-        Try(errors, "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
-        Try(errors, "轻松设置扩展项", () => EasySettingsTweaks.Apply(s));
-        Try(errors, "竞品常用项", () => CompetitorTweaks.Apply(s));
+        Do(Ch(x => x.DisablePca), "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
+        Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s));
+        Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s));
         return errors;
+    }
+
+    private static bool AnyWin11DesktopChanged(State? b, State s)
+    {
+        if (b is null) return true;
+        return b.ShowItemCheckboxes != s.ShowItemCheckboxes
+            || b.ShowCommonFolders != s.ShowCommonFolders
+            || b.RemoveAdminShield != s.RemoveAdminShield
+            || b.NoShortcutSuffix != s.NoShortcutSuffix
+            || b.Win11ExplorerStyle != s.Win11ExplorerStyle
+            || b.Win10ClassicContextMenu != s.Win10ClassicContextMenu
+            || b.TaskbarSearchBox != s.TaskbarSearchBox
+            || b.TaskbarSearchMode != s.TaskbarSearchMode
+            || b.TaskbarAlignLeft != s.TaskbarAlignLeft
+            || b.TaskbarCombineAlways != s.TaskbarCombineAlways
+            || b.TaskbarAutoHide != s.TaskbarAutoHide
+            || b.ShowTaskViewButton != s.ShowTaskViewButton
+            || b.TaskbarEndTask != s.TaskbarEndTask
+            || b.DisableWidgets != s.DisableWidgets
+            || b.DisableSearchHighlights != s.DisableSearchHighlights
+            || b.DisableRecommendedItems != s.DisableRecommendedItems
+            || b.DisableAdTracking != s.DisableAdTracking
+            || b.DisableSearchHistory != s.DisableSearchHistory
+            || b.DisableStickyKeys != s.DisableStickyKeys
+            || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035;
+    }
+
+    private static bool AnyEasySettingsChanged(State? b, State s)
+    {
+        if (b is null) return true;
+        return b.HideProtectedOsFiles != s.HideProtectedOsFiles
+            || b.AlwaysShowIconsNeverThumbnails != s.AlwaysShowIconsNeverThumbnails
+            || b.ShowEmptyDrives != s.ShowEmptyDrives
+            || b.ShowRecentFiles != s.ShowRecentFiles
+            || b.ShowFrequentPlaces != s.ShowFrequentPlaces
+            || b.HideOfficeCloudFiles != s.HideOfficeCloudFiles
+            || b.DisableOneDrive != s.DisableOneDrive
+            || b.HideTaskbarChat != s.HideTaskbarChat
+            || b.HideTaskbarCopilot != s.HideTaskbarCopilot
+            || b.DisableCloudSearch != s.DisableCloudSearch
+            || b.DisableWebSearch != s.DisableWebSearch
+            || b.DisableSearchHistory != s.DisableSearchHistory
+            || b.DisableWebsiteLangList != s.DisableWebsiteLangList
+            || b.DisableAppLaunchTracking != s.DisableAppLaunchTracking
+            || b.DisableSettingsSuggestions != s.DisableSettingsSuggestions
+            || b.DisableInkingPersonalization != s.DisableInkingPersonalization
+            || b.DisableAdTracking != s.DisableAdTracking
+            || b.DisableDeliveryOpt != s.DisableDeliveryOpt
+            || b.ExcludeMsrtFromWu != s.ExcludeMsrtFromWu
+            || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035
+            || b.DisableMeltdownSpectre != s.DisableMeltdownSpectre
+            || b.DisableMemoryIntegrity != s.DisableMemoryIntegrity
+            || b.DisableWdac != s.DisableWdac
+            || b.DisableVbs != s.DisableVbs
+            || b.EnableTcpBbr2 != s.EnableTcpBbr2
+            || b.DisableSystemRestore != s.DisableSystemRestore
+            || b.DisableCeip != s.DisableCeip
+            || b.DisableDiagnosticPolicy != s.DisableDiagnosticPolicy
+            || b.DisableRemoteAssistance != s.DisableRemoteAssistance
+            || b.DisableMemoryCompression != s.DisableMemoryCompression
+            || b.DisableAppPrelaunch != s.DisableAppPrelaunch
+            || b.DisablePageCombining != s.DisablePageCombining
+            || b.DisableUcpdDriver != s.DisableUcpdDriver;
+    }
+
+    private static bool AnyCompetitorChanged(State? b, State s)
+    {
+        if (b is null) return true;
+        return b.DisableCortana != s.DisableCortana
+            || b.DisableCopilotAi != s.DisableCopilotAi
+            || b.DisableOfficeTelemetry != s.DisableOfficeTelemetry
+            || b.EnableUtcTime != s.EnableUtcTime
+            || b.DisableHpet != s.DisableHpet
+            || b.EnableLoginVerbose != s.EnableLoginVerbose
+            || b.DisableNetworkThrottling != s.DisableNetworkThrottling
+            || b.DisableGameDvr != s.DisableGameDvr
+            || b.DisableLocationTracking != s.DisableLocationTracking
+            || b.DisableConsumerFeatures != s.DisableConsumerFeatures
+            || b.DisableEdgePreload != s.DisableEdgePreload
+            || b.DisableTeredo != s.DisableTeredo
+            || b.DisableClipboardCloud != s.DisableClipboardCloud
+            || b.DisableNtfsLastAccess != s.DisableNtfsLastAccess
+            || b.DisableXboxServices != s.DisableXboxServices
+            || b.DisableFaxService != s.DisableFaxService
+            || b.EnableF8BootMenu != s.EnableF8BootMenu
+            || b.ContextMenuTakeOwnership != s.ContextMenuTakeOwnership
+            || b.ContextMenuOpenCmd != s.ContextMenuOpenCmd
+            || b.DisableMediaPlayerSharing != s.DisableMediaPlayerSharing
+            || b.DisableInsiderService != s.DisableInsiderService
+            || b.DisableStoreAutoUpdate != s.DisableStoreAutoUpdate
+            || b.DisableNewsInterests != s.DisableNewsInterests;
     }
 
     private static bool IsShortcutArrowRemoved()
