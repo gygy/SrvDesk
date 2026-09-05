@@ -196,6 +196,15 @@ internal static class DnsAdapterHelper
 
                 try
                 {
+                    var before = mo["DNSServerSearchOrder"] is string[] oldArr
+                        ? string.Join(", ", oldArr)
+                        : "（空/自动）";
+                    var after = servers is null ? "自动获取（DHCP）" : string.Join(", ", servers);
+                    ApplyLog.SystemChange(
+                        $"网卡 Index={index} SettingID={settingId}",
+                        "WMI SetDNSServerSearchOrder",
+                        before,
+                        after);
                     var result = (uint)mo.InvokeMethod("SetDNSServerSearchOrder", new object?[] { servers });
                     if (result is not 0 and not 1)
                     {

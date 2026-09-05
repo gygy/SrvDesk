@@ -266,10 +266,20 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
                 }
             }
 
+            var dnsText = servers is null ? "自动获取（DHCP）" : string.Join(", ", servers);
+            ApplyLog.BeginBatch("DNS 切换");
+            using (ApplyLog.PushContext("DNS 设置"))
+            {
+                ApplyLog.SystemChange(
+                    "网卡 DNS（WMI Win32_NetworkAdapterConfiguration.SetDNSServerSearchOrder）",
+                    $"预设={_preset.Text}；网卡={string.Join("、", names)}",
+                    oldValue: null,
+                    newValue: dnsText);
+            }
             var count = DnsAdapterHelper.ApplyDns(indexes, settingIds, servers);
             HostsFileHelper.FlushDns();
             RefreshAdapters();
-            ApplyLog.Write($"DNS → {string.Join(", ", names)} / {_preset.Text}");
+            ApplyLog.WriteApply("DNS 切换", Array.Empty<string>());
             MessageBox.Show(this,
                 $"已应用到 {count} 块网卡：\r\n" + string.Join("\r\n", names),
                 "DNS 切换", MessageBoxButtons.OK, MessageBoxIcon.Information);

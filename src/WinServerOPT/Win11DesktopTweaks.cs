@@ -143,6 +143,12 @@ internal static class Win11DesktopTweaks
         }
     }
 
+    private static bool IsClassicContextMenuOn()
+    {
+        using var k = Registry.CurrentUser.OpenSubKey(ClassicMenuClsid);
+        return (k?.GetValue(null) as string)?.Length == 0;
+    }
+
     private static void SetClassicContextMenu(bool classic)
     {
         if (classic)
@@ -173,7 +179,14 @@ internal static class Win11DesktopTweaks
         using var k = Registry.CurrentUser.OpenSubKey(StuckRects, writable: true);
         if (k?.GetValue("Settings") is not byte[] settings || settings.Length < 9)
             return;
-        settings[8] = (byte)(hide ? 2 : 3);
+        var oldByte = settings[8];
+        var newByte = (byte)(hide ? 2 : 3);
+        ApplyLog.SystemChange(
+            $"HKCU\\{StuckRects}\\Settings[8]",
+            "任务栏自动隐藏（StuckRects3 二进制第 9 字节）",
+            oldByte.ToString(),
+            newByte.ToString());
+        settings[8] = newByte;
         k.SetValue("Settings", settings, RegistryValueKind.Binary);
     }
 

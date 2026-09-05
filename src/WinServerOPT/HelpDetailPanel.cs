@@ -98,8 +98,9 @@ internal sealed class HelpDetailPanel : Panel
             ("配置备份", "「文件」菜单可导入/导出 JSON 配置，便于多台机器复用或回滚界面状态。"),
             ("管理员", "必须以管理员身份运行，否则注册表、服务、DISM 操作可能失败。"),
             ("生效", "多数项立即生效；DISM、大系统缓存、自动登录等需重启。详见各项「生效方式」。"),
+            ("操作日志", "每次写入会记录：修改项、注册表完整路径、值名、类型、原值→新值。路径：%LocalAppData%\\WinOpt\\apply.log"),
         ]);
-        _footer.Text = "日志路径见「帮助 → 打开操作日志」";
+        _footer.Text = "帮助 → 打开操作日志";
     }
 
     public void ShowScopeLegend()
