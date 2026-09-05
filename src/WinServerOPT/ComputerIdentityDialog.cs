@@ -11,7 +11,7 @@ internal sealed class ComputerIdentityDialog : Form
 
     public bool RestartScheduled { get; private set; }
 
-    public ComputerIdentityDialog(ComputerIdentityInfo info)
+    public ComputerIdentityDialog(ComputerIdentityInfo info, bool optional = false)
     {
         _info = info;
         Text = "计算机名 / 工作组";
@@ -20,59 +20,81 @@ internal sealed class ComputerIdentityDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(480, 380);
+        ClientSize = new Size(500, 400);
+        CancelButton = null;
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 48), BackColor = AppTheme.Surface };
+        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 56), BackColor = AppTheme.Surface };
 
         var tip = new Label
         {
-            Text = "通过 WMI 修改计算机名与工作组。NetBIOS 名称最长 15 字符，修改后必须重启才能完全生效。",
+            Text = optional
+                ? "此步可选：不改可直接点「跳过」。改名/改工作组后需重启才会完全生效。"
+                : "通过 WMI 修改计算机名与工作组。NetBIOS 名称最长 15 字符，修改后需重启才能完全生效。",
             Dock = DockStyle.Top,
-            Height = 36,
+            Height = 40,
             ForeColor = AppTheme.TextMute,
         };
 
         _currentName.Text = "当前计算机名：" + info.ComputerName;
-        _currentName.SetBounds(0, 44, 428, 20);
+        _currentName.SetBounds(0, 48, 448, 20);
         _currentName.ForeColor = AppTheme.TextHeader;
 
         _currentGroup.Text = info.PartOfDomain
             ? $"当前：已加入域「{info.Domain}」（无法在此修改工作组）"
             : "当前工作组：" + info.Workgroup;
-        _currentGroup.SetBounds(0, 66, 428, 20);
+        _currentGroup.SetBounds(0, 70, 448, 20);
         _currentGroup.ForeColor = info.PartOfDomain ? AppTheme.ScopeServer : AppTheme.TextHeader;
 
-        var form = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 92, 0, 0) };
-        AddField(form, "新计算机名（留空表示不修改）", _newName, 0, info.ComputerName);
-        AddField(form, "新工作组名（留空表示不修改）", _newWorkgroup, 72, info.PartOfDomain ? "" : info.Workgroup);
+        var form = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 96, 0, 0) };
+        AddField(form, "新计算机名（与当前相同或留空 = 不改）", _newName, 0, info.ComputerName);
+        AddField(form, "新工作组名（与当前相同或留空 = 不改）", _newWorkgroup, 72, info.PartOfDomain ? "" : info.Workgroup);
         _newWorkgroup.Enabled = !info.PartOfDomain;
 
-        _restart.Text = "应用成功后 60 秒后自动重启（可运行 shutdown /a 取消）";
-        _restart.Location = new Point(0, 152);
+        _restart.Text = "应用成功后 60 秒自动重启（可执行 shutdown /a 取消）";
+        _restart.Location = new Point(0, 156);
         _restart.AutoSize = true;
-        _restart.Checked = true;
+        _restart.Checked = false; // 默认不重启，避免打断用户
 
-        var apply = ThemedSettingsChrome.CreateButton("应用", true);
-        apply.Size = new Size(88, 34);
-        apply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 44,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, 6, 0, 0),
+            BackColor = AppTheme.Surface,
+        };
+
+        var apply = ThemedSettingsChrome.CreateButton("应用修改", true);
+        apply.Size = new Size(100, 34);
+        apply.Margin = new Padding(6, 0, 0, 0);
         apply.Click += (_, _) => ApplyChanges();
 
+        var skip = ThemedSettingsChrome.CreateButton(optional ? "跳过" : "取消", false);
+        skip.Size = new Size(88, 34);
+        skip.Margin = new Padding(6, 0, 0, 0);
+        skip.Click += (_, _) =>
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        };
+
+        buttons.Controls.Add(apply);
+        buttons.Controls.Add(skip);
+
+        body.Controls.Add(buttons);
         body.Controls.Add(_restart);
         body.Controls.Add(form);
         body.Controls.Add(_currentGroup);
         body.Controls.Add(_currentName);
         body.Controls.Add(tip);
-        body.Controls.Add(apply);
 
         ThemedSettingsChrome.MountModal(
             this,
             "计算机名 / 工作组",
-            "与「系统属性 → 计算机名」相同",
+            optional ? "可选步骤 · 与系统属性相同" : "与「系统属性 → 计算机名」相同",
             body,
-            "修改后需重启才能完全生效。");
-
-        body.Resize += (_, _) =>
-            apply.Location = new Point(body.ClientSize.Width - apply.Width, body.ClientSize.Height - apply.Height);
+            "不修改可关闭本窗口；改名后请自行安排重启。");
     }
 
     private void ApplyChanges()
@@ -86,29 +108,34 @@ internal sealed class ComputerIdentityDialog : Form
 
         if (!renameChanged && !workgroupChanged)
         {
-            MessageBox.Show("未修改任何项。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "未修改任何项。若暂不改名，请点「跳过」或「取消」。", Text,
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
         if (renameChanged && !ComputerIdentityHelper.ValidateNetbiosName(rename, out var err1))
         {
-            MessageBox.Show(err1, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, err1, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
         if (workgroupChanged && !ComputerIdentityHelper.ValidateNetbiosName(workgroup, out var err2))
         {
-            MessageBox.Show(err2, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, err2, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        if (MessageBox.Show(
+        var restartHint = _restart.Checked
+            ? "\r\n将在约 60 秒后自动重启。"
+            : "\r\n不会自动重启，请稍后自行重启。";
+
+        if (MessageBox.Show(this,
                 (renameChanged ? $"计算机名 → {rename.ToUpperInvariant()}\r\n" : "") +
                 (workgroupChanged ? $"工作组 → {workgroup.ToUpperInvariant()}\r\n" : "") +
-                "\r\n更改后需重启生效。是否继续？",
+                restartHint + "\r\n\r\n是否继续？",
                 "确认修改",
                 MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning,
+                MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             return;
 
@@ -133,7 +160,7 @@ internal sealed class ComputerIdentityDialog : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "修改失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, "修改失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -146,7 +173,7 @@ internal sealed class ComputerIdentityDialog : Form
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         });
-        box.SetBounds(0, y + 22, 428, 26);
+        box.SetBounds(0, y + 22, 448, 26);
         box.Text = value;
         parent.Controls.Add(box);
     }

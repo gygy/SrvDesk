@@ -1894,32 +1894,43 @@ internal sealed class MainForm : Form
 
     private void ApplyRecommended()
     {
-        RunApply("正在写入系统…", "已写入系统。开启项为优化建议值，关闭项保持系统默认值。");
-        PromptComputerIdentity();
+        if (!RunApply("正在写入系统…", "已写入系统。开启项为优化建议值，关闭项保持系统默认值。"))
+            return;
+
+        // 改名是独立操作，不强制打断「应用到系统」流程
+        var answer = MessageBox.Show(
+            this,
+            _status.Text + "\r\n\r\n是否现在修改计算机名 / 工作组？\r\n（也可稍后从菜单「工具 → 计算机名 / 工作组」打开）",
+            "应用到系统",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Information,
+            MessageBoxDefaultButton.Button2);
+        if (answer == DialogResult.Yes)
+            PromptComputerIdentity(optional: true);
     }
 
-    /// <summary>写入系统后引导修改计算机名/工作组。</summary>
-    private void PromptComputerIdentity()
+    /// <summary>修改计算机名/工作组。optional=true 时提供明显的「跳过」。</summary>
+    private void PromptComputerIdentity(bool optional = false)
     {
         try
         {
             var info = ComputerIdentityHelper.Read();
-            using var dlg = new ComputerIdentityDialog(info);
+            using var dlg = new ComputerIdentityDialog(info, optional);
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
             var msg = dlg.RestartScheduled
-                ? "计算机名/工作组已修改，系统将在 60 秒后重启（shutdown /a 可取消）。"
-                : "计算机名/工作组已修改，请尽快手动重启以完全生效。";
+                ? "计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。"
+                : "计算机名/工作组已修改，请自行选择合适时间重启以完全生效。";
             _status.Text = msg;
-            MessageBox.Show(msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "计算机名", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, "计算机名", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private void RunApply(string working, string success)
+    private bool RunApply(string working, string success)
     {
         _apply.Enabled = false;
         _restore.Enabled = false;
@@ -1928,12 +1939,13 @@ internal sealed class MainForm : Form
         Application.UseWaitCursor = false;
         _status.Text = working;
         Application.DoEvents();
+        var ok = false;
         try
         {
             if (!EnsureAutologonReady())
             {
                 _status.Text = "已取消：启用自动登录需先配置账户。";
-                return;
+                return false;
             }
 
             SyncInvisibleRowsFromSystem();
@@ -1948,10 +1960,12 @@ internal sealed class MainForm : Form
                 ? $"{success} 实际变更 {changed} 条 → 帮助「打开变更日志」。部分项需注销/重启。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors) +
                   $"\r\n（已写入变更 {changed} 条，见帮助 → 打开变更日志）";
+            ok = true;
         }
         catch (Exception ex)
         {
             _status.Text = "操作失败：" + ex.Message;
+            ok = false;
         }
         finally
         {
@@ -1961,6 +1975,8 @@ internal sealed class MainForm : Form
             _apply.Enabled = true;
             _restore.Enabled = true;
         }
+
+        return ok;
     }
 
     private void ShowAboutDialog()

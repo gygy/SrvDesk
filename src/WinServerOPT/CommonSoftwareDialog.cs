@@ -8,8 +8,13 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly Button _installWingetBtn = new();
     private readonly ListBox _categoryMenu = new();
     private readonly Dictionary<string, CommonSoftwareRow> _rows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Panel _progressHost = new();
+    private readonly Label _progressLabel = new();
+    private readonly ProgressBar _progressBar = new();
+    private readonly List<Control> _actionButtons = [];
     private string _selectedCategory = "全部";
     private int _categoryHover = -1;
+    private string? _busyItemId;
 
     private static readonly string[] Categories = ["全部", "必备", "工具", "浏览器", "通讯", "网盘", "开发"];
 
@@ -36,21 +41,23 @@ internal sealed class CommonSoftwareDialog : Form
             Padding = new Padding(12, 6, 12, 6),
             BackColor = AppTheme.Surface,
         };
-        actions.Controls.Add(MkBtn("清理下载缓存", () =>
+        actions.Controls.Add(TrackAction(MkBtn("清理下载缓存", () =>
         {
             CommonSoftwareHelper.ClearDownloadCache();
             MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }, false));
-        actions.Controls.Add(MkBtn("检查软件更新", () =>
+        }, false)));
+        actions.Controls.Add(TrackAction(MkBtn("检查软件更新", () =>
         {
             var msg = CommonSoftwareHelper.CheckUpdates(CommonSoftwareCatalog.All);
             MessageBox.Show(this, msg, "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
             RefreshAll();
-        }, false));
-        actions.Controls.Add(MkBtn("安装系统必备", InstallEssentials, false));
-        actions.Controls.Add(MkBtn("安装所选", InstallSelected, true));
-        actions.Controls.Add(MkBtn("全选当前", () => SetAllSelected(true), false));
-        actions.Controls.Add(MkBtn("全不选", () => SetAllSelected(false), false));
+        }, false)));
+        actions.Controls.Add(TrackAction(MkBtn("安装系统必备", InstallEssentials, false)));
+        actions.Controls.Add(TrackAction(MkBtn("安装所选", InstallSelected, true)));
+        actions.Controls.Add(TrackAction(MkBtn("全选当前", () => SetAllSelected(true), false)));
+        actions.Controls.Add(TrackAction(MkBtn("全不选", () => SetAllSelected(false), false)));
+
+        BuildProgressHost();
 
         var sidebar = BuildSidebar();
         sidebar.Dock = DockStyle.Left;
@@ -79,6 +86,7 @@ internal sealed class CommonSoftwareDialog : Form
         content.Controls.Add(main);
         content.Controls.Add(sidebar);
         body.Controls.Add(content);
+        body.Controls.Add(_progressHost);
         body.Controls.Add(actions);
 
         ThemedSettingsChrome.MountModal(
@@ -98,6 +106,42 @@ internal sealed class CommonSoftwareDialog : Form
                 BuildList();
             }
         };
+    }
+
+    private Control TrackAction(Control c)
+    {
+        _actionButtons.Add(c);
+        return c;
+    }
+
+    private void BuildProgressHost()
+    {
+        _progressHost.Dock = DockStyle.Bottom;
+        _progressHost.Height = 52;
+        _progressHost.Padding = new Padding(12, 6, 12, 6);
+        _progressHost.BackColor = AppTheme.PrimaryPale;
+        _progressHost.Visible = false;
+        _progressHost.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawLine(pen, 0, 0, _progressHost.Width, 0);
+        };
+
+        _progressLabel.Dock = DockStyle.Top;
+        _progressLabel.Height = 20;
+        _progressLabel.ForeColor = AppTheme.PrimaryDeep;
+        _progressLabel.Font = new Font("Microsoft YaHei UI", 9F);
+        _progressLabel.TextAlign = ContentAlignment.MiddleLeft;
+        _progressLabel.AutoEllipsis = true;
+        _progressLabel.Text = "准备中…";
+
+        _progressBar.Dock = DockStyle.Bottom;
+        _progressBar.Height = 14;
+        _progressBar.Style = ProgressBarStyle.Marquee;
+        _progressBar.MarqueeAnimationSpeed = 30;
+
+        _progressHost.Controls.Add(_progressBar);
+        _progressHost.Controls.Add(_progressLabel);
     }
 
     private static Button MkBtn(string text, Action click, bool primary)
@@ -303,15 +347,58 @@ internal sealed class CommonSoftwareDialog : Form
 
     private bool _installBusy;
 
-    private void SetInstallBusy(bool busy, string? progress = null)
+    private void SetInstallBusy(bool busy, string? progress = null, int current = -1, int total = -1, string? itemId = null)
     {
         _installBusy = busy;
         _installWingetBtn.Enabled = !busy;
-        Text = busy && !string.IsNullOrWhiteSpace(progress)
-            ? "常用软件 — " + progress
-            : "常用软件";
+        foreach (var btn in _actionButtons)
+            btn.Enabled = !busy;
+
+        var text = string.IsNullOrWhiteSpace(progress) ? (busy ? "处理中…" : "") : progress!;
+        Text = busy ? "常用软件 — " + text : "常用软件";
         Cursor = Cursors.Default;
         UseWaitCursor = false;
+
+        if (!busy)
+        {
+            _busyItemId = null;
+            _progressHost.Visible = false;
+            _progressBar.Style = ProgressBarStyle.Marquee;
+            _progressBar.MarqueeAnimationSpeed = 0;
+            _progressLabel.Text = "";
+            foreach (var row in _rows.Values)
+                row.SetBusy(false);
+            return;
+        }
+
+        _busyItemId = itemId;
+        _progressHost.Visible = true;
+        _progressLabel.Text = text;
+        if (total > 0 && current >= 0)
+        {
+            _progressBar.Style = ProgressBarStyle.Continuous;
+            _progressBar.Minimum = 0;
+            _progressBar.Maximum = Math.Max(1, total);
+            _progressBar.Value = Math.Max(0, Math.Min(current, total));
+        }
+        else
+        {
+            _progressBar.Style = ProgressBarStyle.Marquee;
+            _progressBar.MarqueeAnimationSpeed = 30;
+        }
+
+        foreach (var row in _rows.Values)
+        {
+            var on = itemId is not null && row.Item.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase);
+            row.SetBusy(on, on ? DeriveRowBusyText(text) : null);
+        }
+    }
+
+    private static string DeriveRowBusyText(string progress)
+    {
+        if (progress.IndexOf("卸载", StringComparison.Ordinal) >= 0)
+            return "卸载中…";
+        return "安装中…";
     }
 
     private void Ui(Action action)
@@ -338,7 +425,7 @@ internal sealed class CommonSoftwareDialog : Form
             if (answer != DialogResult.Yes) return;
         }
 
-        SetInstallBusy(true, "正在安装 winget…");
+        SetInstallBusy(true, "正在安装 winget（下载/注册可能需要几分钟）…", itemId: "winget");
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg;
@@ -390,7 +477,7 @@ internal sealed class CommonSoftwareDialog : Form
             if (answer != DialogResult.Yes) return;
         }
 
-        SetInstallBusy(true, "正在安装 " + item.Title);
+        SetInstallBusy(true, "正在安装 " + item.Title + "…", itemId: item.Id);
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg = "";
@@ -403,8 +490,8 @@ internal sealed class CommonSoftwareDialog : Form
                 SetInstallBusy(false);
                 RefreshAll();
                 if (error is not null)
-                    MessageBox.Show(this, error.Message, "安装失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                else if (msg.Length > 0)
+                    MessageBox.Show(this, error.Message, item.Title + " 安装失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else if (!string.IsNullOrWhiteSpace(msg))
                     MessageBox.Show(this, msg, item.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
         });
@@ -430,7 +517,7 @@ internal sealed class CommonSoftwareDialog : Form
             "卸载确认", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
 
-        SetInstallBusy(true, "正在卸载 " + item.Title);
+        SetInstallBusy(true, "正在卸载 " + item.Title + "…", itemId: item.Id);
         System.Threading.Tasks.Task.Run(() =>
         {
             string msg = "";
@@ -490,7 +577,7 @@ internal sealed class CommonSoftwareDialog : Form
     private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
     {
         if (_installBusy) return;
-        SetInstallBusy(true, $"准备安装 0/{items.Count}");
+        SetInstallBusy(true, $"准备安装（共 {items.Count} 项）…", current: 0, total: items.Count);
         System.Threading.Tasks.Task.Run(() =>
         {
             var notes = new List<string>();
@@ -498,7 +585,11 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 var item = items[i];
                 var n = i + 1;
-                Ui(() => SetInstallBusy(true, $"正在安装 {item.Title}（{n}/{items.Count}）"));
+                Ui(() => SetInstallBusy(true,
+                    $"正在安装 {item.Title}（{n}/{items.Count}）…",
+                    current: n - 1,
+                    total: items.Count,
+                    itemId: item.Id));
                 try
                 {
                     var msg = item.IsWingetBootstrap
@@ -514,6 +605,7 @@ internal sealed class CommonSoftwareDialog : Form
 
             Ui(() =>
             {
+                SetInstallBusy(true, $"全部完成（{items.Count}/{items.Count}）", current: items.Count, total: items.Count);
                 SetInstallBusy(false);
                 RefreshAll();
                 MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -575,6 +667,7 @@ internal sealed class CommonSoftwareDialog : Form
         private readonly ToolTip _statusTip = new() { ShowAlways = true };
         private readonly Action<CommonSoftwareItem> _onInstall;
         private readonly Action<CommonSoftwareItem> _onUninstall;
+        private bool _busy;
 
         public CommonSoftwareItem Item => _item;
 
@@ -644,6 +737,12 @@ internal sealed class CommonSoftwareDialog : Form
 
         public void RefreshStatus()
         {
+            if (_busy)
+            {
+                ApplyBusyStatus(_status.Text.Length > 0 ? _status.Text : "安装中…");
+                return;
+            }
+
             var s = CommonSoftwareHelper.Query(_item);
             if (_item.IsWingetBootstrap)
             {
@@ -679,6 +778,30 @@ internal sealed class CommonSoftwareDialog : Form
             }
 
             _statusTip.SetToolTip(_status, _status.Text);
+            _install.Enabled = true;
+            _uninstall.Enabled = true;
+        }
+
+        public void SetBusy(bool busy, string? statusText = null)
+        {
+            _busy = busy;
+            if (busy)
+            {
+                ApplyBusyStatus(statusText ?? "安装中…");
+                return;
+            }
+
+            RefreshStatus();
+        }
+
+        private void ApplyBusyStatus(string text)
+        {
+            _install.Enabled = false;
+            _uninstall.Enabled = false;
+            _status.Text = text;
+            _status.ForeColor = AppTheme.ScopeServer;
+            _status.BackColor = AppTheme.PrimaryPale;
+            _statusTip.SetToolTip(_status, "任务进行中，请稍候…");
         }
 
         private static Button RowButton(string text, int x)

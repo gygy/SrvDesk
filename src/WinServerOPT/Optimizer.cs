@@ -614,6 +614,18 @@ internal static class Optimizer
         // 部分版本还会写该值；勾选时设为 0
         SetDword(Hive.HkCu, @"Software\Microsoft\ServerManager", "CheckedUnattendLaunchSetting", skipAtLogon ? 0 : 1);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\ServerManager", "DoNotOpenAtLogon", skipAtLogon ? 1 : 0);
+
+        // 登录计划任务也会拉起服务器管理器；失败忽略（任务不存在等）
+        try
+        {
+            Run("schtasks.exe", skipAtLogon
+                ? "/Change /TN \"\\Microsoft\\Windows\\Server Manager\\ServerManager\" /DISABLE"
+                : "/Change /TN \"\\Microsoft\\Windows\\Server Manager\\ServerManager\" /ENABLE");
+        }
+        catch
+        {
+            /* ignore */
+        }
     }
 
     private static void SetShutdownReason(bool enableUi)
