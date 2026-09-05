@@ -410,12 +410,20 @@ internal static class SettingCatalog
         SettingScope.ServerExclusive);
 
     public static readonly SettingHelpInfo SkipServerManager = H(
-        "登录后不自动弹出「服务器管理器」。",
-        "DoNotOpenServerManagerAtLogon 等 Server Manager 策略。",
-        "进桌面即干净，不必每次关管理器窗口。",
+        "在登录时不自动启动服务器管理器（等同「服务器管理器 → 管理 → 服务器管理器属性」中同名勾选）。",
+        "HKLM/HKCU\\…\\ServerManager\\DoNotOpenServerManagerAtLogon=1；策略 DoNotOpenAtLogon。",
+        "进桌面不再自动弹出服务器管理器，需要时仍可手动打开。",
         "Server 当桌面强烈建议开启。",
         "下次登录生效。",
         new SettingScope(serverOnly: true, minServer: "2012 R2+"));
+
+    public static readonly SettingHelpInfo HideServerManagerWacPrompt = H(
+        "打开服务器管理器时不再弹出 Windows Admin Center / Azure Arc 推广提示（等同勾选「不再显示此消息」）。",
+        "HKLM\\SOFTWARE\\Microsoft\\ServerManager\\DoNotPopWACConsoleAtSMLaunch=1。",
+        "去掉每次打开 Server Manager 的推广弹窗，保留管理器本身可用。",
+        "Server 2019/2022 桌面强烈建议开启。",
+        "立即生效（下次打开服务器管理器）。",
+        new SettingScope(serverOnly: true, minServer: "2019+"));
 
     public static readonly SettingHelpInfo DisableAzureArc = H(
         "禁止 Azure Arc 托盘程序开机自启。",

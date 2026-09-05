@@ -115,6 +115,7 @@ internal static class OptPresets
         var s = new Optimizer.State();
         s.DisableIeEsc = true;
         s.SkipServerManager = true;
+        s.HideServerManagerWacPrompt = true;
         s.DisableSmRemoting = true;
         s.DisableAzureArc = true;
         s.DisableShutdownReason = true;

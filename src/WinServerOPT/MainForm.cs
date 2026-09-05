@@ -140,7 +140,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭", SettingCatalog.EnableNetworkDiscovery);
     private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启", SettingCatalog.DisableSmRemoting);
 
-    private readonly SettingRow _svrMgr = Row("登录不启动服务管理器", "自动打开", SettingCatalog.SkipServerManager);
+    private readonly SettingRow _svrMgr = Row("在登录时不自动启动服务器管理器", "登录时启动", SettingCatalog.SkipServerManager);
+    private readonly SettingRow _wacPrompt = Row("不再显示 Admin Center 推广", "每次弹出", SettingCatalog.HideServerManagerWacPrompt);
     private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动", SettingCatalog.DisableAzureArc);
     private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动", SettingCatalog.EnableInstaller);
     private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动", SettingCatalog.EnableWia);
@@ -213,7 +214,7 @@ internal sealed class MainForm : Form
         "桌面外观",
         "远程与网络",
         "隐私与体验",
-        "系统组件",
+        "服务器",
         "账户策略",
     ];
 
@@ -239,7 +240,7 @@ internal sealed class MainForm : Form
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
         _insider, _storeUpd,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra,
-        _svrMgr, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
+        _svrMgr, _wacPrompt, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
     ];
 
@@ -313,9 +314,10 @@ internal sealed class MainForm : Form
             // 应用与网络
             _gameDvr, _officeTel, _teredo,
         ]));
-        _groups.Add(("系统组件", [
-            _svrMgr, _mediaFeatures, _bloatFeatures,
-            _installer, _wia, _azure,
+        _groups.Add(("服务器", [
+            _svrMgr, _wacPrompt, _azure,
+            _mediaFeatures, _bloatFeatures,
+            _installer, _wia,
         ]));
         _groups.Add(("账户策略", [
             _autologon, _pwd, _pwdExpire, _noCad,
@@ -1581,6 +1583,7 @@ internal sealed class MainForm : Form
         _netDiscovery.Checked = s.EnableNetworkDiscovery;
         _smRemoting.Checked = s.DisableSmRemoting;
         _svrMgr.Checked = s.SkipServerManager;
+        _wacPrompt.Checked = s.HideServerManagerWacPrompt;
         _azure.Checked = s.DisableAzureArc;
         _installer.Checked = s.EnableInstaller;
         _wia.Checked = s.EnableWia;
@@ -1737,6 +1740,7 @@ internal sealed class MainForm : Form
         EnableNetworkDiscovery = _netDiscovery.Checked,
         DisableSmRemoting = _smRemoting.Checked,
         SkipServerManager = _svrMgr.Checked,
+        HideServerManagerWacPrompt = _wacPrompt.Checked,
         DisableAzureArc = _azure.Checked,
         EnableInstaller = _installer.Checked,
         EnableWia = _wia.Checked,

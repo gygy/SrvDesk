@@ -60,6 +60,7 @@ internal static class Optimizer
         public bool DisableSmRemoting;
 
         public bool SkipServerManager;
+        public bool HideServerManagerWacPrompt;
         public bool DisableAzureArc;
         public bool EnableInstaller;
         public bool EnableWia;
@@ -248,7 +249,11 @@ internal static class Optimizer
             EnableNetworkDiscovery = ServiceStartEquals("fdPHost", 2) && ServiceStartEquals("FDResPub", 2),
             DisableSmRemoting = ServiceStartEquals("WinRM", 4),
 
-            SkipServerManager = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", 1),
+            SkipServerManager =
+                DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", 1)
+                || DwordEquals(Hive.HkCu, @"Software\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", 1)
+                || DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\ServerManager", "DoNotOpenAtLogon", 1),
+            HideServerManagerWacPrompt = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch", 1),
             DisableAzureArc = GetValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "AzureArcSetup") is null,
             EnableInstaller = ServiceStartEquals("msiserver", 2),
             EnableWia = ServiceStartEquals("stisvc", 2),
@@ -404,6 +409,9 @@ internal static class Optimizer
         Try(errors, "Server远程管理", () => SetSmRemoting(!s.DisableSmRemoting));
 
         Try(errors, "服务管理器", () => SetServerManager(s.SkipServerManager));
+        Try(errors, "WAC推广提示", () =>
+            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch",
+                s.HideServerManagerWacPrompt ? 1 : 0));
         Try(errors, "Azure Arc", () =>
         {
             if (s.DisableAzureArc)
@@ -598,11 +606,14 @@ internal static class Optimizer
         }
     }
 
-    private static void SetServerManager(bool skip)
+    private static void SetServerManager(bool skipAtLogon)
     {
-        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", skip ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotPopWACConsoleAtSMLaunch", skip ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "RefreshInterval", skip ? 14400 : 3600);
+        // 等同「服务器管理器属性」→「在登录时不自动启动服务器管理器」
+        SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", skipAtLogon ? 1 : 0);
+        SetDword(Hive.HkCu, @"Software\Microsoft\ServerManager", "DoNotOpenServerManagerAtLogon", skipAtLogon ? 1 : 0);
+        // 部分版本还会写该值；勾选时设为 0
+        SetDword(Hive.HkCu, @"Software\Microsoft\ServerManager", "CheckedUnattendLaunchSetting", skipAtLogon ? 0 : 1);
+        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\ServerManager", "DoNotOpenAtLogon", skipAtLogon ? 1 : 0);
     }
 
     private static void SetShutdownReason(bool enableUi)
