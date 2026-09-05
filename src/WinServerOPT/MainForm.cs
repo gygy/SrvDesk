@@ -555,7 +555,8 @@ internal sealed class MainForm : Form
         }
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
-        LoadState(fullScan: false);
+        // 完整扫描，避免电源/TCP/DISM 等项启动时误显示为未优化
+        LoadState(fullScan: true);
         BeginInvoke(new Action(StartWarmupInstantPages));
     }
 
@@ -739,10 +740,25 @@ internal sealed class MainForm : Form
 
     private void ConfigureComputerIdentity() => PromptComputerIdentity();
 
+    private CommonSoftwareDialog? _commonSoftwareDlg;
+
     private void ShowCommonSoftware()
     {
-        using var dlg = new CommonSoftwareDialog();
-        dlg.ShowDialog(this);
+        if (_commonSoftwareDlg is { IsDisposed: false })
+        {
+            if (_commonSoftwareDlg.WindowState == FormWindowState.Minimized)
+                _commonSoftwareDlg.WindowState = FormWindowState.Normal;
+            _commonSoftwareDlg.BringToFront();
+            _commonSoftwareDlg.Activate();
+            return;
+        }
+
+        _commonSoftwareDlg = new CommonSoftwareDialog();
+        _commonSoftwareDlg.Owner = this;
+        _commonSoftwareDlg.ShowInTaskbar = true;
+        _commonSoftwareDlg.MinimizeBox = true;
+        _commonSoftwareDlg.FormClosed += (_, _) => _commonSoftwareDlg = null;
+        _commonSoftwareDlg.Show(this);
     }
 
     private void ShowDesktopMaintenance()
@@ -1906,6 +1922,17 @@ internal sealed class MainForm : Form
         Application.DoEvents();
         try
         {
+            if (!AdminHelper.IsRunningAsAdministrator())
+            {
+                MessageBox.Show(
+                    "当前未以管理员运行，注册表/服务等写入会失败。\n\n请右键本程序 →「以管理员身份运行」后再点「应用推荐」。",
+                    "需要管理员权限",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                _status.Text = "已取消：需要管理员权限。";
+                return;
+            }
+
             if (!EnsureAutologonReady())
             {
                 _status.Text = "已取消：启用自动登录需先配置账户。";

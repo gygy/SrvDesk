@@ -209,7 +209,7 @@ internal static class Optimizer
         if (fullScan)
             ServerDesktopTweaks.ResetDismCache();
 
-        var account = fullScan ? ReadAccountPolicyFlags() : (ComplexityOff: ServerDesktopTweaks.IsSamPasswordComplexityOff(), NeverExpire: false);
+        var account = ReadAccountPolicyFlags();
 
         var state = new State
         {
@@ -217,7 +217,7 @@ internal static class Optimizer
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
             DisableUac = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", 0),
             DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
-            HighPerfPower = fullScan && IsActivePowerPlan(PowerPlanHighPerf),
+            HighPerfPower = IsActivePowerPlan(PowerPlanHighPerf),
             DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
             NoUpdateReboot = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1),
             DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
@@ -226,7 +226,7 @@ internal static class Optimizer
             VisualBestPerf = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2),
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
-            TcpOptimized = fullScan && IsTcpOptimized(),
+            TcpOptimized = IsTcpOptimized(),
             QosSpeedOptimize = IsQosSpeedOptimized(),
             DisableErrorReport = ServiceStartEquals("WerSvc", 4),
 
@@ -930,7 +930,21 @@ internal static class Optimizer
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         }) ?? throw new InvalidOperationException("无法启动 " + fileName);
+        var stdout = p.StandardOutput.ReadToEnd();
+        var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit(60_000);
+        if (p.ExitCode == 0) return;
+
+        // sc：已停止/已启动等常见无害退出码
+        var isSc = fileName.EndsWith("sc.exe", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(fileName, "sc", StringComparison.OrdinalIgnoreCase);
+        if (isSc && p.ExitCode is 1056 or 1060 or 1062) return;
+
+        var detail = (stderr + " " + stdout).Trim();
+        if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";
+        throw new InvalidOperationException(
+            $"{Path.GetFileName(fileName)} 退出码 {p.ExitCode}" +
+            (detail.Length > 0 ? "：" + detail : ""));
     }
 
     private static string RunCapture(string fileName, string arguments)

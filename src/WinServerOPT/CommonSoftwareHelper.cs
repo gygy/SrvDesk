@@ -117,7 +117,12 @@ internal static class CommonSoftwareHelper
         try
         {
             var output = RunCapture("powershell.exe",
-                "-NoProfile -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
+                "-NoProfile -Command \"(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
+            if (output.Length == 0)
+            {
+                output = RunCapture("powershell.exe",
+                    "-NoProfile -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
+            }
             if (output.Length == 0) return null;
             var path = Path.Combine(output, "winget.exe");
             return File.Exists(path) ? path : null;
@@ -261,30 +266,49 @@ internal static class CommonSoftwareHelper
         if (IsWingetAvailable())
             return "";
 
-        ApplyLog.Write("安装 winget（App Installer）");
+        ApplyLog.Write("安装 winget（App Installer）" + (Optimizer.IsWindowsServer() ? " [Server]" : ""));
         ResetWingetDiscovery();
         var notes = new List<string>();
+
+        // Server：优先离线包 + 机器级 ProvisionedPackage，再尝试修复模块
+        if (Optimizer.IsWindowsServer())
+        {
+            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: true);
+            if (bootstrap.Length > 0) notes.Add(bootstrap);
+            ResetWingetDiscovery();
+            if (IsWingetAvailable()) return FormatWingetReady(notes);
+
+            var register = TryRegisterAppInstaller();
+            if (register.Length > 0) notes.Add(register);
+            ResetWingetDiscovery();
+            if (IsWingetAvailable()) return FormatWingetReady(notes);
+        }
 
         var repair = TryRepairWinGetPackageManager();
         if (repair.Length > 0) notes.Add(repair);
         ResetWingetDiscovery();
         if (IsWingetAvailable()) return FormatWingetReady(notes);
 
-        var bootstrap = TryBootstrapWingetPackages();
-        if (bootstrap.Length > 0) notes.Add(bootstrap);
-        ResetWingetDiscovery();
-        if (IsWingetAvailable()) return FormatWingetReady(notes);
+        if (!Optimizer.IsWindowsServer())
+        {
+            var bootstrap = TryBootstrapWingetPackages(preferProvisioned: false);
+            if (bootstrap.Length > 0) notes.Add(bootstrap);
+            ResetWingetDiscovery();
+            if (IsWingetAvailable()) return FormatWingetReady(notes);
 
-        var register = TryRegisterAppInstaller();
-        if (register.Length > 0) notes.Add(register);
-        ResetWingetDiscovery();
-        if (IsWingetAvailable()) return FormatWingetReady(notes);
+            var register = TryRegisterAppInstaller();
+            if (register.Length > 0) notes.Add(register);
+            ResetWingetDiscovery();
+            if (IsWingetAvailable()) return FormatWingetReady(notes);
+        }
 
         var wingetItem = CommonSoftwareCatalog.Find("winget");
         if (wingetItem is not null)
             OpenDownloadPage(wingetItem);
 
-        notes.Add("自动安装未完成。已打开官方下载页；也可重启本程序或注销后再试。");
+        notes.Add("自动安装未完成。已打开官方下载页。");
+        notes.Add("下载目录：" + DownloadDir);
+        notes.Add("Server 也可手动：以管理员 PowerShell 执行 Add-AppxPackage / Add-AppxProvisionedPackage 安装该目录下的 msixbundle。");
         return string.Join("\r\n", notes);
     }
 
@@ -354,7 +378,7 @@ internal static class CommonSoftwareHelper
         try
         {
             var output = RunCapture("powershell.exe",
-                "-NoProfile -Command \"Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name\"");
+                "-NoProfile -Command \"@(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name); @(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name)\"");
             return output.IndexOf("DesktopAppInstaller", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
@@ -391,26 +415,46 @@ Repair-WinGetPackageManager -AllUsers
         }
     }
 
-    private static string TryBootstrapWingetPackages()
+    private static string TryBootstrapWingetPackages(bool preferProvisioned)
     {
         Directory.CreateDirectory(DownloadDir);
+        ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+
         var vcLibs = Path.Combine(DownloadDir, "Microsoft.VCLibs.x64.14.00.Desktop.appx");
         var uiXaml = Path.Combine(DownloadDir, "Microsoft.UI.Xaml.2.8.x64.appx");
         var bundle = Path.Combine(DownloadDir, "Microsoft.DesktopAppInstaller.msixbundle");
 
         try
         {
-            DownloadIfMissing("https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx", vcLibs);
-            DownloadIfMissing(
+            DownloadPackage(
+                "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx",
+                vcLibs,
+                minBytes: 500_000);
+            DownloadPackage(
                 "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx",
-                uiXaml);
-            DownloadIfMissing("https://aka.ms/getwinget", bundle);
+                uiXaml,
+                minBytes: 500_000);
 
-            AddAppxPackage(vcLibs);
-            AddAppxPackage(uiXaml);
-            AddAppxPackage(bundle);
+            // 优先 GitHub release 直链，再回退 aka.ms（避免短链下到 HTML）
+            try
+            {
+                DownloadPackage(
+                    "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle",
+                    bundle,
+                    minBytes: 1_000_000);
+            }
+            catch
+            {
+                DownloadPackage("https://aka.ms/getwinget", bundle, minBytes: 1_000_000);
+            }
 
-            return "已下载并安装 App Installer 依赖与主包。";
+            AddAppxPackage(vcLibs, provisioned: false);
+            AddAppxPackage(uiXaml, provisioned: false);
+            AddAppxPackage(bundle, provisioned: preferProvisioned);
+
+            return preferProvisioned
+                ? "已按 Server 路径下载并安装 App Installer（含依赖）。"
+                : "已下载并安装 App Installer 依赖与主包。";
         }
         catch (Exception ex)
         {
@@ -423,6 +467,7 @@ Repair-WinGetPackageManager -AllUsers
         const string script = @"
 $ErrorActionPreference = 'SilentlyContinue'
 Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
 ";
         try
         {
@@ -443,17 +488,74 @@ Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller
         return string.Join("\r\n", notes.Where(n => n.Length > 0));
     }
 
-    private static void DownloadIfMissing(string url, string dest)
+    private static void DownloadPackage(string url, string dest, long minBytes)
     {
-        if (File.Exists(dest) && new FileInfo(dest).Length > 0) return;
+        if (File.Exists(dest))
+        {
+            var len = new FileInfo(dest).Length;
+            if (len >= minBytes && LooksLikeBinaryPackage(dest))
+                return;
+            try { File.Delete(dest); } catch { /* ignore */ }
+        }
+
+        ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         using var wc = new WebClient();
+        wc.Headers[HttpRequestHeader.UserAgent] = "SrvDesk/1.0";
         wc.DownloadFile(url, dest);
+
+        var size = new FileInfo(dest).Length;
+        if (size < minBytes || !LooksLikeBinaryPackage(dest))
+        {
+            try { File.Delete(dest); } catch { /* ignore */ }
+            throw new InvalidOperationException("下载文件无效或过小：" + Path.GetFileName(dest) + "（" + size + " 字节）");
+        }
     }
 
-    private static void AddAppxPackage(string path)
+    private static bool LooksLikeBinaryPackage(string path)
+    {
+        try
+        {
+            using var fs = File.OpenRead(path);
+            if (fs.Length < 4) return false;
+            var b0 = fs.ReadByte();
+            var b1 = fs.ReadByte();
+            // ZIP/Office Open XML / msix/appx 均为 PK..
+            return b0 == 'P' && b1 == 'K';
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void AddAppxPackage(string path, bool provisioned)
     {
         var escaped = path.Replace("'", "''");
-        RunPowerShell($"Add-AppxPackage -Path '{escaped}'");
+        string script;
+        if (provisioned)
+        {
+            // Server：机器级安装；无 license 时退回当前用户 Add-AppxPackage
+            script = $@"
+$ErrorActionPreference = 'Stop'
+$path = '{escaped}'
+try {{
+  Add-AppxProvisionedPackage -Online -PackagePath $path -SkipLicense | Out-Null
+}} catch {{
+  Add-AppxPackage -Path $path -ErrorAction Stop
+}}
+";
+        }
+        else
+        {
+            script = $@"
+$ErrorActionPreference = 'Stop'
+Add-AppxPackage -Path '{escaped}'
+";
+        }
+
+        var code = RunPowerShell(script);
+        if (code != 0)
+            throw new InvalidOperationException("安装包失败，退出码 " + code + "：" + Path.GetFileName(path));
     }
 
     private static bool Matches(string displayName, string[] patterns)

@@ -29,10 +29,11 @@ internal sealed class CommonSoftwareDialog : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 44,
+            Height = 48,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Padding = new Padding(12, 4, 12, 4),
+            AutoScroll = true,
+            Padding = new Padding(12, 6, 12, 6),
             BackColor = AppTheme.Surface,
         };
         actions.Controls.Add(MkBtn("清理下载缓存", () =>
@@ -46,7 +47,10 @@ internal sealed class CommonSoftwareDialog : Form
             MessageBox.Show(this, msg, "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
             RefreshAll();
         }, false));
-        actions.Controls.Add(MkBtn("安装系统必备", InstallEssentials, true));
+        actions.Controls.Add(MkBtn("安装系统必备", InstallEssentials, false));
+        actions.Controls.Add(MkBtn("安装所选", InstallSelected, true));
+        actions.Controls.Add(MkBtn("全选当前", () => SetAllSelected(true), false));
+        actions.Controls.Add(MkBtn("全不选", () => SetAllSelected(false), false));
 
         var sidebar = BuildSidebar();
         sidebar.Dock = DockStyle.Left;
@@ -230,10 +234,11 @@ internal sealed class CommonSoftwareDialog : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderCell("软件名称", 16, 320));
-        header.Controls.Add(MakeHeaderCell("安装", 344, 96, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell("卸载", 448, 72, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell("状态", 528, 320));
+        header.Controls.Add(MakeHeaderCell("选", 8, 36, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell("软件名称", 44, 300));
+        header.Controls.Add(MakeHeaderCell("安装", 352, 96, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell("卸载", 456, 72, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell("状态", 536, 300));
         header.Resize += (_, _) => header.Invalidate();
         return header;
     }
@@ -405,6 +410,65 @@ internal sealed class CommonSoftwareDialog : Form
         }
     }
 
+    private void SetAllSelected(bool on)
+    {
+        foreach (var row in _rows.Values)
+            row.Selected = on;
+    }
+
+    private void InstallSelected()
+    {
+        var selected = _rows.Values.Where(r => r.Selected).Select(r => r.Item).ToList();
+        if (selected.Count == 0)
+        {
+            MessageBox.Show(this, "请先勾选要安装的软件。", "安装所选", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var ordered = selected.OrderBy(x => x.IsWingetBootstrap ? 0 : 1).ToList();
+        var names = string.Join("\r\n", ordered.Select(x => "· " + x.Title));
+        if (_askBeforeInstall.Checked)
+        {
+            var answer = MessageBox.Show(this,
+                $"将依次安装已选的 {ordered.Count} 款软件：\r\n\r\n{names}\r\n\r\n是否继续？",
+                "安装所选", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+        }
+
+        RunBatchInstall(ordered, "安装所选");
+    }
+
+    private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
+    {
+        UseWaitCursor = true;
+        Enabled = false;
+        var notes = new List<string>();
+        try
+        {
+            foreach (var item in items)
+            {
+                try
+                {
+                    var msg = item.IsWingetBootstrap
+                        ? CommonSoftwareHelper.InstallWinget()
+                        : CommonSoftwareHelper.Install(item);
+                    notes.Add(item.Title + "：" + (string.IsNullOrWhiteSpace(msg) ? "完成" : msg));
+                }
+                catch (Exception ex)
+                {
+                    notes.Add(item.Title + "：失败 — " + ex.Message);
+                }
+            }
+            RefreshAll();
+            MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        finally
+        {
+            Enabled = true;
+            UseWaitCursor = false;
+        }
+    }
+
     private void InstallEssentials()
     {
         var essentials = CommonSoftwareCatalog.All.Where(x => x.Essential).ToList();
@@ -429,24 +493,7 @@ internal sealed class CommonSoftwareDialog : Form
             if (answer != DialogResult.Yes) return;
         }
 
-        UseWaitCursor = true;
-        var notes = new List<string>();
-        try
-        {
-            foreach (var item in missing)
-            {
-                var msg = CommonSoftwareHelper.Install(item);
-                if (msg.Length > 0) notes.Add(item.Title + "：" + msg);
-            }
-            RefreshAll();
-            MessageBox.Show(this,
-                notes.Count == 0 ? "必备软件安装流程已完成，请查看列表状态。" : string.Join("\r\n\r\n", notes),
-                "安装系统必备软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        finally
-        {
-            UseWaitCursor = false;
-        }
+        RunBatchInstall(missing, "安装系统必备软件");
     }
 
     private static Label MakeHeaderCell(string text, int x, int w, ContentAlignment align = ContentAlignment.MiddleLeft) => new()
@@ -463,11 +510,20 @@ internal sealed class CommonSoftwareDialog : Form
     private sealed class CommonSoftwareRow : Panel
     {
         private readonly CommonSoftwareItem _item;
+        private readonly CheckBox _select = new();
         private readonly Button _install;
         private readonly Button _uninstall;
         private readonly Label _status;
         private readonly Action<CommonSoftwareItem> _onInstall;
         private readonly Action<CommonSoftwareItem> _onUninstall;
+
+        public CommonSoftwareItem Item => _item;
+
+        public bool Selected
+        {
+            get => _select.Checked;
+            set => _select.Checked = value;
+        }
 
         public CommonSoftwareRow(
             CommonSoftwareItem item,
@@ -482,20 +538,24 @@ internal sealed class CommonSoftwareDialog : Form
             Height = height;
             BackColor = bg;
 
+            _select.Location = new Point(12, (height - 18) / 2);
+            _select.Size = new Size(18, 18);
+            _select.BackColor = Color.Transparent;
+
             var name = new Label
             {
                 Text = item.Title,
-                Location = new Point(16, 0),
-                Size = new Size(316, height),
+                Location = new Point(44, 0),
+                Size = new Size(300, height),
                 ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
             };
 
-            _install = RowButton("一键安装", 344);
+            _install = RowButton("一键安装", 352);
             _install.Click += (_, _) => _onInstall(_item);
 
-            _uninstall = RowButton("卸载", 448);
+            _uninstall = RowButton("卸载", 456);
             _uninstall.Click += (_, _) => _onUninstall(_item);
             if (item.IsWingetBootstrap)
             {
@@ -505,14 +565,14 @@ internal sealed class CommonSoftwareDialog : Form
 
             _status = new Label
             {
-                Location = new Point(528, 10),
-                Size = new Size(300, 24),
+                Location = new Point(536, 10),
+                Size = new Size(280, 24),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Microsoft YaHei UI", 8.75F),
                 Padding = new Padding(8, 0, 8, 0),
             };
 
-            Controls.AddRange([name, _install, _uninstall, _status]);
+            Controls.AddRange([_select, name, _install, _uninstall, _status]);
             Paint += (_, e) =>
             {
                 using var pen = new Pen(AppTheme.BorderLight);
