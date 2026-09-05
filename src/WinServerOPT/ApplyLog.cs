@@ -262,7 +262,8 @@ internal static class ApplyLog
             var text = File.ReadAllText(ChangeLogPath, Utf8Bom);
             return text.IndexOf("【注册表变更】", StringComparison.Ordinal) >= 0
                 || text.IndexOf("【服务变更】", StringComparison.Ordinal) >= 0
-                || text.IndexOf("【系统设置变更】", StringComparison.Ordinal) >= 0;
+                || text.IndexOf("【系统设置变更】", StringComparison.Ordinal) >= 0
+                || text.IndexOf("变更：原来从", StringComparison.Ordinal) >= 0;
         }
         catch
         {

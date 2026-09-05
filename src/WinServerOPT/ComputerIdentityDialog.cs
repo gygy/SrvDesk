@@ -123,7 +123,11 @@ internal sealed class ComputerIdentityDialog : Form
                 RestartScheduled = true;
             }
 
-            ApplyLog.Write($"计算机标识：名={renameChanged} 组={workgroupChanged} 重启={_restart.Checked}");
+            ApplyLog.SystemChange(
+                "计算机名/工作组",
+                $"改名={renameChanged} 改组={workgroupChanged} 计划重启={_restart.Checked}",
+                ComputerIdentityHelper.Read().Summary,
+                $"名={rename} 组={workgroup}");
             DialogResult = DialogResult.OK;
             Close();
         }

@@ -86,7 +86,7 @@ internal static class StartupItemHelper
             using (ApplyLog.PushContext("登录启动项"))
             {
                 ApplyLog.SystemChange(
-                    entry.FolderPath,
+                    entry.FolderPath ?? entry.Name,
                     $"删除启动文件夹快捷方式「{entry.Name}」",
                     "文件存在",
                     "已删除");
