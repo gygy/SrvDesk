@@ -326,8 +326,73 @@ internal static class CommonSoftwareHelper
         }
     }
 
+    private static Dictionary<string, CommonSoftwareStatus>? _statusCache;
+    private static readonly object StatusCacheLock = new();
+
+    public static void InvalidateStatusCache()
+    {
+        lock (StatusCacheLock)
+            _statusCache = null;
+    }
+
+    /// <summary>一次扫描卸载注册表，缓存全部常用软件安装状态（打开窗口时后台调用）。</summary>
+    public static void PrefetchStatuses(IReadOnlyList<CommonSoftwareItem> items)
+    {
+        var map = new Dictionary<string, CommonSoftwareStatus>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in items)
+        {
+            if (item.IsWingetBootstrap)
+            {
+                map[item.Id] = QueryWingetStatus();
+                continue;
+            }
+
+            map[item.Id] = new CommonSoftwareStatus();
+        }
+
+        foreach (var keyPath in UninstallKeyPaths())
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(keyPath.Hive, RegistryView.Registry64);
+            using var uninstall = baseKey.OpenSubKey(keyPath.SubKey);
+            if (uninstall is null) continue;
+
+            foreach (var subName in uninstall.GetSubKeyNames())
+            {
+                using var sub = uninstall.OpenSubKey(subName);
+                if (sub is null) continue;
+                var display = sub.GetValue("DisplayName") as string ?? "";
+                if (display.Length == 0) continue;
+
+                foreach (var item in items)
+                {
+                    if (item.IsWingetBootstrap) continue;
+                    if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
+                    if (!Matches(display, item.DetectPatterns)) continue;
+
+                    map[item.Id] = new CommonSoftwareStatus
+                    {
+                        Installed = true,
+                        Version = sub.GetValue("DisplayVersion") as string ?? "",
+                        UninstallCommand = sub.GetValue("QuietUninstallString") as string
+                            ?? sub.GetValue("UninstallString") as string,
+                    };
+                }
+            }
+        }
+
+        lock (StatusCacheLock)
+            _statusCache = map;
+    }
+
     public static CommonSoftwareStatus Query(CommonSoftwareItem item)
     {
+        lock (StatusCacheLock)
+        {
+            if (_statusCache is not null &&
+                _statusCache.TryGetValue(item.Id, out var cached))
+                return cached;
+        }
+
         if (item.IsWingetBootstrap)
             return QueryWingetStatus();
 
@@ -378,11 +443,13 @@ internal static class CommonSoftwareHelper
             if (code == 0)
             {
                 Report(onProgress, "安装完成", 100);
+                InvalidateStatusCache();
                 return "";
             }
             if (code == -1978335189) // 0x8A150013 already installed
             {
                 Report(onProgress, "已安装", 100);
+                InvalidateStatusCache();
                 return "软件已安装或无需重复安装。";
             }
 
@@ -395,11 +462,13 @@ internal static class CommonSoftwareHelper
             if (code == 0)
             {
                 Report(onProgress, "安装完成", 100);
+                InvalidateStatusCache();
                 return "";
             }
             if (code == -1978335189)
             {
                 Report(onProgress, "已安装", 100);
+                InvalidateStatusCache();
                 return "软件已安装或无需重复安装。";
             }
         }
@@ -426,6 +495,7 @@ internal static class CommonSoftwareHelper
             if (code == 0)
             {
                 Report(onProgress, "卸载完成", 100);
+                InvalidateStatusCache();
                 return "";
             }
         }
@@ -438,6 +508,7 @@ internal static class CommonSoftwareHelper
         Report(onProgress, "执行卸载命令…", 40);
         RunShell(cmd!);
         Report(onProgress, "卸载命令已执行", 100);
+        InvalidateStatusCache();
         return "";
     }
 
@@ -615,6 +686,7 @@ internal static class CommonSoftwareHelper
         if (code == 0)
         {
             Report(onProgress, "更新完成", 100);
+            InvalidateStatusCache();
             _lastUpdates.RemoveAll(u => u.Item.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase));
             return "";
         }
@@ -623,6 +695,7 @@ internal static class CommonSoftwareHelper
         if (code is -1978335189 or -1978335212 or -1978335135)
         {
             Report(onProgress, "已是最新", 100);
+            InvalidateStatusCache();
             _lastUpdates.RemoveAll(u => u.Item.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase));
             return "已是最新版本或不需要更新。";
         }

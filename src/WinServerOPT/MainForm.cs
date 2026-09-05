@@ -112,7 +112,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _noSuffix = Row("快捷方式不加「快捷方式」后缀", "添加", SettingCatalog.NoShortcutSuffix);
     private readonly SettingRow _win11Explorer = Row("Win11 资源管理器布局", "紧凑", SettingCatalog.Win11ExplorerStyle);
     private readonly SettingRow _classicMenu = Row("Win10 经典右键菜单", "Win11 现代", SettingCatalog.Win10ClassicContextMenu);
-    private readonly SettingRow _tbSearch = Row("任务栏搜索框", "仅图标", SettingCatalog.TaskbarSearchBox);
+    private readonly SettingRow _tbSearch = Row("隐藏任务栏搜索栏", "显示", SettingCatalog.HideTaskbarSearch);
     private readonly SettingRow _tbLeft = Row("任务栏靠左对齐", "居中", SettingCatalog.TaskbarAlignLeft);
     private readonly SettingRow _tbCombine = Row("任务栏按钮始终合并", "从不", SettingCatalog.TaskbarCombineAlways);
     private readonly SettingRow _tbAutohide = Row("自动隐藏任务栏", "不隐藏", SettingCatalog.TaskbarAutoHide);
@@ -1528,7 +1528,7 @@ internal sealed class MainForm : Form
         _noSuffix.Checked = s.NoShortcutSuffix;
         _win11Explorer.Checked = s.Win11ExplorerStyle;
         _classicMenu.Checked = s.Win10ClassicContextMenu;
-        _tbSearch.Checked = s.TaskbarSearchBox;
+        _tbSearch.Checked = s.TaskbarSearchMode == 0;
         _tbLeft.Checked = s.TaskbarAlignLeft;
         _tbCombine.Checked = s.TaskbarCombineAlways;
         _tbAutohide.Checked = s.TaskbarAutoHide;
@@ -1713,7 +1713,8 @@ internal sealed class MainForm : Form
         DisableInsiderService = _insider.Checked,
         DisableStoreAutoUpdate = _storeUpd.Checked,
         DisableNewsInterests = _news.Checked,
-        TaskbarSearchMode = _tbSearch.Checked ? 2 : 1,
+        TaskbarSearchMode = _tbSearch.Checked ? 0 : 1,
+        TaskbarSearchBox = false,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
         SmallTaskbar = _taskbar.Checked,
@@ -1740,7 +1741,6 @@ internal sealed class MainForm : Form
         NoShortcutSuffix = _noSuffix.Checked,
         Win11ExplorerStyle = _win11Explorer.Checked,
         Win10ClassicContextMenu = _classicMenu.Checked,
-        TaskbarSearchBox = _tbSearch.Checked,
         TaskbarAlignLeft = _tbLeft.Checked,
         TaskbarCombineAlways = _tbCombine.Checked,
         TaskbarAutoHide = _tbAutohide.Checked,
@@ -1843,7 +1843,7 @@ internal sealed class MainForm : Form
         Sync(_noSuffix, s.NoShortcutSuffix);
         Sync(_win11Explorer, s.Win11ExplorerStyle);
         Sync(_classicMenu, s.Win10ClassicContextMenu);
-        Sync(_tbSearch, s.TaskbarSearchBox);
+        Sync(_tbSearch, s.TaskbarSearchMode == 0);
         Sync(_tbLeft, s.TaskbarAlignLeft);
         Sync(_tbCombine, s.TaskbarCombineAlways);
         Sync(_tbAutohide, s.TaskbarAutoHide);
@@ -1900,17 +1900,7 @@ internal sealed class MainForm : Form
     {
         if (!RunApply("正在写入系统…", "已写入本次改动。仅同步有变化的开关。"))
             return;
-
-        // 改名是独立操作，不强制打断「应用到系统」流程
-        var answer = MessageBox.Show(
-            this,
-            _status.Text + "\r\n\r\n是否现在修改计算机名 / 工作组？\r\n（也可稍后从菜单「工具 → 计算机名 / 工作组」打开）",
-            "应用到系统",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Information,
-            MessageBoxDefaultButton.Button2);
-        if (answer == DialogResult.Yes)
-            PromptComputerIdentity(optional: true);
+        // 改名请从「工具 → 计算机名 / 工作组」单独打开，不再每次追问
     }
 
     /// <summary>修改计算机名/工作组。optional=true 时提供明显的「跳过」。</summary>

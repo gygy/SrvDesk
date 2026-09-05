@@ -94,8 +94,24 @@ internal sealed class CommonSoftwareDialog : Form
 
         Load += (_, _) =>
         {
+            // 先快速画出列表，状态检测放到后台，避免卡在「正在打开」
+            if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
+            BuildList();
+            SetRowsPendingStatus();
+            _wingetHint.Text = "正在检测软件状态…";
             CommonSoftwareHelper.WarmUpInBackground();
-            RefreshAll();
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All);
+                    _ = CommonSoftwareHelper.IsWingetAvailable();
+                }
+                catch { /* ignore */ }
+
+                Ui(RefreshAll);
+            });
         };
         _categoryMenu.SelectedIndexChanged += (_, _) =>
         {
@@ -329,6 +345,12 @@ internal sealed class CommonSoftwareDialog : Form
         var w = Math.Max(680, _listHost.ClientSize.Width - 4);
         foreach (Control c in _listHost.Controls)
             c.Width = w;
+    }
+
+    private void SetRowsPendingStatus()
+    {
+        foreach (var row in _rows.Values)
+            row.SetPendingDetect();
     }
 
     private void RefreshAll()

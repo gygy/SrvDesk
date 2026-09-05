@@ -322,13 +322,16 @@ internal static class Optimizer
             DisableStickyKeys = Win11DesktopTweaks.IsDisableStickyKeysOn(),
             DisablePca = ServiceStartEquals("PcaSvc", 4),
             PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On(),
-            TaskbarSearchMode = Win11DesktopTweaks.IsTaskbarSearchBoxOn() ? 2 : 1,
+            TaskbarSearchMode = -1,
         };
         EasySettingsTweaks.ReadInto(state);
         CompetitorTweaks.ReadInto(state);
         var searchMode = EasySettingsTweaks.GetSearchboxMode();
         if (searchMode is 0 or 1 or 2)
             state.TaskbarSearchMode = searchMode;
+        else
+            state.TaskbarSearchMode = state.TaskbarSearchBox ? 2 : 1;
+        state.TaskbarSearchBox = state.TaskbarSearchMode == 2;
         return state;
     }
 

@@ -21,6 +21,9 @@ internal static class Win11DesktopTweaks
         SetClassicContextMenu(s.Win10ClassicContextMenu);
         SetDword(Hive.HkCu, ExplorerAdvanced, "SearchboxTaskbarMode",
             s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
+        // 部分系统读 Search 键；两处一并写入，确保能隐藏搜索栏
+        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode",
+            s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
         SetTaskbarAutoHide(s.TaskbarAutoHide);
