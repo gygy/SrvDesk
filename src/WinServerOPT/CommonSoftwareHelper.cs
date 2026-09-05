@@ -20,6 +20,17 @@ internal sealed class SoftwareInstallProgress
     public int Percent { get; set; }
 }
 
+/// <summary>常用软件可更新项。</summary>
+internal sealed class SoftwareUpdateInfo
+{
+    public CommonSoftwareItem Item { get; set; } = null!;
+    public string CurrentVersion { get; set; } = "";
+    public string AvailableVersion { get; set; } = "";
+
+    public string SummaryLine =>
+        $"{Item.Title}  {CurrentVersion} → {AvailableVersion}";
+}
+
 internal static class CommonSoftwareHelper
 {
     private static string? _wingetPath;
@@ -550,22 +561,125 @@ internal static class CommonSoftwareHelper
         ApplyLog.Write("已删除常用软件下载临时文件");
     }
 
-    public static string CheckUpdates(IReadOnlyList<CommonSoftwareItem> items)
-    {
-        if (!IsWingetAvailable())
-            return "未检测到 winget，无法批量检查更新。可在必备列表中安装 winget，或逐一点击「一键安装」。";
+    private static List<SoftwareUpdateInfo> _lastUpdates = [];
 
-        var output = RunCaptureWinget("upgrade --include-unknown");
-        var upgradable = items.Count(i =>
+    public static IReadOnlyList<SoftwareUpdateInfo> LastUpdateCheck => _lastUpdates;
+
+    public static SoftwareUpdateInfo? FindPendingUpdate(string itemId) =>
+        _lastUpdates.FirstOrDefault(u => u.Item.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>检查常用软件目录中可更新的项（含当前版本 / 新版本）。</summary>
+    public static List<SoftwareUpdateInfo> ListAvailableUpdates(
+        IReadOnlyList<CommonSoftwareItem> items,
+        Action<SoftwareInstallProgress>? onProgress = null)
+    {
+        _lastUpdates = [];
+        if (!IsWingetAvailable())
+            throw new InvalidOperationException("未检测到 winget，请先在必备列表中安装/修复 winget。");
+
+        EnsureWingetSpeedSettings();
+        Report(onProgress, "正在查询可更新软件…", 10);
+        var output = RunCaptureWinget(
+            "upgrade --include-unknown --disable-interactivity --accept-source-agreements");
+        if (output.IndexOf("No applicable update", StringComparison.OrdinalIgnoreCase) < 0 &&
+            output.IndexOf("没有适用的升级", StringComparison.Ordinal) < 0 &&
+            output.Trim().Length < 20)
         {
-            if (i.IsWingetBootstrap || string.IsNullOrWhiteSpace(i.WingetId)) return false;
-            var status = Query(i);
-            return status.Installed &&
-                output.IndexOf(i.WingetId, StringComparison.OrdinalIgnoreCase) >= 0;
-        });
-        return upgradable > 0
-            ? $"检测到 {upgradable} 款已安装软件可能有更新（详见 winget upgrade）。"
-            : "已检查：当前列表中的已安装软件未发现 winget 可用更新。";
+            // 部分环境 upgrade 列表为空时再试 list
+            Report(onProgress, "换用 list 再查一次…", 40);
+            output += "\r\n" + RunCaptureWinget(
+                "list --upgrade-available --disable-interactivity --accept-source-agreements");
+        }
+
+        Report(onProgress, "解析更新列表…", 70);
+        var result = ParseUpgradeList(output, items);
+        _lastUpdates = result;
+        Report(onProgress, result.Count > 0 ? $"发现 {result.Count} 款可更新" : "没有可用更新", 100);
+        ApplyLog.Write($"检查软件更新：目录内可更新 {result.Count} 款");
+        return result;
+    }
+
+    public static string Upgrade(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
+    {
+        if (item.IsWingetBootstrap)
+            return "winget 自身请使用「修复安装」。";
+        if (!IsWingetAvailable() || string.IsNullOrWhiteSpace(item.WingetId))
+            return "无法更新：本机无 winget 或该软件无包 ID。";
+
+        EnsureWingetSpeedSettings();
+        Report(onProgress, "正在更新 " + item.Title, 5);
+        var code = RunWinget(
+            $"upgrade -e --id {item.WingetId} --include-unknown --silent " +
+            "--accept-package-agreements --accept-source-agreements --disable-interactivity",
+            onProgress);
+        if (code == 0)
+        {
+            Report(onProgress, "更新完成", 100);
+            _lastUpdates.RemoveAll(u => u.Item.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase));
+            return "";
+        }
+
+        // 常见：已是最新 / 无可升级
+        if (code is -1978335189 or -1978335212 or -1978335135)
+        {
+            Report(onProgress, "已是最新", 100);
+            _lastUpdates.RemoveAll(u => u.Item.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase));
+            return "已是最新版本或不需要更新。";
+        }
+
+        return "更新未成功，退出码 " + code + "。可尝试「一键安装/修复安装」。";
+    }
+
+    private static List<SoftwareUpdateInfo> ParseUpgradeList(string output, IReadOnlyList<CommonSoftwareItem> items)
+    {
+        var catalog = items
+            .Where(i => !i.IsWingetBootstrap && !string.IsNullOrWhiteSpace(i.WingetId))
+            .ToList();
+        var found = new Dictionary<string, SoftwareUpdateInfo>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var raw in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = raw.Trim();
+            if (line.Length < 8) continue;
+            if (line.StartsWith("-", StringComparison.Ordinal) || line.StartsWith("─", StringComparison.Ordinal))
+                continue;
+            if (line.IndexOf("Version", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                line.IndexOf("Available", StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
+            if (line.IndexOf("版本", StringComparison.Ordinal) >= 0 &&
+                line.IndexOf("可用", StringComparison.Ordinal) >= 0)
+                continue;
+
+            foreach (var item in catalog)
+            {
+                var id = item.WingetId;
+                var idx = line.IndexOf(id, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) continue;
+
+                // Id 后应为：当前版本  可用版本  [源]
+                var after = line.Substring(idx + id.Length).Trim();
+                after = Regex.Replace(after, @"\s+", " ");
+                var parts = after.Split(' ');
+                if (parts.Length < 2) continue;
+
+                var current = parts[0].Trim();
+                var available = parts[1].Trim();
+                if (available.Equals("winget", StringComparison.OrdinalIgnoreCase) ||
+                    available.Equals("msstore", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (string.Equals(current, available, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                found[item.Id] = new SoftwareUpdateInfo
+                {
+                    Item = item,
+                    CurrentVersion = current,
+                    AvailableVersion = available,
+                };
+            }
+        }
+
+        return found.Values.OrderBy(u => u.Item.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
     private static CommonSoftwareStatus QueryWingetStatus()

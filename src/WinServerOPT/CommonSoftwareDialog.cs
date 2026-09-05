@@ -46,12 +46,7 @@ internal sealed class CommonSoftwareDialog : Form
             CommonSoftwareHelper.ClearDownloadCache();
             MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }, false)));
-        actions.Controls.Add(TrackAction(MkBtn("检查软件更新", () =>
-        {
-            var msg = CommonSoftwareHelper.CheckUpdates(CommonSoftwareCatalog.All);
-            MessageBox.Show(this, msg, "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            RefreshAll();
-        }, false)));
+        actions.Controls.Add(TrackAction(MkBtn("检查软件更新", CheckSoftwareUpdates, false)));
         actions.Controls.Add(TrackAction(MkBtn("安装系统必备", InstallEssentials, false)));
         actions.Controls.Add(TrackAction(MkBtn("安装所选", InstallSelected, true)));
         actions.Controls.Add(TrackAction(MkBtn("全选当前", () => SetAllSelected(true), false)));
@@ -503,6 +498,21 @@ internal sealed class CommonSoftwareDialog : Form
             return;
         }
 
+        var pending = CommonSoftwareHelper.FindPendingUpdate(item.Id);
+        if (pending is not null)
+        {
+            if (_askBeforeInstall.Checked)
+            {
+                var answer = MessageBox.Show(this,
+                    $"「{item.Title}」有可用更新：\r\n{pending.CurrentVersion} → {pending.AvailableVersion}\r\n\r\n是否更新？",
+                    "软件更新", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (answer != DialogResult.Yes) return;
+            }
+
+            RunBatchUpgrade([pending]);
+            return;
+        }
+
         var status = CommonSoftwareHelper.Query(item);
         var action = status.Installed ? "修复安装" : "一键安装";
         if (_askBeforeInstall.Checked)
@@ -608,6 +618,105 @@ internal sealed class CommonSoftwareDialog : Form
         }
 
         RunBatchInstall(ordered, "安装所选");
+    }
+
+    private void CheckSoftwareUpdates()
+    {
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        if (!CommonSoftwareHelper.IsWingetAvailable())
+        {
+            MessageBox.Show(this,
+                "未检测到 winget，无法检查更新。\r\n请先在必备列表中安装/修复 winget。",
+                "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        SetInstallBusy(true, "正在检查软件更新…", percent: 5);
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            List<SoftwareUpdateInfo> updates = [];
+            Exception? error = null;
+            try
+            {
+                updates = CommonSoftwareHelper.ListAvailableUpdates(
+                    CommonSoftwareCatalog.All,
+                    MakeProgressHandler("检查更新", "winget"));
+            }
+            catch (Exception ex) { error = ex; }
+
+            Ui(() =>
+            {
+                SetInstallBusy(false);
+                RefreshAll();
+                if (error is not null)
+                {
+                    MessageBox.Show(this, error.Message, "检查更新失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (updates.Count == 0)
+                {
+                    MessageBox.Show(this,
+                        "已检查：常用软件列表中的已安装软件暂无可用更新。",
+                        "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using var dlg = new SoftwareUpdateDialog(updates);
+                if (dlg.ShowDialog(this) != DialogResult.OK || dlg.SelectedUpdates.Count == 0)
+                    return;
+
+                RunBatchUpgrade(dlg.SelectedUpdates);
+            });
+        });
+    }
+
+    private void RunBatchUpgrade(List<SoftwareUpdateInfo> updates)
+    {
+        if (_installBusy) return;
+        SetInstallBusy(true, $"准备更新（共 {updates.Count} 项）…", percent: 0);
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            var notes = new List<string>();
+            for (var i = 0; i < updates.Count; i++)
+            {
+                var u = updates[i];
+                var item = u.Item;
+                var progress = MakeProgressHandler(
+                    $"{item.Title} {u.CurrentVersion}→{u.AvailableVersion}",
+                    item.Id, i, updates.Count);
+                Ui(() => SetInstallBusy(true,
+                    $"正在更新 {item.Title}（{i + 1}/{updates.Count}）…",
+                    itemId: item.Id,
+                    percent: (int)((i / (double)updates.Count) * 100)));
+                try
+                {
+                    var msg = CommonSoftwareHelper.Upgrade(item, progress);
+                    notes.Add(item.Title + "：" +
+                        (string.IsNullOrWhiteSpace(msg)
+                            ? $"完成 {u.CurrentVersion} → {u.AvailableVersion}"
+                            : msg));
+                }
+                catch (Exception ex)
+                {
+                    notes.Add(item.Title + "：失败 — " + ex.Message);
+                }
+            }
+
+            Ui(() =>
+            {
+                SetInstallBusy(true, $"全部完成（{updates.Count}/{updates.Count}）", percent: 100);
+                SetInstallBusy(false);
+                RefreshAll();
+                MessageBox.Show(this, string.Join("\r\n", notes), "批量更新",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+        });
     }
 
     private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
@@ -792,11 +901,22 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 if (!_item.IsWingetBootstrap)
                     _install.Text = "修复安装";
-                _status.Text = string.IsNullOrWhiteSpace(s.Version)
-                    ? "已安装"
-                    : "已安装 · " + s.Version;
-                _status.ForeColor = AppTheme.PrimaryDeep;
-                _status.BackColor = AppTheme.PrimaryPale;
+                var pending = CommonSoftwareHelper.FindPendingUpdate(_item.Id);
+                if (pending is not null)
+                {
+                    _status.Text = $"可更新 {pending.CurrentVersion} → {pending.AvailableVersion}";
+                    _status.ForeColor = AppTheme.ScopeServer;
+                    _status.BackColor = AppTheme.PrimaryPale;
+                    _install.Text = "立即更新";
+                }
+                else
+                {
+                    _status.Text = string.IsNullOrWhiteSpace(s.Version)
+                        ? "已安装"
+                        : "已安装 · " + s.Version;
+                    _status.ForeColor = AppTheme.PrimaryDeep;
+                    _status.BackColor = AppTheme.PrimaryPale;
+                }
             }
             else if (_item.IsWingetBootstrap && s.Version.Length > 0)
             {
