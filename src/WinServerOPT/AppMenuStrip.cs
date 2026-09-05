@@ -5,7 +5,6 @@ internal sealed class AppMenuStrip : MenuStrip
 {
     public ToolStripMenuItem FileImport { get; }
     public ToolStripMenuItem FileExport { get; }
-    public ToolStripMenuItem PresetLoad { get; }
     public ToolStripMenuItem ToolAutologon { get; }
     public ToolStripMenuItem ToolIdentity { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
@@ -45,9 +44,6 @@ internal sealed class AppMenuStrip : MenuStrip
         file.DropDownItems.AddRange([FileImport, FileExport]);
 
         var preset = new ToolStripMenuItem("预设(&P)");
-        PresetLoad = new ToolStripMenuItem("载入当前所选预设", null, null, Keys.Control | Keys.L);
-        preset.DropDownItems.Add(PresetLoad);
-        preset.DropDownItems.Add(new ToolStripSeparator());
         foreach (var p in presets)
         {
             var item = new ToolStripMenuItem(p.Title) { Tag = p };

@@ -173,7 +173,7 @@ internal sealed class MainForm : Form
     private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
     private readonly TextBox _searchBox = new();
     private readonly CheckBox _hideIncompatible = new();
-    private readonly ComboBox _presetCombo = new();
+    private readonly ComboBox _categoryFilter = new();
     private readonly FlowLayoutPanel _commandFlow = new();
     private readonly Label _commandHint = new();
     private SettingRow[] _activeRows = [];
@@ -183,6 +183,15 @@ internal sealed class MainForm : Form
     private readonly Panel _bottomPanel = new();
     private FlowLayoutPanel? _bottomActions;
     private string _defaultStatusText = "";
+
+    private enum RowCategoryFilter
+    {
+        All,
+        ServerRecommended,
+        OptRecommended,
+        Optimized,
+        NotOptimized,
+    }
 
     private Form? _embeddedPage;
     private readonly Dictionary<string, Form> _pageCache = new(StringComparer.Ordinal);
@@ -313,6 +322,16 @@ internal sealed class MainForm : Form
             _shutdownLogon, _shutdownReason, _keyboardFilter,
         ]));
 
+        foreach (var row in AllRows)
+        {
+            row.OnCheckedChanged = _ =>
+            {
+                var cat = CurrentCategoryFilter();
+                if (cat is RowCategoryFilter.Optimized or RowCategoryFilter.NotOptimized)
+                    ApplySearchFilter();
+            };
+        }
+
         WireAppMenu();
         var header = BuildHeader();
         var sidebar = BuildSidebar();
@@ -349,7 +368,6 @@ internal sealed class MainForm : Form
     {
         _appMenu.FileImport.Click += (_, _) => ImportProfile();
         _appMenu.FileExport.Click += (_, _) => ExportProfile();
-        _appMenu.PresetLoad.Click += (_, _) => ApplySelectedPreset();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
         _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
@@ -413,15 +431,17 @@ internal sealed class MainForm : Form
 
     private void LoadPresetFromMenu(OptPresets.PresetInfo preset)
     {
-        for (var i = 0; i < _presetCombo.Items.Count; i++)
-        {
-            if (_presetCombo.Items[i] is OptPresets.PresetInfo p && p.Id == preset.Id)
-            {
-                _presetCombo.SelectedIndex = i;
-                break;
-            }
-        }
-        ApplySelectedPreset();
+        var answer = MessageBox.Show(
+            $"将载入预设「{preset.Title}」到界面开关（尚未写入系统）。\n\n{preset.Description}\n\n是否继续？",
+            "载入预设",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+        if (answer != DialogResult.Yes) return;
+
+        Bind(preset.Build());
+        _status.Text = $"已载入预设「{preset.Title}」，点击「应用推荐」写入系统。";
+        ApplyLog.Write("载入预设 " + preset.Title);
+        ApplySearchFilter();
     }
 
     private void OpenLogFile(string path, string title)
@@ -619,20 +639,23 @@ internal sealed class MainForm : Form
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
         _commandFlow.Controls.Add(_hideIncompatible);
 
-        _commandFlow.Controls.Add(BarLabel("预设"));
-        _presetCombo.Width = 220;
-        _presetCombo.Height = 26;
-        _presetCombo.Margin = new Padding(0, 2, 8, 0);
-        _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-        _presetCombo.IntegralHeight = false;
-        foreach (var p in OptPresets.All) _presetCombo.Items.Add(p);
-        if (_presetCombo.Items.Count > 0) _presetCombo.SelectedIndex = 0;
-        AdjustPresetComboDropDownWidth();
-        _commandFlow.Controls.Add(_presetCombo);
-
-        var loadPreset = CompactButton("载入预设", ApplySelectedPreset);
-        loadPreset.Margin = new Padding(0, 1, 0, 0);
-        _commandFlow.Controls.Add(loadPreset);
+        _commandFlow.Controls.Add(BarLabel("分类"));
+        _categoryFilter.Width = 130;
+        _categoryFilter.Height = 26;
+        _categoryFilter.Margin = new Padding(0, 2, 0, 0);
+        _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _categoryFilter.Items.AddRange([
+            "全部",
+            "Server 推荐",
+            "优化推荐",
+            "已优化",
+            "未优化",
+        ]);
+        _categoryFilter.SelectedIndex = 0;
+        _categoryFilter.SelectedIndexChanged += (_, _) => ApplySearchFilter();
+        _toolTip.SetToolTip(_categoryFilter,
+            "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
+        _commandFlow.Controls.Add(_categoryFilter);
 
         _commandHint.Dock = DockStyle.Fill;
         _commandHint.Visible = false;
@@ -653,53 +676,15 @@ internal sealed class MainForm : Form
         BackColor = Color.Transparent,
     };
 
-    private static Button CompactButton(string text, Action click)
-    {
-        var b = new Button
+    private RowCategoryFilter CurrentCategoryFilter() =>
+        _categoryFilter.SelectedIndex switch
         {
-            Text = text,
-            AutoSize = true,
-            Height = 28,
-            Padding = new Padding(10, 0, 10, 0),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = AppTheme.SurfaceCard,
-            ForeColor = AppTheme.PrimaryDeep,
-            Cursor = Cursors.Hand,
-            Margin = new Padding(0, 1, 0, 0),
+            1 => RowCategoryFilter.ServerRecommended,
+            2 => RowCategoryFilter.OptRecommended,
+            3 => RowCategoryFilter.Optimized,
+            4 => RowCategoryFilter.NotOptimized,
+            _ => RowCategoryFilter.All,
         };
-        b.FlatAppearance.BorderColor = AppTheme.Border;
-        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-        b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
-        b.Click += (_, _) => click();
-        return b;
-    }
-
-    private void AdjustPresetComboDropDownWidth()
-    {
-        var max = _presetCombo.Width;
-        foreach (OptPresets.PresetInfo preset in _presetCombo.Items)
-        {
-            var w = TextRenderer.MeasureText(preset.Title, _presetCombo.Font).Width + 28;
-            if (w > max) max = w;
-        }
-
-        _presetCombo.DropDownWidth = max;
-    }
-
-    private void ApplySelectedPreset()
-    {
-        if (_presetCombo.SelectedItem is not OptPresets.PresetInfo preset) return;
-        var answer = MessageBox.Show(
-            $"将载入预设「{preset.Title}」到界面开关（尚未写入系统）。\n\n{preset.Description}\n\n是否继续？",
-            "载入预设",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Question);
-        if (answer != DialogResult.Yes) return;
-
-        Bind(preset.Build());
-        _status.Text = $"已载入预设「{preset.Title}」，点击「应用推荐」写入系统。";
-        ApplyLog.Write("载入预设 " + preset.Title);
-    }
 
     private void ExportProfile()
     {
@@ -858,10 +843,12 @@ internal sealed class MainForm : Form
         const int rowH = 44;
         var query = _searchBox.Text;
         var hideDe = _hideIncompatible.Checked;
+        var category = CurrentCategoryFilter();
         var visible = 0;
         foreach (var row in _activeRows)
         {
-            var show = row.MatchesFilter(query, _systemFacts, hideDe);
+            var show = row.MatchesFilter(query, _systemFacts, hideDe)
+                && row.MatchesCategory(category);
             row.SetVisible(show);
             if (!show) continue;
             row.SetLocationY(visible * rowH);
@@ -870,8 +857,8 @@ internal sealed class MainForm : Form
         _activeBody.Height = Math.Max(visible, 1) * rowH;
         _activeSection.Height = headerH + _activeBody.Height;
         RelayoutActiveWrap();
-        if (visible == 0 && !string.IsNullOrWhiteSpace(query))
-            _status.Text = "无匹配项，请调整搜索关键词。";
+        if (visible == 0 && (!string.IsNullOrWhiteSpace(query) || category != RowCategoryFilter.All))
+            _status.Text = "无匹配项，请调整搜索或分类筛选。";
         else if (_status.Text.StartsWith("无匹配项", StringComparison.Ordinal))
             _status.Text = _defaultStatusText;
     }
@@ -1612,6 +1599,7 @@ internal sealed class MainForm : Form
             foreach (var row in AllRows)
                 row.SyncCurrentValueFromState();
         }
+        ApplySearchFilter();
     }
 
     private Optimizer.State CaptureState() => new()
@@ -2001,6 +1989,7 @@ internal sealed class MainForm : Form
 
         public string ItemText { get; }
         public SettingHelpInfo Help { get; }
+        public Action<SettingRow>? OnCheckedChanged { get; set; }
 
         public SettingRow(string item, string systemDefault, SettingHelpInfo help)
         {
@@ -2037,6 +2026,7 @@ internal sealed class MainForm : Form
                 Cursor = Cursors.Hand,
             };
             _toggle = new ToggleSwitch();
+            _toggle.CheckedChanged += (_, _) => OnCheckedChanged?.Invoke(this);
             _system = new Label
             {
                 Text = systemDefault,
@@ -2098,6 +2088,16 @@ internal sealed class MainForm : Form
                 || _system.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _current.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
+
+        public bool MatchesCategory(RowCategoryFilter category) =>
+            category switch
+            {
+                RowCategoryFilter.ServerRecommended => Help.Scope.ServerOnly,
+                RowCategoryFilter.OptRecommended => !Help.Scope.ServerOnly,
+                RowCategoryFilter.Optimized => Checked,
+                RowCategoryFilter.NotOptimized => !Checked,
+                _ => true,
+            };
 
         public void SetVisible(bool visible)
         {
