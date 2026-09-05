@@ -33,9 +33,13 @@ internal static class CommonSoftwareCatalog
             ["Everything"], "https://www.voidtools.com/downloads/", essential: true),
 
         Item("geek", "Geek Uninstaller（深度卸载）", "工具", "GeekUninstaller.GeekUninstaller",
-            ["Geek Uninstaller"], "https://geekuninstaller.com/download", essential: false),
+            ["Geek Uninstaller", "Geek"], "https://geekuninstaller.com/download", essential: false),
+        Item("pdfgear", "PDFgear（免费 PDF 编辑）", "工具", "PDFgear.PDFgear",
+            ["PDFgear", "PDF gear"], "https://www.pdfgear.com/download.htm", essential: false),
         Item("stirling-pdf", "Stirling-PDF（本地 PDF 工具箱）", "工具", "StirlingTools.StirlingPDF",
             ["Stirling-PDF", "Stirling PDF"], "https://github.com/Stirling-Tools/Stirling-PDF/releases", essential: false),
+        Item("zotero", "Zotero（文献管理）", "工具", "DigitalScholar.Zotero",
+            ["Zotero"], "https://www.zotero.org/download/", essential: false),
         Item("hikconnect", "海康互联", "工具", "",
             ["海康互联"], "https://www.hikiot.com/download", essential: false),
         Item("pixpin", "PixPin（截图贴图）", "工具", "PixPin.PixPin",
@@ -61,6 +65,8 @@ internal static class CommonSoftwareCatalog
             ["百度网盘"], "https://pan.baidu.com/download", essential: false),
         Item("aliyundrive", "阿里云盘", "网盘", "Alibaba.aDrive",
             ["阿里云盘"], "https://www.aliyundrive.com/download", essential: false),
+        Item("tianyiyun", "天翼云盘", "网盘", "",
+            ["天翼云盘", "Cloud189", "eCloud"], "https://cloud.189.cn/", essential: false),
 
         Item("git", "Git For Windows", "开发", "Git.Git",
             ["Git"], "https://git-scm.com/download/win", essential: false),

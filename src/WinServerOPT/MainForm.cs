@@ -749,25 +749,7 @@ internal sealed class MainForm : Form
         _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用推荐后下次重启生效）";
     }
 
-    private void ConfigureComputerIdentity()
-    {
-        try
-        {
-            var info = ComputerIdentityHelper.Read();
-            using var dlg = new ComputerIdentityDialog(info);
-            if (dlg.ShowDialog(this) != DialogResult.OK) return;
-
-            var msg = dlg.RestartScheduled
-                ? "计算机名/工作组已修改，系统将在 60 秒后重启（shutdown /a 可取消）。"
-                : "计算机名/工作组已修改，请尽快手动重启以完全生效。";
-            _status.Text = msg;
-            MessageBox.Show(msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message, "读取失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
+    private void ConfigureComputerIdentity() => PromptComputerIdentity();
 
     private void ShowCommonSoftware()
     {
@@ -1874,8 +1856,32 @@ internal sealed class MainForm : Form
         RunApply($"正在恢复「{title}」…", $"「{title}」已恢复为出厂默认。");
     }
 
-    private void ApplyRecommended() =>
+    private void ApplyRecommended()
+    {
         RunApply("正在应用推荐设置…", "已应用。开启项为优化建议值，关闭项保持系统默认值。");
+        PromptComputerIdentity();
+    }
+
+    /// <summary>应用推荐后引导修改计算机名/工作组。</summary>
+    private void PromptComputerIdentity()
+    {
+        try
+        {
+            var info = ComputerIdentityHelper.Read();
+            using var dlg = new ComputerIdentityDialog(info);
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            var msg = dlg.RestartScheduled
+                ? "计算机名/工作组已修改，系统将在 60 秒后重启（shutdown /a 可取消）。"
+                : "计算机名/工作组已修改，请尽快手动重启以完全生效。";
+            _status.Text = msg;
+            MessageBox.Show(msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "计算机名", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
 
     private void RunApply(string working, string success)
     {
