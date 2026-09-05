@@ -215,7 +215,7 @@ internal sealed class MainForm : Form
         "桌面外观",
         "远程与网络",
         "隐私与体验",
-        "服务器",
+        "Server专属",
         "账户策略",
     ];
 
@@ -315,7 +315,7 @@ internal sealed class MainForm : Form
             // 应用与网络
             _gameDvr, _officeTel, _teredo,
         ]));
-        _groups.Add(("服务器", [
+        _groups.Add(("Server专属", [
             _svrMgr, _wacPrompt, _azure,
             _mediaFeatures, _bloatFeatures,
             _installer, _wia,
@@ -558,6 +558,13 @@ internal sealed class MainForm : Form
         ApplyLog.Write("启动 " + _systemFacts.Summary);
         UseWaitCursor = false;
         Cursor = Cursors.Default;
+        // 后台预热常用软件状态，点击打开时尽量秒开
+        CommonSoftwareHelper.WarmUpInBackground();
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try { CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All); }
+            catch { /* ignore */ }
+        });
         // 启动先快速读取；完整扫描放后台、不改鼠标样式，避免一直转圈
         LoadState(fullScan: false);
         BeginInvoke(new Action(StartWarmupInstantPages));
@@ -752,6 +759,7 @@ internal sealed class MainForm : Form
 
     private void ShowCommonSoftware()
     {
+        CommonSoftwareHelper.WarmUpInBackground();
         if (_commonSoftwareDlg is { IsDisposed: false })
         {
             if (_commonSoftwareDlg.WindowState == FormWindowState.Minimized)

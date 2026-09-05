@@ -10,6 +10,15 @@ internal sealed class CommonSoftwareItem
     public string DownloadUrl { get; set; } = "";
     public bool Essential { get; set; }
 
+    /// <summary>官方离线安装包直链（优先于 winget/商店，适合 Server）。</summary>
+    public string OfflineInstallerUrl { get; set; } = "";
+
+    /// <summary>离线安装参数，如 /quiet /norestart。</summary>
+    public string OfflineInstallArgs { get; set; } = "";
+
+    /// <summary>为 true 时先下载并运行离线包，失败再尝试 winget。</summary>
+    public bool PreferOfflineInstall { get; set; }
+
     public bool IsWingetBootstrap => Id.Equals("winget", StringComparison.OrdinalIgnoreCase);
 }
 
@@ -67,6 +76,12 @@ internal static class CommonSoftwareCatalog
             ["阿里云盘"], "https://www.aliyundrive.com/download", essential: false),
         Item("tianyiyun", "天翼云盘", "网盘", "",
             ["天翼云盘", "Cloud189", "eCloud"], "https://cloud.189.cn/", essential: false),
+        // Server 无微软商店：优先 Apple CDN 离线安装包（遗留桌面版 7.21）；勿走 msstore
+        Item("icloud", "iCloud for Windows（离线安装）", "网盘", "Apple.iCloud",
+            ["iCloud"], "https://support.apple.com/zh-cn/103232", essential: false,
+            offlineInstallerUrl: "https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe",
+            offlineInstallArgs: "/quiet /norestart",
+            preferOfflineInstall: true),
 
         Item("git", "Git For Windows", "开发", "Git.Git",
             ["Git"], "https://git-scm.com/download/win", essential: false),

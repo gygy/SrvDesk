@@ -90,7 +90,7 @@ internal sealed class CommonSoftwareDialog : Form
             "官方源下载与安装 · 优先 winget",
             body,
             "安装前请确认来源可信；Server 环境 winget 需先安装应用安装程序。",
-            RefreshAll);
+            () => ReloadStatusesAsync());
 
         Load += (_, _) =>
         {
@@ -100,18 +100,7 @@ internal sealed class CommonSoftwareDialog : Form
             SetRowsPendingStatus();
             _wingetHint.Text = "正在检测软件状态…";
             CommonSoftwareHelper.WarmUpInBackground();
-
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All);
-                    _ = CommonSoftwareHelper.IsWingetAvailable();
-                }
-                catch { /* ignore */ }
-
-                Ui(RefreshAll);
-            });
+            ReloadStatusesAsync(forceRefresh: false);
         };
         _categoryMenu.SelectedIndexChanged += (_, _) =>
         {
@@ -353,6 +342,27 @@ internal sealed class CommonSoftwareDialog : Form
             row.SetPendingDetect();
     }
 
+    /// <param name="forceRefresh">安装/卸载后强制重扫；首次打开可复用已有缓存。</param>
+    private void ReloadStatusesAsync(bool forceRefresh = true)
+    {
+        if (_rows.Count == 0) BuildList();
+        SetRowsPendingStatus();
+        _wingetHint.Text = "正在检测软件状态…";
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                if (forceRefresh)
+                    CommonSoftwareHelper.InvalidateStatusCache();
+                CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All);
+                _ = CommonSoftwareHelper.IsWingetAvailable();
+            }
+            catch { /* ignore */ }
+
+            Ui(RefreshAll);
+        });
+    }
+
     private void RefreshAll()
     {
         // 不每次重置探测：重复 Probe winget 很慢；安装/修复后再 Reset
@@ -493,7 +503,7 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 CommonSoftwareHelper.ResetWingetDiscovery();
                 SetInstallBusy(false);
-                RefreshAll();
+                ReloadStatusesAsync();
                 if (error is not null)
                     MessageBox.Show(this, error.Message, "安装 winget 失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else
@@ -556,7 +566,7 @@ internal sealed class CommonSoftwareDialog : Form
             Ui(() =>
             {
                 SetInstallBusy(false);
-                RefreshAll();
+                ReloadStatusesAsync();
                 if (error is not null)
                     MessageBox.Show(this, error.Message, item.Title + " 安装失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else if (!string.IsNullOrWhiteSpace(msg))
@@ -596,7 +606,7 @@ internal sealed class CommonSoftwareDialog : Form
             Ui(() =>
             {
                 SetInstallBusy(false);
-                RefreshAll();
+                ReloadStatusesAsync();
                 if (error is not null)
                     MessageBox.Show(this, error.Message, "卸载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else if (msg.Length > 0)
@@ -734,7 +744,7 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 SetInstallBusy(true, $"全部完成（{updates.Count}/{updates.Count}）", percent: 100);
                 SetInstallBusy(false);
-                RefreshAll();
+                ReloadStatusesAsync();
                 MessageBox.Show(this, string.Join("\r\n", notes), "批量更新",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
@@ -774,7 +784,7 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 SetInstallBusy(true, $"全部完成（{items.Count}/{items.Count}）", percent: 100);
                 SetInstallBusy(false);
-                RefreshAll();
+                ReloadStatusesAsync();
                 MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
         });
@@ -899,7 +909,18 @@ internal sealed class CommonSoftwareDialog : Form
                 e.Graphics.DrawLine(pen, 0, Height - 1, Width, Height - 1);
             };
 
-            RefreshStatus();
+            SetPendingDetect();
+        }
+
+        public void SetPendingDetect()
+        {
+            _busy = false;
+            _install.Enabled = false;
+            _uninstall.Enabled = false;
+            _status.Text = "检测中…";
+            _status.ForeColor = AppTheme.TextMute;
+            _status.BackColor = AppTheme.Surface;
+            _statusTip.SetToolTip(_status, "正在读取安装状态…");
         }
 
         public void RefreshStatus()
