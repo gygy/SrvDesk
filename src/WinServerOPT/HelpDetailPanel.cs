@@ -69,9 +69,9 @@ internal sealed class HelpDetailPanel : Panel
         _summary.Text = "本页开关修改后立即写入系统，无需点击底部「应用到系统」。";
         BuildSections([
             ("与分组页的关系", "同一设置若在「性能及安全」等分组中也有，本页用于逐项微调；分组页适合配合预设批量应用。"),
-            ("同步状态", "在其他地方修改系统后，可点本页底部「刷新」读取当前值。"),
+            ("同步状态", "在其他地方修改系统后，可点本页底部「刷新」，或菜单「工具 → 刷新当前状态」。"),
         ]);
-        _footer.Text = "hosts、事件查看器等系统工具请从顶部「工具」菜单打开";
+        _footer.Text = "常用软件、桌面维护等请从顶部「工具」菜单打开";
     }
 
     public void ShowPlaceholder(string? groupTitle = null)

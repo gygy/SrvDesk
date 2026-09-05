@@ -105,25 +105,13 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 80,
+            Height = 48,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
+            WrapContents = false,
             Padding = new Padding(0, 8, 0, 0),
         };
-        var selectUp = ThemedSettingsChrome.CreateButton("仅勾选已连接", false);
-        selectUp.Size = new Size(120, 34);
-        selectUp.Click += (_, _) => SelectConnectedOnly();
-        var selectAll = ThemedSettingsChrome.CreateButton("全选", false);
-        selectAll.Size = new Size(72, 34);
-        selectAll.Margin = new Padding(8, 0, 0, 0);
-        selectAll.Click += (_, _) => SetAllChecked(true);
-        var clear = ThemedSettingsChrome.CreateButton("全不选", false);
-        clear.Size = new Size(80, 34);
-        clear.Margin = new Padding(8, 0, 0, 0);
-        clear.Click += (_, _) => SetAllChecked(false);
         var apply = ThemedSettingsChrome.CreateButton("应用到勾选网卡", true);
         apply.Size = new Size(140, 34);
-        apply.Margin = new Padding(16, 0, 0, 0);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
         flush.Size = new Size(110, 34);
@@ -133,7 +121,15 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             HostsFileHelper.FlushDns();
             MessageBox.Show(this, "已刷新 DNS 缓存。", "DNS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
-        actions.Controls.AddRange([selectUp, selectAll, clear, apply, flush]);
+        var more = ThemedSettingsChrome.CreateButton("选择 ▾", false);
+        more.Size = new Size(80, 34);
+        more.Margin = new Padding(8, 0, 0, 0);
+        var selectMenu = new ContextMenuStrip();
+        selectMenu.Items.Add("仅勾选已连接", null, (_, _) => SelectConnectedOnly());
+        selectMenu.Items.Add("全选", null, (_, _) => SetAllChecked(true));
+        selectMenu.Items.Add("全不选", null, (_, _) => SetAllChecked(false));
+        more.Click += (_, _) => selectMenu.Show(more, new Point(0, more.Height));
+        actions.Controls.AddRange([apply, flush, more]);
 
         card.Controls.Add(_adapters);
         card.Controls.Add(actions);

@@ -149,12 +149,18 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             Margin = new Padding(0, 4, 0, 0),
             BackColor = Color.Transparent,
         };
-        row.Controls.Add(ActionBtn("刷新图标缓存", () => DesktopQuickActions.RefreshIconCache(this)));
+        // 属性页改动后最常用：重启资源管理器；其它入口在「工具 → 桌面维护」
         row.Controls.Add(ActionBtn("重启资源管理器", DesktopQuickActions.RestartExplorer, accent: true));
-        row.Controls.Add(ActionBtn("清空回收站", () => DesktopQuickActions.EmptyRecycleBin(this)));
-        row.Controls.Add(ActionBtn("性能选项...", () => DesktopQuickActions.OpenPerformanceOptions(this)));
-        row.Controls.Add(ActionBtn("桌面图标...", () => DesktopQuickActions.OpenDesktopIconSettings(this)));
+        row.Controls.Add(ActionBtn("刷新图标缓存", () => DesktopQuickActions.RefreshIconCache(this)));
         host.Controls.Add(row);
+        var tip = new Label
+        {
+            Text = "清空回收站、性能选项、桌面图标等：菜单「工具 → 桌面维护」。",
+            AutoSize = true,
+            ForeColor = AppTheme.TextMute,
+            Margin = new Padding(0, 6, 0, 0),
+        };
+        host.Controls.Add(tip);
         return card;
     }
 

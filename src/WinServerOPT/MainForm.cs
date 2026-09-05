@@ -905,9 +905,24 @@ internal sealed class MainForm : Form
     private void RelayoutActiveWrap()
     {
         if (_activeWrap is null || _activeSection is null) return;
-        _activeWrap.Width = ContentWidth();
+        var w = ContentWidth();
+        _activeWrap.Width = w;
         _activeWrap.Height = Math.Max(_activeSection.Bottom, 1);
-        _activeSection.Width = _activeWrap.Width;
+        _activeSection.Width = w;
+        if (_activeBody is not null)
+            _activeBody.Width = w;
+        foreach (var row in _activeRows)
+            row.ApplyLayoutWidth(w);
+        foreach (Control c in _activeWrap.Controls)
+        {
+            if (c.Tag as string != "table-header") continue;
+            c.Width = w;
+            foreach (Control h in c.Controls)
+            {
+                if (h.Tag as string == "note-header")
+                    h.Width = SettingListLayout.NoteWidthFor(w);
+            }
+        }
     }
 
     private Panel BuildHeader()
@@ -1195,7 +1210,7 @@ internal sealed class MainForm : Form
     }
 
     private int ContentWidth() =>
-        Math.Max(800, _contentHost.ClientSize.Width - _contentHost.Padding.Horizontal);
+        Math.Max(SettingListLayout.NoteX + 160, _contentHost.ClientSize.Width - _contentHost.Padding.Horizontal);
 
     private void LayoutContent()
     {
@@ -1230,7 +1245,9 @@ internal sealed class MainForm : Form
         header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteW));
+        var noteHeader = MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
+        noteHeader.Tag = "note-header";
+        header.Controls.Add(noteHeader);
         return header;
     }
 
@@ -1335,6 +1352,8 @@ internal sealed class MainForm : Form
             body.Width = section.Width;
             titleLabel.Width = section.Width - 120;
             restoreGroup.Location = new Point(section.Width - 108, 8);
+            foreach (var row in rows)
+                row.ApplyLayoutWidth(section.Width);
         };
         return section;
     }
@@ -1351,7 +1370,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开=优化建议值。即时页改动立即生效；分组页改完后点「应用到系统」。"
+            ? "开=优化建议值。即时页立即生效；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 
@@ -1989,8 +2008,8 @@ internal sealed class MainForm : Form
             UseWaitCursor = false;
             Cursor = Cursors.Default;
             Application.UseWaitCursor = false;
-            _apply.Enabled = true;
-            _restore.Enabled = true;
+            _apply.Enabled = _apply.Visible;
+            _restore.Enabled = _restore.Visible;
         }
 
         return ok;
@@ -2186,6 +2205,18 @@ internal sealed class MainForm : Form
             if (_wrap is not null) _wrap.Top = y;
         }
 
+        /// <summary>窗口变宽/变窄时同步行宽与说明列，避免说明被父级裁切。</summary>
+        public void ApplyLayoutWidth(int width)
+        {
+            if (_wrap is null) return;
+            width = Math.Max(SettingListLayout.NoteX + 80, width);
+            if (_wrap.Width != width)
+                _wrap.Width = width;
+            var noteW = SettingListLayout.NoteWidthFor(width);
+            if (_note.Width != noteW || _note.Left != SettingListLayout.NoteX)
+                _note.SetBounds(SettingListLayout.NoteX, 0, noteW, _wrap.Height);
+        }
+
         public void SetSelected(bool selected)
         {
             if (_wrap is null) return;
@@ -2234,16 +2265,18 @@ internal sealed class MainForm : Form
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
-            var noteW = Math.Max(SettingListLayout.NoteW, width - noteX - 8);
+            // 说明列宽度不得超过行宽，否则父级裁切且 AutoEllipsis 不生效
+            var noteW = SettingListLayout.NoteWidthFor(width);
             _note.SetBounds(noteX, 0, noteW, h);
+            _note.Text = Help.ListNote;
 
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
-            toolTip.SetToolTip(_note, Help.ListNote +
-                (Help.UiPlace.Length > 0 ? "\r\n对应：" + Help.UiPlace : "") +
-                (Help.WhenHint.Length > 0 ? "\r\n建议：" + Help.WhenHint : ""));
+            toolTip.SetToolTip(_note,
+                (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
+                (Help.UiPlace.Length > 0 ? "对应：" + Help.UiPlace : Help.ListNote));
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
             toolTip.SetToolTip(_system, "系统默认值（出厂）");
             toolTip.SetToolTip(_current, "系统当前值（读取自本机）");

@@ -31,26 +31,49 @@ internal sealed class CommonSoftwareDialog : Form
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(0, 0, 0, 4) };
 
+        var menu = new MenuStrip
+        {
+            BackColor = AppTheme.SurfaceCard,
+            ForeColor = AppTheme.TextMain,
+            Padding = new Padding(4, 2, 0, 2),
+        };
+        var op = new ToolStripMenuItem("操作(&A)");
+        var mInstallSelected = new ToolStripMenuItem("安装所选");
+        mInstallSelected.Click += (_, _) => InstallSelected();
+        var mEssentials = new ToolStripMenuItem("安装系统必备");
+        mEssentials.Click += (_, _) => InstallEssentials();
+        var mUpdates = new ToolStripMenuItem("检查软件更新");
+        mUpdates.Click += (_, _) => CheckSoftwareUpdates();
+        var mClearCache = new ToolStripMenuItem("清理下载缓存");
+        mClearCache.Click += (_, _) =>
+        {
+            CommonSoftwareHelper.ClearDownloadCache();
+            MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        };
+        op.DropDownItems.AddRange([
+            mInstallSelected, mEssentials, new ToolStripSeparator(), mUpdates, mClearCache
+        ]);
+        var edit = new ToolStripMenuItem("编辑(&E)");
+        var mSelectAll = new ToolStripMenuItem("全选当前");
+        mSelectAll.Click += (_, _) => SetAllSelected(true);
+        var mSelectNone = new ToolStripMenuItem("全不选");
+        mSelectNone.Click += (_, _) => SetAllSelected(false);
+        edit.DropDownItems.AddRange([mSelectAll, mSelectNone]);
+        menu.Items.AddRange([op, edit]);
+        menu.Dock = DockStyle.Top;
+
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
             Height = 48,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            AutoScroll = true,
+            AutoScroll = false,
             Padding = new Padding(12, 6, 12, 6),
             BackColor = AppTheme.Surface,
         };
-        actions.Controls.Add(TrackAction(MkBtn("清理下载缓存", () =>
-        {
-            CommonSoftwareHelper.ClearDownloadCache();
-            MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }, false)));
-        actions.Controls.Add(TrackAction(MkBtn("检查软件更新", CheckSoftwareUpdates, false)));
-        actions.Controls.Add(TrackAction(MkBtn("安装系统必备", InstallEssentials, false)));
+        // 底部只留最常用：安装所选；其余进菜单
         actions.Controls.Add(TrackAction(MkBtn("安装所选", InstallSelected, true)));
-        actions.Controls.Add(TrackAction(MkBtn("全选当前", () => SetAllSelected(true), false)));
-        actions.Controls.Add(TrackAction(MkBtn("全不选", () => SetAllSelected(false), false)));
 
         BuildProgressHost();
 
@@ -83,14 +106,17 @@ internal sealed class CommonSoftwareDialog : Form
         body.Controls.Add(content);
         body.Controls.Add(_progressHost);
         body.Controls.Add(actions);
+        body.Controls.Add(menu);
 
         ThemedSettingsChrome.MountModal(
             this,
             "常用软件",
             "官方源下载与安装 · 优先 winget",
             body,
-            "安装前请确认来源可信；Server 环境 winget 需先安装应用安装程序。",
+            "更多操作见顶部「操作 / 编辑」菜单；安装前请确认来源可信。",
             () => ReloadStatusesAsync());
+
+        MainMenuStrip = menu;
 
         Load += (_, _) =>
         {
@@ -384,6 +410,8 @@ internal sealed class CommonSoftwareDialog : Form
     {
         _installBusy = busy;
         _installWingetBtn.Enabled = !busy;
+        if (MainMenuStrip is not null)
+            MainMenuStrip.Enabled = !busy;
         foreach (var btn in _actionButtons)
             btn.Enabled = !busy;
 

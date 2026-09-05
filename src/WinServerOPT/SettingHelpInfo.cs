@@ -33,15 +33,16 @@ internal sealed class SettingHelpInfo
         WhenHint = whenHint ?? "";
     }
 
-    /// <summary>列表「说明」列：对应哪里 · 何时建议（简洁一行）。</summary>
+    /// <summary>列表「说明」列：先短建议，再对应位置（窄列时建议仍可见）。</summary>
     public string ListNote
     {
         get
         {
-            var place = UiPlace.Length > 0 ? UiPlace : Compact(Summary, 36);
-            var when = WhenHint.Length > 0 ? WhenHint : Compact(Guide, 18);
+            var when = WhenHint.Length > 0 ? WhenHint : Compact(Guide, 14);
+            var place = UiPlace.Length > 0 ? Compact(UiPlace, 28) : Compact(Summary, 28);
             if (when.Length == 0) return place;
-            return place + " · " + when;
+            if (place.Length == 0) return when;
+            return when + " · " + place;
         }
     }
 
