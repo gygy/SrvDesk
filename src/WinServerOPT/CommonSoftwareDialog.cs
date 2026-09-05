@@ -301,42 +301,69 @@ internal sealed class CommonSoftwareDialog : Form
             row.RefreshStatus();
     }
 
+    private bool _installBusy;
+
+    private void SetInstallBusy(bool busy, string? progress = null)
+    {
+        _installBusy = busy;
+        _installWingetBtn.Enabled = !busy;
+        Text = busy && !string.IsNullOrWhiteSpace(progress)
+            ? "常用软件 — " + progress
+            : "常用软件";
+        Cursor = Cursors.Default;
+        UseWaitCursor = false;
+    }
+
+    private void Ui(Action action)
+    {
+        if (IsDisposed) return;
+        if (InvokeRequired) BeginInvoke(action);
+        else action();
+    }
+
     private void InstallWingetNow()
     {
-        var winget = CommonSoftwareCatalog.Find("winget");
-        if (winget is null) return;
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
 
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
                 "将下载并安装「应用安装程序」(winget) 及其依赖。\r\n\r\n" +
-                "依次尝试：PowerShell 修复模块 → 官方离线包 → 注册别名。\r\n" +
-                "Server 环境可能需要数分钟，是否继续？",
+                "Server 环境可能需要数分钟。安装期间可继续使用主窗口。\r\n是否继续？",
                 "安装 winget", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }
 
-        UseWaitCursor = true;
-        _installWingetBtn.Enabled = false;
-        try
+        SetInstallBusy(true, "正在安装 winget…");
+        System.Threading.Tasks.Task.Run(() =>
         {
-            var msg = CommonSoftwareHelper.InstallWinget();
-            RefreshAll();
-            MessageBox.Show(this,
-                string.IsNullOrWhiteSpace(msg) ? "winget 安装完成。" : msg,
-                "安装 winget",
-                MessageBoxButtons.OK,
-                CommonSoftwareHelper.IsWingetAvailable() ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "安装 winget 失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            UseWaitCursor = false;
-            _installWingetBtn.Enabled = true;
-        }
+            string msg;
+            Exception? error = null;
+            try { msg = CommonSoftwareHelper.InstallWinget(); }
+            catch (Exception ex)
+            {
+                error = ex;
+                msg = "";
+            }
+
+            Ui(() =>
+            {
+                SetInstallBusy(false);
+                RefreshAll();
+                if (error is not null)
+                    MessageBox.Show(this, error.Message, "安装 winget 失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                    MessageBox.Show(this,
+                        string.IsNullOrWhiteSpace(msg) ? "winget 安装完成。" : msg,
+                        "安装 winget",
+                        MessageBoxButtons.OK,
+                        CommonSoftwareHelper.IsWingetAvailable() ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            });
+        });
     }
 
     private void OnInstall(CommonSoftwareItem item)
@@ -347,36 +374,50 @@ internal sealed class CommonSoftwareDialog : Form
             return;
         }
 
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         var status = CommonSoftwareHelper.Query(item);
         var action = status.Installed ? "修复安装" : "一键安装";
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先使用 winget；失败则打开官方下载页。\r\n是否继续？",
+                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先使用 winget；失败则打开官方下载页。\r\n安装期间可继续使用主窗口。\r\n是否继续？",
                 "常用软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }
 
-        UseWaitCursor = true;
-        try
+        SetInstallBusy(true, "正在安装 " + item.Title);
+        System.Threading.Tasks.Task.Run(() =>
         {
-            var msg = CommonSoftwareHelper.Install(item);
-            RefreshAll();
-            if (msg.Length > 0)
-                MessageBox.Show(this, msg, item.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "安装失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            UseWaitCursor = false;
-        }
+            string msg = "";
+            Exception? error = null;
+            try { msg = CommonSoftwareHelper.Install(item); }
+            catch (Exception ex) { error = ex; }
+
+            Ui(() =>
+            {
+                SetInstallBusy(false);
+                RefreshAll();
+                if (error is not null)
+                    MessageBox.Show(this, error.Message, "安装失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else if (msg.Length > 0)
+                    MessageBox.Show(this, msg, item.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+        });
     }
 
     private void OnUninstall(CommonSoftwareItem item)
     {
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         var status = CommonSoftwareHelper.Query(item);
         if (!status.Installed)
         {
@@ -389,25 +430,27 @@ internal sealed class CommonSoftwareDialog : Form
             "卸载确认", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
 
-        UseWaitCursor = true;
-        try
+        SetInstallBusy(true, "正在卸载 " + item.Title);
+        System.Threading.Tasks.Task.Run(() =>
         {
-            var msg = CommonSoftwareHelper.Uninstall(item);
-            RefreshAll();
-            if (msg.Length > 0)
-                MessageBox.Show(this, msg, item.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            else
-                MessageBox.Show(this, "卸载命令已执行，请稍候刷新状态。", item.Title,
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "卸载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            UseWaitCursor = false;
-        }
+            string msg = "";
+            Exception? error = null;
+            try { msg = CommonSoftwareHelper.Uninstall(item); }
+            catch (Exception ex) { error = ex; }
+
+            Ui(() =>
+            {
+                SetInstallBusy(false);
+                RefreshAll();
+                if (error is not null)
+                    MessageBox.Show(this, error.Message, "卸载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else if (msg.Length > 0)
+                    MessageBox.Show(this, msg, item.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else
+                    MessageBox.Show(this, "卸载命令已执行，请稍候刷新状态。", item.Title,
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+        });
     }
 
     private void SetAllSelected(bool on)
@@ -418,6 +461,12 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void InstallSelected()
     {
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         var selected = _rows.Values.Where(r => r.Selected).Select(r => r.Item).ToList();
         if (selected.Count == 0)
         {
@@ -430,7 +479,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"将依次安装已选的 {ordered.Count} 款软件：\r\n\r\n{names}\r\n\r\n是否继续？",
+                $"将依次安装已选的 {ordered.Count} 款软件：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
                 "安装所选", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }
@@ -440,13 +489,16 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
     {
-        UseWaitCursor = true;
-        Enabled = false;
-        var notes = new List<string>();
-        try
+        if (_installBusy) return;
+        SetInstallBusy(true, $"准备安装 0/{items.Count}");
+        System.Threading.Tasks.Task.Run(() =>
         {
-            foreach (var item in items)
+            var notes = new List<string>();
+            for (var i = 0; i < items.Count; i++)
             {
+                var item = items[i];
+                var n = i + 1;
+                Ui(() => SetInstallBusy(true, $"正在安装 {item.Title}（{n}/{items.Count}）"));
                 try
                 {
                     var msg = item.IsWingetBootstrap
@@ -459,18 +511,24 @@ internal sealed class CommonSoftwareDialog : Form
                     notes.Add(item.Title + "：失败 — " + ex.Message);
                 }
             }
-            RefreshAll();
-            MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        finally
-        {
-            Enabled = true;
-            UseWaitCursor = false;
-        }
+
+            Ui(() =>
+            {
+                SetInstallBusy(false);
+                RefreshAll();
+                MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+        });
     }
 
     private void InstallEssentials()
     {
+        if (_installBusy)
+        {
+            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         var essentials = CommonSoftwareCatalog.All.Where(x => x.Essential).ToList();
         var missing = essentials
             .Where(x => x.IsWingetBootstrap
@@ -488,7 +546,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"将依次安装以下 {missing.Count} 款必备软件：\r\n\r\n{names}\r\n\r\n是否继续？",
+                $"将依次安装以下 {missing.Count} 款必备软件：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
                 "安装系统必备软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }

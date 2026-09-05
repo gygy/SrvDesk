@@ -555,9 +555,16 @@ internal sealed class MainForm : Form
         }
 
         ApplyLog.Write("启动 " + _systemFacts.Summary);
-        // 完整扫描，避免电源/TCP/DISM 等项启动时误显示为未优化
-        LoadState(fullScan: true);
+        UseWaitCursor = false;
+        Cursor = Cursors.Default;
+        // 启动先快速读取；完整扫描放后台、不改鼠标样式，避免一直转圈
+        LoadState(fullScan: false);
         BeginInvoke(new Action(StartWarmupInstantPages));
+        BeginInvoke(new Action(() =>
+        {
+            // 空闲后再补全 DISM 等慢项，仍不使用等待光标
+            LoadState(fullScan: true);
+        }));
     }
 
     /// <summary>空闲时分帧预创建即时页，并预热 MMAgent，减轻首次点左侧菜单的卡顿。</summary>
@@ -754,11 +761,12 @@ internal sealed class MainForm : Form
         }
 
         _commonSoftwareDlg = new CommonSoftwareDialog();
-        _commonSoftwareDlg.Owner = this;
+        // 不设 Owner，避免子窗安装/弹窗时连带卡住主窗
         _commonSoftwareDlg.ShowInTaskbar = true;
         _commonSoftwareDlg.MinimizeBox = true;
         _commonSoftwareDlg.FormClosed += (_, _) => _commonSoftwareDlg = null;
-        _commonSoftwareDlg.Show(this);
+        _commonSoftwareDlg.Show();
+        _commonSoftwareDlg.BringToFront();
     }
 
     private void ShowDesktopMaintenance()
@@ -1420,10 +1428,7 @@ internal sealed class MainForm : Form
     private void LoadState(bool fullScan = false)
     {
         if (fullScan)
-        {
             _status.Text = "正在完整扫描系统状态（含 DISM，可能需要数十秒）…";
-            UseWaitCursor = true;
-        }
 
         System.Threading.Tasks.Task.Run(() =>
         {
@@ -1436,13 +1441,12 @@ internal sealed class MainForm : Form
                     catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
                     finally
                     {
+                        UseWaitCursor = false;
+                        Cursor = Cursors.Default;
+                        Application.UseWaitCursor = false;
                         RefreshEmbeddedPageIfVisible();
-                        if (fullScan)
-                        {
-                            UseWaitCursor = false;
-                            if (!_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
-                                _status.Text = _systemFacts.Summary + " · 状态已刷新。";
-                        }
+                        if (fullScan && !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
+                            _status.Text = _systemFacts.Summary + " · 状态已刷新。";
                     }
                 }));
             }
@@ -1451,7 +1455,9 @@ internal sealed class MainForm : Form
                 BeginInvoke(new Action(() =>
                 {
                     _status.Text = "读取当前配置失败：" + ex.Message;
-                    if (fullScan) UseWaitCursor = false;
+                    UseWaitCursor = false;
+                    Cursor = Cursors.Default;
+                    Application.UseWaitCursor = false;
                 }));
             }
         });
@@ -1917,7 +1923,9 @@ internal sealed class MainForm : Form
     {
         _apply.Enabled = false;
         _restore.Enabled = false;
-        UseWaitCursor = true;
+        UseWaitCursor = false;
+        Cursor = Cursors.Default;
+        Application.UseWaitCursor = false;
         _status.Text = working;
         Application.DoEvents();
         try
@@ -1948,6 +1956,8 @@ internal sealed class MainForm : Form
         finally
         {
             UseWaitCursor = false;
+            Cursor = Cursors.Default;
+            Application.UseWaitCursor = false;
             _apply.Enabled = true;
             _restore.Enabled = true;
         }
