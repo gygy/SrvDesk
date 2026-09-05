@@ -8,6 +8,10 @@ internal sealed class SettingHelpInfo
     public string Guide { get; }
     public string Effect { get; }
     public SettingScope Scope { get; }
+    /// <summary>对应系统哪里（弹窗/菜单/设置页），列表「说明」列用。</summary>
+    public string UiPlace { get; }
+    /// <summary>何时建议优化，列表「说明」列用。</summary>
+    public string WhenHint { get; }
 
     public SettingHelpInfo(
         string summary,
@@ -15,7 +19,9 @@ internal sealed class SettingHelpInfo
         string benefit,
         string guide,
         string effect,
-        SettingScope? scope = null)
+        SettingScope? scope = null,
+        string? uiPlace = null,
+        string? whenHint = null)
     {
         Summary = summary;
         Purpose = purpose;
@@ -23,9 +29,36 @@ internal sealed class SettingHelpInfo
         Guide = guide;
         Effect = effect;
         Scope = scope ?? SettingScope.Universal;
+        UiPlace = uiPlace ?? "";
+        WhenHint = whenHint ?? "";
+    }
+
+    /// <summary>列表「说明」列：对应哪里 · 何时建议（简洁一行）。</summary>
+    public string ListNote
+    {
+        get
+        {
+            var place = UiPlace.Length > 0 ? UiPlace : Compact(Summary, 36);
+            var when = WhenHint.Length > 0 ? WhenHint : Compact(Guide, 18);
+            if (when.Length == 0) return place;
+            return place + " · " + when;
+        }
     }
 
     public string FormatDetail() =>
-        Scope.FormatHelpSection() + "\r\n【作用】" + Purpose +
+        Scope.FormatHelpSection() +
+        (UiPlace.Length > 0 ? "\r\n【对应】" + UiPlace : "") +
+        (WhenHint.Length > 0 ? "\r\n【建议】" + WhenHint : "") +
+        "\r\n【作用】" + Purpose +
         "\r\n【好处】" + Benefit + "\r\n【指引】" + Guide + "\r\n【生效】" + Effect;
+
+    private static string Compact(string text, int max)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var t = text.Trim();
+        var cut = t.IndexOfAny(['。', '；', ';']);
+        if (cut > 0 && cut < max) t = t.Substring(0, cut);
+        if (t.Length > max) t = t.Substring(0, max - 1) + "…";
+        return t;
+    }
 }

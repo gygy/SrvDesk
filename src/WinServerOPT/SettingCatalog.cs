@@ -46,7 +46,9 @@ internal static class SettingCatalog
         "本地浏览器、内网管理页、旧 OA 系统可正常访问，不必逐站加白名单。",
         "个人桌面推荐开启；面向公网的生产 Server 请谨慎。",
         "新开 IE/Edge IE 模式窗口后生效。",
-        SettingScope.ServerExclusive);
+        SettingScope.ServerExclusive,
+        uiPlace: "服务器管理器→本地服务器→IE 增强安全配置",
+        whenHint: "当桌面用建议开");
 
     public static readonly SettingHelpInfo HighPerfPower = H(
         "切换为「高性能」电源计划，避免 CPU 降频。",
@@ -410,20 +412,24 @@ internal static class SettingCatalog
         SettingScope.ServerExclusive);
 
     public static readonly SettingHelpInfo SkipServerManager = H(
-        "在登录时不自动启动服务器管理器（等同「服务器管理器 → 管理 → 服务器管理器属性」中同名勾选）。",
+        "登录时不自动打开服务器管理器。",
         "HKLM/HKCU\\…\\ServerManager\\DoNotOpenServerManagerAtLogon=1；策略 DoNotOpenAtLogon。",
         "进桌面不再自动弹出服务器管理器，需要时仍可手动打开。",
         "Server 当桌面强烈建议开启。",
         "下次登录生效。",
-        new SettingScope(serverOnly: true, minServer: "2012 R2+"));
+        new SettingScope(serverOnly: true, minServer: "2012 R2+"),
+        uiPlace: "服务器管理器→管理→服务器管理器属性",
+        whenHint: "当桌面用建议开");
 
     public static readonly SettingHelpInfo HideServerManagerWacPrompt = H(
-        "打开服务器管理器时不再弹出 Windows Admin Center / Azure Arc 推广提示（等同勾选「不再显示此消息」）。",
+        "不再弹出「立即尝试 Windows Admin Center 并 Azure Arc」推广窗。",
         "HKLM\\SOFTWARE\\Microsoft\\ServerManager\\DoNotPopWACConsoleAtSMLaunch=1。",
-        "去掉每次打开 Server Manager 的推广弹窗，保留管理器本身可用。",
+        "去掉开机/打开服务器管理器时的 WAC·Azure Arc 推广，管理器本身仍可用。",
         "Server 2019/2022 桌面强烈建议开启。",
         "立即生效（下次打开服务器管理器）。",
-        new SettingScope(serverOnly: true, minServer: "2019+"));
+        new SettingScope(serverOnly: true, minServer: "2019+"),
+        uiPlace: "开机弹窗「立即尝试 WAC 并 Azure Arc」",
+        whenHint: "烦人就开");
 
     public static readonly SettingHelpInfo DisableAzureArc = H(
         "禁止 Azure Arc 托盘程序开机自启。",
@@ -431,7 +437,9 @@ internal static class SettingCatalog
         "无 Azure 混合管理需求时不占托盘、不后台连接云。",
         "若已接入 Azure Arc 管理需关闭本项保留启动。",
         "下次登录生效。",
-        Arc2019);
+        Arc2019,
+        uiPlace: "托盘/开机启动里的 Azure Arc",
+        whenHint: "不用 Azure 建议开");
 
     public static readonly SettingHelpInfo EnableInstaller = H(
         "Windows Installer 服务设为自动。",
@@ -739,6 +747,8 @@ internal static class SettingCatalog
         string benefit,
         string guide,
         string effect,
-        SettingScope? scope = null) =>
-        new(summary, purpose, benefit, guide, effect, scope);
+        SettingScope? scope = null,
+        string? uiPlace = null,
+        string? whenHint = null) =>
+        new(summary, purpose, benefit, guide, effect, scope, uiPlace, whenHint);
 }

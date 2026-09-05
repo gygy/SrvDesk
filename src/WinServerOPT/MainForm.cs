@@ -140,8 +140,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭", SettingCatalog.EnableNetworkDiscovery);
     private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启", SettingCatalog.DisableSmRemoting);
 
-    private readonly SettingRow _svrMgr = Row("在登录时不自动启动服务器管理器", "登录时启动", SettingCatalog.SkipServerManager);
-    private readonly SettingRow _wacPrompt = Row("不再显示 Admin Center 推广", "每次弹出", SettingCatalog.HideServerManagerWacPrompt);
+    private readonly SettingRow _svrMgr = Row("登录时不自动启动服务器管理器", "登录时启动", SettingCatalog.SkipServerManager);
+    private readonly SettingRow _wacPrompt = Row("不再显示「立即尝试 WAC/Azure Arc」弹窗", "每次弹出", SettingCatalog.HideServerManagerWacPrompt);
     private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动", SettingCatalog.DisableAzureArc);
     private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动", SettingCatalog.EnableInstaller);
     private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动", SettingCatalog.EnableWia);
@@ -248,8 +248,8 @@ internal sealed class MainForm : Form
     {
         Text = AppBrand.ProductName;
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1080, 720);
-        ClientSize = new Size(1180, 760);
+        MinimumSize = new Size(1180, 720);
+        ClientSize = new Size(1280, 760);
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
@@ -1210,7 +1210,8 @@ internal sealed class MainForm : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX));
+        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.NoteX - SettingListLayout.InfoX - 4));
+        header.Controls.Add(MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteW));
         header.Controls.Add(MakeHeaderLabel("优化建议值", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
@@ -2028,6 +2029,7 @@ internal sealed class MainForm : Form
         private readonly Label _item;
         private readonly Label _scope;
         private readonly Label _info;
+        private readonly Label _note;
         private readonly Label _system;
         private readonly Label _current;
         private Panel? _wrap;
@@ -2049,7 +2051,7 @@ internal sealed class MainForm : Form
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
-                AutoEllipsis = false,
+                AutoEllipsis = true,
             };
             _scope = new Label
             {
@@ -2069,6 +2071,17 @@ internal sealed class MainForm : Form
                 ForeColor = AppTheme.Primary,
                 Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
                 BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+            };
+            _note = new Label
+            {
+                Text = help.ListNote,
+                AutoSize = false,
+                ForeColor = AppTheme.TextMute,
+                Font = new Font("Microsoft YaHei UI", 8.25F),
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true,
                 Cursor = Cursors.Hand,
             };
             _toggle = new ToggleSwitch();
@@ -2130,6 +2143,8 @@ internal sealed class MainForm : Form
             var q = query.Trim();
             return ItemText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.Summary.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || Help.ListNote.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || Help.UiPlace.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _system.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _current.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
@@ -2174,7 +2189,7 @@ internal sealed class MainForm : Form
             var toggleX = SettingListLayout.ToggleX;
             var systemX = SettingListLayout.SystemX;
             var currentX = SettingListLayout.CurrentX;
-            var toggleW = SettingListLayout.ToggleW;
+            var noteX = SettingListLayout.NoteX;
             var itemX = SettingListLayout.ItemX;
 
             _normalBg = bg;
@@ -2187,7 +2202,7 @@ internal sealed class MainForm : Form
             _wrap = wrap;
             _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
 
-            var textW = Math.Max(120, toggleX - itemX - SettingListLayout.TextToggleGap);
+            var textW = Math.Max(100, noteX - itemX - SettingListLayout.TextNoteGap);
             var hasScope = Help.Scope.HasBadge;
             if (hasScope)
             {
@@ -2199,7 +2214,8 @@ internal sealed class MainForm : Form
                 _item.SetBounds(itemX, 0, textW, h);
             }
 
-            _toggle.Size = new Size(toggleW, 26);
+            _note.SetBounds(noteX, 0, SettingListLayout.NoteW, h);
+            _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
@@ -2208,6 +2224,9 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
+            toolTip.SetToolTip(_note, Help.ListNote +
+                (Help.UiPlace.Length > 0 ? "\r\n对应：" + Help.UiPlace : "") +
+                (Help.WhenHint.Length > 0 ? "\r\n建议：" + Help.WhenHint : ""));
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
             toolTip.SetToolTip(_system, "系统默认值（出厂）");
             toolTip.SetToolTip(_current, "系统当前值（读取自本机）");
@@ -2215,10 +2234,12 @@ internal sealed class MainForm : Form
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
             _info.Click += Select;
+            _note.Click += Select;
             if (hasScope) _scope.Click += Select;
 
             wrap.Controls.Add(_current);
             wrap.Controls.Add(_system);
+            wrap.Controls.Add(_note);
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
