@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>单独窗口展示某优化项的开启/关闭一键脚本，便于复制与另存为。</summary>
+/// <summary>单独窗口展示某优化项的开启/关闭配置脚本（可编辑、自动记住、导出）。</summary>
 internal sealed class SettingRecipeDialog : Form
 {
     private readonly SettingActionRecipe? _recipe;
@@ -10,7 +10,9 @@ internal sealed class SettingRecipeDialog : Form
     private readonly Button _tabOff = new();
     private readonly Label _kind = new();
     private readonly Label _note = new();
+    private readonly System.Windows.Forms.Timer _persistTimer = new() { Interval = 600 };
     private bool _showEnable = true;
+    private Button? _resetBtn;
 
     public static void ShowFor(IWin32Window? owner, string itemTitle, SettingHelpInfo help)
     {
@@ -45,7 +47,7 @@ internal sealed class SettingRecipeDialog : Form
 
         var hint = new Label
         {
-            Text = "语法高亮显示。可直接编辑，再复制或导出为文件手工执行。",
+            Text = "可直接编辑；修改会自动记住。可复制或导出为文件。",
             Location = new Point(16, 38),
             Size = new Size(520, 20),
             ForeColor = AppTheme.TextMute,
@@ -56,8 +58,8 @@ internal sealed class SettingRecipeDialog : Form
         StyleTab(_tabOff, "关闭（恢复）");
         _tabOn.Location = new Point(16, 66);
         _tabOff.Location = new Point(130, 66);
-        _tabOn.Click += (_, _) => SetSide(true);
-        _tabOff.Click += (_, _) => SetSide(false);
+        _tabOn.Click += (_, _) => SetSide(true, flush: true);
+        _tabOff.Click += (_, _) => SetSide(false, flush: true);
 
         _kind.Location = new Point(250, 70);
         _kind.AutoSize = true;
@@ -66,6 +68,17 @@ internal sealed class SettingRecipeDialog : Form
 
         _box.Location = new Point(16, 100);
         _box.Size = new Size(528, 230);
+        _box.UserScriptChanged += (_, _) =>
+        {
+            _persistTimer.Stop();
+            _persistTimer.Start();
+        };
+        _persistTimer.Tick += (_, _) =>
+        {
+            _persistTimer.Stop();
+            Persist();
+            RefreshNote();
+        };
 
         _note.Location = new Point(16, 336);
         _note.Size = new Size(528, 36);
@@ -90,11 +103,27 @@ internal sealed class SettingRecipeDialog : Form
             }
         };
 
-        var save = ActionButton("导出", 140);
-        save.Click += (_, _) => ExportAs();
+        var export = ActionButton("导出", 140);
+        export.Click += (_, _) => ExportAs();
+
+        _resetBtn = ActionButton("恢复默认", 264);
+        _resetBtn.Click += (_, _) =>
+        {
+            if (_recipe is null) return;
+            _persistTimer.Stop();
+            SettingScriptStore.Remove(_itemTitle, _showEnable);
+            _box.SetScript(_recipe.ContentFor(_showEnable), _recipe.Kind);
+            RefreshNote();
+        };
 
         var close = ActionButton("关闭", 456);
         close.Click += (_, _) => Close();
+
+        FormClosing += (_, _) =>
+        {
+            _persistTimer.Stop();
+            Persist();
+        };
 
         Controls.Add(head);
         Controls.Add(hint);
@@ -104,7 +133,8 @@ internal sealed class SettingRecipeDialog : Form
         Controls.Add(_box);
         Controls.Add(_note);
         Controls.Add(copy);
-        Controls.Add(save);
+        Controls.Add(export);
+        Controls.Add(_resetBtn);
         Controls.Add(close);
 
         if (_recipe is null)
@@ -112,7 +142,8 @@ internal sealed class SettingRecipeDialog : Form
             _tabOn.Enabled = false;
             _tabOff.Enabled = false;
             copy.Enabled = false;
-            save.Enabled = false;
+            export.Enabled = false;
+            _resetBtn.Enabled = false;
             _kind.Text = "";
             _box.SetScript(
                 "此项为组合操作（DISM / 多服务 / 右键菜单集成等），未单独收录可复制脚本。\r\n\r\n请直接在列表中切换开关，再点「应用到系统」。",
@@ -122,22 +153,62 @@ internal sealed class SettingRecipeDialog : Form
         else
         {
             _kind.Text = _recipe.KindLabel;
-            _note.Text = _recipe.Note;
-            SetSide(true);
+            SetSide(true, flush: false);
         }
     }
 
-    private void SetSide(bool enable)
+    private void SetSide(bool enable, bool flush)
     {
+        if (flush)
+        {
+            _persistTimer.Stop();
+            Persist();
+        }
         _showEnable = enable;
         PaintTab(_tabOn, enable);
         PaintTab(_tabOff, !enable);
         if (_recipe is not null)
-            _box.SetScript(_recipe.ContentFor(enable), _recipe.Kind);
+        {
+            var text = SettingScriptStore.TryGet(_itemTitle, enable, out var custom)
+                ? custom
+                : _recipe.ContentFor(enable);
+            _box.SetScript(text, _recipe.Kind);
+            RefreshNote();
+        }
+    }
+
+    private void Persist()
+    {
+        if (_recipe is null) return;
+        var current = _box.PlainText;
+        var builtin = _recipe.ContentFor(_showEnable);
+        if (ScriptsEqual(current, builtin))
+            SettingScriptStore.Remove(_itemTitle, _showEnable);
+        else
+            SettingScriptStore.Set(_itemTitle, _showEnable, current);
+    }
+
+    private void RefreshNote()
+    {
+        if (_recipe is null) return;
+        var customized = SettingScriptStore.HasOverride(_itemTitle, _showEnable);
+        if (_resetBtn is not null)
+            _resetBtn.Enabled = customized;
+        _note.Text = customized
+            ? "已记住你的修改。可导出文件，或点「恢复默认」还原内置脚本。"
+            : (_recipe.Note.Length > 0 ? _recipe.Note + " · 修改会自动记住。" : "修改会自动记住。");
+    }
+
+    private static bool ScriptsEqual(string a, string b)
+    {
+        static string Norm(string s) =>
+            (s ?? "").Replace("\r\n", "\n").Replace('\r', '\n').TrimEnd();
+        return string.Equals(Norm(a), Norm(b), StringComparison.Ordinal);
     }
 
     private void ExportAs()
     {
+        Persist();
         var ext = _recipe?.FileExtension ?? ".txt";
         var filter = _recipe?.Kind switch
         {
@@ -209,5 +280,12 @@ internal sealed class SettingRecipeDialog : Form
         };
         b.FlatAppearance.BorderColor = AppTheme.Primary;
         return b;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _persistTimer.Dispose();
+        base.Dispose(disposing);
     }
 }

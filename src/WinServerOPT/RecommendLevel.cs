@@ -64,4 +64,71 @@ internal static class RecommendLevelUi
 
     public static string LegendShort =>
         "★★★★★ 必优化 · ★★★★☆ 强烈推荐 · ★★★☆☆ 建议优化 · ★☆☆☆☆ 可选";
+
+    /// <summary>与列表「推荐值」列相同的五星着色绘制（实心琥珀金 / 灰色）。</summary>
+    public static void DrawStars(Graphics g, RecommendLevel level, int x, int y)
+    {
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var on = StarsOn(level);
+        using var font = new Font("Segoe UI Symbol", StarFontSize, FontStyle.Regular);
+        for (var i = 0; i < 5; i++)
+        {
+            var filled = i < on;
+            using var brush = new SolidBrush(filled ? StarOn : StarOff);
+            g.DrawString("★", font, brush, x + i * StarStep, y);
+        }
+    }
+
+    public static Size MeasureStars() => new(StarsBlockWidth + 2, (int)StarFontSize + 6);
+}
+
+/// <summary>彩色五星 + 右侧说明文字（与列表推荐值同色）。</summary>
+internal sealed class RecommendStarsRow : Control
+{
+    private RecommendLevel _level = RecommendLevel.Suggested;
+    private string _text = "";
+
+    public RecommendStarsRow()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        Height = 22;
+        BackColor = Color.Transparent;
+    }
+
+    public RecommendLevel Level
+    {
+        get => _level;
+        set { _level = value; Invalidate(); }
+    }
+
+    public string TrailingText
+    {
+        get => _text;
+        set { _text = value ?? ""; Invalidate(); }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        var g = e.Graphics;
+        var bg = Parent?.BackColor ?? AppTheme.SurfaceCard;
+        if (bg.A == 255)
+        {
+            using var b = new SolidBrush(bg);
+            g.FillRectangle(b, ClientRectangle);
+        }
+
+        var starY = Math.Max(0, (Height - (int)RecommendLevelUi.StarFontSize) / 2 - 1);
+        RecommendLevelUi.DrawStars(g, _level, 0, starY);
+
+        if (_text.Length == 0) return;
+        var textX = RecommendLevelUi.StarsBlockWidth + 6;
+        using var font = new Font("Microsoft YaHei UI", 8.5F);
+        var color = AppTheme.TextMain;
+        TextRenderer.DrawText(g, _text, font,
+            new Rectangle(textX, 0, Math.Max(20, Width - textX), Height),
+            color,
+            TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+    }
 }

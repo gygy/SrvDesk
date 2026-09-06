@@ -113,8 +113,22 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         StyleAction(_btnCopy, "复制");
         StyleAction(_btnSave, "导出");
+        StyleAction(_btnReset, "恢复默认");
+        _btnReset.Width = 72;
         _btnCopy.Click += (_, _) => CopyRecipe();
         _btnSave.Click += (_, _) => ExportRecipe();
+        _btnReset.Click += (_, _) => ResetRecipeToBuiltin();
+        _recipeBox.UserScriptChanged += (_, _) =>
+        {
+            _persistTimer.Stop();
+            _persistTimer.Start();
+        };
+        _persistTimer.Tick += (_, _) =>
+        {
+            _persistTimer.Stop();
+            PersistCurrentScript();
+            UpdateOverrideHint();
+        };
 
         _recipeNote.Font = new Font("Microsoft YaHei UI", 8F);
         _recipeNote.ForeColor = AppTheme.PrimaryDark;
@@ -136,6 +150,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeHost.Controls.Add(_recipeBox);
         _recipeHost.Controls.Add(_btnCopy);
         _recipeHost.Controls.Add(_btnSave);
+        _recipeHost.Controls.Add(_btnReset);
         _recipeHost.Controls.Add(_recipeNote);
         _recipeHost.Controls.Add(_emptyRecipe);
     }
@@ -201,7 +216,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _summary.Text = "点选配置项后，可在此查看、编辑开启/关闭脚本，并复制或导出为文件。";
         BuildSections([
             ("操作", "开=采用优化建议；关=恢复「系统默认值」。改完后点「应用到系统」。"),
-            ("配置脚本", "脚本可直接改字；「复制」到剪贴板，「导出」为 .reg/.cmd/.ps1 后手工执行。"),
+            ("配置脚本", "脚本可直接改字，修改会自动记住；「导出」写出文件，「恢复默认」还原内置脚本。"),
             ("面板位置", "「视图 → 配置脚本 · 靠右 / 靠底」可切换；拖动分隔条调宽/调高，下次启动会记住。"),
             ("说明列", "写明对应系统哪里、何时建议开，悬停可看全文。"),
             ("搜索", "可搜项目名、说明或摘要；「视图」可隐藏当前系统不适用的项。"),
@@ -247,9 +262,8 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         _caption.Text = "配置脚本 · 当前项";
         _title.Text = itemTitle;
-        // 摘要已含核心说明；下方只留 2～3 行精简信息，把空间留给脚本
         _summary.Text = help.Summary;
-        BuildSections([("", FormatCompactBrief(help))]);
+        BuildSettingBrief(help);
         _footer.Text = "";
 
         _itemTitle = itemTitle;
@@ -258,38 +272,61 @@ internal sealed class HelpDetailPanel : BufferedPanel
         ShowRecipeUi();
     }
 
-    /// <summary>把推荐/范围/作用/指引/生效压成最多约 2～3 行。</summary>
-    private static string FormatCompactBrief(SettingHelpInfo help)
+    /// <summary>精简说明：第1行彩色五星+推荐/范围/生效；其后各占一行，最多约 3 行。</summary>
+    private void BuildSettingBrief(SettingHelpInfo help)
     {
-        var line1Parts = new List<string>
-        {
-            RecommendLevelUi.Icon(help.Recommend) + " " + RecommendLevelUi.Title(help.Recommend),
-        };
+        _sections.Controls.Clear();
+        _sections.AutoSize = false;
+
+        var metaParts = new List<string> { RecommendLevelUi.Title(help.Recommend) };
         if (help.Scope.HasBadge)
-            line1Parts.Add(help.Scope.FormatBadges());
+            metaParts.Add(help.Scope.FormatBadges());
         if (help.Effect.Length > 0)
-            line1Parts.Add(TrimOneLine(help.Effect, 18));
+            metaParts.Add(TrimOneLine(help.Effect, 20));
 
-        var line2Parts = new List<string>();
-        if (help.Purpose.Length > 0)
-            line2Parts.Add(TrimOneLine(help.Purpose, 36));
-        if (help.Guide.Length > 0)
-            line2Parts.Add(TrimOneLine(help.Guide, 28));
-        else if (help.Benefit.Length > 0)
-            line2Parts.Add(TrimOneLine(help.Benefit, 28));
+        _sections.Controls.Add(new RecommendStarsRow
+        {
+            Level = help.Recommend,
+            TrailingText = string.Join(" · ", metaParts),
+            Tag = "stars",
+        });
 
-        var line3Parts = new List<string>();
-        if (help.UiPlace.Length > 0)
-            line3Parts.Add(TrimOneLine(help.UiPlace, 40));
-        else if (help.WhenHint.Length > 0)
-            line3Parts.Add(TrimOneLine(help.WhenHint, 40));
+        var line2 = TrimOneLine(help.Purpose, 56);
+        if (line2.Length > 0)
+        {
+            _sections.Controls.Add(new Label
+            {
+                Text = line2,
+                AutoSize = false,
+                ForeColor = AppTheme.TextMain,
+                Font = new Font("Microsoft YaHei UI", 8.5F),
+                BackColor = Color.Transparent,
+                Tag = "b",
+            });
+        }
 
-        var lines = new List<string> { string.Join(" · ", line1Parts) };
-        if (line2Parts.Count > 0)
-            lines.Add(string.Join(" · ", line2Parts));
-        if (line3Parts.Count > 0 && lines.Count < 3)
-            lines.Add(string.Join(" · ", line3Parts));
-        return string.Join("\r\n", lines);
+        var line3 = help.Guide.Length > 0
+            ? TrimOneLine(help.Guide, 56)
+            : (help.Benefit.Length > 0 ? TrimOneLine(help.Benefit, 56) : "");
+        if (line3.Length == 0 && help.UiPlace.Length > 0)
+            line3 = TrimOneLine(help.UiPlace, 56);
+        else if (line3.Length == 0 && help.WhenHint.Length > 0)
+            line3 = TrimOneLine(help.WhenHint, 56);
+
+        if (line3.Length > 0)
+        {
+            _sections.Controls.Add(new Label
+            {
+                Text = line3,
+                AutoSize = false,
+                ForeColor = AppTheme.TextMute,
+                Font = new Font("Microsoft YaHei UI", 8.25F),
+                BackColor = Color.Transparent,
+                Tag = "b",
+            });
+        }
+
+        LayoutInner();
     }
 
     private static string TrimOneLine(string text, int max)
@@ -305,6 +342,8 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     private void HideRecipe()
     {
+        _persistTimer.Stop();
+        PersistCurrentScript();
         _recipe = null;
         _itemTitle = "";
         _recipeHost.Visible = false;
@@ -320,34 +359,101 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _tabDisable.Visible = has;
         _btnCopy.Visible = has;
         _btnSave.Visible = has;
+        _btnReset.Visible = has;
         _recipeKind.Visible = has;
-        _recipeNote.Visible = has && _recipe!.Note.Length > 0;
         _emptyRecipe.Visible = !has;
 
         if (has)
         {
             _recipeKind.Text = _recipe!.KindLabel;
-            _recipeNote.Text = _recipe.Note.Length > 0
-                ? _recipe.Note
-                : "可编辑后复制或导出。";
-            _recipeNote.Visible = true;
-            SetRecipeSide(_showEnable);
+            SetRecipeSide(_showEnable, flushPrevious: false);
         }
         else
         {
             _recipeKind.Text = "";
+            _recipeNote.Visible = false;
             LayoutInner();
         }
     }
 
-    private void SetRecipeSide(bool enable)
+    private void SetRecipeSide(bool enable) => SetRecipeSide(enable, flushPrevious: true);
+
+    private void SetRecipeSide(bool enable, bool flushPrevious)
     {
+        if (flushPrevious)
+        {
+            _persistTimer.Stop();
+            PersistCurrentScript();
+        }
+
         _showEnable = enable;
         ApplyTabVisual(_tabEnable, enable);
         ApplyTabVisual(_tabDisable, !enable);
         if (_recipe is not null)
-            _recipeBox.SetScript(_recipe.ContentFor(enable), _recipe.Kind);
+        {
+            var text = SettingScriptStore.TryGet(_itemTitle, enable, out var custom)
+                ? custom
+                : _recipe.ContentFor(enable);
+            _recipeBox.SetScript(text, _recipe.Kind);
+            UpdateOverrideHint();
+        }
         LayoutInner();
+    }
+
+    private void PersistCurrentScript()
+    {
+        if (_recipe is null || string.IsNullOrEmpty(_itemTitle) || !_recipeBox.Visible)
+            return;
+        var current = CurrentScriptText();
+        var builtin = _recipe.ContentFor(_showEnable);
+        if (ScriptsEqual(current, builtin))
+            SettingScriptStore.Remove(_itemTitle, _showEnable);
+        else
+            SettingScriptStore.Set(_itemTitle, _showEnable, current);
+    }
+
+    private void ResetRecipeToBuiltin()
+    {
+        if (_recipe is null) return;
+        _persistTimer.Stop();
+        SettingScriptStore.Remove(_itemTitle, _showEnable);
+        _recipeBox.SetScript(_recipe.ContentFor(_showEnable), _recipe.Kind);
+        UpdateOverrideHint();
+        LayoutInner();
+    }
+
+    private void UpdateOverrideHint()
+    {
+        if (_recipe is null)
+        {
+            _recipeNote.Visible = false;
+            return;
+        }
+
+        var customized = SettingScriptStore.HasOverride(_itemTitle, _showEnable);
+        if (customized)
+        {
+            _recipeNote.Text = "已保存你的修改（下次打开仍有效）。「导出」写出文件；「恢复默认」还原内置脚本。";
+            _btnReset.Enabled = true;
+        }
+        else if (_recipe.Note.Length > 0)
+        {
+            _recipeNote.Text = _recipe.Note + " · 修改会自动记住。";
+            _btnReset.Enabled = false;
+        }
+        else
+        {
+            _recipeNote.Text = "可直接改字，修改会自动记住；「导出」写出文件。";
+            _btnReset.Enabled = false;
+        }
+        _recipeNote.Visible = true;
+    }
+
+    private static bool ScriptsEqual(string a, string b)
+    {
+        static string Norm(string s) =>
+            (s ?? "").Replace("\r\n", "\n").Replace('\r', '\n').TrimEnd();
+        return string.Equals(Norm(a), Norm(b), StringComparison.Ordinal);
     }
 
     private string CurrentScriptText() => _recipeBox.PlainText;
@@ -377,6 +483,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private void ExportRecipe()
     {
         if (!_recipeBox.Visible) return;
+        _persistTimer.Stop();
+        PersistCurrentScript();
+        UpdateOverrideHint();
         var ext = _recipe?.FileExtension ?? ".txt";
         var filter = _recipe?.Kind switch
         {
@@ -503,9 +612,17 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var y = 0;
         foreach (Control c in _sections.Controls)
         {
+            c.Left = 0;
+            c.Width = w;
+            if (c is RecommendStarsRow stars)
+            {
+                stars.Height = 22;
+                stars.Top = y;
+                y += stars.Height + 4;
+                continue;
+            }
+
             if (c is not Label lbl) continue;
-            lbl.Left = 0;
-            lbl.Width = w;
             var isHead = Equals(lbl.Tag, "h");
             var h = TextRenderer.MeasureText(
                 lbl.Text, lbl.Font, new Size(w, int.MaxValue),
@@ -516,7 +633,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 h = Math.Max(16, h);
             lbl.Top = y;
             lbl.Height = h;
-            y += h + (isHead ? 4 : 12);
+            y += h + (isHead ? 4 : 6);
         }
         _sections.Height = Math.Max(y, 8);
         _sections.ResumeLayout(true);
@@ -554,6 +671,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         _btnCopy.Location = new Point(8, _recipeBox.Bottom + 6);
         _btnSave.Location = new Point(88, _recipeBox.Bottom + 6);
+        _btnReset.Location = new Point(168, _recipeBox.Bottom + 6);
         if (_recipeNote.Visible)
         {
             _recipeNote.Location = new Point(8, _btnCopy.Bottom + 6);
