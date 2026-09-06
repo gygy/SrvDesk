@@ -71,6 +71,18 @@ internal static class UiBuffer
         catch { /* ignore */ }
     }
 
+    /// <summary>
+    /// ListView 专用双缓冲：走 LVS_EX_DOUBLEBUFFER，避免反射 DoubleBuffered 破坏表头绘制。
+    /// </summary>
+    public static void EnableListView(ListView list)
+    {
+        if (!list.IsHandleCreated) return;
+        const int lvmFirst = 0x1000;
+        const int lvmSetExtendedListViewStyle = lvmFirst + 54;
+        const int lvsExDoubleBuffer = 0x00010000;
+        SendMessage(list.Handle, lvmSetExtendedListViewStyle, (IntPtr)lvsExDoubleBuffer, (IntPtr)lvsExDoubleBuffer);
+    }
+
     /// <summary>切换标签时暂停重绘，减轻内容区高度跳动带来的闪烁。</summary>
     public static IDisposable SuspendRedraw(Control control) => new RedrawScope(control);
 

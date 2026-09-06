@@ -33,7 +33,6 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _list.MultiSelect = false;
         _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Dock = DockStyle.Fill;
-        UiBuffer.Enable(_list);
         _list.BackColor = AppTheme.SurfaceCard;
         _list.ForeColor = AppTheme.TextMain;
         _list.Columns.Add("名称", 180);
@@ -43,14 +42,10 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _list.Columns.Add("命令", 360);
         _list.SelectedIndexChanged += (_, _) => UpdateDetail();
         _list.DoubleClick += (_, _) => ToggleSelected();
-
-        _detail.Dock = DockStyle.Bottom;
-        _detail.Height = 44;
-        _detail.ForeColor = AppTheme.TextMute;
-        _detail.Padding = new Padding(0, 6, 0, 0);
+        // 用官方扩展样式双缓冲，避免反射 DoubleBuffered 导致表头右侧残影/文字被压扁
+        _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
 
         body.Controls.Add(_list);
-        body.Controls.Add(_detail);
         body.Controls.Add(tools);
 
         ThemedSettingsChrome.MountEmbedded(
@@ -93,40 +88,48 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 
     private Panel BuildToolStrip()
     {
-        var bar = new Panel { Height = 40, BackColor = AppTheme.Surface };
+        var bar = new Panel { Height = 64, BackColor = AppTheme.Surface };
 
         var filterLabel = new Label
         {
             Text = "筛选",
-            Location = new Point(0, 10),
+            Location = new Point(0, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
         _filter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _filter.SetBounds(40, 6, 110, 26);
+        _filter.SetBounds(40, 4, 110, 26);
         _filter.Items.AddRange(Filters);
         _filter.SelectedIndexChanged += (_, _) => ApplyFilter();
 
         var searchLabel = new Label
         {
             Text = "搜索",
-            Location = new Point(164, 10),
+            Location = new Point(164, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
-        _search.SetBounds(204, 6, 200, 26);
+        _search.SetBounds(204, 4, 200, 26);
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.TextChanged += (_, _) => ApplyFilter();
 
-        _count.Location = new Point(416, 10);
+        _count.Location = new Point(416, 8);
         _count.AutoSize = true;
         _count.ForeColor = AppTheme.TextMute;
+
+        _detail.AutoSize = false;
+        _detail.AutoEllipsis = true;
+        _detail.ForeColor = AppTheme.TextMute;
+        _detail.TextAlign = ContentAlignment.MiddleLeft;
+        _detail.Text = "双击切换启用/禁用。添加写入当前用户 Run；系统级项需管理员。";
+        _detail.SetBounds(0, 34, 400, 26);
 
         bar.Controls.Add(filterLabel);
         bar.Controls.Add(_filter);
         bar.Controls.Add(searchLabel);
         bar.Controls.Add(_search);
         bar.Controls.Add(_count);
+        bar.Controls.Add(_detail);
 
         var buttons = new[]
         {
@@ -141,14 +144,18 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 
         void LayoutTools()
         {
-            var x = bar.Width - 8;
+            var x = bar.ClientSize.Width - 8;
             for (var i = buttons.Length - 1; i >= 0; i--)
             {
                 var b = buttons[i];
                 x -= b.Width;
-                b.Location = new Point(Math.Max(520, x), 4);
+                b.Location = new Point(Math.Max(8, x), 2);
                 x -= 8;
             }
+            var detailRight = buttons[0].Left - 12;
+            _detail.SetBounds(0, 34, Math.Max(80, detailRight), 26);
+            // 统计文字避开右侧按钮组
+            _count.Visible = _count.Right <= buttons[0].Left - 8 || bar.ClientSize.Width > 780;
         }
 
         bar.Resize += (_, _) => LayoutTools();
@@ -159,8 +166,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     private Button ToolBtn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Height = 30;
-        b.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        b.Height = 28;
         b.Click += (_, _) => click();
         return b;
     }
@@ -217,7 +223,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         var item = Selected();
         _detail.Text = item is null
             ? "双击切换启用/禁用。添加写入当前用户 Run；系统级项需管理员。"
-            : $"{item.Name}  ·  {item.Scope}  ·  {(item.Enabled ? "启用" : "禁用")}\r\n{item.Command}";
+            : $"{item.Name}  ·  {item.Scope}  ·  {(item.Enabled ? "启用" : "禁用")}  ·  {item.Command}";
     }
 
     private void ToggleSelected()
