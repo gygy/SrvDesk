@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>右侧上下文帮助面板：说明 + 一键开/关脚本（可复制/另存为）。</summary>
+/// <summary>右侧配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、保存）。</summary>
 internal sealed class HelpDetailPanel : BufferedPanel
 {
     private readonly Label _caption = new();
@@ -23,48 +23,48 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private SettingActionRecipe? _recipe;
     private string _itemTitle = "";
     private bool _showEnable = true;
+    private const int PadX = 12;
 
     public HelpDetailPanel() : base(composited: true)
     {
-        Width = 320;
-        BackColor = AppTheme.PrimaryPale;
+        Width = UiPrefs.DefaultHelpPanelWidth;
+        BackColor = AppTheme.SurfaceCard;
         Padding = new Padding(0, 0, 0, 8);
         AutoScroll = true;
 
+        // 仅 1px 细分隔线，不要粗色条
         Paint += (_, e) =>
         {
-            using var accent = new SolidBrush(AppTheme.Primary);
-            e.Graphics.FillRectangle(accent, 0, 0, 4, Height);
-            using var top = new Pen(AppTheme.Border);
-            e.Graphics.DrawLine(top, 0, 0, Width, 0);
+            using var edge = new Pen(AppTheme.BorderLight);
+            e.Graphics.DrawLine(edge, 0, 0, 0, Height);
         };
 
-        _caption.Text = "帮助";
-        _caption.SetBounds(16, 10, 280, 18);
+        _caption.Text = "配置脚本";
+        _caption.SetBounds(PadX, 10, 280, 18);
         _caption.ForeColor = AppTheme.TextMute;
         _caption.Font = new Font("Microsoft YaHei UI", 8F);
         _caption.BackColor = Color.Transparent;
 
-        _title.SetBounds(16, 30, 280, 44);
+        _title.SetBounds(PadX, 30, 280, 44);
         _title.ForeColor = AppTheme.PrimaryDeep;
         _title.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
         _title.BackColor = Color.Transparent;
         _title.AutoEllipsis = false;
 
-        _summary.SetBounds(16, 76, 280, 48);
+        _summary.SetBounds(PadX, 76, 280, 48);
         _summary.ForeColor = AppTheme.TextMute;
         _summary.Font = new Font("Microsoft YaHei UI", 8.75F);
         _summary.BackColor = Color.Transparent;
         _summary.AutoEllipsis = false;
 
-        _sections.SetBounds(16, 128, 280, 10);
+        _sections.SetBounds(PadX, 128, 280, 10);
         _sections.BackColor = Color.Transparent;
         _sections.AutoSize = true;
         _sections.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
         BuildRecipeHost();
 
-        _footer.SetBounds(16, 140, 280, 36);
+        _footer.SetBounds(PadX, 140, 280, 36);
         _footer.ForeColor = AppTheme.PrimaryDark;
         _footer.Font = new Font("Microsoft YaHei UI", 8F);
         _footer.BackColor = Color.Transparent;
@@ -82,11 +82,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     private void BuildRecipeHost()
     {
-        _recipeHost.BackColor = Color.FromArgb(255, 248, 250, 252);
+        _recipeHost.BackColor = Color.FromArgb(248, 250, 252);
         _recipeHost.Padding = new Padding(8);
         _recipeHost.Visible = false;
 
-        _recipeCaption.Text = "一键脚本";
+        _recipeCaption.Text = "配置脚本（可编辑）";
         _recipeCaption.Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold);
         _recipeCaption.ForeColor = AppTheme.PrimaryDeep;
         _recipeCaption.BackColor = Color.Transparent;
@@ -97,7 +97,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeKind.ForeColor = AppTheme.TextMute;
         _recipeKind.BackColor = Color.Transparent;
         _recipeKind.AutoSize = true;
-        _recipeKind.Location = new Point(72, 8);
+        _recipeKind.Location = new Point(128, 8);
 
         StyleTab(_tabEnable, "开启", true);
         StyleTab(_tabDisable, "关闭", false);
@@ -107,7 +107,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _tabDisable.Click += (_, _) => SetRecipeSide(false);
 
         _recipeBox.Multiline = true;
-        _recipeBox.ReadOnly = true;
+        _recipeBox.ReadOnly = false; // 允许用户改完再复制/保存
         _recipeBox.ScrollBars = ScrollBars.Vertical;
         _recipeBox.Font = new Font("Consolas", 8.25F);
         _recipeBox.BackColor = Color.White;
@@ -117,9 +117,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeBox.Height = 150;
         _recipeBox.WordWrap = false;
         _recipeBox.ShortcutsEnabled = true;
+        _recipeBox.AcceptsReturn = true;
+        _recipeBox.AcceptsTab = true;
 
         StyleAction(_btnCopy, "复制");
-        StyleAction(_btnSave, "另存为…");
+        StyleAction(_btnSave, "保存…");
         _btnCopy.Click += (_, _) => CopyRecipe();
         _btnSave.Click += (_, _) => SaveRecipe();
 
@@ -129,7 +131,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeNote.AutoSize = false;
         _recipeNote.MaximumSize = new Size(260, 0);
 
-        _emptyRecipe.Text = "此项为组合操作（DISM/多服务等），脚本未单独收录；请直接用左侧开关 +「应用到系统」。";
+        _emptyRecipe.Text = "此项为组合操作（DISM/多服务等），未单独收录脚本；请用左侧开关 +「应用到系统」。";
         _emptyRecipe.Font = new Font("Microsoft YaHei UI", 8.5F);
         _emptyRecipe.ForeColor = AppTheme.TextMute;
         _emptyRecipe.BackColor = Color.Transparent;
@@ -189,13 +191,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
     public void ShowEmbeddedGuide(string pageTitle)
     {
         HideRecipe();
-        _caption.Text = "帮助 · 即时设置";
+        _caption.Text = "配置脚本 · 即时设置";
         _title.Text = pageTitle;
         _summary.Text = "本页开关切换后直接写入系统。";
         BuildSections([
             ("与分组页的关系", "登录启动项、DNS 等即时页适合单项微调；左侧其它分类为分组列表，改完后点「应用到系统」。"),
             ("同步状态", "在其他地方改过系统后，可点本页底部「刷新」，或菜单「工具 → 刷新当前状态」。"),
-            ("脚本", "分组列表中的优化项可选中后，在本栏下方查看「开启/关闭」对应的注册表或脚本。"),
+            ("配置脚本", "分组列表中点选优化项，可在本栏查看并编辑「开启/关闭」对应的注册表或脚本。"),
         ]);
         _footer.Text = "RDP 端口 / 预取 / Search 等请从「工具 → 高级设置」打开";
     }
@@ -203,32 +205,32 @@ internal sealed class HelpDetailPanel : BufferedPanel
     public void ShowPlaceholder(string? groupTitle = null)
     {
         HideRecipe();
-        _caption.Text = "帮助 · 使用指引";
-        _title.Text = groupTitle is null ? "选择左侧设置项" : $"{groupTitle}";
-        _summary.Text = "点击列表中的项目名称或 ⓘ 图标，此处显示完整说明与一键脚本。";
+        _caption.Text = "配置脚本 · 使用指引";
+        _title.Text = groupTitle is null ? "选择左侧配置项" : $"{groupTitle}";
+        _summary.Text = "点选配置项后，可在此查看、编辑开启/关闭脚本，并复制或保存为文件。";
         BuildSections([
             ("操作", "开=采用优化建议；关=恢复「系统默认值」。改完后点「应用到系统」。"),
-            ("一键脚本", "选中任一项后，下方显示「开启/关闭」对应的 .reg 或脚本，可复制或另存为手工执行。"),
-            ("说明列", "写明对应系统哪里（如开机弹窗标题）、何时建议开，悬停可看全文。"),
-            ("分类筛选", "命令栏「分类」可按 Server 推荐、优化推荐、已优化、未优化过滤。"),
+            ("配置脚本", "脚本可直接改字；「复制」到剪贴板，「保存…」另存为 .reg/.cmd/.ps1 后手工执行。"),
+            ("面板宽度", "拖动左右分隔条可调整本栏宽度，下次启动会记住。"),
+            ("说明列", "写明对应系统哪里、何时建议开，悬停可看全文。"),
             ("搜索", "可搜项目名、说明或摘要；「视图」可隐藏当前系统不适用的项。"),
         ]);
-        _footer.Text = "F1 打开完整使用说明";
+        _footer.Text = "F1 打开完整使用说明 · 视图 → 显示配置脚本";
     }
 
     public void ShowUsageGuide()
     {
         HideRecipe();
-        _caption.Text = "帮助 · 使用说明";
+        _caption.Text = "配置脚本 · 使用说明";
         _title.Text = $"{AppBrand.ProductName} 使用说明";
         _summary.Text = "用于 Windows Server 桌面化：改注册表、服务与 DISM。";
         BuildSections([
             ("工作流程", "1. 选择左侧分类 → 2. 勾选开关 → 3. 点击「应用到系统」。"),
-            ("一键脚本", "点选优化项后，右侧「开启/关闭」页可复制与软件一致的注册表或脚本，便于审计或离线手工应用。"),
+            ("配置脚本", "点选配置项后，右侧可查看/编辑与软件一致的开启、关闭脚本，便于审计或离线应用。"),
             ("列含义", "说明=对应哪里·何时建议；推荐值=五星；设置操作=开关。"),
             ("配置备份", "「文件」菜单可导入/导出 JSON 配置，便于多台机器复用或回滚界面状态。"),
             ("管理员", "必须以管理员身份运行，否则注册表、服务、DISM 操作可能失败。"),
-            ("生效", "多数项写入后即可用；DISM、大系统缓存、自动登录等需重启。详见各项「生效方式」。"),
+            ("生效", "多数项写入后即可用；DISM、大系统缓存、自动登录等需重启。"),
             ("操作日志", "一般事件：%LocalAppData%\\WinOpt\\apply.log"),
             ("变更日志", "优化改动专用：%LocalAppData%\\WinOpt\\变更日志.log"),
         ]);
@@ -238,7 +240,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
     public void ShowScopeLegend()
     {
         HideRecipe();
-        _caption.Text = "帮助 · 标识图例";
+        _caption.Text = "配置脚本 · 标识图例";
         _title.Text = "适用范围标识";
         _summary.Text = "每项名称下方的彩色标签，标明该项在不同系统上是否有效。";
         BuildSections([
@@ -252,7 +254,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     public void ShowSetting(string itemTitle, SettingHelpInfo help)
     {
-        _caption.Text = "帮助 · 当前项";
+        _caption.Text = "配置脚本 · 当前项";
         _title.Text = itemTitle;
         _summary.Text = help.Summary;
         var sections = new List<(string Head, string Body)>();
@@ -300,7 +302,10 @@ internal sealed class HelpDetailPanel : BufferedPanel
         if (has)
         {
             _recipeKind.Text = _recipe!.KindLabel;
-            _recipeNote.Text = _recipe.Note;
+            _recipeNote.Text = _recipe.Note.Length > 0
+                ? _recipe.Note
+                : "可直接修改下方内容，再复制或保存为文件。";
+            _recipeNote.Visible = true;
             SetRecipeSide(_showEnable);
         }
         else
@@ -320,12 +325,14 @@ internal sealed class HelpDetailPanel : BufferedPanel
         LayoutInner();
     }
 
+    private string CurrentScriptText() => _recipeBox.Text;
+
     private void CopyRecipe()
     {
-        if (_recipe is null) return;
+        if (!_recipeBox.Visible) return;
         try
         {
-            Clipboard.SetText(_recipe.ContentFor(_showEnable));
+            Clipboard.SetText(CurrentScriptText());
             _btnCopy.Text = "已复制";
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
@@ -344,25 +351,40 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     private void SaveRecipe()
     {
-        if (_recipe is null) return;
+        if (!_recipeBox.Visible) return;
+        var ext = _recipe?.FileExtension ?? ".txt";
+        var filter = _recipe?.Kind switch
+        {
+            SettingActionKind.Reg => "注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*",
+            SettingActionKind.Cmd => "批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*",
+            SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|所有文件 (*.*)|*.*",
+            _ => "文本 (*.txt)|*.txt|所有文件 (*.*)|*.*",
+        };
+        var suggested = _recipe?.SuggestedFileName(_itemTitle, _showEnable)
+                        ?? ("配置脚本" + (_showEnable ? "-开启" : "-关闭") + ext);
+
         using var dlg = new SaveFileDialog
         {
-            Title = "另存为一键脚本",
-            Filter = _recipe.Kind switch
-            {
-                SettingActionKind.Reg => "注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*",
-                SettingActionKind.Cmd => "批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*",
-                SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|所有文件 (*.*)|*.*",
-                _ => "文本 (*.txt)|*.txt|所有文件 (*.*)|*.*",
-            },
-            FileName = _recipe.SuggestedFileName(_itemTitle, _showEnable),
+            Title = "保存配置脚本",
+            Filter = filter,
+            FileName = suggested,
             OverwritePrompt = true,
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
         };
         if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
         try
         {
-            File.WriteAllText(dlg.FileName, _recipe.ContentFor(_showEnable),
+            File.WriteAllText(dlg.FileName, CurrentScriptText(),
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            _btnSave.Text = "已保存";
+            var t = new System.Windows.Forms.Timer { Interval = 1200 };
+            t.Tick += (_, _) =>
+            {
+                _btnSave.Text = "保存…";
+                t.Stop();
+                t.Dispose();
+            };
+            t.Start();
         }
         catch (Exception ex)
         {
@@ -409,14 +431,19 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     private void LayoutInner()
     {
-        var w = Math.Max(260, ClientSize.Width - 24);
+        var w = Math.Max(240, ClientSize.Width - PadX * 2);
+        _caption.Left = PadX;
+        _title.Left = PadX;
+        _summary.Left = PadX;
+        _sections.Left = PadX;
+        _footer.Left = PadX;
         _caption.Width = w;
         _title.Width = w;
         _summary.Width = w;
         _sections.Width = w;
         _footer.Width = w;
         _recipeHost.Width = w;
-        _recipeHost.Left = 16;
+        _recipeHost.Left = PadX;
 
         var titleH = Math.Max(28, TextRenderer.MeasureText(
             _title.Text, _title.Font, new Size(w, int.MaxValue),
@@ -428,7 +455,6 @@ internal sealed class HelpDetailPanel : BufferedPanel
             TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
         _summary.Height = Math.Min(summaryH, 96);
 
-        // 一键脚本紧跟摘要下方，避免滚到长说明末尾才看见
         var y = _summary.Bottom + 8;
         if (_recipeHost.Visible)
         {
@@ -448,22 +474,20 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
 
         _footer.Top = _sections.Bottom + 8;
-        var contentH = _footer.Bottom + 12;
-        AutoScrollMinSize = new Size(0, contentH);
+        AutoScrollMinSize = new Size(0, _footer.Bottom + 12);
     }
 
-    /// <summary>选中项后滚动到一键脚本区域，保证入口可见。</summary>
     public void FocusRecipe()
     {
         if (!_recipeHost.Visible) return;
-        // 先把脚本区滚进可视范围
         AutoScrollPosition = new Point(0, Math.Max(0, _recipeHost.Top - 8));
-        _recipeBox.Focus();
+        if (_recipeBox.Visible)
+            _recipeBox.Focus();
     }
 
     private void LayoutRecipe(int w)
     {
-        var inner = Math.Max(240, w - 16);
+        var inner = Math.Max(220, w - 16);
         _recipeBox.Width = inner;
         _emptyRecipe.SetBounds(8, 28, inner, 60);
         _recipeNote.Width = inner;

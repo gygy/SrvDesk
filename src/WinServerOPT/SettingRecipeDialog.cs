@@ -23,7 +23,7 @@ internal sealed class SettingRecipeDialog : Form
         _itemTitle = itemTitle;
         _recipe = SettingRecipeCatalog.Get(help);
 
-        Text = "一键脚本 · " + itemTitle;
+            Text = "配置脚本 · " + itemTitle;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -45,7 +45,7 @@ internal sealed class SettingRecipeDialog : Form
 
         var hint = new Label
         {
-            Text = "与软件「开/关」一致。可复制后手工导入 .reg，或另存为脚本执行。",
+            Text = "与软件「开/关」一致。可直接编辑，再复制或保存为文件手工执行。",
             Location = new Point(16, 38),
             Size = new Size(520, 20),
             ForeColor = AppTheme.TextMute,
@@ -67,12 +67,14 @@ internal sealed class SettingRecipeDialog : Form
         _box.Location = new Point(16, 100);
         _box.Size = new Size(528, 230);
         _box.Multiline = true;
-        _box.ReadOnly = true;
+        _box.ReadOnly = false;
         _box.ScrollBars = ScrollBars.Both;
         _box.WordWrap = false;
         _box.Font = new Font("Consolas", 9F);
         _box.BackColor = Color.White;
         _box.BorderStyle = BorderStyle.FixedSingle;
+        _box.AcceptsReturn = true;
+        _box.AcceptsTab = true;
 
         _note.Location = new Point(16, 336);
         _note.Size = new Size(528, 36);
@@ -82,10 +84,9 @@ internal sealed class SettingRecipeDialog : Form
         var copy = ActionButton("复制到剪贴板", 16);
         copy.Click += (_, _) =>
         {
-            if (_recipe is null) return;
             try
             {
-                Clipboard.SetText(_recipe.ContentFor(_showEnable));
+                Clipboard.SetText(_box.Text);
                 copy.Text = "已复制";
                 var t = new System.Windows.Forms.Timer { Interval = 1200 };
                 t.Tick += (_, _) => { copy.Text = "复制到剪贴板"; t.Stop(); t.Dispose(); };
@@ -98,7 +99,7 @@ internal sealed class SettingRecipeDialog : Form
             }
         };
 
-        var save = ActionButton("另存为…", 140);
+        var save = ActionButton("保存…", 140);
         save.Click += (_, _) => SaveAs();
 
         var close = ActionButton("关闭", 456);
@@ -144,24 +145,27 @@ internal sealed class SettingRecipeDialog : Form
 
     private void SaveAs()
     {
-        if (_recipe is null) return;
+        var ext = _recipe?.FileExtension ?? ".txt";
+        var filter = _recipe?.Kind switch
+        {
+            SettingActionKind.Reg => "注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*",
+            SettingActionKind.Cmd => "批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*",
+            SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|所有文件 (*.*)|*.*",
+            _ => "文本 (*.txt)|*.txt|所有文件 (*.*)|*.*",
+        };
         using var dlg = new SaveFileDialog
         {
-            Title = "另存为一键脚本",
-            Filter = _recipe.Kind switch
-            {
-                SettingActionKind.Reg => "注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*",
-                SettingActionKind.Cmd => "批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*",
-                SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|所有文件 (*.*)|*.*",
-                _ => "文本 (*.txt)|*.txt|所有文件 (*.*)|*.*",
-            },
-            FileName = _recipe.SuggestedFileName(_itemTitle, _showEnable),
+            Title = "保存配置脚本",
+            Filter = filter,
+            FileName = _recipe?.SuggestedFileName(_itemTitle, _showEnable)
+                       ?? ("配置脚本" + (_showEnable ? "-开启" : "-关闭") + ext),
             OverwritePrompt = true,
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            File.WriteAllText(dlg.FileName, _recipe.ContentFor(_showEnable),
+            File.WriteAllText(dlg.FileName, _box.Text,
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         }
         catch (Exception ex)

@@ -92,9 +92,10 @@ internal sealed class AppMenuStrip : MenuStrip
         ViewAllOff = Item("全部关闭当前页", MenuIcons.ViewAllOff);
         ViewHideIncompatible = Item("隐藏不适用项", MenuIcons.ViewHide);
         ViewHideIncompatible.CheckOnClick = true;
-        ViewHelpPanel = Item("显示帮助面板", MenuIcons.ViewHelpPanel);
+        ViewHelpPanel = Item("显示配置脚本", MenuIcons.ViewHelpPanel);
         ViewHelpPanel.CheckOnClick = true;
         ViewHelpPanel.Checked = true;
+        ViewHelpPanel.ToolTipText = "右侧面板：查看/编辑当前配置项的开启与关闭脚本（可复制、另存为）";
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
             ViewHideIncompatible, ViewHelpPanel

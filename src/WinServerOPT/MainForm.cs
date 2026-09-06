@@ -158,6 +158,7 @@ internal sealed class MainForm : Form
     private AutologonSettings? _autologonSettings;
 
     private readonly HelpDetailPanel _helpDetail = new();
+    private readonly SplitContainer _mainSplit = new();
     private readonly AppMenuStrip _appMenu = new();
     private readonly Panel _commandBar = new();
     private readonly Panel _workArea = new();
@@ -485,7 +486,7 @@ internal sealed class MainForm : Form
 
         _appMenu.ViewHelpPanel.CheckedChanged += (_, _) =>
         {
-            _helpDetail.Visible = _appMenu.ViewHelpPanel.Checked;
+            SetConfigScriptPanelVisible(_appMenu.ViewHelpPanel.Checked);
             UiPrefs.SetShowHelpPanel(_appMenu.ViewHelpPanel.Checked);
             LayoutContent();
         };
@@ -539,10 +540,8 @@ internal sealed class MainForm : Form
     {
         if (e.KeyCode == Keys.F1)
         {
-            if (!_helpDetail.Visible)
-            {
+            if (!_appMenu.ViewHelpPanel.Checked)
                 _appMenu.ViewHelpPanel.Checked = true;
-            }
             _helpDetail.ShowUsageGuide();
             e.Handled = true;
         }
@@ -553,14 +552,102 @@ internal sealed class MainForm : Form
         UiBuffer.Enable(_workArea);
         _workArea.BackColor = AppTheme.Surface;
         sidebar.Dock = DockStyle.Left;
-        _helpDetail.Dock = DockStyle.Right;
+
+        var prefs = UiPrefs.Load();
+        var panelW = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
+
+        _mainSplit.Dock = DockStyle.Fill;
+        _mainSplit.Orientation = Orientation.Vertical;
+        _mainSplit.FixedPanel = FixedPanel.Panel2;
+        _mainSplit.SplitterWidth = 4;
+        _mainSplit.BackColor = AppTheme.BorderLight;
+        _mainSplit.Panel1MinSize = 360;
+        _mainSplit.Panel2MinSize = UiPrefs.MinHelpPanelWidth;
+        _mainSplit.Panel1.BackColor = AppTheme.Surface;
+        _mainSplit.Panel2.BackColor = AppTheme.SurfaceCard;
+
         _contentHost.Dock = DockStyle.Fill;
-        var showHelp = UiPrefs.Load().ShowHelpPanel;
-        _helpDetail.Visible = showHelp;
-        _appMenu.ViewHelpPanel.Checked = showHelp;
-        _workArea.Controls.Add(_contentHost);
-        _workArea.Controls.Add(_helpDetail);
+        _helpDetail.Dock = DockStyle.Fill;
+        _mainSplit.Panel1.Controls.Add(_contentHost);
+        _mainSplit.Panel2.Controls.Add(_helpDetail);
+
+        // 先加入再设距离，避免未布局时 SplitterDistance 抛异常
+        _workArea.Controls.Add(_mainSplit);
         _workArea.Controls.Add(sidebar);
+
+        void ApplyPanelWidth()
+        {
+            try
+            {
+                var total = _mainSplit.Width;
+                if (total <= _mainSplit.Panel1MinSize + _mainSplit.Panel2MinSize + _mainSplit.SplitterWidth)
+                    return;
+                var w = Math.Min(panelW, total - _mainSplit.Panel1MinSize - _mainSplit.SplitterWidth);
+                w = Math.Max(_mainSplit.Panel2MinSize, w);
+                _mainSplit.SplitterDistance = total - w - _mainSplit.SplitterWidth;
+            }
+            catch
+            {
+                /* 布局未就绪时忽略 */
+            }
+        }
+
+        _mainSplit.HandleCreated += (_, _) => BeginInvoke(ApplyPanelWidth);
+        _mainSplit.SizeChanged += (_, _) =>
+        {
+            if (_mainSplit.Panel2Collapsed) return;
+            // 固定右侧宽度：窗口变宽时保持配置脚本面板宽度
+            try
+            {
+                var want = UiPrefs.ClampWidth(_mainSplit.Panel2.Width > 0 ? _mainSplit.Panel2.Width : panelW);
+                var total = _mainSplit.Width;
+                var maxRight = total - _mainSplit.Panel1MinSize - _mainSplit.SplitterWidth;
+                if (maxRight < _mainSplit.Panel2MinSize) return;
+                want = Math.Min(want, maxRight);
+                var dist = total - want - _mainSplit.SplitterWidth;
+                if (Math.Abs(_mainSplit.SplitterDistance - dist) > 2)
+                    _mainSplit.SplitterDistance = dist;
+            }
+            catch { /* ignore */ }
+        };
+
+        var saveWidthTimer = new System.Windows.Forms.Timer { Interval = 400 };
+        saveWidthTimer.Tick += (_, _) =>
+        {
+            saveWidthTimer.Stop();
+            if (_mainSplit.Panel2Collapsed) return;
+            var w = _mainSplit.Panel2.Width;
+            if (w >= UiPrefs.MinHelpPanelWidth)
+            {
+                panelW = w;
+                UiPrefs.SetHelpPanelWidth(w);
+            }
+        };
+        _mainSplit.SplitterMoved += (_, _) =>
+        {
+            saveWidthTimer.Stop();
+            saveWidthTimer.Start();
+        };
+
+        SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+        _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
+    }
+
+    private void SetConfigScriptPanelVisible(bool visible)
+    {
+        _mainSplit.Panel2Collapsed = !visible;
+        _helpDetail.Visible = visible;
+        if (visible)
+        {
+            try
+            {
+                var want = UiPrefs.ClampWidth(UiPrefs.Load().HelpPanelWidth);
+                var total = _mainSplit.Width;
+                if (total > _mainSplit.Panel1MinSize + want + _mainSplit.SplitterWidth)
+                    _mainSplit.SplitterDistance = total - want - _mainSplit.SplitterWidth;
+            }
+            catch { /* 布局未就绪 */ }
+        }
     }
 
     private void InitializeRuntime()
@@ -2492,7 +2579,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明与一键脚本\r\n" + tip);
-            toolTip.SetToolTip(_script, "查看本项开启/关闭对应的注册表或脚本（可复制、另存为）");
+            toolTip.SetToolTip(_script, "查看/编辑本项开启与关闭的配置脚本（可复制、保存）");
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
