@@ -177,6 +177,10 @@ internal sealed class MainForm : Form
     private readonly Panel _contentHost = new BufferedPanel(composited: true);
     private readonly Label _status = new();
     private Optimizer.State? _baselineState;
+    /// <summary>用户改过开关/载入预设等，尚未用系统读取覆盖界面。</summary>
+    private bool _uiDirty;
+    /// <summary>异步 LoadState 代数，避免慢扫描覆盖更新的结果。</summary>
+    private int _loadEpoch;
     private readonly Button _apply = new();
     private readonly Button _restore = new();
     private Button? _refreshBottom;
@@ -409,6 +413,7 @@ internal sealed class MainForm : Form
         {
             row.OnCheckedChanged = _ =>
             {
+                _uiDirty = true;
                 var cat = CurrentCategoryFilter();
                 if (cat is RowCategoryFilter.Optimized or RowCategoryFilter.NotOptimized)
                     ApplySearchFilter();
@@ -511,7 +516,7 @@ internal sealed class MainForm : Form
             SyncContextMenuRowsFromSystem();
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
-        _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true);
+        _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true, forceUi: true);
         _appMenu.ToolRestoreDefaults.Click += (_, _) => RestoreDefaults();
         _appMenu.ViewAllOn.Click += (_, _) => SetVisibleAll(true);
         _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
@@ -833,14 +838,11 @@ internal sealed class MainForm : Form
             try { CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All); }
             catch { /* ignore */ }
         });
-        // 启动先快速读取；完整扫描放后台、不改鼠标样式，避免一直转圈
-        LoadState(fullScan: false);
+        // 启动先快速读取；完整扫描在后台补 DISM 等慢项。
+        // 若用户已改开关，完整扫描不得再覆盖界面（否则会出现「开了又自己关」）。
+        LoadState(fullScan: false, forceUi: true);
         BeginInvoke(new Action(StartWarmupInstantPages));
-        BeginInvoke(new Action(() =>
-        {
-            // 空闲后再补全 DISM 等慢项，仍不使用等待光标
-            LoadState(fullScan: true);
-        }));
+        BeginInvoke(new Action(() => LoadState(fullScan: true, forceUi: false)));
     }
 
     /// <summary>空闲时分帧预创建即时页，并预热 MMAgent，减轻首次点左侧菜单的卡顿。</summary>
@@ -1013,6 +1015,7 @@ internal sealed class MainForm : Form
     private void LoadPreset(OptPresets.PresetInfo preset)
     {
         Bind(preset.Build(), updateCurrentValues: false);
+        _uiDirty = true;
         _status.Text = $"已载入预设「{preset.Title}」。请检查后点「应用到系统」。";
         ApplyLog.Write("载入预设 " + preset.Id + " / " + preset.Title);
     }
@@ -1120,6 +1123,7 @@ internal sealed class MainForm : Form
             if (bundle.HasSettings)
             {
                 Bind(bundle.State);
+                _uiDirty = true;
                 parts.Add("开关");
             }
             if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
@@ -1496,7 +1500,6 @@ internal sealed class MainForm : Form
         using (UiBuffer.SuspendRedraw(_workArea))
         {
             SetBatchMode(batch: true);
-            var fromPage = _embeddedPage is not null;
             DetachEmbeddedPage();
             DetachActiveBatchWrap();
 
@@ -1519,7 +1522,7 @@ internal sealed class MainForm : Form
                 catch { /* ignore */ }
                 ShowHelpPlaceholder(title);
                 ApplySearchFilter();
-                if (fromPage) LoadState(fullScan: false);
+                // 从即时页返回时不要重新读系统：会覆盖用户刚勾的开关
                 return;
             }
 
@@ -1579,7 +1582,7 @@ internal sealed class MainForm : Form
             catch { /* ignore */ }
             ShowHelpPlaceholder(group.Title);
             ApplySearchFilter();
-            if (fromPage) LoadState(fullScan: false);
+            // 从即时页返回时不要重新读系统：会覆盖用户刚勾的开关
         }
     }
 
@@ -1969,7 +1972,7 @@ internal sealed class MainForm : Form
         _bottomActions = actions;
 
         // 底部三键始终占位：刷新 / 恢复默认 / 应用到系统（按页启用）
-        _refreshBottom = ToolButton("刷新", () => LoadState(fullScan: true));
+        _refreshBottom = ToolButton("刷新", () => LoadState(fullScan: true, forceUi: true));
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -2040,11 +2043,16 @@ internal sealed class MainForm : Form
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
     }
 
-    private void LoadState(bool fullScan = false)
+    /// <param name="forceUi">
+    /// true：用系统状态覆盖界面开关（启动首读、用户点刷新、应用后回读）。
+    /// false：若用户已改过开关则只丢弃本次后台读取，避免「开了又自己关」。
+    /// </param>
+    private void LoadState(bool fullScan = false, bool forceUi = false)
     {
-        if (fullScan)
+        if (fullScan && forceUi)
             _status.Text = "正在完整扫描系统状态（含 DISM，可能需要数十秒）…";
 
+        var epoch = ++_loadEpoch;
         System.Threading.Tasks.Task.Run(() =>
         {
             try
@@ -2052,7 +2060,28 @@ internal sealed class MainForm : Form
                 var state = Optimizer.Read(fullScan);
                 BeginInvoke(new Action(() =>
                 {
-                    try { Bind(state, updateCurrentValues: true); }
+                    if (epoch != _loadEpoch)
+                        return;
+
+                    try
+                    {
+                        if (_uiDirty && !forceUi)
+                        {
+                            // 保留用户勾选；后台扫描结果不写回开关
+                            if (fullScan &&
+                                !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal) &&
+                                _status.Text.IndexOf("已载入预设", StringComparison.Ordinal) < 0 &&
+                                _status.Text.IndexOf("已导入", StringComparison.Ordinal) < 0)
+                            {
+                                _status.Text = _systemFacts.Summary +
+                                    " · 后台扫描完成（已保留你改过的开关；要同步系统请点「刷新」）。";
+                            }
+                            return;
+                        }
+
+                        Bind(state, updateCurrentValues: true);
+                        _uiDirty = false;
+                    }
                     catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
                     finally
                     {
@@ -2060,7 +2089,8 @@ internal sealed class MainForm : Form
                         Cursor = Cursors.Default;
                         Application.UseWaitCursor = false;
                         RefreshEmbeddedPageIfVisible();
-                        if (fullScan && !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
+                        if (fullScan && forceUi &&
+                            !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
                             _status.Text = _systemFacts.Summary + " · 状态已刷新。";
                     }
                 }));
@@ -2069,6 +2099,7 @@ internal sealed class MainForm : Form
             {
                 BeginInvoke(new Action(() =>
                 {
+                    if (epoch != _loadEpoch) return;
                     _status.Text = "读取当前配置失败：" + ex.Message;
                     UseWaitCursor = false;
                     Cursor = Cursors.Default;
@@ -2612,7 +2643,8 @@ internal sealed class MainForm : Form
                 return true;
             }
 
-            LoadState(fullScan: true);
+            _uiDirty = false;
+            LoadState(fullScan: true, forceUi: true);
             if (!_autologon.Checked) _autologonSettings = null;
             RefreshAutologonDisplay();
             var changed = ApplyLog.LastBatchRealChangeCount;
