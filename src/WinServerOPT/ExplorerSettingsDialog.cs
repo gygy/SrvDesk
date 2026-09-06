@@ -93,6 +93,10 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         return true;
     }
 
+    public bool SupportsApplyToSystem => true;
+
+    public void ApplyToSystem() => ApplyTaskbarToSystem();
+
     private Control BuildLaunchRow()
     {
         var row = ThemedSettingsChrome.CreateComboRow("打开至", _launchTo, ["此电脑", "快速访问"]);

@@ -96,6 +96,9 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         return true;
     }
 
+    public bool SupportsApplyToSystem => false;
+    public void ApplyToSystem() { }
+
     private Panel BuildSidebar()
     {
         var sidebar = new Panel { Width = 150, BackColor = AppTheme.NavBg };

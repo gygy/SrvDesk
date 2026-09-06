@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace WinOpt;
 
@@ -58,10 +59,44 @@ internal static class UiBuffer
         typeof(Control).GetProperty("DoubleBuffered",
             BindingFlags.Instance | BindingFlags.NonPublic);
 
+    private const int WmSetRedraw = 0x000B;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
     /// <summary>对已有控件开启双缓冲（无法改类型时用）。</summary>
     public static void Enable(Control control)
     {
         try { DoubleBufferedProp?.SetValue(control, true, null); }
         catch { /* ignore */ }
+    }
+
+    /// <summary>切换标签时暂停重绘，减轻内容区高度跳动带来的闪烁。</summary>
+    public static IDisposable SuspendRedraw(Control control) => new RedrawScope(control);
+
+    private sealed class RedrawScope : IDisposable
+    {
+        private readonly Control _control;
+        private readonly bool _hadHandle;
+
+        public RedrawScope(Control control)
+        {
+            _control = control;
+            _hadHandle = control.IsHandleCreated;
+            if (_hadHandle)
+                SendMessage(control.Handle, WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
+            control.SuspendLayout();
+        }
+
+        public void Dispose()
+        {
+            _control.ResumeLayout(true);
+            if (_hadHandle && _control.IsHandleCreated)
+            {
+                SendMessage(_control.Handle, WmSetRedraw, (IntPtr)1, IntPtr.Zero);
+                _control.Invalidate(true);
+                _control.Update();
+            }
+        }
     }
 }

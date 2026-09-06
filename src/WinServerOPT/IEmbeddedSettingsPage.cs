@@ -10,4 +10,10 @@ internal interface IEmbeddedSettingsPage
     /// 未实现预热跳过的页面恒为 false。
     /// </summary>
     bool ConsumeWarmLoadSkip();
+
+    /// <summary>是否支持主窗口底部「应用到系统」（如资源管理器任务栏延迟写入）。</summary>
+    bool SupportsApplyToSystem { get; }
+
+    /// <summary>写入本页待应用改动。不支持时为空操作。</summary>
+    void ApplyToSystem();
 }
