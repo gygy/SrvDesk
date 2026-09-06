@@ -1086,7 +1086,7 @@ internal sealed class MainForm : Form
     private void ShowEmbeddedPage(int index)
     {
         var title = MenuItems[index];
-        SetBatchMode(batch: false);
+        SetBatchMode(batch: false, embeddedTitle: title);
 
         if (_embeddedPage is not null)
         {
@@ -1185,7 +1185,7 @@ internal sealed class MainForm : Form
             _helpDetail.ShowPlaceholder(groupTitle);
     }
 
-    private void SetBatchMode(bool batch)
+    private void SetBatchMode(bool batch, string? embeddedTitle = null)
     {
         _commandFlow.Visible = batch;
         _commandHint.Visible = !batch;
@@ -1204,9 +1204,22 @@ internal sealed class MainForm : Form
         _appMenu.ViewAllOff.Enabled = batch;
         _appMenu.ToolRestoreDefaults.Enabled = batch;
 
-        _status.Text = batch
-            ? _defaultStatusText
-            : "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
+        if (batch)
+        {
+            _status.Text = _defaultStatusText;
+            return;
+        }
+
+        if (embeddedTitle == "资源管理器")
+        {
+            _commandHint.Text = "任务栏相关请改完后点本页底部「应用到系统」；其它项即时写入。可用「刷新」重新读取。";
+            _status.Text = "资源管理器页：任务栏隐藏/搜索等需点「应用到系统」后重启资源管理器才可见。";
+        }
+        else
+        {
+            _commandHint.Text = "当前为即时设置页：修改后立即写入系统。请使用本页底部“刷新”重新读取状态。";
+            _status.Text = "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
+        }
     }
 
     private int ContentWidth() =>

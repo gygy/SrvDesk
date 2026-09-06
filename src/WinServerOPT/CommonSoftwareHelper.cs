@@ -47,6 +47,10 @@ internal static class CommonSoftwareHelper
         @"C:\Program Files (x86)\WinGet\winget.exe",
     ];
 
+    /// <summary>Server 上管理员进程调用 WindowsApps 别名常因许可证失败；便携目录可绕过。</summary>
+    private const string PortableWingetDir = @"C:\Tools\winget";
+    private static string PortableWingetExe => Path.Combine(PortableWingetDir, "winget.exe");
+
     public static string DownloadDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "software-downloads");
 
@@ -465,7 +469,7 @@ internal static class CommonSoftwareHelper
 
         Report(onProgress, "准备安装 " + item.Title, 2);
 
-        // Server 无商店：优先 Appx/Msix 旁加载（与手工安装的 .Appx + 依赖一致）
+        // Server 无商店：优先离线自动安装（Appx/Msix + 依赖，与手工放包一致）
         if (item.PreferAppxSideload && !string.IsNullOrWhiteSpace(item.StoreProductId))
         {
             try
@@ -476,8 +480,8 @@ internal static class CommonSoftwareHelper
             }
             catch (Exception ex)
             {
-                ApplyLog.Write("Appx 旁加载失败，尝试其它方式：" + ex.Message);
-                Report(onProgress, "Appx 旁加载失败，尝试其它方式…", 35);
+                ApplyLog.Write("离线 Appx 安装失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "离线 Appx 安装失败，尝试其它方式…", 35);
             }
         }
 
@@ -628,7 +632,7 @@ internal static class CommonSoftwareHelper
         var dir = Path.Combine(DownloadDir, item.Id + "-appx");
         Directory.CreateDirectory(dir);
 
-        Report(onProgress, "解析商店 Appx 直链（旁加载）…", 8);
+        Report(onProgress, "解析商店 Appx 直链（离线自动安装）…", 8);
         var files = ResolveStoreAppxFiles(productId, packageName);
         if (files.Count == 0)
         {
@@ -674,8 +678,8 @@ internal static class CommonSoftwareHelper
             .OrderBy(AppxInstallOrder)
             .ToList();
 
-        Report(onProgress, "正在旁加载安装 Appx（含依赖）…", 72);
-        ApplyLog.Write("Appx 旁加载：" + main + " deps=" + deps.Count);
+        Report(onProgress, "正在离线安装 Appx（含依赖）…", 72);
+        ApplyLog.Write("离线 Appx 安装：" + main + " deps=" + deps.Count);
         AddAppxPackageWithDependencies(main, deps);
 
         InvalidateStatusCache();
@@ -683,12 +687,12 @@ internal static class CommonSoftwareHelper
         if (status.Installed)
         {
             Report(onProgress, "安装完成", 100);
-            return "已通过 Appx 旁加载安装（无需微软商店）。";
+            return "已通过离线自动安装完成（无需微软商店）。";
         }
 
         // 安装命令成功但检测延迟时仍视为完成
         Report(onProgress, "安装命令已执行", 100);
-        return "Appx 旁加载命令已执行。若列表未刷新，请点刷新。";
+        return "离线自动安装命令已执行。若列表未刷新，请点刷新。";
     }
 
     private static int AppxInstallOrder(string path)
@@ -935,7 +939,8 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             return "";
         }
 
-        ApplyLog.Write("安装/修复 winget（App Installer）" + (Optimizer.IsWindowsServer() ? " [Server]" : ""));
+        var isServer = Optimizer.IsWindowsServer();
+        ApplyLog.Write("安装/修复 winget（App Installer）" + (isServer ? " [Server]" : ""));
         ResetWingetDiscovery();
         var notes = new List<string>();
 
@@ -947,6 +952,14 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             ResetWingetDiscovery();
             if (TryBindWingetFromAppx())
             {
+                if (isServer) TryStagePortableWinget(onProgress, notes);
+                Report(onProgress, "winget 已就绪", 100);
+                return FormatWingetReady(notes);
+            }
+
+            // Server：管理员进程常无法用 WindowsApps 别名，部署便携副本到 C:\Tools\winget
+            if (isServer && TryStagePortableWinget(onProgress, notes))
+            {
                 Report(onProgress, "winget 已就绪", 100);
                 return FormatWingetReady(notes);
             }
@@ -954,16 +967,23 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
 
         // 优先直接下载 AppX/msixbundle（可靠）；勿先跑 Install-Module，PSGallery 在 Server/内网常永久卡住
         Report(onProgress,
-            Optimizer.IsWindowsServer()
-                ? "下载并安装 App Installer（Server，多镜像）…"
+            isServer
+                ? "下载并安装 App Installer（Server 离线包 + 便携部署）…"
                 : "下载并安装 App Installer（多镜像）…",
             18);
         var bootstrap = TryBootstrapWingetPackages(
-            preferProvisioned: Optimizer.IsWindowsServer(),
+            preferProvisioned: isServer,
             onProgress);
         if (bootstrap.Length > 0) notes.Add(bootstrap);
         ResetWingetDiscovery();
         if (IsWingetAvailable() || TryBindWingetFromAppx())
+        {
+            if (isServer) TryStagePortableWinget(onProgress, notes);
+            Report(onProgress, "winget 已就绪", 100);
+            return FormatWingetReady(notes);
+        }
+
+        if (isServer && TryStagePortableWinget(onProgress, notes))
         {
             Report(onProgress, "winget 已就绪", 100);
             return FormatWingetReady(notes);
@@ -973,14 +993,15 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         var registerAgain = TryRegisterAppInstaller();
         if (registerAgain.Length > 0) notes.Add(registerAgain);
         ResetWingetDiscovery();
-        if (IsWingetAvailable() || TryBindWingetFromAppx())
+        if (IsWingetAvailable() || TryBindWingetFromAppx() ||
+            (isServer && TryStagePortableWinget(onProgress, notes)))
         {
             Report(onProgress, "winget 已就绪", 100);
             return FormatWingetReady(notes);
         }
 
         // 桌面可选：PowerShell 模块修复（短超时）；Server 跳过——Install-Module 极易挂死
-        if (!Optimizer.IsWindowsServer())
+        if (!isServer)
         {
             Report(onProgress, "通过 WinGet 模块快速修复（最多 90 秒）…", 88);
             var repair = TryRepairWinGetPackageManager(onProgress);
@@ -1016,8 +1037,17 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         notes.Add("自动修复未完成。");
         if (appxPresent || !string.IsNullOrWhiteSpace(appxPath))
         {
-            notes.Add("已检测到 App Installer 包，但未能启动 winget.exe（常见于 Server 缺许可证/别名）。");
-            notes.Add("请再试：设置 → 应用 → 应用执行别名 → 打开 winget.exe；或注销后重开本程序。");
+            notes.Add("已检测到 App Installer 包，但未能启动 winget.exe。");
+            if (isServer)
+            {
+                notes.Add("Server 常见原因：管理员进程调用 WindowsApps 别名报「找不到适用的应用许可证」。");
+                notes.Add("本程序会尝试部署便携目录：" + PortableWingetDir);
+                notes.Add("也可手动把 WindowsApps\\Microsoft.DesktopAppInstaller_* 目录内容复制到该路径。");
+            }
+            else
+            {
+                notes.Add("请再试：设置 → 应用 → 应用执行别名 → 打开 winget.exe；或注销后重开本程序。");
+            }
             if (!string.IsNullOrWhiteSpace(appxPath))
                 notes.Add("检测到路径：" + appxPath);
         }
@@ -1414,11 +1444,26 @@ Repair-WinGetPackageManager -AllUsers -Force
                 catch (Exception ex) { ApplyLog.Write("UI.Xaml 安装：" + ex.Message); }
             }
 
+            // Dependencies.zip 里其它 x64 框架（如 WindowsAppRuntime）一并安装
+            foreach (var extra in CollectExtraWingetDependencyPackages(DownloadDir, vcLibs, uiXaml))
+            {
+                try
+                {
+                    Report(onProgress, "安装依赖 " + Path.GetFileName(extra) + "…", 87);
+                    AddAppxPackage(extra, provisioned: false);
+                }
+                catch (Exception ex)
+                {
+                    ApplyLog.Write("依赖安装 " + Path.GetFileName(extra) + "：" + ex.Message);
+                }
+            }
+
             Report(onProgress, "安装 App Installer…", 90);
             // 优先带 DependencyPath，减少依赖遗漏
             var depPaths = new List<string>();
             if (hasVc) depPaths.Add(vcLibs);
             if (hasXaml) depPaths.Add(uiXaml);
+            depPaths.AddRange(CollectExtraWingetDependencyPackages(DownloadDir, vcLibs, uiXaml));
             try
             {
                 if (depPaths.Count > 0)
@@ -1445,15 +1490,225 @@ Repair-WinGetPackageManager -AllUsers -Force
             ResetWingetDiscovery();
             TryBindWingetFromAppx();
             TryEnableWingetAppAlias();
+            if (preferProvisioned)
+                TryStagePortableWinget(onProgress, notes: null, fromBundlePath: bundle);
 
             return preferProvisioned
-                ? "已按 Server 路径安装 App Installer（含依赖；本机缓存/多镜像）。"
+                ? "已按 Server 路径安装 App Installer（依赖 + 许可证 + 便携目录 C:\\Tools\\winget）。"
                 : "已下载并安装 App Installer 依赖与主包。";
         }
         catch (Exception ex)
         {
             return "离线包安装失败：" + ShortNetError(ex);
         }
+    }
+
+    private static IEnumerable<string> CollectExtraWingetDependencyPackages(
+        string destDir, string vcLibs, string uiXaml)
+    {
+        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { vcLibs, uiXaml };
+        var extractDir = Path.Combine(destDir, "winget-deps");
+        if (!Directory.Exists(extractDir))
+            yield break;
+
+        foreach (var file in Directory.EnumerateFiles(extractDir, "*.*", SearchOption.AllDirectories))
+        {
+            var ext = Path.GetExtension(file);
+            if (!ext.Equals(".appx", StringComparison.OrdinalIgnoreCase) &&
+                !ext.Equals(".msix", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var lower = file.Replace('\\', '/').ToLowerInvariant();
+            // 只要 x64；跳过 arm/x86
+            if (lower.Contains("/arm") || lower.Contains("\\arm") || lower.Contains("arm64"))
+                continue;
+            if ((lower.Contains("/x86") || lower.Contains("\\x86") || lower.Contains(".x86.")) &&
+                !lower.Contains("x64"))
+                continue;
+            if (skip.Contains(file)) continue;
+            if (!LooksLikeBinaryPackage(file)) continue;
+            yield return file;
+        }
+    }
+
+    /// <summary>
+    /// Server：把可执行的 winget 部署到 C:\Tools\winget。
+    /// 本机实测管理员进程调用 WindowsApps 别名常失败，而该便携目录可正常 --version。
+    /// </summary>
+    private static bool TryStagePortableWinget(
+        Action<SoftwareInstallProgress>? onProgress = null,
+        List<string>? notes = null,
+        string? fromBundlePath = null)
+    {
+        try
+        {
+            if (File.Exists(PortableWingetExe) && ProbeWinget(PortableWingetExe))
+            {
+                _wingetPath = PortableWingetExe;
+                _wingetDiscoveryDone = true;
+                notes?.Add("已使用便携 winget：" + PortableWingetExe);
+                return true;
+            }
+
+            Report(onProgress, "Server：部署便携 winget 到 C:\\Tools\\winget…", 96);
+
+            // 1) 从已安装 Appx 目录复制（与本机 C:\Tools\winget 来源一致）
+            var appxExe = TryGetAppxWingetPath();
+            if (!string.IsNullOrWhiteSpace(appxExe))
+            {
+                var srcDir = Path.GetDirectoryName(appxExe);
+                if (!string.IsNullOrWhiteSpace(srcDir) && Directory.Exists(srcDir) &&
+                    TryCopyWingetTree(srcDir!, PortableWingetDir) &&
+                    ProbeWinget(PortableWingetExe))
+                {
+                    _wingetPath = PortableWingetExe;
+                    _wingetDiscoveryDone = true;
+                    ApplyLog.Write("已从 Appx 部署便携 winget：" + PortableWingetExe);
+                    notes?.Add("已部署便携 winget（来自 Appx）：" + PortableWingetExe);
+                    return true;
+                }
+            }
+
+            // 2) 从已下载的 msixbundle 解出 x64 包再展开
+            var bundle = fromBundlePath;
+            if (string.IsNullOrWhiteSpace(bundle) || !File.Exists(bundle))
+            {
+                bundle = Path.Combine(DownloadDir, "Microsoft.DesktopAppInstaller.msixbundle");
+                var alt = Path.Combine(DownloadDir, "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle");
+                if ((!File.Exists(bundle) || !LooksLikeBinaryPackage(bundle)) && File.Exists(alt))
+                    bundle = alt;
+            }
+
+            if (!string.IsNullOrWhiteSpace(bundle) && File.Exists(bundle) &&
+                TryExtractPortableWingetFromBundle(bundle!, PortableWingetDir, onProgress) &&
+                ProbeWinget(PortableWingetExe))
+            {
+                _wingetPath = PortableWingetExe;
+                _wingetDiscoveryDone = true;
+                ApplyLog.Write("已从 msixbundle 部署便携 winget：" + PortableWingetExe);
+                notes?.Add("已部署便携 winget（来自离线包）：" + PortableWingetExe);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("便携 winget 部署失败：" + ex.Message);
+            notes?.Add("便携 winget 部署失败：" + ShortNetError(ex));
+        }
+
+        return false;
+    }
+
+    private static bool TryCopyWingetTree(string srcDir, string destDir)
+    {
+        try
+        {
+            Directory.CreateDirectory(destDir);
+            foreach (var file in Directory.EnumerateFiles(srcDir, "*", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)), overwrite: true);
+                }
+                catch
+                {
+                    /* WindowsApps ACL 可能拦个别文件 */
+                }
+            }
+
+            foreach (var sub in Directory.EnumerateDirectories(srcDir))
+            {
+                var name = Path.GetFileName(sub);
+                if (name.Equals("AppxMetadata", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                try { CopyDirectoryRecursive(sub, Path.Combine(destDir, name)); }
+                catch { /* ignore one subtree */ }
+            }
+
+            return File.Exists(Path.Combine(destDir, "winget.exe")) &&
+                   File.Exists(Path.Combine(destDir, "WindowsPackageManager.dll"));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void CopyDirectoryRecursive(string src, string dest)
+    {
+        Directory.CreateDirectory(dest);
+        foreach (var file in Directory.EnumerateFiles(src))
+        {
+            try { File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), overwrite: true); }
+            catch { /* ignore */ }
+        }
+        foreach (var dir in Directory.EnumerateDirectories(src))
+            CopyDirectoryRecursive(dir, Path.Combine(dest, Path.GetFileName(dir)));
+    }
+
+    private static bool TryExtractPortableWingetFromBundle(
+        string bundlePath,
+        string destDir,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var work = Path.Combine(DownloadDir, "winget-bundle-extract");
+        try
+        {
+            if (Directory.Exists(work))
+                Directory.Delete(work, recursive: true);
+        }
+        catch { /* ignore */ }
+
+        Directory.CreateDirectory(work);
+        Report(onProgress, "从 msixbundle 解出便携 winget…", 97);
+
+        // msixbundle / msix 均为 ZIP
+        try
+        {
+            System.IO.Compression.ZipFile.ExtractToDirectory(bundlePath, work);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("解压 msixbundle 失败：" + ex.Message);
+            return false;
+        }
+
+        // 找 x64 主包（.msix）
+        var msix = Directory.EnumerateFiles(work, "*.msix", SearchOption.AllDirectories)
+            .Where(f =>
+            {
+                var n = Path.GetFileName(f);
+                return n.IndexOf("DesktopAppInstaller", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                       n.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                       n.IndexOf("language", StringComparison.OrdinalIgnoreCase) < 0 &&
+                       n.IndexOf("scale-", StringComparison.OrdinalIgnoreCase) < 0;
+            })
+            .OrderByDescending(f => new FileInfo(f).Length)
+            .FirstOrDefault();
+
+        if (msix is null)
+        {
+            msix = Directory.EnumerateFiles(work, "*.msix", SearchOption.AllDirectories)
+                .Where(f => Path.GetFileName(f).IndexOf("DesktopAppInstaller", StringComparison.OrdinalIgnoreCase) >= 0)
+                .OrderByDescending(f => new FileInfo(f).Length)
+                .FirstOrDefault();
+        }
+
+        if (msix is null) return false;
+
+        var unpack = Path.Combine(work, "msix-unpacked");
+        Directory.CreateDirectory(unpack);
+        try
+        {
+            System.IO.Compression.ZipFile.ExtractToDirectory(msix, unpack);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("解压 msix 失败：" + ex.Message);
+            return false;
+        }
+
+        return TryCopyWingetTree(unpack, destDir);
     }
 
     private static void TryInstallWingetLicense(string bundlePath, Action<SoftwareInstallProgress>? onProgress)
@@ -1609,6 +1864,8 @@ Add-AppxProvisionedPackage -Online -PackagePath '{escBundle}' -LicensePath '{esc
                 targetName = "Microsoft.VCLibs.x64.14.00.Desktop.appx";
             else if (name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0)
                 targetName = "Microsoft.UI.Xaml.2.8.x64.appx";
+            else if (name.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0)
+                targetName = name; // 保留原名，供 CollectExtra 安装
 
             var target = Path.Combine(destDir, targetName);
             try { File.Copy(file, target, overwrite: true); }

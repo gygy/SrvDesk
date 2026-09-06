@@ -511,7 +511,10 @@ internal sealed class CommonSoftwareDialog : Form
         {
             var answer = MessageBox.Show(this,
                 "将下载并安装「应用安装程序」(winget) 及其依赖。\r\n\r\n" +
-                "Server 环境可能需要数分钟。安装期间可继续使用主窗口。\r\n是否继续？",
+                (Optimizer.IsWindowsServer()
+                    ? "Server：离线包安装 + 部署便携目录 C:\\Tools\\winget（绕过 WindowsApps 别名许可证问题）。\r\n"
+                    : "") +
+                "安装期间可继续使用主窗口。是否继续？",
                 "安装 winget", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }

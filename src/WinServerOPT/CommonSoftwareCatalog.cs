@@ -85,8 +85,8 @@ internal static class CommonSoftwareCatalog
             ["阿里云盘"], "https://www.aliyundrive.com/download", essential: false),
         Item("tianyiyun", "天翼云盘", "网盘", "",
             ["天翼云盘", "Cloud189", "eCloud"], "https://cloud.189.cn/", essential: false),
-        // Server 无商店：优先 Appx/Msix 旁加载（与手工下载的 AppleInc.iCloud_*.Appx + 依赖一致）
-        Item("icloud", "iCloud for Windows（Appx 旁加载）", "网盘", "Apple.iCloud",
+        // Server 无商店：离线自动安装（Appx 旁加载 → EXE 回退）
+        Item("icloud", "iCloud for Windows（离线自动安装）", "网盘", "Apple.iCloud",
             ["iCloud"], "https://support.apple.com/zh-cn/103232", essential: false,
             storeProductId: "9PKTQ5699M62",
             appxPackageName: "AppleInc.iCloud",
