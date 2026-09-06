@@ -34,12 +34,14 @@ internal static class SettingCatalog
         "立即生效。");
 
     public static readonly SettingHelpInfo DisableUac = H(
-        "关闭 UAC 弹窗，安装/改系统时不再反复确认。",
-        "将 EnableLUA 设为 0，降低用户账户控制拦截级别。",
-        "个人桌面环境操作更顺畅，减少「是否允许」打断。",
-        "仅建议在可信的个人/内网环境开启；企业或公网暴露环境请保持 UAC。",
-        "立即生效；部分程序需重启后完全生效。",
-        recommend: RecommendLevel.Optional);
+        "将用户账户控制滑块设为「从不通知」，安装/改系统时不再弹确认框。",
+        "ConsentPromptBehaviorAdmin=0、PromptOnSecureDesktop=0（与常见「从不通知」.reg 一致；不关闭 EnableLUA）。",
+        "个人桌面减少 UAC 打断；比直接 EnableLUA=0 更接近系统自带滑块行为。",
+        "仅建议在可信的个人/内网环境开启；企业或公网暴露环境请保持默认通知。",
+        "立即生效；个别程序建议注销或重启后再试。",
+        recommend: RecommendLevel.Optional,
+        uiPlace: "控制面板 → 用户账户 → 更改用户账户控制设置",
+        whenHint: "个人桌面可开；公网/域环境慎用");
 
     public static readonly SettingHelpInfo DisableIeEsc = H(
         "关闭 Server 默认的 IE 增强安全模式。",
@@ -760,7 +762,25 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo ContextMenuTakeOwnership = H(
         "右键菜单增加「取得所有权」。", "HKCR *\\shell。", "快速 takeown/icacls。", "对齐 Optimizer Integrator。", "立即生效。", W10De);
     public static readonly SettingHelpInfo ContextMenuOpenCmd = H(
-        "文件夹右键「在此处打开 CMD」。", "HKCR Directory\\shell。", "运维常用。", "对齐 Optimizer OpenWithCMD。", "立即生效。", W10De);
+        "文件夹右键「在此处打开命令提示符」。",
+        "写入 Directory\\shell 与 Background（空白处）；关闭时一并清除常见优化包的 Folder\\shell\\OpenDOSBox。",
+        "在当前目录快速打开 CMD，运维常用。",
+        "建议开启；已用其它 .reg 加过同类项时，用本开关开关即可统一管理。",
+        "立即生效。",
+        W10De,
+        uiPlace: "资源管理器 → 文件夹 / 空白处右键",
+        whenHint: "需要在目录下开 CMD 时开启",
+        recommend: RecommendLevel.Suggested);
+    public static readonly SettingHelpInfo ContextMenuCopyMoveTo = H(
+        "右键菜单增加「复制到文件夹」「移动到文件夹」。",
+        "HKCR AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Copy To / Move To（系统自带 CLSID）。",
+        "选中文件/文件夹后可一键复制或移动到指定目录，少开资源管理器窗口。",
+        "桌面整理、批量归类时建议开启；不需要可关。",
+        "立即生效；若菜单未出现可刷新资源管理器。",
+        W10De,
+        uiPlace: "资源管理器 → 文件/文件夹右键",
+        whenHint: "需要快速复制/移动到其它目录时开启",
+        recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo DisableMediaPlayerSharing = H(
         "禁用 Windows Media Player 网络共享。", "WMPNetworkSvc。", "减少共享端口。", "不共享媒体库可开。", "服务停止后生效。");
     public static readonly SettingHelpInfo DisableInsiderService = H(

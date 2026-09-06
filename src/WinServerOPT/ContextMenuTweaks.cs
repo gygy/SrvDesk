@@ -7,7 +7,10 @@ internal static class ContextMenuTweaks
 {
     public static bool IsTakeOwnershipOn() => KeyExists(@"*\shell\WinOptTakeOwnership");
     public static bool IsOpenCmdOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenCmd") || KeyExists(@"Directory\Background\shell\WinOptOpenCmd");
+        KeyExists(@"Directory\shell\WinOptOpenCmd")
+        || KeyExists(@"Directory\Background\shell\WinOptOpenCmd")
+        || KeyExists(@"Folder\shell\OpenDOSBox");
+
     public static bool IsOpenPowerShellOn() =>
         KeyExists(@"Directory\shell\WinOptOpenPS") || KeyExists(@"Directory\Background\shell\WinOptOpenPS");
     public static bool IsOpenPowerShellAdminOn() =>
@@ -23,6 +26,24 @@ internal static class ContextMenuTweaks
         GetDword(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked",
             "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}") == 1;
 
+    /// <summary>资源管理器右键「复制到文件夹 / 移动到文件夹」（两者同一开关）。</summary>
+    public static bool IsCopyMoveToOn()
+    {
+        var copy = GetDefault(CopyToHandlerKey);
+        var move = GetDefault(MoveToHandlerKey);
+        return string.Equals(copy, CopyToClsid, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(move, MoveToClsid, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private const string CopyToHandlerKey =
+        @"AllFilesystemObjects\shellex\ContextMenuHandlers\Copy To";
+    private const string MoveToHandlerKey =
+        @"AllFilesystemObjects\shellex\ContextMenuHandlers\Move To";
+    private const string CopyToClsid = "{C2FBB630-2971-11D1-A18C-00C04FD75D13}";
+    private const string MoveToClsid = "{C2FBB631-2971-11D1-A18C-00C04FD75D13}";
+    /// <summary>部分优化包使用的旧键（Folder\shell\OpenDOSBox）。</summary>
+    private const string LegacyOpenCmdKey = @"Folder\shell\OpenDOSBox";
+
     public static void SetTakeOwnership(bool enable)
     {
         if (!enable) { DeleteTree(@"*\shell\WinOptTakeOwnership"); return; }
@@ -32,12 +53,13 @@ internal static class ContextMenuTweaks
 
     public static void SetOpenCmd(bool enable)
     {
-        if (!enable)
-        {
-            DeleteTree(@"Directory\shell\WinOptOpenCmd");
-            DeleteTree(@"Directory\Background\shell\WinOptOpenCmd");
-            return;
-        }
+        // 关闭时同时清掉 WinOpt 键与常见优化包 OpenDOSBox 旧键，避免关不干净 / 重复菜单
+        DeleteTree(@"Directory\shell\WinOptOpenCmd");
+        DeleteTree(@"Directory\Background\shell\WinOptOpenCmd");
+        DeleteTree(LegacyOpenCmdKey);
+        if (!enable) return;
+
+        // Directory + Background：文件夹本身与空白处均可；pushd "%V" 比 CD %1 更稳
         SetShell(@"Directory\shell\WinOptOpenCmd", "在此处打开命令提示符",
             "cmd.exe /s /k pushd \"%V\"");
         SetShell(@"Directory\Background\shell\WinOptOpenCmd", "在此处打开命令提示符",
@@ -109,6 +131,35 @@ internal static class ContextMenuTweaks
         if (!enable) { DeleteTree(@"AllFilesystemObjects\shell\WinOptCopyPath"); return; }
         SetShell(@"AllFilesystemObjects\shell\WinOptCopyPath", "复制完整路径",
             "powershell.exe -NoProfile -Command \"Set-Clipboard -Value '%1'\"");
+    }
+
+    /// <summary>开启/关闭右键「复制到文件夹」与「移动到文件夹」（对齐经典 shellex CLSID）。</summary>
+    public static void SetCopyMoveTo(bool enable)
+    {
+        if (!enable)
+        {
+            DeleteTree(CopyToHandlerKey);
+            DeleteTree(MoveToHandlerKey);
+            return;
+        }
+
+        SetHandlerDefault(CopyToHandlerKey, CopyToClsid, "右键「复制到文件夹」");
+        SetHandlerDefault(MoveToHandlerKey, MoveToClsid, "右键「移动到文件夹」");
+    }
+
+    private static void SetHandlerDefault(string relative, string clsid, string logTitle)
+    {
+        var old = GetDefault(relative);
+        ApplyLog.RegistryKeyWrite("HKCR", relative, $"{logTitle} @={clsid}（原={old ?? "(无)"}）");
+        using var k = Registry.ClassesRoot.CreateSubKey(relative)
+            ?? throw new InvalidOperationException("无法写入：" + relative);
+        k.SetValue("", clsid);
+    }
+
+    private static string? GetDefault(string relative)
+    {
+        using var k = Registry.ClassesRoot.OpenSubKey(relative);
+        return k?.GetValue("") as string;
     }
 
     public static void SetEditWithPaint(bool enable)

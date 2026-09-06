@@ -6,7 +6,7 @@ internal sealed class MainForm : Form
 {
     private readonly SettingRow _cpu = Row("CPU 资源分配（程序优先）", "后台服务优先", SettingCatalog.CpuProgramPriority);
     private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略", SettingCatalog.Dep);
-    private readonly SettingRow _uac = Row("禁用用户账户控制 UAC", "启用", SettingCatalog.DisableUac);
+    private readonly SettingRow _uac = Row("UAC 设置为从不通知", "默认通知", SettingCatalog.DisableUac);
     private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启", SettingCatalog.DisableIeEsc);
     private readonly SettingRow _highPerf = Row("高性能电源计划", "平衡", SettingCatalog.HighPerfPower);
     private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启", SettingCatalog.DisableTelemetry);
@@ -80,6 +80,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _f8 = Row("启用 F8 高级启动菜单", "标准", SettingCatalog.EnableF8BootMenu);
     private readonly SettingRow _takeOwn = Row("右键菜单：取得所有权", "无", SettingCatalog.ContextMenuTakeOwnership);
     private readonly SettingRow _openCmd = Row("右键菜单：在此处打开 CMD", "无", SettingCatalog.ContextMenuOpenCmd);
+    private readonly SettingRow _copyMoveTo = Row("右键菜单：复制到 / 移动到", "无", SettingCatalog.ContextMenuCopyMoveTo);
     private readonly SettingRow _wmpShare = Row("禁用媒体播放器网络共享", "手动", SettingCatalog.DisableMediaPlayerSharing);
     private readonly SettingRow _insider = Row("禁用 Windows Insider 服务", "手动", SettingCatalog.DisableInsiderService);
     private readonly SettingRow _storeUpd = Row("禁止商店自动更新应用", "自动", SettingCatalog.DisableStoreAutoUpdate);
@@ -250,7 +251,7 @@ internal sealed class MainForm : Form
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
-        _takeOwn, _openCmd, _news,
+        _takeOwn, _openCmd, _copyMoveTo, _news,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
@@ -316,7 +317,7 @@ internal sealed class MainForm : Form
                 _classicSearch, _searchEngine,
             ]),
             ("右键菜单", [
-                _takeOwn, _openCmd,
+                _takeOwn, _openCmd, _copyMoveTo,
             ]),
         ]));
         _groups.Add(("资源管理器", [
@@ -1899,8 +1900,10 @@ internal sealed class MainForm : Form
     {
         _takeOwn.Checked = ContextMenuTweaks.IsTakeOwnershipOn();
         _openCmd.Checked = ContextMenuTweaks.IsOpenCmdOn();
+        _copyMoveTo.Checked = ContextMenuTweaks.IsCopyMoveToOn();
         _takeOwn.SyncCurrentValueFromState();
         _openCmd.SyncCurrentValueFromState();
+        _copyMoveTo.SyncCurrentValueFromState();
     }
 
     private void Bind(Optimizer.State s, bool updateCurrentValues = false)
@@ -2026,6 +2029,7 @@ internal sealed class MainForm : Form
         _f8.Checked = s.EnableF8BootMenu;
         _takeOwn.Checked = s.ContextMenuTakeOwnership;
         _openCmd.Checked = s.ContextMenuOpenCmd;
+        _copyMoveTo.Checked = s.ContextMenuCopyMoveTo;
         _wmpShare.Checked = s.DisableMediaPlayerSharing;
         _insider.Checked = s.DisableInsiderService;
         _storeUpd.Checked = s.DisableStoreAutoUpdate;
@@ -2139,6 +2143,7 @@ internal sealed class MainForm : Form
         EnableF8BootMenu = _f8.Checked,
         ContextMenuTakeOwnership = _takeOwn.Checked,
         ContextMenuOpenCmd = _openCmd.Checked,
+        ContextMenuCopyMoveTo = _copyMoveTo.Checked,
         DisableMediaPlayerSharing = _wmpShare.Checked,
         DisableInsiderService = _insider.Checked,
         DisableStoreAutoUpdate = _storeUpd.Checked,
@@ -2292,6 +2297,7 @@ internal sealed class MainForm : Form
         Sync(_tbCopilot, s.HideTaskbarCopilot);
         Sync(_takeOwn, s.ContextMenuTakeOwnership);
         Sync(_openCmd, s.ContextMenuOpenCmd);
+        Sync(_copyMoveTo, s.ContextMenuCopyMoveTo);
     }
 
     private void SetRowsChecked(IEnumerable<SettingRow> rows, bool on)

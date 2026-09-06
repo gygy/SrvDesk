@@ -188,6 +188,7 @@ internal static class Optimizer
         public bool EnableF8BootMenu;
         public bool ContextMenuTakeOwnership;
         public bool ContextMenuOpenCmd;
+        public bool ContextMenuCopyMoveTo;
         public bool DisableMediaPlayerSharing;
         public bool DisableInsiderService;
         public bool DisableStoreAutoUpdate;
@@ -216,7 +217,7 @@ internal static class Optimizer
         {
             CpuProgramPriority = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", 38),
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
-            DisableUac = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", 0),
+            DisableUac = IsUacNeverNotify(),
             DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
             HighPerfPower = IsActivePowerPlan(PowerPlanHighPerf),
             DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
@@ -359,8 +360,7 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", s.CpuProgramPriority ? 38 : 2));
         Do(Ch(x => x.Dep), "DEP", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", s.Dep ? 1 : 0));
-        Do(Ch(x => x.DisableUac), "UAC", () =>
-            SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", s.DisableUac ? 0 : 1));
+        Do(Ch(x => x.DisableUac), "UAC从不通知", () => SetUacNeverNotify(s.DisableUac));
         Do(Ch(x => x.DisableIeEsc), "IE增强安全", () =>
         {
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
@@ -612,6 +612,7 @@ internal static class Optimizer
             || b.EnableF8BootMenu != s.EnableF8BootMenu
             || b.ContextMenuTakeOwnership != s.ContextMenuTakeOwnership
             || b.ContextMenuOpenCmd != s.ContextMenuOpenCmd
+            || b.ContextMenuCopyMoveTo != s.ContextMenuCopyMoveTo
             || b.DisableMediaPlayerSharing != s.DisableMediaPlayerSharing
             || b.DisableInsiderService != s.DisableInsiderService
             || b.DisableStoreAutoUpdate != s.DisableStoreAutoUpdate

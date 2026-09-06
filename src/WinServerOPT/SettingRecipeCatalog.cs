@@ -25,9 +25,17 @@ internal static class SettingRecipeCatalog
             @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management",
             "DataExecutionPrevention_S4UEnable", 1, 0));
 
-        Add(SettingCatalog.DisableUac, ActionScript.DwordToggle(false,
-            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", 0, 1,
-            "关闭 UAC 需管理员；部分程序需重启后完全生效。"));
+        Add(SettingCatalog.DisableUac, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"),
+                ActionScript.Dword("ConsentPromptBehaviorAdmin", 0),
+                ActionScript.Dword("PromptOnSecureDesktop", 0)),
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"),
+                ActionScript.Dword("ConsentPromptBehaviorAdmin", 5),
+                ActionScript.Dword("PromptOnSecureDesktop", 1),
+                ActionScript.Dword("EnableLUA", 1)),
+            "对齐「从不通知」滑块；关闭时恢复默认通知并确保 EnableLUA=1。"));
 
         Add(SettingCatalog.DisableIeEsc, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm($@"SOFTWARE\Microsoft\Active Setup\Installed Components\{Optimizer.IeEscAdmin}"),
@@ -674,9 +682,33 @@ internal static class SettingRecipeCatalog
             "echo 右键「取得所有权」由 ContextMenuTweaks 写入 HKCR；请用软件开关一键应用。",
             "echo 关闭请用软件关闭本项。",
             "HKCR 组合项较多，建议软件应用。"));
-        Add(SettingCatalog.ContextMenuOpenCmd, ActionScript.Cmd(
-            "echo 右键「在此处打开 CMD」由 ContextMenuTweaks 写入；请用软件开关。",
-            "echo 关闭请用软件关闭本项。"));
+        Add(SettingCatalog.ContextMenuOpenCmd, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\WinOptOpenCmd"),
+                "@=\"在此处打开命令提示符\"") +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\WinOptOpenCmd\\command"),
+                "@=\"cmd.exe /s /k pushd \\\"%V\\\"\"") +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\WinOptOpenCmd"),
+                "@=\"在此处打开命令提示符\"") +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\WinOptOpenCmd\\command"),
+                "@=\"cmd.exe /s /k pushd \\\"%V\\\"\""),
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\shell\\WinOptOpenCmd]\r\n" +
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\Background\\shell\\WinOptOpenCmd]\r\n" +
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Folder\\shell\\OpenDOSBox]\r\n",
+            "开启用 Directory+Background；关闭同时清除 OpenDOSBox 旧键。"));
+        Add(SettingCatalog.ContextMenuCopyMoveTo, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\Copy To"),
+                "@=\"{C2FBB630-2971-11D1-A18C-00C04FD75D13}\"") +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Classes\AllFilesystemObjects\shellex\ContextMenuHandlers\Move To"),
+                "@=\"{C2FBB631-2971-11D1-A18C-00C04FD75D13}\""),
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Copy To]\r\n" +
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Move To]\r\n",
+            "开启后文件/文件夹右键出现「复制到文件夹」「移动到文件夹」。"));
         Add(SettingCatalog.DisableMediaPlayerSharing, ActionScript.Service("WMPNetworkSvc", enableMeansStart: false));
         Add(SettingCatalog.DisableInsiderService, ActionScript.Service("wisvc", enableMeansStart: false));
         Add(SettingCatalog.DisableStoreAutoUpdate, ActionScript.DwordToggle(false,
