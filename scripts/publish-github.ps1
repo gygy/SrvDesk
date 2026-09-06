@@ -10,6 +10,7 @@ Set-Location $Root
 
 $PublicFiles = @(
     "README.md",
+    "README_en.md",
     "README_cn.md",
     "LICENSE",
     "DISCLAIMER.md",
