@@ -478,7 +478,7 @@ internal sealed class MainForm : Form
         _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
         _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
-        _appMenu.HelpAbout.Click += (_, _) => ShowAboutDialog();
+        _appMenu.HelpSupport.Click += (_, _) => ShowSupportDialog();
 
         _appMenu.ViewHideIncompatible.CheckedChanged += (_, _) =>
         {
@@ -2487,21 +2487,10 @@ internal sealed class MainForm : Form
         return ok;
     }
 
-    private void ShowAboutDialog()
+    private void ShowSupportDialog()
     {
-        MessageBox.Show(
-            $"{AppBrand.ProductName} v{AppBrand.VersionText}\r\n" +
-            "用于 Windows Server 2022/2025 个人桌面。\r\n\r\n" +
-            "系统：" + _systemFacts.Summary + "\r\n" +
-            "计算机：" + ComputerIdentityHelper.Read().Summary + "\r\n" +
-            "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
-            "操作日志：" + ApplyLog.LogFilePath + "\r\n" +
-            "变更日志：" + ApplyLog.ChangeLogFilePath + "\r\n\r\n" +
-            "配置 JSON 可导入导出（含开关、脚本覆盖、自定义方案）。\r\n" +
-            $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
-            AppBrand.AboutDialogTitle,
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
+        using var dlg = new SupportDialog();
+        dlg.ShowDialog(this);
     }
 
     private static SettingRow Row(string item, string systemDefault, SettingHelpInfo help) =>

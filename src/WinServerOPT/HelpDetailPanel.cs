@@ -421,6 +421,15 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     private void SetRecipeSide(bool enable) => SetRecipeSide(enable, flushPrevious: true);
 
+    /// <summary>导入配置后刷新当前正在显示的脚本内容。</summary>
+    public void ReloadScriptsIfShowing()
+    {
+        if (_recipe is null || string.IsNullOrEmpty(_itemTitle) || !_recipeBox.Visible)
+            return;
+        _persistTimer.Stop();
+        SetRecipeSide(_showEnable, flushPrevious: false);
+    }
+
     private void SetRecipeSide(bool enable, bool flushPrevious)
     {
         if (flushPrevious)

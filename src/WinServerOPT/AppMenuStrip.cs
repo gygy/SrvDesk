@@ -32,10 +32,9 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ViewHideIncompatible { get; }
     public ToolStripMenuItem ViewHelpPanel { get; }
     public ToolStripMenuItem HelpUsage { get; }
-    public ToolStripMenuItem HelpLegend { get; }
     public ToolStripMenuItem HelpChangeLog { get; }
     public ToolStripMenuItem HelpLog { get; }
-    public ToolStripMenuItem HelpAbout { get; }
+    public ToolStripMenuItem HelpSupport { get; }
 
     public AppMenuStrip()
     {
@@ -103,13 +102,12 @@ internal sealed class AppMenuStrip : MenuStrip
 
         var help = new ToolStripMenuItem("帮助(&H)");
         HelpUsage = Item("使用说明", MenuIcons.HelpUsage, Keys.F1);
-        HelpLegend = Item("标识图例...", MenuIcons.HelpLegend);
-        HelpChangeLog = Item("打开变更日志...", MenuIcons.HelpChangeLog);
-        HelpLog = Item("打开操作日志...", MenuIcons.HelpLog);
-        HelpAbout = Item($"关于 {AppBrand.ProductName}...", MenuIcons.HelpAbout);
+        HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
+        HelpLog = Item("操作日志...", MenuIcons.HelpLog);
+        HelpSupport = Item("支持", MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
-            HelpUsage, HelpLegend, new ToolStripSeparator(),
-            HelpChangeLog, HelpLog, HelpAbout
+            HelpUsage, new ToolStripSeparator(),
+            HelpChangeLog, HelpLog, HelpSupport
         ]);
 
         Items.AddRange([file, tools, view, help]);

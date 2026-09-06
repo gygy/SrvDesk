@@ -9,10 +9,12 @@ internal static class AppBrand
 {
     public const string ProductName = "Windows server优化助手SrvDesk";
     public const string ShortName = "SrvDesk";
+    public const string Author = "gygy";
+    public const string FeedbackUrl = "https://github.com/gygy/SrvDesk";
 
     public static string ExeFileName => $"{ShortName}.exe";
 
-    public static string AboutDialogTitle => $"关于 {ProductName}";
+    public static string SupportDialogTitle => "支持";
 
     /// <summary>短版本号（如 1.0.1），不含 git 提交哈希等后缀。</summary>
     public static string VersionText

@@ -47,13 +47,13 @@ internal sealed class CustomPackItemExport
 /// <summary>导入结果：开关状态 + 可选的脚本覆盖与自定义方案。</summary>
 internal sealed class OptProfileBundle
 {
-    public Optimizer.State State { get; init; } = new();
-    public bool HasSettings { get; init; }
-    public Dictionary<string, string>? ScriptOverrides { get; init; }
-    public bool HasScriptOverrides { get; init; }
-    public List<CustomPackExport>? CustomPacks { get; init; }
-    public string? CustomPacksLastId { get; init; }
-    public bool HasCustomPacks { get; init; }
+    public Optimizer.State State { get; set; } = new();
+    public bool HasSettings { get; set; }
+    public Dictionary<string, string>? ScriptOverrides { get; set; }
+    public bool HasScriptOverrides { get; set; }
+    public List<CustomPackExport>? CustomPacks { get; set; }
+    public string? CustomPacksLastId { get; set; }
+    public bool HasCustomPacks { get; set; }
 }
 
 internal static class ProfileStore
