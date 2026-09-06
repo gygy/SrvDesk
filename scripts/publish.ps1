@@ -1,5 +1,6 @@
 ﻿param(
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [switch]$SkipObfuscate
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +9,11 @@ if (-not (Test-Path $dotnet)) { $dotnet = "dotnet" }
 $repo = Split-Path $PSScriptRoot -Parent
 $proj = Join-Path $repo "src\WinServerOPT\WinServerOPT.csproj"
 $dist = Join-Path $repo "dist"
+$obfuscarXml = Join-Path $PSScriptRoot "obfuscar.xml"
+$toolsDir = Join-Path $repo "tools\obfuscar"
+$publishRaw = Join-Path $repo "artifacts\publish-raw"
+$obfIn = Join-Path $repo "artifacts\obfuscar-in"
+$obfOut = Join-Path $repo "artifacts\obfuscar-out"
 
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
@@ -44,29 +50,110 @@ if ($locked.Count -gt 0) {
     Write-Warning ("Locked (not deleted): " + ($locked -join ", "))
 }
 
-& $dotnet publish $proj -c $Configuration -o $dist
-if ($LASTEXITCODE -ne 0) {
-    $stamp = Get-Date -Format "HHmmss"
-    $tmp = Join-Path $repo ("dist-tmp-" + $stamp)
-    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+function Publish-ToDir([string]$OutDir) {
+    if (Test-Path $OutDir) {
+        Remove-Item -LiteralPath $OutDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+    # Out-Host: keep tool logs off the success pipeline so return value stays numeric
+    & $dotnet publish $proj -c $Configuration -o $OutDir 2>&1 | ForEach-Object { Write-Host $_ }
+    return [int]$LASTEXITCODE
+}
+
+function Ensure-Obfuscar {
+    $exe = Join-Path $toolsDir "obfuscar.console.exe"
+    if (Test-Path $exe) { return $exe }
+
+    New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+    Write-Host "Installing Obfuscar.GlobalTool (light obfuscation)..."
+    & $dotnet tool install Obfuscar.GlobalTool --tool-path $toolsDir --version 2.2.50 2>&1 | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) {
+        & $dotnet tool update Obfuscar.GlobalTool --tool-path $toolsDir --version 2.2.50 2>&1 | ForEach-Object { Write-Host $_ }
+    }
+    if (-not (Test-Path $exe)) {
+        throw "Obfuscar not found after install: $exe"
+    }
+    return $exe
+}
+
+function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
+    $obfuscar = Ensure-Obfuscar
+
+    foreach ($d in @($obfIn, $obfOut)) {
+        if (Test-Path $d) { Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType Directory -Force -Path $d | Out-Null
+    }
+
+    Copy-Item -LiteralPath $SourceExe -Destination (Join-Path $obfIn "SrvDesk.exe") -Force
+
+    # Fill absolute paths into a temp config (Obfuscar resolves relative to cwd)
+    $cfg = Join-Path $repo "artifacts\obfuscar.generated.xml"
+    $xml = Get-Content -LiteralPath $obfuscarXml -Raw -Encoding UTF8
+    $xml = $xml.Replace('value="./in"', ('value="' + $obfIn + '"'))
+    $xml = $xml.Replace('value="./out"', ('value="' + $obfOut + '"'))
+    $utf8Bom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($cfg, $xml, $utf8Bom)
+
+    Push-Location $repo
     try {
-        & $dotnet publish $proj -c $Configuration -o $tmp
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        $built = Get-ChildItem -LiteralPath $tmp -Filter "*.exe" | Select-Object -First 1
-        if ($null -eq $built) {
-            Write-Error "No exe found in publish output"
-            exit 1
+        & $obfuscar $cfg 2>&1 | ForEach-Object { Write-Host $_ }
+        if ($LASTEXITCODE -ne 0) {
+            throw "Obfuscar failed with exit code $LASTEXITCODE"
         }
-        Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue |
-            Remove-Item -Force -ErrorAction SilentlyContinue
-        $target = Join-Path $dist ("SrvDesk-" + $stamp + ".exe")
-        Copy-Item -LiteralPath $built.FullName -Destination $target -Force
-        Write-Host ("SrvDesk.exe locked; wrote: {0} ({1} bytes)" -f $target, $built.Length)
-        exit 0
     }
     finally {
-        Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
+        Pop-Location
     }
+
+    $outExe = Join-Path $obfOut "SrvDesk.exe"
+    if (-not (Test-Path $outExe)) {
+        throw "Obfuscar output missing: $outExe"
+    }
+    Copy-Item -LiteralPath $outExe -Destination $DestExe -Force
+    Write-Host ("Obfuscated (light): {0}" -f $DestExe)
+}
+
+$code = Publish-ToDir $publishRaw
+if ($code -ne 0) {
+    Write-Error "dotnet publish failed"
+    exit $code
+}
+
+$built = Get-ChildItem -LiteralPath $publishRaw -Filter "SrvDesk.exe" | Select-Object -First 1
+if ($null -eq $built) {
+    Write-Error "No SrvDesk.exe in publish output"
+    exit 1
+}
+
+$destExe = Join-Path $dist "SrvDesk.exe"
+try {
+    if ($SkipObfuscate) {
+        Copy-Item -LiteralPath $built.FullName -Destination $destExe -Force
+        Write-Host "SkipObfuscate: copied plain Release build"
+    }
+    else {
+        Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $destExe
+    }
+}
+catch {
+    # dist locked: write stamped obfuscated/plain copy
+    $stamp = Get-Date -Format "HHmmss"
+    $fallback = Join-Path $dist ("SrvDesk-" + $stamp + ".exe")
+    Write-Warning $_.Exception.Message
+    if ($SkipObfuscate) {
+        Copy-Item -LiteralPath $built.FullName -Destination $fallback -Force
+    }
+    else {
+        try {
+            Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $fallback
+        }
+        catch {
+            Copy-Item -LiteralPath $built.FullName -Destination $fallback -Force
+            Write-Warning "Obfuscation failed; wrote plain build as fallback"
+        }
+    }
+    Write-Host ("Wrote: {0} ({1} bytes)" -f $fallback, (Get-Item $fallback).Length)
+    exit 0
 }
 
 Get-ChildItem -LiteralPath $dist -Filter "*.config" -ErrorAction SilentlyContinue | Remove-Item -Force
@@ -74,13 +161,11 @@ Get-ChildItem -LiteralPath $dist -Filter "*.pdb" -ErrorAction SilentlyContinue |
 Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
-$exe = Get-ChildItem -LiteralPath $dist -Filter "SrvDesk.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($null -eq $exe) {
-    $exe = Get-ChildItem -LiteralPath $dist -Filter "*.exe" | Select-Object -First 1
-}
-if ($null -eq $exe) {
-    Write-Error "No exe found in dist"
-    exit 1
-}
+# Clean temp artifacts (keep tools\obfuscar cache)
+Remove-Item -LiteralPath $publishRaw -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $obfIn -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $obfOut -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $repo "artifacts\obfuscar.generated.xml") -Force -ErrorAction SilentlyContinue
 
-Write-Host ("Published: {0} ({1} bytes)" -f $exe.FullName, $exe.Length)
+$exe = Get-Item -LiteralPath $destExe
+Write-Host ("Published: {0} ({1} bytes) [light obfuscation]" -f $exe.FullName, $exe.Length)

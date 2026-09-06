@@ -1,0 +1,33 @@
+<?xml version='1.0'?>
+<!--
+  轻度混淆（低误报优先）：
+  - 重命名类型/方法/字段/属性/事件
+  - 不加密字符串、不做控制流混淆（降低杀软误报）
+  - 跳过 JSON/配置反射依赖的类型，避免导入导出与偏好文件失效
+-->
+<Obfuscator>
+  <Var name="InPath" value="./in" />
+  <Var name="OutPath" value="./out" />
+  <Var name="KeepPublicApi" value="false" />
+  <Var name="HidePrivateApi" value="true" />
+  <Var name="RenameProperties" value="true" />
+  <Var name="RenameEvents" value="true" />
+  <Var name="RenameFields" value="true" />
+  <Var name="UseUnicodeNames" value="false" />
+  <Var name="UseKoreanNames" value="false" />
+  <Var name="HideStrings" value="false" />
+  <Var name="OptimizeMethods" value="true" />
+  <Var name="SuppressIldasm" value="true" />
+  <Var name="RegenerateDebugInfo" value="false" />
+
+  <Module file="$(InPath)\SrvDesk.exe">
+    <!-- 配置 JSON：DataContract 成员名 -->
+    <SkipType name="WinOpt.UiPrefsData" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="WinOpt.OptProfileFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="WinOpt.SettingEntry" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="WinOpt.SettingScriptStore/StoreFile" skipProperties="true" skipFields="true" skipMethods="true" />
+
+    <!-- 预设/导入导出：反射 Optimizer.State 公共字段名 -->
+    <SkipType name="WinOpt.Optimizer/State" skipProperties="true" skipFields="true" skipMethods="true" />
+  </Module>
+</Obfuscator>

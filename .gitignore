@@ -1,6 +1,8 @@
 bin/
 obj/
 dist/
+artifacts/
+tools/
 *.exe
 .vs/
 *.user
