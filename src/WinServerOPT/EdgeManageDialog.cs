@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>MSEdge 管理：状态、禁用更新、卸载 Edge / WebView2 / Edge Core。</summary>
+/// <summary>MSEdge 管理：状态、禁用/恢复更新、卸载与安装恢复 Edge / WebView2 / Edge Core。</summary>
 internal sealed class EdgeManageDialog : Form
 {
     private readonly Label _edgeStatus = MakeStatus();
@@ -10,6 +10,14 @@ internal sealed class EdgeManageDialog : Form
     private readonly Label _coreStatus = MakeStatus();
     private readonly Label _coreVer = MakeVersion();
     private readonly CheckBox _disableUpdate = new();
+    private readonly Button _btnUnEdge;
+    private readonly Button _btnUnWv;
+    private readonly Button _btnUnCore;
+    private readonly Button _btnUnAll;
+    private readonly Button _btnInEdge;
+    private readonly Button _btnInWv;
+    private readonly Button _btnInCore;
+    private readonly Button _btnInMissing;
     private bool _loading;
 
     public EdgeManageDialog()
@@ -20,7 +28,7 @@ internal sealed class EdgeManageDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 340);
+        ClientSize = new Size(540, 420);
 
         var body = new Panel
         {
@@ -34,6 +42,7 @@ internal sealed class EdgeManageDialog : Form
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
+            AutoScroll = true,
         };
 
         stack.Controls.Add(MakeComponentRow("Microsoft Edge", _edgeStatus, _edgeVer));
@@ -62,37 +71,38 @@ internal sealed class EdgeManageDialog : Form
 
         var hint = new Label
         {
-            Text = "提示：卸载 WebView2 可能导致部分应用甚至系统组件打不开。",
+            Text = "提示：卸载 WebView2 可能导致部分应用打不开。安装优先用 winget，失败则下载官方包。取消勾选「禁用更新」即可恢复更新。",
             AutoSize = false,
-            Width = 460,
-            Height = 28,
+            Width = 490,
+            Height = 40,
             ForeColor = AppTheme.TextMute,
-            Margin = new Padding(0, 2, 0, 12),
+            Margin = new Padding(0, 2, 0, 10),
         };
         stack.Controls.Add(hint);
 
-        var buttons = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
-            Margin = new Padding(0),
-        };
-        buttons.Controls.Add(MkBtn("卸载 Edge", () => UninstallOne(EdgeComponentKind.Edge)));
-        buttons.Controls.Add(MkBtn("卸载 WebView2", () => UninstallOne(EdgeComponentKind.WebView2)));
-        buttons.Controls.Add(MkBtn("卸载 Edge Core", () => UninstallOne(EdgeComponentKind.EdgeCore)));
-        buttons.Controls.Add(MkBtn("卸载所有", UninstallAll));
-        stack.Controls.Add(buttons);
+        _btnUnEdge = MkBtn("卸载 Edge", () => UninstallOne(EdgeComponentKind.Edge));
+        _btnUnWv = MkBtn("卸载 WebView2", () => UninstallOne(EdgeComponentKind.WebView2));
+        _btnUnCore = MkBtn("卸载 Edge Core", () => UninstallOne(EdgeComponentKind.EdgeCore));
+        _btnUnAll = MkBtn("卸载所有", UninstallAll);
+
+        _btnInEdge = MkBtn("安装 Edge", () => InstallOne(EdgeComponentKind.Edge));
+        _btnInWv = MkBtn("安装 WebView2", () => InstallOne(EdgeComponentKind.WebView2));
+        _btnInCore = MkBtn("恢复 Edge Core", () => InstallOne(EdgeComponentKind.EdgeCore));
+        _btnInMissing = MkBtn("恢复缺失项", InstallMissing);
+
+        stack.Controls.Add(MakeButtonRow("卸载", _btnUnEdge, _btnUnWv, _btnUnCore, _btnUnAll));
+        stack.Controls.Add(MakeButtonRow("安装 / 恢复", _btnInEdge, _btnInWv, _btnInCore, _btnInMissing));
 
         body.Controls.Add(stack);
 
         ThemedSettingsChrome.MountModal(
             this,
             "MSEdge 管理",
-            "卸载 Edge 组件 · 禁用更新",
+            "卸载 / 安装恢复 · 禁用更新",
             body,
             "",
-            showHeader: false);
+            showHeader: false,
+            onRefresh: RefreshStatus);
 
         Load += (_, _) => RefreshStatus();
     }
@@ -106,6 +116,17 @@ internal sealed class EdgeManageDialog : Form
         _loading = true;
         _disableUpdate.Checked = s.UpdatesDisabled;
         _loading = false;
+
+        _btnUnEdge.Enabled = s.Edge.Installed;
+        _btnUnWv.Enabled = s.WebView2.Installed;
+        _btnUnCore.Enabled = s.EdgeCore.Installed;
+        _btnUnAll.Enabled = s.Edge.Installed || s.WebView2.Installed || s.EdgeCore.Installed;
+
+        _btnInEdge.Enabled = !s.Edge.Installed;
+        _btnInWv.Enabled = !s.WebView2.Installed;
+        // Edge Core：未安装时可点；若 Edge 也未装，会先装 Edge
+        _btnInCore.Enabled = !s.EdgeCore.Installed;
+        _btnInMissing.Enabled = !s.Edge.Installed || !s.WebView2.Installed || !s.EdgeCore.Installed;
     }
 
     private static void Bind(EdgeComponentStatus c, Label status, Label ver)
@@ -119,34 +140,14 @@ internal sealed class EdgeManageDialog : Form
     private void UninstallOne(EdgeComponentKind kind)
     {
         if (!EnsureAdmin()) return;
-        var name = kind switch
-        {
-            EdgeComponentKind.WebView2 => "Edge WebView2",
-            EdgeComponentKind.EdgeCore => "Edge Core",
-            _ => "Microsoft Edge",
-        };
+        var name = KindName(kind);
         var tip = kind == EdgeComponentKind.WebView2
             ? "卸载 WebView2 可能导致部分应用打不开。是否继续？"
             : $"确定卸载 {name}？";
         if (MessageBox.Show(this, tip, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
             return;
 
-        try
-        {
-            Cursor = Cursors.WaitCursor;
-            var msg = EdgeManageHelper.Uninstall(kind);
-            RefreshStatus();
-            MessageBox.Show(this, msg, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "卸载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            RefreshStatus();
-        }
-        finally
-        {
-            Cursor = Cursors.Default;
-        }
+        RunAction(() => EdgeManageHelper.Uninstall(kind), "卸载失败");
     }
 
     private void UninstallAll()
@@ -157,16 +158,45 @@ internal sealed class EdgeManageDialog : Form
                 Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
             return;
 
+        RunAction(EdgeManageHelper.UninstallAll, "卸载失败");
+    }
+
+    private void InstallOne(EdgeComponentKind kind)
+    {
+        if (!EnsureAdmin()) return;
+        var name = KindName(kind);
+        var tip = kind == EdgeComponentKind.EdgeCore
+            ? "Edge Core 无独立安装包时，将尝试通过安装 Microsoft Edge 来恢复。是否继续？"
+            : $"确定安装/恢复 {name}？\r\n（优先 winget，失败则下载官方安装包，可能需要几分钟）";
+        if (MessageBox.Show(this, tip, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        RunAction(() => EdgeManageHelper.Install(kind), "安装失败");
+    }
+
+    private void InstallMissing()
+    {
+        if (!EnsureAdmin()) return;
+        if (MessageBox.Show(this,
+                "将安装当前未安装的 Edge 相关组件（优先 winget，失败则下载官方包）。是否继续？",
+                Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        RunAction(EdgeManageHelper.InstallMissing, "安装失败");
+    }
+
+    private void RunAction(Func<string> action, string failTitle)
+    {
         try
         {
             Cursor = Cursors.WaitCursor;
-            var msg = EdgeManageHelper.UninstallAll();
+            var msg = action();
             RefreshStatus();
             MessageBox.Show(this, msg, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "卸载失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, failTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             RefreshStatus();
         }
         finally
@@ -174,6 +204,13 @@ internal sealed class EdgeManageDialog : Form
             Cursor = Cursors.Default;
         }
     }
+
+    private static string KindName(EdgeComponentKind kind) => kind switch
+    {
+        EdgeComponentKind.WebView2 => "Edge WebView2",
+        EdgeComponentKind.EdgeCore => "Edge Core",
+        _ => "Microsoft Edge",
+    };
 
     private bool EnsureAdmin()
     {
@@ -198,7 +235,7 @@ internal sealed class EdgeManageDialog : Form
 
     private static Control MakeComponentRow(string title, Label status, Label version)
     {
-        var panel = new Panel { Width = 460, Height = 32, Margin = new Padding(0, 0, 0, 2) };
+        var panel = new Panel { Width = 490, Height = 32, Margin = new Padding(0, 0, 0, 2) };
         panel.Controls.Add(new Label
         {
             Text = title,
@@ -212,6 +249,33 @@ internal sealed class EdgeManageDialog : Form
         panel.Controls.Add(status);
         panel.Controls.Add(version);
         return panel;
+    }
+
+    private static Control MakeButtonRow(string caption, params Button[] buttons)
+    {
+        var wrap = new Panel { Width = 490, AutoSize = true, Margin = new Padding(0, 0, 0, 6) };
+        var label = new Label
+        {
+            Text = caption,
+            AutoSize = true,
+            ForeColor = AppTheme.TextMute,
+            Location = new Point(0, 0),
+        };
+        var flow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            Location = new Point(0, 20),
+            Width = 490,
+            Margin = new Padding(0),
+        };
+        foreach (var b in buttons)
+            flow.Controls.Add(b);
+        wrap.Controls.Add(label);
+        wrap.Controls.Add(flow);
+        wrap.Height = 20 + 48;
+        return wrap;
     }
 
     private Button MkBtn(string text, Action click)

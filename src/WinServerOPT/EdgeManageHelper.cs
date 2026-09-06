@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.ServiceProcess;
 using Microsoft.Win32;
 
@@ -336,7 +337,7 @@ internal static class EdgeManageHelper
         if (!p.WaitForExit(timeoutMs))
         {
             try { p.Kill(); } catch { /* ignore */ }
-            throw new TimeoutException(Path.GetFileName(file) + " 运行超时。");
+            throw new System.TimeoutException(Path.GetFileName(file) + " 运行超时。");
         }
         return p.ExitCode;
     }
