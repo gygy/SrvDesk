@@ -1018,7 +1018,7 @@ internal sealed class MainForm : Form
         _headerMeter = new HeaderResourceMeter
         {
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(header.Width - 352, 0),
+            Location = new Point(header.Width - 312, 0),
         };
 
         // 蓝色顶栏左侧系统信息，右侧资源占用
