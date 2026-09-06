@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Microsoft.Win32;
 
 namespace WinOpt;
@@ -2266,8 +2268,21 @@ Add-AppxPackage -Path '{escaped}'
         });
     }
 
-    private static int RunWinget(string args, Action<SoftwareInstallProgress>? onProgress = null) =>
-        RunStreaming(ResolveWingetPath(), args, setWorkingDirForExe: true, onProgress);
+    private static readonly SemaphoreSlim WingetGate = new(1, 1);
+
+    private static int RunWinget(string args, Action<SoftwareInstallProgress>? onProgress = null)
+    {
+        // winget 进程间互斥：并行调用常报「另一安装正在进行」；离线包安装不受此锁影响
+        WingetGate.Wait();
+        try
+        {
+            return RunStreaming(ResolveWingetPath(), args, setWorkingDirForExe: true, onProgress);
+        }
+        finally
+        {
+            WingetGate.Release();
+        }
+    }
 
     private static string RunCaptureWinget(string args) =>
         RunCapture(ResolveWingetPath(), args, setWorkingDirForExe: true);

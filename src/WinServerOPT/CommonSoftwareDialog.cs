@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace WinOpt;
 
 internal sealed class CommonSoftwareDialog : Form
@@ -699,7 +701,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"将依次安装已选的 {ordered.Count} 款软件：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
+                $"将并行安装已选的 {ordered.Count} 款软件（最多 3 路同时进行；winget 包自动排队）：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
                 "安装所选", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }
@@ -766,34 +768,56 @@ internal sealed class CommonSoftwareDialog : Form
     private void RunBatchUpgrade(List<SoftwareUpdateInfo> updates)
     {
         if (_installBusy) return;
-        SetInstallBusy(true, $"准备更新（共 {updates.Count} 项）…", percent: 0);
+        const int maxParallel = 3;
+        SetInstallBusy(true, $"准备并行更新（共 {updates.Count} 项，最多 {maxParallel} 路）…", percent: 0);
         System.Threading.Tasks.Task.Run(() =>
         {
-            var notes = new List<string>();
-            for (var i = 0; i < updates.Count; i++)
+            var notes = new ConcurrentBag<string>();
+            var done = 0;
+            var active = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            void RefreshUi(string? focusId = null)
             {
-                var u = updates[i];
-                var item = u.Item;
-                var progress = MakeProgressHandler(
-                    $"{item.Title} {u.CurrentVersion}→{u.AvailableVersion}",
-                    item.Id, i, updates.Count);
-                Ui(() => SetInstallBusy(true,
-                    $"正在更新 {item.Title}（{i + 1}/{updates.Count}）…",
-                    itemId: item.Id,
-                    percent: (int)((i / (double)updates.Count) * 100)));
-                try
-                {
-                    var msg = CommonSoftwareHelper.Upgrade(item, progress);
-                    notes.Add(item.Title + "：" +
-                        (string.IsNullOrWhiteSpace(msg)
-                            ? $"完成 {u.CurrentVersion} → {u.AvailableVersion}"
-                            : msg));
-                }
-                catch (Exception ex)
-                {
-                    notes.Add(item.Title + "：失败 — " + ex.Message);
-                }
+                var finished = Volatile.Read(ref done);
+                var overall = updates.Count == 0 ? 100
+                    : (int)Math.Min(99, finished * 100.0 / updates.Count);
+                var running = active.Count == 0
+                    ? "排队中"
+                    : string.Join("、", active.Values.Take(3));
+                if (active.Count > 3) running += $" 等{active.Count}项";
+                var text = $"并行更新 {finished}/{updates.Count} · {running}";
+                Ui(() => SetInstallBusy(true, text, itemId: focusId, percent: overall));
             }
+
+            System.Threading.Tasks.Parallel.ForEach(
+                updates,
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = maxParallel },
+                u =>
+                {
+                    var item = u.Item;
+                    active[item.Id] = item.Title;
+                    RefreshUi(item.Id);
+                    var progress = MakeParallelProgressHandler(
+                        item.Title, item.Id, () => Volatile.Read(ref done), updates.Count, active);
+                    try
+                    {
+                        var msg = CommonSoftwareHelper.Upgrade(item, progress);
+                        notes.Add(item.Title + "：" +
+                            (string.IsNullOrWhiteSpace(msg)
+                                ? $"完成 {u.CurrentVersion} → {u.AvailableVersion}"
+                                : msg));
+                    }
+                    catch (Exception ex)
+                    {
+                        notes.Add(item.Title + "：失败 — " + ex.Message);
+                    }
+                    finally
+                    {
+                        active.TryRemove(item.Id, out _);
+                        Interlocked.Increment(ref done);
+                        RefreshUi();
+                    }
+                });
 
             Ui(() =>
             {
@@ -809,19 +833,38 @@ internal sealed class CommonSoftwareDialog : Form
     private void RunBatchInstall(List<CommonSoftwareItem> items, string title)
     {
         if (_installBusy) return;
-        SetInstallBusy(true, $"准备安装（共 {items.Count} 项）…", percent: 0);
+        const int maxParallel = 3;
+        SetInstallBusy(true, $"准备并行安装（共 {items.Count} 项，最多 {maxParallel} 路）…", percent: 0);
         System.Threading.Tasks.Task.Run(() =>
         {
-            var notes = new List<string>();
-            for (var i = 0; i < items.Count; i++)
+            var notes = new ConcurrentBag<string>();
+            var done = 0;
+            var active = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // winget 本体必须先装好，其它包才能走 winget
+            var bootstrap = items.Where(x => x.IsWingetBootstrap).ToList();
+            var rest = items.Where(x => !x.IsWingetBootstrap).ToList();
+            var ordered = bootstrap.Concat(rest).ToList();
+
+            void RefreshUi(string? focusId = null)
             {
-                var item = items[i];
-                var n = i + 1;
-                var progress = MakeProgressHandler(item.Title, item.Id, i, items.Count);
-                Ui(() => SetInstallBusy(true,
-                    $"正在安装 {item.Title}（{n}/{items.Count}）…",
-                    itemId: item.Id,
-                    percent: (int)((i / (double)items.Count) * 100)));
+                var finished = Volatile.Read(ref done);
+                var overall = ordered.Count == 0 ? 100
+                    : (int)Math.Min(99, finished * 100.0 / ordered.Count);
+                var running = active.Count == 0
+                    ? "排队中"
+                    : string.Join("、", active.Values.Take(3));
+                if (active.Count > 3) running += $" 等{active.Count}项";
+                var text = $"并行安装 {finished}/{ordered.Count} · {running}";
+                Ui(() => SetInstallBusy(true, text, itemId: focusId, percent: overall));
+            }
+
+            void InstallOne(CommonSoftwareItem item)
+            {
+                active[item.Id] = item.Title;
+                RefreshUi(item.Id);
+                var progress = MakeParallelProgressHandler(
+                    item.Title, item.Id, () => Volatile.Read(ref done), ordered.Count, active);
                 try
                 {
                     var msg = item.IsWingetBootstrap
@@ -833,16 +876,54 @@ internal sealed class CommonSoftwareDialog : Form
                 {
                     notes.Add(item.Title + "：失败 — " + ex.Message);
                 }
+                finally
+                {
+                    active.TryRemove(item.Id, out _);
+                    Interlocked.Increment(ref done);
+                    RefreshUi();
+                }
+            }
+
+            foreach (var item in bootstrap)
+                InstallOne(item);
+
+            if (rest.Count > 0)
+            {
+                System.Threading.Tasks.Parallel.ForEach(
+                    rest,
+                    new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = maxParallel },
+                    InstallOne);
             }
 
             Ui(() =>
             {
-                SetInstallBusy(true, $"全部完成（{items.Count}/{items.Count}）", percent: 100);
+                SetInstallBusy(true, $"全部完成（{ordered.Count}/{ordered.Count}）", percent: 100);
                 SetInstallBusy(false);
                 ReloadStatusesAsync();
                 MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
         });
+    }
+
+    /// <summary>并行批量时的进度：按完成数估算总进度，文案突出当前软件状态。</summary>
+    private Action<SoftwareInstallProgress> MakeParallelProgressHandler(
+        string title,
+        string itemId,
+        Func<int> getDone,
+        int total,
+        ConcurrentDictionary<string, string> active)
+    {
+        return p =>
+        {
+            active[itemId] = $"{title}·{p.Message}";
+            var finished = getDone();
+            var overall = total <= 0 ? p.Percent
+                : (int)Math.Min(99, (finished + p.Percent / 100.0) / total * 100);
+            var running = string.Join("、", active.Values.Take(2));
+            if (active.Count > 2) running += $" 等{active.Count}项";
+            var text = $"并行 {finished}/{total} · {running}";
+            Ui(() => SetInstallBusy(true, text, itemId: itemId, percent: overall));
+        };
     }
 
     private void InstallEssentials()
@@ -870,7 +951,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"将依次安装以下 {missing.Count} 款必备软件：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
+                $"将并行安装以下 {missing.Count} 款必备软件（最多 3 路）：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
                 "安装系统必备软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }
