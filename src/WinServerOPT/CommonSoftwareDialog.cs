@@ -12,6 +12,7 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly Label _progressLabel = new();
     private readonly ProgressBar _progressBar = new();
     private readonly List<Control> _actionButtons = [];
+    private readonly ToolTip _toolTip = new();
     private string _selectedCategory = "全部";
     private int _categoryHover = -1;
     private string? _busyItemId;
@@ -269,7 +270,7 @@ internal sealed class CommonSoftwareDialog : Form
         };
 
         _wingetHint.AutoSize = false;
-        _wingetHint.Size = new Size(360, 24);
+        _wingetHint.Size = new Size(280, 24);
         _wingetHint.Margin = new Padding(0, 8, 12, 0);
         _wingetHint.ForeColor = AppTheme.TextMute;
 
@@ -284,15 +285,31 @@ internal sealed class CommonSoftwareDialog : Form
         _installWingetBtn.Visible = false;
         _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
-        _askBeforeInstall.Text = "安装前询问确认";
+        // 左侧：状态 / winget；右侧紧凑区：确认开关 + 选择快捷
+        _askBeforeInstall.Text = "安装前确认";
         _askBeforeInstall.Checked = false;
         _askBeforeInstall.AutoSize = true;
-        _askBeforeInstall.Margin = new Padding(0, 8, 0, 0);
+        _askBeforeInstall.Margin = new Padding(8, 8, 4, 0);
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
+        _toolTip.SetToolTip(_askBeforeInstall, "勾选后，安装前会弹出确认对话框");
+
+        var selectBtn = ThemedSettingsChrome.CreateButton("选择 ▾", false);
+        selectBtn.Size = new Size(72, 28);
+        selectBtn.Margin = new Padding(4, 4, 0, 0);
+        selectBtn.Padding = new Padding(0);
+        var selectMenu = new ContextMenuStrip();
+        selectMenu.Items.Add("全选当前分类", null, (_, _) => SetAllSelected(true));
+        selectMenu.Items.Add("全不选", null, (_, _) => SetAllSelected(false));
+        selectMenu.Items.Add(new ToolStripSeparator());
+        selectMenu.Items.Add("仅选必备", null, (_, _) => SelectBy(r => r.Item.Essential));
+        selectMenu.Items.Add("仅选未安装", null, (_, _) => SelectBy(r => !r.IsInstalled));
+        selectBtn.Click += (_, _) => selectMenu.Show(selectBtn, new Point(0, selectBtn.Height));
+        _toolTip.SetToolTip(selectBtn, "快速勾选列表项，便于「安装所选」");
 
         flow.Controls.Add(_wingetHint);
         flow.Controls.Add(_installWingetBtn);
         flow.Controls.Add(_askBeforeInstall);
+        flow.Controls.Add(selectBtn);
         strip.Controls.Add(flow);
         return strip;
     }
@@ -656,6 +673,12 @@ internal sealed class CommonSoftwareDialog : Form
             row.Selected = on;
     }
 
+    private void SelectBy(Func<CommonSoftwareRow, bool> predicate)
+    {
+        foreach (var row in _rows.Values)
+            row.Selected = predicate(row);
+    }
+
     private void InstallSelected()
     {
         if (_installBusy)
@@ -880,6 +903,8 @@ internal sealed class CommonSoftwareDialog : Form
 
         public CommonSoftwareItem Item => _item;
 
+        public bool IsInstalled { get; private set; }
+
         public bool Selected
         {
             get => _select.Checked;
@@ -947,6 +972,7 @@ internal sealed class CommonSoftwareDialog : Form
         public void SetPendingDetect()
         {
             _busy = false;
+            IsInstalled = false;
             _install.Enabled = false;
             _uninstall.Enabled = false;
             _status.Text = "检测中…";
@@ -964,6 +990,7 @@ internal sealed class CommonSoftwareDialog : Form
             }
 
             var s = CommonSoftwareHelper.Query(_item);
+            IsInstalled = s.Installed;
             if (_item.IsWingetBootstrap)
             {
                 // 包在但命令不可用：提示点「修复安装」

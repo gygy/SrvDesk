@@ -2,58 +2,33 @@ namespace WinOpt;
 
 internal sealed class ComputerIdentityDialog : Form
 {
-    private readonly Label _currentName = new();
-    private readonly Label _currentGroup = new();
     private readonly TextBox _newName = new();
     private readonly TextBox _newWorkgroup = new();
     private readonly CheckBox _restart = new();
     private readonly ComputerIdentityInfo _info;
+    private readonly string _suggestedName;
 
     public bool RestartScheduled { get; private set; }
 
     public ComputerIdentityDialog(ComputerIdentityInfo info, bool optional = false)
     {
         _info = info;
+        _suggestedName = ComputerIdentityHelper.SuggestComputerName();
         Text = "计算机名 / 工作组";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(500, 400);
+        ClientSize = new Size(520, 460);
         CancelButton = null;
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 8, 16, 56), BackColor = AppTheme.Surface };
-
-        var tip = new Label
+        var body = new Panel
         {
-            Text = optional
-                ? "此步可选：不改可直接点「跳过」。改名/改工作组后需重启才会完全生效。"
-                : "通过 WMI 修改计算机名与工作组。NetBIOS 名称最长 15 字符，修改后需重启才能完全生效。",
-            Dock = DockStyle.Top,
-            Height = 40,
-            ForeColor = AppTheme.TextMute,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16, 10, 16, 8),
+            BackColor = AppTheme.Surface,
         };
-
-        _currentName.Text = "当前计算机名：" + info.ComputerName;
-        _currentName.SetBounds(0, 48, 448, 20);
-        _currentName.ForeColor = AppTheme.TextHeader;
-
-        _currentGroup.Text = info.PartOfDomain
-            ? $"当前：已加入域「{info.Domain}」（无法在此修改工作组）"
-            : "当前工作组：" + info.Workgroup;
-        _currentGroup.SetBounds(0, 70, 448, 20);
-        _currentGroup.ForeColor = info.PartOfDomain ? AppTheme.ScopeServer : AppTheme.TextHeader;
-
-        var form = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 96, 0, 0) };
-        AddField(form, "新计算机名（与当前相同或留空 = 不改）", _newName, 0, info.ComputerName);
-        AddField(form, "新工作组名（与当前相同或留空 = 不改）", _newWorkgroup, 72, info.PartOfDomain ? "" : info.Workgroup);
-        _newWorkgroup.Enabled = !info.PartOfDomain;
-
-        _restart.Text = "应用成功后 60 秒自动重启（可执行 shutdown /a 取消）";
-        _restart.Location = new Point(0, 156);
-        _restart.AutoSize = true;
-        _restart.Checked = false; // 默认不重启，避免打断用户
 
         var buttons = new FlowLayoutPanel
         {
@@ -82,12 +57,62 @@ internal sealed class ComputerIdentityDialog : Form
         buttons.Controls.Add(apply);
         buttons.Controls.Add(skip);
 
+        var stack = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoScroll = true,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0),
+        };
+
+        stack.Controls.Add(MakeTip(optional
+            ? "此步可选：不改可直接点「跳过」。改名/改工作组后需重启才会完全生效。"
+            : "通过 WMI 修改计算机名与工作组。NetBIOS 名称最长 15 字符，修改后需重启才能完全生效。"));
+
+        stack.Controls.Add(MakeInfoLine("当前计算机名", info.ComputerName));
+        stack.Controls.Add(MakeInfoLine(
+            info.PartOfDomain ? "当前域" : "当前工作组",
+            info.PartOfDomain ? info.Domain : info.Workgroup,
+            info.PartOfDomain ? AppTheme.ScopeServer : AppTheme.TextHeader));
+
+        if (info.PartOfDomain)
+        {
+            stack.Controls.Add(MakeTip("已加入域，无法在此修改工作组；仅可改计算机名。", compact: true));
+        }
+
+        stack.Controls.Add(MakeSpacer(8));
+        stack.Controls.Add(MakeFieldLabel($"新计算机名（建议：{_suggestedName}）"));
+        _newName.Width = 470;
+        _newName.Height = 26;
+        _newName.Margin = new Padding(0, 2, 0, 4);
+        _newName.MaxLength = 15;
+        _newName.Text = _suggestedName;
+        stack.Controls.Add(_newName);
+        stack.Controls.Add(MakeTip(
+            "根据系统「产品名称」自动生成（如 Windows Server 2022 → win2022）。与当前相同或清空 = 不改。",
+            compact: true));
+
+        stack.Controls.Add(MakeSpacer(10));
+        stack.Controls.Add(MakeFieldLabel("新工作组名（与当前相同或留空 = 不改）"));
+        _newWorkgroup.Width = 470;
+        _newWorkgroup.Height = 26;
+        _newWorkgroup.Margin = new Padding(0, 2, 0, 4);
+        _newWorkgroup.MaxLength = 15;
+        _newWorkgroup.Text = info.PartOfDomain ? "" : info.Workgroup;
+        _newWorkgroup.Enabled = !info.PartOfDomain;
+        stack.Controls.Add(_newWorkgroup);
+
+        stack.Controls.Add(MakeSpacer(12));
+        _restart.Text = "应用成功后 60 秒自动重启（可执行 shutdown /a 取消）";
+        _restart.AutoSize = true;
+        _restart.Margin = new Padding(0, 0, 0, 4);
+        _restart.Checked = false;
+        stack.Controls.Add(_restart);
+
+        body.Controls.Add(stack);
         body.Controls.Add(buttons);
-        body.Controls.Add(_restart);
-        body.Controls.Add(form);
-        body.Controls.Add(_currentGroup);
-        body.Controls.Add(_currentName);
-        body.Controls.Add(tip);
 
         ThemedSettingsChrome.MountModal(
             this,
@@ -164,17 +189,59 @@ internal sealed class ComputerIdentityDialog : Form
         }
     }
 
-    private static void AddField(Panel parent, string label, TextBox box, int y, string value)
+    private static Label MakeTip(string text, bool compact = false) => new()
     {
-        parent.Controls.Add(new Label
+        Text = text,
+        AutoSize = false,
+        Width = 470,
+        Height = compact ? 36 : 40,
+        Margin = new Padding(0, 0, 0, compact ? 4 : 8),
+        ForeColor = AppTheme.TextMute,
+    };
+
+    private static Panel MakeInfoLine(string caption, string value, Color? valueColor = null)
+    {
+        var row = new Panel
         {
-            Text = label,
-            Location = new Point(0, y),
+            Width = 470,
+            Height = 24,
+            Margin = new Padding(0, 0, 0, 4),
+            BackColor = Color.Transparent,
+        };
+        var left = new Label
+        {
+            Text = caption + "：",
             AutoSize = true,
-            ForeColor = AppTheme.TextHeader,
-        });
-        box.SetBounds(0, y + 22, 448, 26);
-        box.Text = value;
-        parent.Controls.Add(box);
+            Location = new Point(0, 3),
+            ForeColor = AppTheme.TextMute,
+        };
+        var right = new Label
+        {
+            Text = value,
+            AutoSize = true,
+            Location = new Point(110, 3),
+            ForeColor = valueColor ?? AppTheme.TextHeader,
+            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+        };
+        row.Controls.Add(left);
+        row.Controls.Add(right);
+        return row;
     }
+
+    private static Label MakeFieldLabel(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        MaximumSize = new Size(470, 0),
+        Margin = new Padding(0, 0, 0, 0),
+        ForeColor = AppTheme.TextHeader,
+    };
+
+    private static Panel MakeSpacer(int height) => new()
+    {
+        Width = 10,
+        Height = height,
+        Margin = new Padding(0),
+        BackColor = Color.Transparent,
+    };
 }

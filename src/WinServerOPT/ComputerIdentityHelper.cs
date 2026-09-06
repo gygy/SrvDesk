@@ -32,6 +32,66 @@ internal static class ComputerIdentityHelper
         };
     }
 
+    /// <summary>
+    /// 按系统产品名称生成建议计算机名：Windows Server 2022 → win2022，Windows 11 → win11。
+    /// </summary>
+    public static string SuggestComputerName(string? productName = null)
+    {
+        var product = string.IsNullOrWhiteSpace(productName)
+            ? SystemInfoHelper.Detect().ProductName
+            : productName!.Trim();
+
+        // Windows Server 2022 / 2019 / 2016 / 2025 …
+        var server = Regex.Match(product, @"Windows\s+Server\s+(\d{4})", RegexOptions.IgnoreCase);
+        if (server.Success)
+            return ClipNetbios("win" + server.Groups[1].Value);
+
+        // Windows 11 / 10 / 8.1 / 7 …
+        var client = Regex.Match(product, @"Windows\s+(\d+(?:\.\d+)?)\b", RegexOptions.IgnoreCase);
+        if (client.Success)
+        {
+            var ver = client.Groups[1].Value.Replace(".", "");
+            return ClipNetbios("win" + ver);
+        }
+
+        // 少数环境 ProductName 不含年份：用 DisplayVersion（Server 常为 21H2 等，仅数字年份才用）
+        var facts = SystemInfoHelper.Detect();
+        if (facts.IsServer)
+        {
+            var year = Regex.Match(facts.DisplayVersion ?? "", @"^(20\d{2})$");
+            if (year.Success)
+                return ClipNetbios("win" + year.Groups[1].Value);
+
+            // Build 20348 ≈ Server 2022；17763 ≈ 2019；14393 ≈ 2016；26100 ≈ 2025
+            if (int.TryParse((facts.Build ?? "").Split('.')[0], out var build))
+            {
+                var mapped = build switch
+                {
+                    >= 26000 => "win2025",
+                    >= 20348 => "win2022",
+                    >= 17763 => "win2019",
+                    >= 14393 => "win2016",
+                    _ => "",
+                };
+                if (mapped.Length > 0)
+                    return mapped;
+            }
+        }
+        else if (Regex.IsMatch(facts.DisplayVersion ?? "", @"^1[01]$"))
+        {
+            return ClipNetbios("win" + facts.DisplayVersion);
+        }
+
+        return ClipNetbios(facts.IsServer ? "winserver" : "winpc");
+    }
+
+    private static string ClipNetbios(string name)
+    {
+        name = name.Trim().ToLowerInvariant();
+        if (name.Length > 15) name = name.Substring(0, 15);
+        return name;
+    }
+
     public static bool ValidateNetbiosName(string name, out string error)
     {
         error = "";

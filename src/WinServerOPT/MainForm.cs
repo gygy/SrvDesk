@@ -178,7 +178,6 @@ internal sealed class MainForm : Form
     private readonly CheckBox _hideIncompatible = new();
     private readonly ComboBox _categoryFilter = new();
     private readonly FlowLayoutPanel _commandFlow = new();
-    private readonly Label _commandHint = new();
     private SettingRow[] _activeRows = [];
     private Panel? _activeBody;
     private Panel? _activeSection;
@@ -679,13 +678,7 @@ internal sealed class MainForm : Form
             "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
         _commandFlow.Controls.Add(_categoryFilter);
 
-        _commandHint.Dock = DockStyle.Fill;
-        _commandHint.Visible = false;
-        _commandHint.ForeColor = AppTheme.TextMute;
-        _commandHint.TextAlign = ContentAlignment.MiddleLeft;
-        _commandHint.Text = "当前为即时设置页：修改后立即写入系统。请使用本页底部“刷新”重新读取状态。";
-
-        _commandBar.Controls.Add(_commandHint);
+        // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
     }
 
@@ -1187,9 +1180,10 @@ internal sealed class MainForm : Form
 
     private void SetBatchMode(bool batch, string? embeddedTitle = null)
     {
+        // 批量页：显示搜索/分类命令栏；即时页：收起命令栏，说明只放底部状态栏
+        _commandBar.Visible = batch;
+        _commandBar.Height = batch ? 44 : 0;
         _commandFlow.Visible = batch;
-        _commandHint.Visible = !batch;
-        _commandBar.Height = 44;
         _apply.Visible = batch;
         _apply.Enabled = batch;
         _restore.Visible = batch;
@@ -1210,16 +1204,9 @@ internal sealed class MainForm : Form
             return;
         }
 
-        if (embeddedTitle == "资源管理器")
-        {
-            _commandHint.Text = "任务栏相关请改完后点本页底部「应用到系统」；其它项即时写入。可用「刷新」重新读取。";
-            _status.Text = "资源管理器页：任务栏隐藏/搜索等需点「应用到系统」后重启资源管理器才可见。";
-        }
-        else
-        {
-            _commandHint.Text = "当前为即时设置页：修改后立即写入系统。请使用本页底部“刷新”重新读取状态。";
-            _status.Text = "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
-        }
+        _status.Text = embeddedTitle == "资源管理器"
+            ? "资源管理器页：任务栏隐藏/搜索等需点「应用到系统」后重启资源管理器才可见；其它项即时生效。可用底部「刷新」。"
+            : "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
     }
 
     private int ContentWidth() =>
