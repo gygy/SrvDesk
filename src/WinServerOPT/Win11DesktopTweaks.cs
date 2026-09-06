@@ -132,8 +132,19 @@ internal static class Win11DesktopTweaks
 
     public static bool IsPauseFeatureUpdatesUntil2035On() => IsFeatureUpdatePausedUntil2035();
 
-    public static void SetNoShortcutSuffix(bool on) => SetShortcutSuffixOff(on);
-    public static void SetRemoveAdminShield(bool on) => SetShellIconBlank(77, on);
+    public static void SetShortcutArrowHidden(bool hide)
+    {
+        SetShellIconBlank(29, hide);
+        DesktopQuickActions.RestartExplorer();
+    }
+
+    public static bool IsShortcutArrowHidden() => IsShellIconBlank(29);
+
+    public static void SetRemoveAdminShield(bool on)
+    {
+        SetShellIconBlank(77, on);
+        DesktopQuickActions.RestartExplorer();
+    }
     public static void SetCompactExplorerSpacing(bool compactWin10) =>
         SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", compactWin10 ? 1 : 0);
     public static void SetWin10ClassicContextMenu(bool classic) => SetClassicContextMenu(classic);
@@ -148,19 +159,53 @@ internal static class Win11DesktopTweaks
     private static bool IsShellIconBlank(int index)
     {
         var val = GetValue(Hive.HkLm, ShellIcons, index.ToString()) as string;
-        return val is not null && val.Length == 0;
+        if (string.IsNullOrEmpty(val)) return val is not null; // 旧的空字符串写法也算「已开启」
+        return val.IndexOf("blank.ico", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static void SetShellIconBlank(int index, bool blank)
     {
         if (blank)
-            SetString(Hive.HkLm, ShellIcons, index.ToString(), "");
+        {
+            // 勿写空字符串：部分系统会把桌面图标渲成空白
+            SetString(Hive.HkLm, ShellIcons, index.ToString(), EnsureBlankIconPath() + ",0");
+        }
         else
             DeleteValue(Hive.HkLm, ShellIcons, index.ToString());
     }
 
+    private static string EnsureBlankIconPath()
+    {
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "blank.ico");
+        if (!File.Exists(path) || new FileInfo(path).Length < 16)
+            File.WriteAllBytes(path, BlankIcoBytes);
+        return path;
+    }
+
+    // 1×1 透明 ICO，用作快捷方式箭头/盾牌的空 overlay
+    private static readonly byte[] BlankIcoBytes =
+    [
+        0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00,
+        0x30, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
     private static bool IsShortcutSuffixOff()
     {
+        using (var naming = Registry.CurrentUser.OpenSubKey(
+                   @"Software\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates"))
+        {
+            var template = naming?.GetValue("ShortcutNameTemplate") as string ?? "";
+            if (template.IndexOf("%s", StringComparison.Ordinal) >= 0)
+                return true;
+        }
+
+        // 兼容旧检测（会在写入时清掉）
         using var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer");
         var link = k?.GetValue("Link") as byte[];
         return link is { Length: 4 } && link[0] == 0 && link[1] == 0 && link[2] == 0 && link[3] == 0;
@@ -168,22 +213,40 @@ internal static class Win11DesktopTweaks
 
     private static void SetShortcutSuffixOff(bool disable)
     {
-        const string key = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
-        object? old;
-        using (var r = Registry.CurrentUser.OpenSubKey(key))
-            old = r?.GetValue("Link");
-        using var k = Registry.CurrentUser.CreateSubKey(key);
-        if (k is null) return;
+        const string explorerKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
+        const string namingKey = explorerKey + @"\NamingTemplates";
+
+        // 旧方案 Link=00-00-00-00 在 Server/部分 Win10+ 会导致桌面图标全部空白，必须清除
+        using (var ex = Registry.CurrentUser.OpenSubKey(explorerKey, writable: true))
+        {
+            if (ex?.GetValue("Link") is not null)
+            {
+                ApplyLog.RegistryDelete("HKCU", explorerKey, "Link", ex.GetValue("Link"));
+                ex.DeleteValue("Link", throwOnMissingValue: false);
+            }
+        }
+
         if (disable)
         {
-            ApplyLog.SystemChange($"HKCU\\{key}\\Link", "REG_BINARY → 00-00-00-00（去掉「快捷方式」后缀）",
-                ApplyLog.FormatValue(old), "00-00-00-00");
-            k.SetValue("Link", new byte[] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
+            object? old;
+            using (var r = Registry.CurrentUser.OpenSubKey(namingKey))
+                old = r?.GetValue("ShortcutNameTemplate");
+            using var k = Registry.CurrentUser.CreateSubKey(namingKey);
+            // "%s.lnk"：新建快捷方式只用目标名，不加「快捷方式」后缀
+            const string template = "\"%s.lnk\"";
+            ApplyLog.SystemChange($"HKCU\\{namingKey}\\ShortcutNameTemplate",
+                "去掉「快捷方式」后缀（安全写法）",
+                ApplyLog.FormatValue(old), template);
+            k?.SetValue("ShortcutNameTemplate", template, RegistryValueKind.String);
         }
         else
         {
-            ApplyLog.RegistryDelete("HKCU", key, "Link", old);
-            k.DeleteValue("Link", throwOnMissingValue: false);
+            object? old;
+            using (var r = Registry.CurrentUser.OpenSubKey(namingKey))
+                old = r?.GetValue("ShortcutNameTemplate");
+            ApplyLog.RegistryDelete("HKCU", namingKey, "ShortcutNameTemplate", old);
+            using var k = Registry.CurrentUser.OpenSubKey(namingKey, writable: true);
+            k?.DeleteValue("ShortcutNameTemplate", throwOnMissingValue: false);
         }
     }
 

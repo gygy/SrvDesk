@@ -613,7 +613,11 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo RemoveAdminShield = H(
         "快捷方式不显示管理员盾牌图标。", "Shell Icons 77 置空。", "界面更简洁。", "仅影响图标显示，不降低权限。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo NoShortcutSuffix = H(
-        "新建快捷方式时不自动加「快捷方式」后缀。", "Explorer\\Link 二进制。", "文件名更干净。", "推荐开启。", "立即生效。", W10De);
+        "新建快捷方式时不自动加「快捷方式」后缀。",
+        "NamingTemplates\\ShortcutNameTemplate（已弃用会弄丢桌面图标的 Link 写法）。",
+        "文件名更干净。",
+        "推荐开启。",
+        "写入后会重启资源管理器。", W10De);
     public static readonly SettingHelpInfo Win11ExplorerStyle = H(
         "使用 Win11 默认间距的资源管理器布局。", "UseCompactMode=0。", "非紧凑模式。", "关闭则使用紧凑模式。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo Win10ClassicContextMenu = H(
