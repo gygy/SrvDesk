@@ -22,6 +22,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolPowerExtras { get; }
     public ToolStripMenuItem ToolWindowsFeatures { get; }
     public ToolStripMenuItem ToolSecurityCenter { get; }
+    public ToolStripMenuItem ToolEdgeManage { get; }
     public ToolStripMenuItem ToolContextMenu { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
@@ -68,6 +69,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolPowerExtras = Item("高级设置...", MenuIcons.Advanced);
         ToolWindowsFeatures = Item("可选功能 / Capabilities...", MenuIcons.WindowsFeatures);
         ToolSecurityCenter = Item("安全中心管理...", MenuIcons.SecurityCenter);
+        ToolEdgeManage = Item("MSEdge 管理...", MenuIcons.EdgeManage);
         ToolContextMenu = Item("右键菜单...", MenuIcons.ContextMenu);
         ToolQuick = Item("快速工具...", MenuIcons.Quick);
         ToolRefresh = Item("刷新当前状态", MenuIcons.Refresh, Keys.F5);
@@ -80,7 +82,7 @@ internal sealed class AppMenuStrip : MenuStrip
             new ToolStripSeparator(),
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
             new ToolStripSeparator(),
-            ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolContextMenu,
+            ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
             new ToolStripSeparator(),
             ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);

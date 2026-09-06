@@ -87,6 +87,11 @@ internal static class MenuIcons
         [FileCand(Sys("wscui.cpl")), FileCand(Sys("SecurityHealthSystray.exe"))],
         DrawShield);
 
+    public static Image EdgeManage => Get("edgemanage",
+        [FileCand(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft", "Edge", "Application", "msedge.exe")),
+         FileCand(Sys("inetcpl.cpl"))],
+        DrawWin);
+
     /// <summary>右键菜单：鼠标 + 弹出菜单（不用 shell32#0，避免与刷新撞图标）。</summary>
     public static Image ContextMenu => Get("contextmenu",
         Array.Empty<Cand>(),
