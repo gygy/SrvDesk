@@ -112,10 +112,8 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             Padding = new Padding(0, 8, 0, 0),
         };
         var apply = ThemedSettingsChrome.CreateButton("应用到勾选网卡", true);
-        apply.Size = new Size(140, 34);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
-        flush.Size = new Size(110, 34);
         flush.Margin = new Padding(8, 0, 0, 0);
         flush.Click += (_, _) =>
         {
@@ -123,7 +121,6 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             MessageBox.Show(this, "已刷新 DNS 缓存。", "DNS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         var more = ThemedSettingsChrome.CreateButton("选择 ▾", false);
-        more.Size = new Size(80, 34);
         more.Margin = new Padding(8, 0, 0, 0);
         var selectMenu = new ContextMenuStrip();
         selectMenu.Items.Add("仅勾选已连接", null, (_, _) => SelectConnectedOnly());

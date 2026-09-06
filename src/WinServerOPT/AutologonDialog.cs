@@ -41,7 +41,7 @@ internal sealed class AutologonDialog : Form
         };
 
         var ok = ThemedSettingsChrome.CreateButton("确定", true);
-        ok.Size = new Size(88, 32);
+        ok.Height = 32;
         ok.Margin = new Padding(6, 0, 0, 0);
         ok.Click += (_, _) =>
         {

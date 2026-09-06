@@ -57,11 +57,11 @@ internal sealed class SettingRecipeDialog : Form
         StyleTab(_tabOn, "开启（优化）");
         StyleTab(_tabOff, "关闭（恢复）");
         _tabOn.Location = new Point(16, 66);
-        _tabOff.Location = new Point(130, 66);
+        _tabOff.Location = new Point(16 + _tabOn.Width + 8, 66);
         _tabOn.Click += (_, _) => SetSide(true, flush: true);
         _tabOff.Click += (_, _) => SetSide(false, flush: true);
 
-        _kind.Location = new Point(250, 70);
+        _kind.Location = new Point(_tabOff.Right + 12, 70);
         _kind.AutoSize = true;
         _kind.ForeColor = AppTheme.TextMute;
         _kind.Font = new Font("Microsoft YaHei UI", 8.5F);
@@ -92,8 +92,15 @@ internal sealed class SettingRecipeDialog : Form
             {
                 Clipboard.SetText(_box.PlainText);
                 copy.Text = "已复制";
+                UiFit.FitButton(copy, 30);
                 var t = new System.Windows.Forms.Timer { Interval = 1200 };
-                t.Tick += (_, _) => { copy.Text = "复制到剪贴板"; t.Stop(); t.Dispose(); };
+                t.Tick += (_, _) =>
+                {
+                    copy.Text = "复制到剪贴板";
+                    UiFit.FitButton(copy, 30);
+                    t.Stop();
+                    t.Dispose();
+                };
                 t.Start();
             }
             catch
@@ -103,10 +110,10 @@ internal sealed class SettingRecipeDialog : Form
             }
         };
 
-        var export = ActionButton("导出", 140);
+        var export = ActionButton("导出", copy.Right + 8);
         export.Click += (_, _) => ExportAs();
 
-        _resetBtn = ActionButton("恢复默认", 264);
+        _resetBtn = ActionButton("恢复默认", export.Right + 8);
         _resetBtn.Click += (_, _) =>
         {
             if (_recipe is null) return;
@@ -116,7 +123,7 @@ internal sealed class SettingRecipeDialog : Form
             RefreshNote();
         };
 
-        var close = ActionButton("关闭", 456);
+        var close = ActionButton("关闭", Math.Max(_resetBtn.Right + 8, ClientSize.Width - UiFit.ButtonWidth("关闭") - 16));
         close.Click += (_, _) => Close();
 
         FormClosing += (_, _) =>
@@ -242,9 +249,9 @@ internal sealed class SettingRecipeDialog : Form
     private static void StyleTab(Button b, string text)
     {
         b.Text = text;
-        b.Size = new Size(108, 28);
-        b.FlatStyle = FlatStyle.Flat;
         b.Font = new Font("Microsoft YaHei UI", 9F);
+        b.Size = UiFit.ButtonSize(text, 28, b.Font, minWidth: 88, padding: 22);
+        b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
         PaintTab(b, selected: text.StartsWith("开启", StringComparison.Ordinal));
@@ -272,7 +279,7 @@ internal sealed class SettingRecipeDialog : Form
         {
             Text = text,
             Location = new Point(x, 378),
-            Size = new Size(112, 30),
+            Size = UiFit.ButtonSize(text, 30, padding: 22),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
             ForeColor = AppTheme.PrimaryDeep,

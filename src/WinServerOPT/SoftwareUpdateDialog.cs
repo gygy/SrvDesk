@@ -65,25 +65,21 @@ internal sealed class SoftwareUpdateDialog : Form
         };
 
         var upgrade = ThemedSettingsChrome.CreateButton("更新所选", true);
-        upgrade.Size = new Size(100, 34);
         upgrade.Margin = new Padding(6, 0, 0, 0);
         upgrade.Enabled = updates.Count > 0;
         upgrade.Click += (_, _) => ConfirmUpgrade();
 
         var selectAll = ThemedSettingsChrome.CreateButton("全选", false);
-        selectAll.Size = new Size(72, 34);
         selectAll.Margin = new Padding(6, 0, 0, 0);
         selectAll.Enabled = updates.Count > 0;
         selectAll.Click += (_, _) => SetAll(true);
 
         var clear = ThemedSettingsChrome.CreateButton("全不选", false);
-        clear.Size = new Size(72, 34);
         clear.Margin = new Padding(6, 0, 0, 0);
         clear.Enabled = updates.Count > 0;
         clear.Click += (_, _) => SetAll(false);
 
         var close = ThemedSettingsChrome.CreateButton("关闭", false);
-        close.Size = new Size(72, 34);
         close.Margin = new Padding(6, 0, 0, 0);
         close.Click += (_, _) =>
         {

@@ -45,12 +45,10 @@ internal sealed class CleanupDialog : Form
         opts.Controls.AddRange([_temp, _recent, _recycle, _prefetch, _thumb]);
 
         var run = ThemedSettingsChrome.CreateButton("开始清理", true);
-        run.Size = new Size(120, 34);
         run.Margin = new Padding(0, 0, 8, 0);
         run.Click += (_, _) => RunCleanup();
 
         var repair = ThemedSettingsChrome.CreateButton("修复被锁系统组件", false);
-        repair.Size = new Size(160, 34);
         repair.Margin = new Padding(0);
         repair.Click += (_, _) =>
         {

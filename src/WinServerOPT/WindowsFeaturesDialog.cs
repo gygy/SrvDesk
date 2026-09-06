@@ -78,11 +78,9 @@ internal sealed class WindowsFeaturesDialog : Form
         _btnEnable.Margin = new Padding(8, 0, 0, 0);
         _btnEnable.Click += (_, _) => RunBatch(disable: false);
         var selectAll = ThemedSettingsChrome.CreateButton("全选可见", false);
-        selectAll.Size = new Size(90, 34);
         selectAll.Margin = new Padding(16, 0, 0, 0);
         selectAll.Click += (_, _) => SetVisibleChecked(true);
         var clear = ThemedSettingsChrome.CreateButton("全不选", false);
-        clear.Size = new Size(80, 34);
         clear.Margin = new Padding(8, 0, 0, 0);
         clear.Click += (_, _) => SetVisibleChecked(false);
         actions.Controls.AddRange([_btnDisable, _btnEnable, selectAll, clear]);

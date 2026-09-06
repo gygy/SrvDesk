@@ -279,7 +279,7 @@ internal sealed class CommonSoftwareDialog : Form
         _wingetHint.ForeColor = AppTheme.TextMute;
 
         _installWingetBtn.Text = "一键安装 winget";
-        _installWingetBtn.Size = new Size(120, 28);
+        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", 28, padding: 22);
         _installWingetBtn.Margin = new Padding(0, 4, 12, 0);
         _installWingetBtn.FlatStyle = FlatStyle.Flat;
         _installWingetBtn.BackColor = AppTheme.Primary;
@@ -298,7 +298,7 @@ internal sealed class CommonSoftwareDialog : Form
         _toolTip.SetToolTip(_askBeforeInstall, "勾选后，安装前会弹出确认对话框");
 
         var selectBtn = ThemedSettingsChrome.CreateButton("选择 ▾", false);
-        selectBtn.Size = new Size(72, 28);
+        selectBtn.Height = 28;
         selectBtn.Margin = new Padding(4, 4, 0, 0);
         selectBtn.Padding = new Padding(0);
         var selectMenu = new ContextMenuStrip();
@@ -1033,7 +1033,7 @@ internal sealed class CommonSoftwareDialog : Form
             _install = RowButton("一键安装", 352);
             _install.Click += (_, _) => _onInstall(_item);
 
-            _uninstall = RowButton("卸载", 456);
+            _uninstall = RowButton("卸载", 352 + _install.Width + 12);
             _uninstall.Click += (_, _) => _onUninstall(_item);
             if (item.IsWingetBootstrap)
             {
@@ -1043,8 +1043,8 @@ internal sealed class CommonSoftwareDialog : Form
 
             _status = new Label
             {
-                Location = new Point(536, 10),
-                Size = new Size(280, 24),
+                Location = new Point(_uninstall.Right + 12, 10),
+                Size = new Size(Math.Max(160, 280), 24),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Microsoft YaHei UI", 8.75F),
                 Padding = new Padding(8, 0, 8, 0),
@@ -1052,6 +1052,11 @@ internal sealed class CommonSoftwareDialog : Form
             };
 
             Controls.AddRange([_select, name, _install, _uninstall, _status]);
+            Resize += (_, _) =>
+            {
+                if (Width <= 0) return;
+                _status.Width = Math.Max(120, Width - _status.Left - 12);
+            };
             Paint += (_, e) =>
             {
                 using var pen = new Pen(AppTheme.BorderLight);
@@ -1156,16 +1161,17 @@ internal sealed class CommonSoftwareDialog : Form
 
         private static Button RowButton(string text, int x)
         {
+            var font = new Font("Microsoft YaHei UI", 9F);
             var b = new Button
             {
                 Text = text,
                 Location = new Point(x, 8),
-                Size = new Size(text == "卸载" ? 72 : 88, 28),
+                Size = UiFit.ButtonSize(text, 28, font, minWidth: 72, padding: 20),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = AppTheme.PrimaryDeep,
                 BackColor = AppTheme.SurfaceCard,
                 Cursor = Cursors.Hand,
-                Font = new Font("Microsoft YaHei UI", 9F),
+                Font = font,
             };
             b.FlatAppearance.BorderColor = AppTheme.Border;
             b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;

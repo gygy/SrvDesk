@@ -162,34 +162,43 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _count.AutoSize = true;
         _count.ForeColor = AppTheme.TextMute;
 
-        var x = 430;
         bar.Controls.Add(searchLabel);
         bar.Controls.Add(_search);
         bar.Controls.Add(_count);
-        bar.Controls.Add(ToolBtn("启用", () => SetSelected(true), x));
-        bar.Controls.Add(ToolBtn("禁用", () => SetSelected(false), x + 76));
-        bar.Controls.Add(ToolBtn("删除", DeleteSelected, x + 152));
-        bar.Controls.Add(ToolBtn("添加", AddItem, x + 228));
-        bar.Controls.Add(ToolBtn("打开位置", OpenSelected, x + 304));
-        bar.Resize += (_, _) =>
+
+        var buttons = new[]
         {
-            var right = bar.Width - 8;
-            foreach (Control c in bar.Controls)
-            {
-                if (c is Button b && b.Tag is int offset)
-                    b.Location = new Point(Math.Max(400, right - 380 + offset - 430), 4);
-            }
+            ToolBtn("启用", () => SetSelected(true)),
+            ToolBtn("禁用", () => SetSelected(false)),
+            ToolBtn("删除", DeleteSelected),
+            ToolBtn("添加", AddItem),
+            ToolBtn("打开位置", OpenSelected),
         };
+        foreach (var b in buttons)
+            bar.Controls.Add(b);
+
+        void LayoutTools()
+        {
+            var x = bar.Width - 8;
+            for (var i = buttons.Length - 1; i >= 0; i--)
+            {
+                var b = buttons[i];
+                x -= b.Width;
+                b.Location = new Point(Math.Max(400, x), 4);
+                x -= 8;
+            }
+        }
+
+        bar.Resize += (_, _) => LayoutTools();
+        LayoutTools();
         return bar;
     }
 
-    private Button ToolBtn(string text, Action click, int x)
+    private Button ToolBtn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Size = new Size(72, 30);
-        b.Location = new Point(x, 4);
+        b.Height = 30;
         b.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        b.Tag = x;
         b.Click += (_, _) => click();
         return b;
     }
@@ -313,7 +322,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         var cmdLabel = new Label { Text = "命令", Location = new Point(16, 54), AutoSize = true };
         var cmdBox = new TextBox { Location = new Point(80, 50), Size = new Size(300, 24) };
         var browse = ThemedSettingsChrome.CreateButton("浏览...", false);
-        browse.Size = new Size(72, 26);
+        browse.Height = 26;
         browse.Location = new Point(388, 49);
         browse.Click += (_, _) =>
         {

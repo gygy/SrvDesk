@@ -32,12 +32,10 @@ internal sealed class GroupPolicyDialog : Form
         _output.Text = "点击下方「强制更新组策略」执行 gpupdate /force，输出将显示在此处。";
 
         var gpupdate = ThemedSettingsChrome.CreateButton("强制更新组策略", true);
-        gpupdate.Size = new Size(140, 34);
         gpupdate.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         gpupdate.Click += (_, _) => RunGpUpdate();
 
         var gpedit = ThemedSettingsChrome.CreateButton("打开组策略编辑器", false);
-        gpedit.Size = new Size(140, 34);
         gpedit.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         gpedit.Click += (_, _) => OpenGpedit();
 

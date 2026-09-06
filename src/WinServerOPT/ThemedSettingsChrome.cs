@@ -189,67 +189,80 @@ internal static class ThemedSettingsChrome
             e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0);
         };
 
-        var rightPad = 16;
-        if (showClose) rightPad += 96;
-        if (onApply is not null) rightPad += 112;
-        if (onRefresh is not null) rightPad += 96;
+        Button? closeBtn = null;
+        Button? applyBtn = null;
+        Button? refreshBtn = null;
+
+        if (showClose)
+        {
+            closeBtn = CreateButton("关闭", onApply is null);
+            closeBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            closeBtn.DialogResult = DialogResult.Cancel;
+            form.CancelButton = closeBtn;
+            footer.Controls.Add(closeBtn);
+        }
+
+        if (onApply is not null)
+        {
+            applyBtn = CreateButton("应用到系统", true);
+            applyBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            applyBtn.Click += (_, _) => onApply();
+            footer.Controls.Add(applyBtn);
+        }
+
+        if (onRefresh is not null)
+        {
+            refreshBtn = CreateButton("刷新", false);
+            refreshBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            refreshBtn.Click += (_, _) => onRefresh();
+            footer.Controls.Add(refreshBtn);
+        }
+
+        int RightButtonsWidth()
+        {
+            var w = 16;
+            if (closeBtn is not null) w += closeBtn.Width + 8;
+            if (applyBtn is not null) w += applyBtn.Width + 8;
+            if (refreshBtn is not null) w += refreshBtn.Width + 8;
+            return w;
+        }
+
+        void LayoutFooterButtons()
+        {
+            var x = footer.ClientSize.Width - 16;
+            if (closeBtn is not null)
+            {
+                closeBtn.Location = new Point(x - closeBtn.Width, 9);
+                x = closeBtn.Left - 8;
+            }
+            if (applyBtn is not null)
+            {
+                applyBtn.Location = new Point(x - applyBtn.Width, 9);
+                x = applyBtn.Left - 8;
+            }
+            if (refreshBtn is not null)
+                refreshBtn.Location = new Point(x - refreshBtn.Width, 9);
+        }
 
         var label = new Label
         {
             Text = hint,
             AutoSize = false,
             Location = new Point(16, 4),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - rightPad), 44),
+            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 44),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             ForeColor = AppTheme.TextMute,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = false,
+            AutoEllipsis = true,
         };
-
-        var x = form.ClientSize.Width - 16;
-        if (showClose)
-        {
-            x -= 96;
-            var close = CreateButton("关闭", onApply is null);
-            close.Size = new Size(88, 34);
-            close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            close.Location = new Point(x, 9);
-            close.DialogResult = DialogResult.Cancel;
-            form.CancelButton = close;
-            footer.Controls.Add(close);
-        }
-
-        if (onApply is not null)
-        {
-            x -= 112;
-            var apply = CreateButton("应用到系统", true);
-            apply.Size = new Size(104, 34);
-            apply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            apply.Location = new Point(x, 9);
-            apply.Click += (_, _) => onApply();
-            footer.Controls.Add(apply);
-        }
-
-        if (onRefresh is not null)
-        {
-            x -= 96;
-            var refresh = CreateButton("刷新", false);
-            refresh.Size = new Size(88, 34);
-            refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            refresh.Location = new Point(x, 9);
-            refresh.Click += (_, _) => onRefresh();
-            footer.Controls.Add(refresh);
-        }
 
         footer.Controls.Add(label);
         footer.Resize += (_, _) =>
         {
-            var pad = 16
-                + (showClose ? 96 : 0)
-                + (onApply is not null ? 112 : 0)
-                + (onRefresh is not null ? 96 : 0);
-            label.Width = Math.Max(80, footer.ClientSize.Width - 24 - pad);
+            LayoutFooterButtons();
+            label.Width = Math.Max(80, footer.ClientSize.Width - 24 - RightButtonsWidth());
         };
+        LayoutFooterButtons();
         return footer;
     }
 

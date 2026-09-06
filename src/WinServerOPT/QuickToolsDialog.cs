@@ -55,7 +55,6 @@ internal sealed class QuickToolsDialog : Form
         _list.DoubleClick += (_, _) => OpenSelected();
 
         var openBtn = ThemedSettingsChrome.CreateButton("打开", true);
-        openBtn.Size = new Size(88, 34);
         openBtn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         openBtn.Click += (_, _) => OpenSelected();
 

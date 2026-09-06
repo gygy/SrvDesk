@@ -44,12 +44,12 @@ internal sealed class ComputerIdentityDialog : Form
         };
 
         var apply = ThemedSettingsChrome.CreateButton("应用修改", true);
-        apply.Size = new Size(100, 32);
+        apply.Height = 32;
         apply.Margin = new Padding(6, 0, 0, 0);
         apply.Click += (_, _) => ApplyChanges();
 
         var skip = ThemedSettingsChrome.CreateButton(optional ? "跳过" : "取消", false);
-        skip.Size = new Size(88, 32);
+        skip.Height = 32;
         skip.Margin = new Padding(6, 0, 0, 0);
         skip.Click += (_, _) =>
         {

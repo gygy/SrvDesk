@@ -36,17 +36,14 @@ internal sealed class SystemInfoDialog : Form
         _summary.ForeColor = AppTheme.TextMute;
 
         var refresh = ThemedSettingsChrome.CreateButton("刷新", false);
-        refresh.Size = new Size(80, 34);
         refresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         refresh.Click += (_, _) => LoadInfo();
 
         var copy = ThemedSettingsChrome.CreateButton("复制全部", false);
-        copy.Size = new Size(96, 34);
         copy.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         copy.Click += (_, _) => CopyAll();
 
         var msinfo = ThemedSettingsChrome.CreateButton("msinfo32", false);
-        msinfo.Size = new Size(96, 34);
         msinfo.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         msinfo.Click += (_, _) => OpenMsinfo();
 

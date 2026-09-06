@@ -41,7 +41,7 @@ internal sealed class OtherSettingsDialog : Form
         _port.Maximum = 65535;
         _port.Width = 90;
         var portBtn = ThemedSettingsChrome.CreateButton("更改端口", false);
-        portBtn.Size = new Size(96, 30);
+        portBtn.Height = 30;
         portBtn.Click += (_, _) =>
         {
             try
@@ -85,7 +85,7 @@ internal sealed class OtherSettingsDialog : Form
         _prefetch.Maximum = 4096;
         _prefetch.Width = 90;
         var pfBtn = ThemedSettingsChrome.CreateButton("应用", true);
-        pfBtn.Size = new Size(72, 30);
+        pfBtn.Height = 30;
         pfBtn.Click += (_, _) =>
         {
             EasySettingsTweaks.SetMaxPrefetchFiles((int)_prefetch.Value);
