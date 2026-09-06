@@ -197,63 +197,45 @@ internal sealed class HelpDetailPanel : BufferedPanel
     public void ShowEmbeddedGuide(string pageTitle)
     {
         HideRecipe();
-        _caption.Text = "配置脚本 · 即时设置";
+        _caption.Text = "配置脚本";
         _title.Text = pageTitle;
-        _summary.Text = "本页开关切换后直接写入系统。";
-        BuildSections([
-            ("与分组页的关系", "登录启动项、DNS 等即时页适合单项微调；左侧其它分类为分组列表，改完后点「应用到系统」。"),
-            ("同步状态", "在其他地方改过系统后，可点本页底部「刷新」，或菜单「工具 → 刷新当前状态」。"),
-            ("配置脚本", "分组列表中点选优化项，可在本栏查看并编辑「开启/关闭」对应的注册表或脚本。"),
-        ]);
-        _footer.Text = "RDP 端口 / 预取 / Search 等请从「工具 → 高级设置」打开";
+        _summary.Text = "本页开关会直接写入系统。";
+        BuildSections([]);
+        _footer.Text = "";
     }
 
     public void ShowPlaceholder(string? groupTitle = null)
     {
         HideRecipe();
-        _caption.Text = "配置脚本 · 使用指引";
-        _title.Text = groupTitle is null ? "选择左侧配置项" : $"{groupTitle}";
-        _summary.Text = "点选配置项后，可在此查看、编辑开启/关闭脚本，并复制或导出为文件。";
-        BuildSections([
-            ("操作", "开=采用优化建议；关=恢复「系统默认值」。改完后点「应用到系统」。"),
-            ("配置脚本", "脚本可直接改字，修改会自动记住；「导出」写出文件，「恢复默认」还原内置脚本。"),
-            ("面板位置", "「视图 → 配置脚本 · 靠右 / 靠底」可切换；拖动分隔条调宽/调高，下次启动会记住。"),
-            ("说明列", "写明对应系统哪里、何时建议开，悬停可看全文。"),
-            ("搜索", "可搜项目名、说明或摘要；「视图」可隐藏当前系统不适用的项。"),
-        ]);
-        _footer.Text = "F1 打开完整使用说明 · 视图 → 显示配置脚本";
+        _caption.Text = "配置脚本";
+        _title.Text = groupTitle is null ? "选择左侧配置项" : groupTitle;
+        _summary.Text = "点选配置项后，在此查看开启/关闭脚本。改完点「应用到系统」。";
+        BuildSections([]);
+        _footer.Text = "";
     }
 
     public void ShowUsageGuide()
     {
         HideRecipe();
-        _caption.Text = "配置脚本 · 使用说明";
-        _title.Text = $"{AppBrand.ProductName} 使用说明";
-        _summary.Text = "用于 Windows Server 桌面化：改注册表、服务与 DISM。";
+        _caption.Text = "使用说明";
+        _title.Text = AppBrand.ProductName;
+        _summary.Text = "勾选优化项 →「应用到系统」。需管理员运行。";
         BuildSections([
-            ("工作流程", "1. 选择左侧分类 → 2. 勾选开关 → 3. 点击「应用到系统」。"),
-            ("配置脚本", "点选配置项后，右侧可查看/编辑与软件一致的开启、关闭脚本，便于审计或离线应用。"),
-            ("列含义", "说明=对应哪里·何时建议；推荐值=五星；设置操作=开关。"),
-            ("配置备份", "「文件」菜单可导入/导出 JSON 配置，便于多台机器复用或回滚界面状态。"),
-            ("管理员", "必须以管理员身份运行，否则注册表、服务、DISM 操作可能失败。"),
-            ("生效", "多数项写入后即可用；DISM、大系统缓存、自动登录等需重启。"),
-            ("操作日志", "一般事件：%LocalAppData%\\WinOpt\\apply.log"),
-            ("变更日志", "优化改动专用：%LocalAppData%\\WinOpt\\变更日志.log"),
+            ("配置脚本", "点选左侧项可查看/编辑对应脚本。"),
+            ("备份", "文件菜单可导入、导出配置。"),
         ]);
-        _footer.Text = "帮助 → 打开变更日志 / 打开操作日志";
+        _footer.Text = "";
     }
 
     public void ShowScopeLegend()
     {
         HideRecipe();
-        _caption.Text = "配置脚本 · 标识图例";
-        _title.Text = "适用范围标识";
-        _summary.Text = "每项名称下方的彩色标签，标明该项在不同系统上是否有效。";
+        _caption.Text = "标识图例";
+        _title.Text = "适用范围";
+        _summary.Text = "名称下方标签表示该项适用的系统范围。";
         BuildSections([
-            ("Server 专属", "仅在 Windows Server 安装类型下有意义；客户端 Windows 上可能无效或不存在对应策略。"),
-            ("需桌面体验", "Server Core（无桌面体验）无法应用；GUI Server 或 Win10/11 桌面可用。"),
-            ("版本标签", "如 Server 2016+、Win10+ 表示该注册表/功能在更低版本上不存在或行为不同。"),
-            ("过滤", "勾选「视图 → 隐藏不适用项」可自动隐藏当前环境不可用的开关。"),
+            ("Server 专属", "仅 Windows Server。"),
+            ("需桌面体验", "Server Core 不可用。"),
         ]);
         _footer.Text = "";
     }
