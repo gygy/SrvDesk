@@ -98,8 +98,10 @@ internal sealed class HeaderResourceMeter : Panel
             : Math.Max(0, 100 - (int)memLoad);
 
         // IP 在 CPU/内存左侧
-        _text.Text =
+        var line =
             $"IP {_ipText}    CPU 剩{cpuFree:0}%    内存 剩{freeGbMem:0.0}G({memFreePct}%)    {_systemDrive} 剩{freeGb:0.#}G";
+        _text.Text = line;
+        FitWidthToText(line);
 
         var tip =
             (_ipTip.Length > 0 ? _ipTip + "\r\n" : "") +
@@ -111,12 +113,26 @@ internal sealed class HeaderResourceMeter : Panel
         _toolTip.SetToolTip(_text, tip);
     }
 
+    private void FitWidthToText(string line)
+    {
+        try
+        {
+            var pad = 16;
+            var need = TextRenderer.MeasureText(line, _text.Font).Width + pad;
+            var next = Math.Max(420, Math.Min(720, need));
+            if (Math.Abs(Width - next) >= 8)
+                Width = next;
+        }
+        catch { /* ignore */ }
+    }
+
     private void RefreshIp(bool force)
     {
         _ipRefreshCountdown = 5; // 约每 5 秒刷新一次
         try
         {
             var primary = "";
+            var primaryScore = -1;
             var lines = new List<string>();
             foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -132,14 +148,17 @@ internal sealed class HeaderResourceMeter : Panel
                 if (ips.Count == 0) continue;
 
                 lines.Add(nic.Name + "：" + string.Join(" / ", ips));
-                if (primary.Length == 0)
+                var score = nic.NetworkInterfaceType switch
                 {
-                    // 优先以太网/无线；否则取第一张已连接网卡
-                    var prefer = nic.NetworkInterfaceType is NetworkInterfaceType.Ethernet
-                        or NetworkInterfaceType.Wireless80211
-                        or NetworkInterfaceType.GigabitEthernet;
-                    if (prefer || primary.Length == 0)
-                        primary = ips[0];
+                    NetworkInterfaceType.Ethernet => 30,
+                    NetworkInterfaceType.GigabitEthernet => 30,
+                    NetworkInterfaceType.Wireless80211 => 20,
+                    _ => 10,
+                };
+                if (score > primaryScore)
+                {
+                    primaryScore = score;
+                    primary = ips[0];
                 }
             }
 

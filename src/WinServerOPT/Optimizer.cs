@@ -574,9 +574,7 @@ internal static class Optimizer
             || b.DisableRecommendedItems != s.DisableRecommendedItems
             || b.DisableAdTracking != s.DisableAdTracking
             || b.DisableSearchHistory != s.DisableSearchHistory
-            || b.DisableStickyKeys != s.DisableStickyKeys
-            || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035
-            || b.PauseWindowsUpdatesUx != s.PauseWindowsUpdatesUx;
+            || b.DisableStickyKeys != s.DisableStickyKeys;
     }
 
     private static bool AnyEasySettingsChanged(State? b, State s)

@@ -17,9 +17,9 @@
     <Authors>WinOpt</Authors>
     <Copyright>Copyright (c) 2026 WinOpt</Copyright>
     <Description>Windows Server 与桌面系统设置优化工具</Description>
-    <Version>1.0.10</Version>
-    <FileVersion>1.0.10.0</FileVersion>
-    <InformationalVersion>1.0.10</InformationalVersion>
+    <Version>1.0.11</Version>
+    <FileVersion>1.0.11.0</FileVersion>
+    <InformationalVersion>1.0.11</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <NeutralLanguage>zh-CN</NeutralLanguage>
     <DebugType Condition="'$(Configuration)'=='Release'">pdbonly</DebugType>

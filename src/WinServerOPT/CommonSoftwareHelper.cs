@@ -2575,17 +2575,37 @@ Add-AppxPackage -Path '{escaped}'
     }
 
     /// <summary>
-    /// 含点且无空格 → 按包 ID 精确安装；否则按名称搜索安装（自定义项常用）。
+    /// 含点且无空格 → 按包 ID 精确安装；微软商店 ProductId（如 9PLM9XGG6VKS）同样按 --id；
+    /// 否则按名称搜索安装（自定义项常用）。
     /// </summary>
     private static string BuildWingetInstallArgs(string wingetIdOrName, bool preferWingetSource)
     {
         var raw = (wingetIdOrName ?? "").Trim();
         var quoted = QuoteArg(raw);
-        var looksLikeId = raw.IndexOf('.') > 0 && raw.IndexOf(' ') < 0;
+        var looksLikeId = LooksLikeWingetPackageId(raw);
         var target = looksLikeId ? $"-e --id {quoted}" : $"--name {quoted} --exact";
-        var source = preferWingetSource ? " --source winget" : "";
+        // 商店 ProductId 不在 winget 社区源，强制走默认源（含 msstore）
+        var useWingetSource = preferWingetSource && !LooksLikeMsStoreProductId(raw);
+        var source = useWingetSource ? " --source winget" : "";
         return $"install {target}{source} --silent " +
                "--accept-package-agreements --accept-source-agreements --disable-interactivity";
+    }
+
+    private static bool LooksLikeWingetPackageId(string raw) =>
+        raw.Length > 0
+        && raw.IndexOf(' ') < 0
+        && (raw.IndexOf('.') > 0 || LooksLikeMsStoreProductId(raw));
+
+    /// <summary>微软商店 ProductId：以数字开头的短字母数字串，如 9PLM9XGG6VKS。</summary>
+    private static bool LooksLikeMsStoreProductId(string raw)
+    {
+        if (raw.Length is < 10 or > 16) return false;
+        if (!char.IsDigit(raw[0])) return false;
+        foreach (var c in raw)
+        {
+            if (!char.IsLetterOrDigit(c)) return false;
+        }
+        return true;
     }
 
     private static string QuoteArg(string value)

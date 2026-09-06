@@ -33,8 +33,7 @@ internal static class Win11DesktopTweaks
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
         SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
-        SetFeatureUpdatePause2035(s.PauseFeatureUpdatesUntil2035);
-        SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
+        // 暂停更新由 EasySettingsTweaks.ApplyPrivacyBits 统一写入，避免误触发资源管理器重启
     }
 
     public static bool IsShowItemCheckboxesOn() =>
