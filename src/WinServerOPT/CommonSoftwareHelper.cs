@@ -56,6 +56,10 @@ internal static class CommonSoftwareHelper
     public static string DownloadDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "software-downloads");
 
+    /// <summary>便携工具目录，如 Codex CLI：%LocalAppData%\WinOpt\tools\{id}\</summary>
+    public static string ToolsDir =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "tools");
+
     public static bool IsWingetAvailable()
     {
         EnsureWingetDiscovered();
@@ -458,6 +462,14 @@ internal static class CommonSoftwareHelper
             if (appx.Installed) map[item.Id] = appx;
         }
 
+        foreach (var item in items)
+        {
+            if (item.IsWingetBootstrap) continue;
+            if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
+            var byExe = QueryByExeNames(item);
+            if (byExe.Installed) map[item.Id] = byExe;
+        }
+
         lock (StatusCacheLock)
             _statusCache = map;
     }
@@ -504,6 +516,9 @@ internal static class CommonSoftwareHelper
             }
         }
 
+        var byExe = QueryByExeNames(item);
+        if (byExe.Installed) return byExe;
+
         return new CommonSoftwareStatus();
     }
 
@@ -532,6 +547,7 @@ internal static class CommonSoftwareHelper
             return InstallWinget(onProgress);
 
         Report(onProgress, "准备安装 " + item.Title, 2);
+        var preferOffline = PreferOfflineNow(item);
 
         // Server 无商店：优先离线自动安装（Appx/Msix + 依赖，与手工放包一致）
         if (item.PreferAppxSideload && !string.IsNullOrWhiteSpace(item.StoreProductId))
@@ -549,19 +565,19 @@ internal static class CommonSoftwareHelper
             }
         }
 
-        // 次选：传统 EXE 离线包（如 iCloudSetup 遗留版）
-        if (item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+        // Server 优先 / 显式 PreferOffline：离线包（含便携 EXE）
+        if (preferOffline && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
         {
             try
             {
-                var offlineMsg = InstallFromOfflinePackage(item, onProgress);
+                var offlineMsg = TryInstallOffline(item, onProgress);
                 if (offlineMsg is not null)
                     return offlineMsg;
             }
             catch (Exception ex)
             {
-                ApplyLog.Write("离线 EXE 安装失败，尝试其它方式：" + ex.Message);
-                Report(onProgress, "离线 EXE 安装失败，尝试其它方式…", 45);
+                ApplyLog.Write("离线安装失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "离线安装失败，尝试其它方式…", 45);
             }
         }
 
@@ -586,7 +602,7 @@ internal static class CommonSoftwareHelper
             }
 
             // PreferAppx/Offline 的包跳过 msstore，避免 Server 挂死
-            if (!item.PreferOfflineInstall && !item.PreferAppxSideload)
+            if (!SkipMsStoreRetry(item))
             {
                 Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
                 code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: false), onProgress);
@@ -605,11 +621,11 @@ internal static class CommonSoftwareHelper
             }
         }
 
-        if (!item.PreferOfflineInstall && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+        if (!preferOffline && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
         {
             try
             {
-                var offlineMsg = InstallFromOfflinePackage(item, onProgress);
+                var offlineMsg = TryInstallOffline(item, onProgress);
                 if (offlineMsg is not null)
                     return offlineMsg;
             }
@@ -626,6 +642,181 @@ internal static class CommonSoftwareHelper
             : string.IsNullOrWhiteSpace(item.WingetId)
                 ? "该软件暂无 winget 包，已在浏览器打开官方下载页。"
                 : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
+    }
+
+    private static bool PreferOfflineNow(CommonSoftwareItem item) =>
+        item.PreferOfflineInstall
+        || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer());
+
+    private static bool SkipMsStoreRetry(CommonSoftwareItem item) =>
+        item.PreferOfflineInstall
+        || item.PreferAppxSideload
+        || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer());
+
+    /// <summary>离线安装入口：便携 EXE 或静默安装包。成功返回文案；失败返回 null。</summary>
+    private static string? TryInstallOffline(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress) =>
+        item.OfflinePortable
+            ? InstallPortableOffline(item, onProgress)
+            : InstallFromOfflinePackage(item, onProgress);
+
+    /// <summary>
+    /// 下载便携 EXE 到 %LocalAppData%\WinOpt\tools\{id}\，并加入用户 PATH。
+    /// 用于 Server 上无 winget/商店时安装 Codex CLI 等工具。
+    /// </summary>
+    private static string? InstallPortableOffline(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var url = item.OfflineInstallerUrl.Trim();
+        if (url.Length == 0) return null;
+
+        var exeName = ResolvePortableExeName(item);
+        var toolDir = Path.Combine(ToolsDir, item.Id);
+        Directory.CreateDirectory(toolDir);
+        var dest = Path.Combine(toolDir, exeName);
+
+        Report(onProgress, "下载便携程序…", 5);
+        DownloadInstaller(url, dest, minBytes: 100_000, onProgress, percentBase: 5, percentSpan: 70);
+
+        EnsureUserPathContains(toolDir);
+        PrependProcessPath(toolDir);
+
+        InvalidateStatusCache();
+        Report(onProgress, "安装完成", 100);
+        ApplyLog.Write("便携安装：" + dest);
+        return "已安装到 " + dest + "，并已加入用户 PATH。请新开终端后使用 "
+            + Path.GetFileNameWithoutExtension(exeName) + "。";
+    }
+
+    private static string ResolvePortableExeName(CommonSoftwareItem item)
+    {
+        if (item.DetectExeNames.Length > 0)
+        {
+            var name = item.DetectExeNames[0].Trim();
+            if (name.Length > 0)
+            {
+                return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                    ? name
+                    : name + ".exe";
+            }
+        }
+
+        return item.Id + ".exe";
+    }
+
+    private static CommonSoftwareStatus QueryByExeNames(CommonSoftwareItem item)
+    {
+        if (item.DetectExeNames.Length == 0)
+            return new CommonSoftwareStatus();
+
+        foreach (var raw in item.DetectExeNames)
+        {
+            var name = raw.Trim();
+            if (name.Length == 0) continue;
+            if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                name += ".exe";
+
+            var inTools = Path.Combine(ToolsDir, item.Id, name);
+            if (File.Exists(inTools))
+            {
+                return new CommonSoftwareStatus
+                {
+                    Installed = true,
+                    UninstallCommand = "portable:" + inTools,
+                };
+            }
+
+            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+            {
+                var trimmed = dir.Trim();
+                if (trimmed.Length == 0) continue;
+                var candidate = Path.Combine(trimmed, name);
+                if (!File.Exists(candidate)) continue;
+                return new CommonSoftwareStatus
+                {
+                    Installed = true,
+                    UninstallCommand = "portable:" + candidate,
+                };
+            }
+
+            try
+            {
+                var whereHit = RunCapture("where.exe", name)
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim().Trim('"'))
+                    .FirstOrDefault(File.Exists);
+                if (!string.IsNullOrWhiteSpace(whereHit))
+                {
+                    return new CommonSoftwareStatus
+                    {
+                        Installed = true,
+                        UninstallCommand = "portable:" + whereHit,
+                    };
+                }
+            }
+            catch { /* ignore */ }
+        }
+
+        return new CommonSoftwareStatus();
+    }
+
+    private static void EnsureUserPathContains(string dir)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey("Environment", writable: true)
+                ?? Registry.CurrentUser.CreateSubKey("Environment");
+            if (key is null) return;
+
+            var current = key.GetValue("Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
+            var parts = current.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => p.Length > 0)
+                .ToList();
+            if (parts.Any(p => string.Equals(p, dir, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            parts.Add(dir);
+            key.SetValue("Path", string.Join(";", parts), RegistryValueKind.ExpandString);
+            ApplyLog.Write("已写入用户 PATH：" + dir);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("写入用户 PATH 失败：" + ex.Message);
+        }
+    }
+
+    private static void RemoveUserPathEntry(string dir)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey("Environment", writable: true);
+            if (key is null) return;
+            var current = key.GetValue("Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
+            var parts = current.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => p.Length > 0
+                    && !string.Equals(p, dir, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            key.SetValue("Path", string.Join(";", parts), RegistryValueKind.ExpandString);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("移除用户 PATH 失败：" + ex.Message);
+        }
+    }
+
+    private static void PrependProcessPath(string dir)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        foreach (var part in path.Split(';'))
+        {
+            if (string.Equals(part.Trim(), dir, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+        Environment.SetEnvironmentVariable("PATH", dir + ";" + path);
     }
 
     /// <summary>下载并静默运行离线安装包。成功返回提示文案（空串=成功）；失败返回 null 以便上层回退。</summary>
@@ -944,6 +1135,28 @@ Add-AppxPackage -Path '{mainEsc}' -DependencyPath $deps -ErrorAction Stop
             return "winget（应用安装程序）为系统组件，不建议在此卸载。请在「设置 → 应用」中操作。";
 
         Report(onProgress, "准备卸载 " + item.Title, 5);
+
+        if (item.OfflinePortable || item.DetectExeNames.Length > 0)
+        {
+            var toolDir = Path.Combine(ToolsDir, item.Id);
+            if (Directory.Exists(toolDir))
+            {
+                try
+                {
+                    Report(onProgress, "移除便携目录…", 40);
+                    Directory.Delete(toolDir, recursive: true);
+                    RemoveUserPathEntry(toolDir);
+                    Report(onProgress, "卸载完成", 100);
+                    InvalidateStatusCache();
+                    return "";
+                }
+                catch (Exception ex)
+                {
+                    ApplyLog.Write("便携卸载失败：" + ex.Message);
+                }
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(item.AppxPackageName))
         {
             try
@@ -979,6 +1192,31 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
 
         var status = Query(item);
         var cmd = status.UninstallCommand;
+        if (!string.IsNullOrWhiteSpace(cmd) && cmd!.StartsWith("portable:", StringComparison.OrdinalIgnoreCase))
+        {
+            var path = cmd.Substring("portable:".Length);
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(dir) &&
+                    dir.StartsWith(ToolsDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                        Directory.Delete(dir);
+                    RemoveUserPathEntry(dir!);
+                }
+                Report(onProgress, "卸载完成", 100);
+                InvalidateStatusCache();
+                return "";
+            }
+            catch (Exception ex)
+            {
+                return "便携程序卸载失败：" + ex.Message;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(cmd))
             return "未找到可用的卸载命令。请在「设置 → 应用」中手动卸载。";
 

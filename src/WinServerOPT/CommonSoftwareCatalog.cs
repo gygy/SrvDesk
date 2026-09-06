@@ -87,7 +87,7 @@ internal static class CommonSoftwareCatalog
             "https://www.neatdownloadmanager.com/",
             essential: false,
             offlineInstallerUrl: "https://www.neatdownloadmanager.com/file/NeatDM_setup.exe",
-            offlineInstallArgs: "/VERYSILENT /NORESTART"),
+            offlineInstallArgs: "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"),
         Item("pdfgear", "PDFgear（免费 PDF 编辑）", "工具", "PDFgear.PDFgear",
             ["PDFgear", "PDF gear"], "https://www.pdfgear.com/download.htm", essential: false),
         Item("stirling-pdf", "Stirling-PDF（本地 PDF 工具箱）", "工具", "StirlingTools.StirlingPDF",
@@ -134,13 +134,6 @@ internal static class CommonSoftwareCatalog
             offlineInstallerUrl: "https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe",
             offlineInstallArgs: "/quiet /norestart",
             preferOfflineInstall: true),
-
-        Item("git", "Git For Windows", "开发", "Git.Git",
-            ["Git"], "https://git-scm.com/download/win", essential: false),
-        Item("notepadpp", "Notepad++", "开发", "Notepad++.Notepad++",
-            ["Notepad++"], "https://notepad-plus-plus.org/downloads/", essential: false),
-        Item("tortoisegit", "TortoiseGit简体中文版", "开发", "TortoiseGit.TortoiseGit",
-            ["TortoiseGit"], "https://tortoisegit.org/download/", essential: false),
 
         // 微软运行库：按需勾选。多数软件只需 2015–2022 x64；装 32 位软件再补 x86
         Item("vcredist-2022-x64", "Visual C++ 2015–2022 (x64) · 推荐", "微软运行库",
@@ -241,6 +234,9 @@ internal static class CommonSoftwareCatalog
         string offlineInstallerUrl = "",
         string offlineInstallArgs = "",
         bool preferOfflineInstall = false,
+        bool preferOfflineOnServer = false,
+        bool offlinePortable = false,
+        string[]? detectExeNames = null,
         string storeProductId = "",
         string appxPackageName = "",
         bool preferAppxSideload = false) => new()
@@ -255,6 +251,9 @@ internal static class CommonSoftwareCatalog
         OfflineInstallerUrl = offlineInstallerUrl,
         OfflineInstallArgs = offlineInstallArgs,
         PreferOfflineInstall = preferOfflineInstall,
+        PreferOfflineOnServer = preferOfflineOnServer,
+        OfflinePortable = offlinePortable,
+        DetectExeNames = detectExeNames ?? [],
         StoreProductId = storeProductId,
         AppxPackageName = appxPackageName,
         PreferAppxSideload = preferAppxSideload,
