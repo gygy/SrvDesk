@@ -45,7 +45,7 @@ internal sealed class SettingRecipeDialog : Form
 
         var hint = new Label
         {
-            Text = "语法高亮显示。可直接编辑，再复制或保存为文件手工执行。",
+            Text = "语法高亮显示。可直接编辑，再复制或导出为文件手工执行。",
             Location = new Point(16, 38),
             Size = new Size(520, 20),
             ForeColor = AppTheme.TextMute,
@@ -90,8 +90,8 @@ internal sealed class SettingRecipeDialog : Form
             }
         };
 
-        var save = ActionButton("保存…", 140);
-        save.Click += (_, _) => SaveAs();
+        var save = ActionButton("导出", 140);
+        save.Click += (_, _) => ExportAs();
 
         var close = ActionButton("关闭", 456);
         close.Click += (_, _) => Close();
@@ -136,7 +136,7 @@ internal sealed class SettingRecipeDialog : Form
             _box.SetScript(_recipe.ContentFor(enable), _recipe.Kind);
     }
 
-    private void SaveAs()
+    private void ExportAs()
     {
         var ext = _recipe?.FileExtension ?? ".txt";
         var filter = _recipe?.Kind switch
@@ -148,7 +148,7 @@ internal sealed class SettingRecipeDialog : Form
         };
         using var dlg = new SaveFileDialog
         {
-            Title = "保存配置脚本",
+            Title = "导出配置脚本",
             Filter = filter,
             FileName = _recipe?.SuggestedFileName(_itemTitle, _showEnable)
                        ?? ("配置脚本" + (_showEnable ? "-开启" : "-关闭") + ext),
@@ -163,7 +163,7 @@ internal sealed class SettingRecipeDialog : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "保存失败：\n" + ex.Message, AppBrand.ProductName,
+            MessageBox.Show(this, "导出失败：\n" + ex.Message, AppBrand.ProductName,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

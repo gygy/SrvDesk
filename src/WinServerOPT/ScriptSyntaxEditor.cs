@@ -43,6 +43,11 @@ internal sealed class ScriptSyntaxEditor : RichTextBox
         TextChanged += OnTextChangedHighlight;
     }
 
+    /// <summary>用户编辑（非程序 SetScript）后触发，用于自动持久化。</summary>
+    public event EventHandler? UserScriptChanged;
+
+    public bool IsUpdating => _suppress;
+
     public SettingActionKind Kind
     {
         get => _kind;
@@ -87,6 +92,7 @@ internal sealed class ScriptSyntaxEditor : RichTextBox
         if (_suppress) return;
         _debounce.Stop();
         _debounce.Start();
+        UserScriptChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void HighlightAll()

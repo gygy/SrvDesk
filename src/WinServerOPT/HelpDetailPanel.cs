@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>右侧配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、保存）。</summary>
+/// <summary>右侧配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、导出）。</summary>
 internal sealed class HelpDetailPanel : BufferedPanel
 {
     private readonly Label _caption = new();
@@ -18,11 +18,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly ScriptSyntaxEditor _recipeBox = new();
     private readonly Button _btnCopy = new();
     private readonly Button _btnSave = new();
+    private readonly Button _btnReset = new();
     private readonly Label _emptyRecipe = new();
 
     private SettingActionRecipe? _recipe;
     private string _itemTitle = "";
     private bool _showEnable = true;
+    private readonly System.Windows.Forms.Timer _persistTimer = new() { Interval = 600 };
     private const int PadX = 12;
 
     public HelpDetailPanel() : base(composited: true)
@@ -110,9 +112,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeBox.Width = 240;
 
         StyleAction(_btnCopy, "复制");
-        StyleAction(_btnSave, "保存…");
+        StyleAction(_btnSave, "导出");
         _btnCopy.Click += (_, _) => CopyRecipe();
-        _btnSave.Click += (_, _) => SaveRecipe();
+        _btnSave.Click += (_, _) => ExportRecipe();
 
         _recipeNote.Font = new Font("Microsoft YaHei UI", 8F);
         _recipeNote.ForeColor = AppTheme.PrimaryDark;
@@ -196,10 +198,10 @@ internal sealed class HelpDetailPanel : BufferedPanel
         HideRecipe();
         _caption.Text = "配置脚本 · 使用指引";
         _title.Text = groupTitle is null ? "选择左侧配置项" : $"{groupTitle}";
-        _summary.Text = "点选配置项后，可在此查看、编辑开启/关闭脚本，并复制或保存为文件。";
+        _summary.Text = "点选配置项后，可在此查看、编辑开启/关闭脚本，并复制或导出为文件。";
         BuildSections([
             ("操作", "开=采用优化建议；关=恢复「系统默认值」。改完后点「应用到系统」。"),
-            ("配置脚本", "脚本可直接改字；「复制」到剪贴板，「保存…」另存为 .reg/.cmd/.ps1 后手工执行。"),
+            ("配置脚本", "脚本可直接改字；「复制」到剪贴板，「导出」为 .reg/.cmd/.ps1 后手工执行。"),
             ("面板位置", "「视图 → 配置脚本 · 靠右 / 靠底」可切换；拖动分隔条调宽/调高，下次启动会记住。"),
             ("说明列", "写明对应系统哪里、何时建议开，悬停可看全文。"),
             ("搜索", "可搜项目名、说明或摘要；「视图」可隐藏当前系统不适用的项。"),
@@ -327,7 +329,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
             _recipeKind.Text = _recipe!.KindLabel;
             _recipeNote.Text = _recipe.Note.Length > 0
                 ? _recipe.Note
-                : "可编辑后复制或保存。";
+                : "可编辑后复制或导出。";
             _recipeNote.Visible = true;
             SetRecipeSide(_showEnable);
         }
@@ -372,7 +374,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
     }
 
-    private void SaveRecipe()
+    private void ExportRecipe()
     {
         if (!_recipeBox.Visible) return;
         var ext = _recipe?.FileExtension ?? ".txt";
@@ -388,7 +390,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         using var dlg = new SaveFileDialog
         {
-            Title = "保存配置脚本",
+            Title = "导出配置脚本",
             Filter = filter,
             FileName = suggested,
             OverwritePrompt = true,
@@ -399,11 +401,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         {
             File.WriteAllText(dlg.FileName, CurrentScriptText(),
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-            _btnSave.Text = "已保存";
+            _btnSave.Text = "已导出";
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
-                _btnSave.Text = "保存…";
+                _btnSave.Text = "导出";
                 t.Stop();
                 t.Dispose();
             };
@@ -411,7 +413,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
         catch (Exception ex)
         {
-            MessageBox.Show("保存失败：\n" + ex.Message, AppBrand.ProductName,
+            MessageBox.Show("导出失败：\n" + ex.Message, AppBrand.ProductName,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

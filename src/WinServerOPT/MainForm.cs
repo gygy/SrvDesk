@@ -2667,7 +2667,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明与一键脚本\r\n" + tip);
-            toolTip.SetToolTip(_script, "查看/编辑本项开启与关闭的配置脚本（可复制、保存）");
+            toolTip.SetToolTip(_script, "查看/编辑本项开启与关闭的配置脚本（可复制、导出）");
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
