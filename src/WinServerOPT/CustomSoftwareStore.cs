@@ -83,7 +83,7 @@ internal static class CustomSoftwareStore
 
         var entry = new CustomSoftwareEntry
         {
-            Id = "custom-" + Guid.NewGuid().ToString("N")[..12],
+            Id = "custom-" + Guid.NewGuid().ToString("N").Substring(0, 12),
             Title = title,
             WingetId = wingetId,
         };
@@ -129,7 +129,7 @@ internal static class CustomSoftwareStore
         var winget = (e.WingetId ?? "").Trim();
         return new CommonSoftwareItem
         {
-            Id = string.IsNullOrWhiteSpace(e.Id) ? "custom-" + Guid.NewGuid().ToString("N")[..12] : e.Id,
+            Id = string.IsNullOrWhiteSpace(e.Id) ? "custom-" + Guid.NewGuid().ToString("N").Substring(0, 12) : e.Id,
             Title = title,
             Category = CommonSoftwareCatalog.CustomCategory,
             WingetId = winget,

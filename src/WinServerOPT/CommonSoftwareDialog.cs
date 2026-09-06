@@ -20,7 +20,7 @@ internal sealed class CommonSoftwareDialog : Form
     private string? _busyItemId;
 
     private static readonly string[] Categories =
-        ["全部", "必备", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发"];
+        ["全部", "必备", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发", "自定义"];
 
     public CommonSoftwareDialog()
     {
@@ -48,6 +48,8 @@ internal sealed class CommonSoftwareDialog : Form
         mEssentials.Click += (_, _) => InstallEssentials();
         var mUpdates = new ToolStripMenuItem("检查软件更新");
         mUpdates.Click += (_, _) => CheckSoftwareUpdates();
+        var mCustom = new ToolStripMenuItem("自定义软件...");
+        mCustom.Click += (_, _) => ManageCustomSoftware();
         var mClearCache = new ToolStripMenuItem("清理下载缓存");
         mClearCache.Click += (_, _) =>
         {
@@ -55,7 +57,7 @@ internal sealed class CommonSoftwareDialog : Form
             MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         op.DropDownItems.AddRange([
-            mInstallSelected, mEssentials, new ToolStripSeparator(), mUpdates, mClearCache
+            mInstallSelected, mEssentials, new ToolStripSeparator(), mUpdates, mCustom, mClearCache
         ]);
         var edit = new ToolStripMenuItem("编辑(&E)");
         var mSelectAll = new ToolStripMenuItem("全选当前");
@@ -312,10 +314,17 @@ internal sealed class CommonSoftwareDialog : Form
         selectBtn.Click += (_, _) => selectMenu.Show(selectBtn, new Point(0, selectBtn.Height));
         _toolTip.SetToolTip(selectBtn, "快速勾选列表项，便于「安装所选」");
 
+        var customBtn = ThemedSettingsChrome.CreateButton("自定义…", false);
+        customBtn.Height = 28;
+        customBtn.Margin = new Padding(8, 4, 0, 0);
+        customBtn.Click += (_, _) => ManageCustomSoftware();
+        _toolTip.SetToolTip(customBtn, "添加可经 winget 安装的自定义软件");
+
         flow.Controls.Add(_wingetHint);
         flow.Controls.Add(_installWingetBtn);
         flow.Controls.Add(_askBeforeInstall);
         flow.Controls.Add(selectBtn);
+        flow.Controls.Add(customBtn);
         strip.Controls.Add(flow);
         return strip;
     }
@@ -352,8 +361,8 @@ internal sealed class CommonSoftwareDialog : Form
         _rows.Clear();
 
         var items = _selectedCategory == "全部"
-            ? CommonSoftwareCatalog.All
-            : CommonSoftwareCatalog.All.Where(x => x.Category == _selectedCategory).ToList();
+            ? CommonSoftwareCatalog.GetAll()
+            : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategory).ToList();
 
         const int rowH = 44;
         var y = 0;
@@ -383,6 +392,25 @@ internal sealed class CommonSoftwareDialog : Form
         var w = Math.Max(680, _listHost.ClientSize.Width - 4);
         foreach (Control c in _listHost.Controls)
             c.Width = w;
+    }
+
+    private void ManageCustomSoftware()
+    {
+        using var dlg = new CustomSoftwareManageDialog();
+        dlg.ShowDialog(this);
+        if (!dlg.Changed) return;
+        if (_selectedCategory == CommonSoftwareCatalog.CustomCategory
+            || _selectedCategory == "全部")
+        {
+            BuildList();
+            ReloadStatusesAsync(forceRefresh: true);
+        }
+        else
+        {
+            // 切到自定义分类方便查看
+            var idx = Array.IndexOf(Categories, CommonSoftwareCatalog.CustomCategory);
+            if (idx >= 0) _categoryMenu.SelectedIndex = idx;
+        }
     }
 
     private void SetRowsPendingStatus()

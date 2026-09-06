@@ -18,14 +18,14 @@ internal static class MenuIcons
         [FileCand(Sys("shell32.dll"), 259), FileCand(Sys("notepad.exe"))],
         DrawExport);
 
-    // —— 工具（已有项） ——
+    // —— 工具：避免共用 mmc.exe / control.exe，保证每项图标可区分 ——
     public static Image Autologon => Get("autologon",
-        [FileCand(Sys("netplwiz.exe")), FileCand(Sys("control.exe"))],
+        [FileCand(Sys("netplwiz.exe"))],
         DrawKey);
 
     public static Image Identity => Get("identity",
-        [FileCand(Sys("SystemPropertiesComputerName.exe")), FileCand(Sys("sysdm.cpl")), FileCand(Sys("SystemPropertiesAdvanced.exe"))],
-        DrawComputer);
+        [FileCand(Sys("SystemPropertiesComputerName.exe")), FileCand(Sys("sysdm.cpl"))],
+        DrawIdentity);
 
     public static Image SystemInfo => Get("sysinfo",
         [FileCand(Sys("msinfo32.exe"))],
@@ -33,15 +33,15 @@ internal static class MenuIcons
 
     public static Image Hosts => Get("hosts",
         [FileCand(Sys("notepad.exe"))],
-        DrawDoc);
+        DrawHosts);
 
     public static Image EventViewer => Get("eventvwr",
-        [FileCand(Sys("eventvwr.exe")), FileCand(Sys("mmc.exe"))],
+        [FileCand(Sys("eventvwr.exe"))],
         DrawLog);
 
     public static Image GroupPolicy => Get("gpedit",
-        [FileCand(Sys("gpedit.msc")), FileCand(Sys("mmc.exe"))],
-        DrawShield);
+        Array.Empty<Cand>(),
+        DrawPolicy);
 
     public static Image Cmd => Get("cmd",
         [FileCand(Sys("cmd.exe"))],
@@ -52,15 +52,15 @@ internal static class MenuIcons
         g => DrawPrompt(g, Color.FromArgb(0, 120, 215)));
 
     public static Image TaskScheduler => Get("taskschd",
-        [FileCand(Sys("taskschd.msc")), FileCand(Sys("mmc.exe"))],
+        Array.Empty<Cand>(),
         DrawClock);
 
     public static Image ComputerMgmt => Get("compmgmt",
-        [FileCand(Sys("compmgmt.msc")), FileCand(Sys("mmc.exe"))],
-        DrawComputer);
+        Array.Empty<Cand>(),
+        DrawComputerMgmt);
 
     public static Image FlushDns => Get("flushdns",
-        [FileCand(Sys("ncpa.cpl")), FileCand(Sys("control.exe"))],
+        [FileCand(Sys("ncpa.cpl"))],
         DrawNetwork);
 
     public static Image CommonSoftware => Get("software",
@@ -72,12 +72,12 @@ internal static class MenuIcons
         DrawTrash);
 
     public static Image DesktopMaintenance => Get("desktop",
-        [FileCand(Sys("explorer.exe")), FileCand(Sys("desk.cpl"))],
+        [FileCand(Sys("desk.cpl"))],
         DrawDesktop);
 
     public static Image Advanced => Get("advanced",
-        [FileCand(Sys("SystemPropertiesAdvanced.exe")), FileCand(Sys("control.exe"))],
-        DrawGear);
+        [FileCand(Sys("SystemPropertiesAdvanced.exe"))],
+        DrawSliders);
 
     public static Image WindowsFeatures => Get("optionalfeatures",
         [FileCand(Sys("OptionalFeatures.exe")), FileCand(Sys("optionalfeatures.exe"))],
@@ -85,12 +85,12 @@ internal static class MenuIcons
 
     public static Image SecurityCenter => Get("securitycenter",
         [FileCand(Sys("wscui.cpl")), FileCand(Sys("SecurityHealthSystray.exe"))],
-        DrawShield);
+        DrawSecurityHealth);
 
     public static Image EdgeManage => Get("edgemanage",
         [FileCand(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft", "Edge", "Application", "msedge.exe")),
          FileCand(Sys("inetcpl.cpl"))],
-        DrawWin);
+        DrawEdge);
 
     /// <summary>右键菜单：鼠标 + 弹出菜单（不用 shell32#0，避免与刷新撞图标）。</summary>
     public static Image ContextMenu => Get("contextmenu",
@@ -98,7 +98,7 @@ internal static class MenuIcons
         DrawContextMenu);
 
     public static Image Quick => Get("quick",
-        [FileCand(Sys("control.exe"))],
+        Array.Empty<Cand>(),
         DrawWrench);
 
     /// <summary>刷新：圆形箭头（不用 shell32#0）。</summary>
@@ -260,13 +260,33 @@ internal static class MenuIcons
         g.DrawLine(p, 12, 7, 12, 11);
     }
 
-    private static void DrawComputer(Graphics g)
+    /// <summary>计算机名：显示器 + 名牌。</summary>
+    private static void DrawIdentity(Graphics g)
     {
         using var b = new SolidBrush(Color.FromArgb(70, 110, 160));
-        g.FillRectangle(b, 2, 3, 12, 8);
-        g.FillRectangle(b, 5, 12, 6, 2);
+        g.FillRectangle(b, 2, 2, 12, 8);
         using var screen = new SolidBrush(Color.FromArgb(200, 220, 240));
-        g.FillRectangle(screen, 3, 4, 10, 6);
+        g.FillRectangle(screen, 3, 3, 10, 6);
+        using var stand = new SolidBrush(Color.FromArgb(90, 90, 90));
+        g.FillRectangle(stand, 6, 10, 4, 2);
+        using var tag = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillRectangle(tag, 3, 13, 10, 2);
+    }
+
+    /// <summary>计算机管理：控制台树。</summary>
+    private static void DrawComputerMgmt(Graphics g)
+    {
+        using var frame = new Pen(Color.FromArgb(70, 110, 160), 1.2f);
+        g.DrawRectangle(frame, 1, 1, 14, 14);
+        using var pane = new SolidBrush(Color.FromArgb(230, 240, 250));
+        g.FillRectangle(pane, 2, 2, 5, 12);
+        using var line = new Pen(Color.FromArgb(0, 120, 215), 1.4f);
+        g.DrawLine(line, 4, 5, 4, 12);
+        g.DrawLine(line, 4, 7, 6, 7);
+        g.DrawLine(line, 4, 10, 6, 10);
+        using var dot = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillEllipse(dot, 9, 4, 3, 3);
+        g.FillEllipse(dot, 9, 9, 3, 3);
     }
 
     private static void DrawInfo(Graphics g)
@@ -288,6 +308,73 @@ internal static class MenuIcons
         g.DrawLine(line, 5, 5, 11, 5);
         g.DrawLine(line, 5, 8, 11, 8);
         g.DrawLine(line, 5, 11, 9, 11);
+    }
+
+    /// <summary>hosts：文档 + 网络点。</summary>
+    private static void DrawHosts(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(245, 245, 245));
+        using var border = new Pen(Color.FromArgb(90, 90, 90));
+        g.FillRectangle(b, 2, 1, 9, 13);
+        g.DrawRectangle(border, 2, 1, 9, 13);
+        using var line = new Pen(Color.FromArgb(120, 120, 120));
+        g.DrawLine(line, 4, 4, 9, 4);
+        g.DrawLine(line, 4, 7, 9, 7);
+        using var net = new Pen(Color.FromArgb(0, 120, 215), 1.3f);
+        g.DrawEllipse(net, 10, 9, 5, 5);
+        g.DrawLine(net, 12, 11, 15, 8);
+    }
+
+    /// <summary>组策略：卷轴 + 勾。</summary>
+    private static void DrawPolicy(Graphics g)
+    {
+        using var paper = new SolidBrush(Color.FromArgb(250, 245, 230));
+        using var border = new Pen(Color.FromArgb(160, 120, 60));
+        g.FillRectangle(paper, 3, 2, 10, 12);
+        g.DrawRectangle(border, 3, 2, 10, 12);
+        using var roll = new SolidBrush(Color.FromArgb(180, 140, 70));
+        g.FillRectangle(roll, 2, 1, 12, 2);
+        g.FillRectangle(roll, 2, 13, 12, 2);
+        using var check = new Pen(Color.FromArgb(0, 140, 60), 1.6f);
+        g.DrawLines(check, new[] { new Point(5, 8), new Point(7, 10), new Point(11, 5) });
+    }
+
+    /// <summary>安全中心：盾牌 + 对勾。</summary>
+    private static void DrawSecurityHealth(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(0, 130, 70));
+        var pts = new[]
+        {
+            new Point(8, 1), new Point(14, 4), new Point(14, 9),
+            new Point(8, 15), new Point(2, 9), new Point(2, 4),
+        };
+        g.FillPolygon(b, pts);
+        using var check = new Pen(Color.White, 1.7f);
+        g.DrawLines(check, new[] { new Point(5, 8), new Point(7, 10), new Point(11, 5) });
+    }
+
+    /// <summary>Edge：蓝色 e。</summary>
+    private static void DrawEdge(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillEllipse(b, 1, 1, 14, 14);
+        using var cut = new SolidBrush(Color.White);
+        g.FillEllipse(cut, 5, 4, 9, 8);
+        using var wave = new Pen(Color.FromArgb(0, 90, 180), 1.5f);
+        g.DrawArc(wave, 2, 7, 10, 6, 200, 140);
+    }
+
+    /// <summary>高级设置：滑块条。</summary>
+    private static void DrawSliders(Graphics g)
+    {
+        using var track = new Pen(Color.FromArgb(180, 180, 180), 1.5f);
+        g.DrawLine(track, 3, 4, 13, 4);
+        g.DrawLine(track, 3, 8, 13, 8);
+        g.DrawLine(track, 3, 12, 13, 12);
+        using var knob = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillEllipse(knob, 9, 2, 4, 4);
+        g.FillEllipse(knob, 4, 6, 4, 4);
+        g.FillEllipse(knob, 8, 10, 4, 4);
     }
 
     /// <summary>配置：简洁齿轮（4 齿，小尺寸不糊）。</summary>

@@ -2335,6 +2335,27 @@ Add-AppxPackage -Path '{escaped}'
         });
     }
 
+    /// <summary>
+    /// 含点且无空格 → 按包 ID 精确安装；否则按名称搜索安装（自定义项常用）。
+    /// </summary>
+    private static string BuildWingetInstallArgs(string wingetIdOrName, bool preferWingetSource)
+    {
+        var raw = (wingetIdOrName ?? "").Trim();
+        var quoted = QuoteArg(raw);
+        var looksLikeId = raw.IndexOf('.') > 0 && raw.IndexOf(' ') < 0;
+        var target = looksLikeId ? $"-e --id {quoted}" : $"--name {quoted} --exact";
+        var source = preferWingetSource ? " --source winget" : "";
+        return $"install {target}{source} --silent " +
+               "--accept-package-agreements --accept-source-agreements --disable-interactivity";
+    }
+
+    private static string QuoteArg(string value)
+    {
+        if (value.Length == 0) return "\"\"";
+        if (value.IndexOfAny(new[] { ' ', '\t', '"' }) < 0) return value;
+        return "\"" + value.Replace("\"", "") + "\"";
+    }
+
     private static readonly SemaphoreSlim WingetGate = new(1, 1);
 
     private static int RunWinget(string args, Action<SoftwareInstallProgress>? onProgress = null)
