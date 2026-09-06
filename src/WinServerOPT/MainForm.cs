@@ -894,8 +894,56 @@ internal sealed class MainForm : Form
             "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
         _commandFlow.Controls.Add(_categoryFilter);
 
+        // 顶部快捷入口
+        var quickGap = new Label
+        {
+            Text = "",
+            AutoSize = false,
+            Width = 16,
+            Height = 1,
+            Margin = new Padding(0),
+        };
+        _commandFlow.Controls.Add(quickGap);
+        _commandFlow.Controls.Add(BarQuickButton("配置脚本 · 靠右", "显示配置脚本面板并靠右停靠", OpenConfigScriptDockRight));
+        _commandFlow.Controls.Add(BarQuickButton("常用软件", "打开常用软件安装与更新", ShowCommonSoftware));
+
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
+    }
+
+    private Button BarQuickButton(string text, string tip, Action click)
+    {
+        var font = new Font("Microsoft YaHei UI", 9F);
+        var textWidth = TextRenderer.MeasureText(text, font).Width;
+        var b = new Button
+        {
+            Text = text,
+            Font = font,
+            AutoSize = false,
+            Size = new Size(Math.Max(72, textWidth + 20), 26),
+            Margin = new Padding(0, 2, 8, 0),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.White,
+            ForeColor = AppTheme.TextMain,
+            Cursor = Cursors.Hand,
+            TabStop = false,
+        };
+        b.FlatAppearance.BorderColor = AppTheme.Border;
+        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
+        b.MouseLeave += (_, _) => b.BackColor = Color.White;
+        b.Click += (_, _) => click();
+        _toolTip.SetToolTip(b, tip);
+        return b;
+    }
+
+    /// <summary>快捷入口：打开配置脚本面板并靠右停靠。</summary>
+    private void OpenConfigScriptDockRight()
+    {
+        ApplyConfigScriptDock(ConfigScriptDock.Right, fromMenu: true);
+        if (!_appMenu.ViewHelpPanel.Checked)
+            _appMenu.ViewHelpPanel.Checked = true;
+        else
+            SetConfigScriptPanelVisible(true);
     }
 
     private static Label BarLabel(string text) => new()
