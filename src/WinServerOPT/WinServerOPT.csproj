@@ -20,6 +20,7 @@
     <Version>1.0.1</Version>
     <FileVersion>1.0.1.0</FileVersion>
     <InformationalVersion>1.0.1</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <NeutralLanguage>zh-CN</NeutralLanguage>
     <DebugType Condition="'$(Configuration)'=='Release'">pdbonly</DebugType>
     <DebugSymbols Condition="'$(Configuration)'=='Release'">true</DebugSymbols>

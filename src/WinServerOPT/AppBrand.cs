@@ -14,14 +14,23 @@ internal static class AppBrand
 
     public static string AboutDialogTitle => $"关于 {ProductName}";
 
+    /// <summary>短版本号（如 1.0.1），不含 git 提交哈希等后缀。</summary>
     public static string VersionText
     {
         get
         {
             var asm = Assembly.GetExecutingAssembly();
-            return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            var raw = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
                 ?? asm.GetName().Version?.ToString(3)
                 ?? "1.0";
+            var plus = raw.IndexOf('+');
+            if (plus >= 0)
+                raw = raw.Substring(0, plus);
+            var dash = raw.IndexOf('-');
+            if (dash >= 0)
+                raw = raw.Substring(0, dash);
+            raw = raw.Trim();
+            return raw.Length > 0 ? raw : "1.0";
         }
     }
 

@@ -212,18 +212,16 @@ internal sealed class MainForm : Form
 
     private static readonly string[] MenuItems =
     [
-        // 即时页：高频操作放最前
+        "Server专属",
+        "账户策略",
         "资源管理器",
-        "电源与服务",
-        "登录启动项",
-        "DNS 设置",
-        // 批量分组：同类聚合，组内高频项靠前
-        "性能及安全",
         "桌面外观",
         "远程与网络",
         "隐私与体验",
-        "Server专属",
-        "账户策略",
+        "性能及安全",
+        "登录启动项",
+        "电源与服务",
+        "DNS 设置",
     ];
 
     private SettingRow[] AllRows =>
