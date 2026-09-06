@@ -618,11 +618,7 @@ internal static class Optimizer
             || b.DisableNewsInterests != s.DisableNewsInterests;
     }
 
-    private static bool IsShortcutArrowRemoved()
-    {
-        var val = GetValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29");
-        return val is string s && s.Length == 0;
-    }
+    private static bool IsShortcutArrowRemoved() => Win11DesktopTweaks.IsShortcutArrowHidden();
 
     private static bool IsAnimationsDisabled()
     {
@@ -636,13 +632,8 @@ internal static class Optimizer
         && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", 0)
         && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", 0);
 
-    private static void SetShortcutArrow(bool show)
-    {
-        if (show)
-            DeleteValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29");
-        else
-            SetString(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", "29", "");
-    }
+    private static void SetShortcutArrow(bool show) =>
+        Win11DesktopTweaks.SetShortcutArrowHidden(!show);
 
     private static void SetAnimations(bool enable)
     {

@@ -140,6 +140,13 @@ internal static class Win11DesktopTweaks
 
     public static bool IsShortcutArrowHidden() => IsShellIconBlank(29);
 
+    public static void SetNoShortcutSuffix(bool on)
+    {
+        SetShortcutSuffixOff(on);
+        // Link 旧写法会导致桌面图标空白，改完后重启资源管理器以立刻恢复
+        DesktopQuickActions.RestartExplorer();
+    }
+
     public static void SetRemoveAdminShield(bool on)
     {
         SetShellIconBlank(77, on);

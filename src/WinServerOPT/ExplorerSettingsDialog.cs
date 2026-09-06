@@ -222,7 +222,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         // 任务栏相关：只更新界面，真正写入在「应用到系统」
         _chat.Bind(bits.HideTaskbarChat, _ => { });
         _copilot.Bind(bits.HideTaskbarCopilot, _ => { });
-        _arrow.Bind(IsShortcutArrowHidden(), ApplyArrow);
+        _arrow.Bind(Win11DesktopTweaks.IsShortcutArrowHidden(), Win11DesktopTweaks.SetShortcutArrowHidden);
         _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), Win11DesktopTweaks.SetNoShortcutSuffix);
         _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), Win11DesktopTweaks.SetRemoveAdminShield);
         _win10Explorer.Bind(!Win11DesktopTweaks.IsWin11ExplorerStyleOn(), Win11DesktopTweaks.SetCompactExplorerSpacing);
@@ -240,32 +240,6 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _glom.SelectedIndex = glom is 0 or 1 or 2 ? glom : 0;
         _loading = false;
         _loaded = true;
-    }
-
-    private static bool IsShortcutArrowHidden()
-    {
-        using var k = Registry.LocalMachine.OpenSubKey(
-            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons");
-        return k?.GetValue("29") is not null;
-    }
-
-    private static void ApplyArrow(bool hide)
-    {
-        const string key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons";
-        object? old;
-        using (var r = Registry.LocalMachine.OpenSubKey(key))
-            old = r?.GetValue("29");
-        using var k = Registry.LocalMachine.CreateSubKey(key);
-        if (hide)
-        {
-            ApplyLog.RegistryString("HKLM", key, "29", old, "");
-            k?.SetValue("29", "", RegistryValueKind.String);
-        }
-        else
-        {
-            ApplyLog.RegistryDelete("HKLM", key, "29", old);
-            k?.DeleteValue("29", throwOnMissingValue: false);
-        }
     }
 
     private static void SetDwordCu(string key, string name, int value)
