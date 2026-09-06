@@ -216,7 +216,7 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
-        "资源管理器", "电源与服务", "登录启动项", "DNS 设置",
+        "登录启动项", "DNS 设置",
     ];
 
     private static readonly string[] MenuItems =
@@ -317,10 +317,36 @@ internal sealed class MainForm : Form
                 _takeOwn, _openCmd,
             ]),
         ]));
+        _groups.Add(("资源管理器", [
+            ("常用显示", [
+                _fileExt, _hiddenFiles, _fullPath, _hideOs, _launchThisPc,
+            ]),
+            ("快速访问", [
+                _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly,
+            ]),
+            ("快捷方式与布局", [
+                _noArrow, _noSuffix, _noShield, _win11Explorer, _classicMenu, _onedrive,
+            ]),
+            ("任务栏", [
+                _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbCopilot,
+                _tbAutohide, _taskView, _taskbarClock,
+            ]),
+        ]));
         _groups.Add(("远程与网络", [
             ("远程与网络", [
-                _rdp, _rdpGpu, _rdpFps, _rdpNla,
-                _netDiscovery, _ra, _smRemoting,
+                _rdpGpu, _rdpFps, _rdpNla,
+                _netDiscovery, _smRemoting,
+            ]),
+        ]));
+        _groups.Add(("电源与服务", [
+            ("远程桌面", [
+                _rdp, _ra,
+            ]),
+            ("电源与休眠", [
+                _hibernate, _fastStartup,
+            ]),
+            ("后台服务与内存", [
+                _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
             ]),
         ]));
         _groups.Add(("隐私与体验", [
@@ -409,6 +435,11 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
+        _appMenu.ToolPowerExtras.Click += (_, _) =>
+        {
+            using var d = new OtherSettingsDialog();
+            d.ShowDialog(this);
+        };
         _appMenu.ToolWindowsFeatures.Click += (_, _) =>
         {
             using var d = new WindowsFeaturesDialog();
@@ -488,7 +519,7 @@ internal sealed class MainForm : Form
                     ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
                       "# 当前尚无变更记录。\r\n" +
                       "# 请先：勾选推荐项 → 点击底部「应用到系统」→ 再打开本文件。\r\n" +
-                      "# 即时页（资源管理器/DNS 等）开关切换后也会写入。\r\n"
+                      "# 即时页（登录启动项/DNS 等）开关切换后也会写入。\r\n"
                     : $"# {title}\r\n# 尚无记录。\r\n";
                 File.WriteAllText(path, tip, new System.Text.UTF8Encoding(true));
             }
@@ -608,7 +639,7 @@ internal sealed class MainForm : Form
     {
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
-        var titles = new[] { "资源管理器", "电源与服务", "登录启动项", "DNS 设置" };
+        var titles = new[] { "登录启动项", "DNS 设置" };
         var i = 0;
         var timer = new System.Windows.Forms.Timer { Interval = 40 };
         timer.Tick += (_, _) =>
@@ -626,8 +657,6 @@ internal sealed class MainForm : Form
             {
                 Form page = title switch
                 {
-                    "资源管理器" => new ExplorerSettingsDialog(),
-                    "电源与服务" => new OtherSettingsDialog(),
                     "登录启动项" => new StartupManagerDialog(),
                     "DNS 设置" => new DnsSwitcherDialog(),
                     _ => throw new InvalidOperationException(title),
@@ -1171,8 +1200,6 @@ internal sealed class MainForm : Form
             {
                 page = title switch
                 {
-                    "资源管理器" => new ExplorerSettingsDialog(),
-                    "电源与服务" => new OtherSettingsDialog(),
                     "登录启动项" => new StartupManagerDialog(),
                     "DNS 设置" => new DnsSwitcherDialog(),
                     _ => throw new InvalidOperationException(title),
@@ -1296,9 +1323,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _status.Text = embeddedTitle == "资源管理器"
-            ? "资源管理器页：任务栏相关改完后点「应用到系统」（会重启资源管理器）；其它项即时生效。"
-            : "此页修改立即生效，无需点击「应用到系统」。可用底部「刷新」。";
+        _status.Text = "此页修改立即生效，无需点击「应用到系统」。可用底部「刷新」。";
     }
 
     private void UpdateBottomActionEnablement(string? embeddedTitle = null)
@@ -1313,10 +1338,11 @@ internal sealed class MainForm : Form
         _restore.Visible = true;
         _restore.Enabled = _inBatchMode;
 
-        var explorer = embeddedTitle == "资源管理器"
-            || (_embeddedPage is IEmbeddedSettingsPage page && page.SupportsApplyToSystem);
+        var canApplyEmbedded = !_inBatchMode
+            && _embeddedPage is IEmbeddedSettingsPage page
+            && page.SupportsApplyToSystem;
         _apply.Visible = true;
-        _apply.Enabled = _inBatchMode || (!_inBatchMode && explorer);
+        _apply.Enabled = _inBatchMode || canApplyEmbedded;
     }
 
     private int ContentWidth() =>

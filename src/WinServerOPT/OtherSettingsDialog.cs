@@ -1,78 +1,38 @@
 namespace WinOpt;
 
-internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
+/// <summary>电源与服务高级工具：RDP 端口、预取文件数、Windows Search（开关项已并入主列表）。</summary>
+internal sealed class OtherSettingsDialog : Form
 {
-    private readonly InstantToggleRow _hibernate = new("禁用系统休眠");
-    private readonly InstantToggleRow _fast = new("禁用快速启动");
-    private readonly InstantToggleRow _rdp = new("启用远程桌面");
-    private readonly InstantToggleRow _ra = new("禁用远程协助");
-    private readonly InstantToggleRow _sysmain = new("禁用 SysMain");
-    private readonly InstantToggleRow _memComp = new("禁用内存压缩");
-    private readonly InstantToggleRow _prelaunch = new("禁用应用预启动");
-    private readonly InstantToggleRow _page = new("禁用内存页面合并");
-    private readonly InstantToggleRow _ucpd = new("禁用 UCPD 驱动");
-    private readonly InstantToggleRow _prefetchRead = new("应用启动预取（只读）");
     private readonly NumericUpDown _port = new();
     private readonly NumericUpDown _prefetch = new();
-    private bool _loaded;
 
     public OtherSettingsDialog()
     {
-        Text = "电源与服务";
+        Text = "电源服务高级工具";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(860, 620);
-        MinimumSize = new Size(720, 480);
+        ClientSize = new Size(640, 420);
+        MinimumSize = new Size(560, 360);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.Controls.Add(BuildSearchTools());
+        body.Controls.Add(BuildPrefetchSection());
+        body.Controls.Add(BuildRemoteSection());
 
-        var remote = BuildRemoteSection();
-        var power = ThemedSettingsChrome.CreateSection("电源与休眠", [_hibernate, _fast]);
-        var svc = ThemedSettingsChrome.CreateSection("后台服务与内存", [_sysmain, _memComp, _prelaunch, _page, _ucpd]);
-        var prefetch = BuildPrefetchSection();
-        var search = BuildSearchTools();
-
-        // Dock.Top：后添加在上；远程桌面 Server 最高频放最上
-        body.Controls.Add(search);
-        body.Controls.Add(prefetch);
-        body.Controls.Add(svc);
-        body.Controls.Add(power);
-        body.Controls.Add(remote);
-
-        ThemedSettingsChrome.MountEmbedded(
+        ThemedSettingsChrome.MountModal(
             this,
-            "电源与服务",
-            "远程桌面 · 休眠 · SysMain · 内存与预取",
+            "电源服务高级工具",
+            "RDP 端口 · 预取 · Windows Search",
             body,
-            "UCPD 为微软用户选择保护驱动，禁用后可改默认浏览器等关联。",
-            LoadValues);
+            "开关类项请在左侧「电源与服务」列表中勾选后点「应用到系统」。");
 
-        Shown += (_, _) =>
+        Load += (_, _) =>
         {
-            if (_loaded) return;
-            _loaded = true;
-            BeginInvoke(new Action(LoadValues));
+            _port.Value = Math.Min(_port.Maximum, Math.Max(_port.Minimum, EasySettingsTweaks.GetRdpPort()));
+            _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));
         };
-    }
-
-    private bool _warmLoadSkip;
-
-    public bool ConsumeWarmLoadSkip()
-    {
-        if (!_warmLoadSkip) return false;
-        _warmLoadSkip = false;
-        return true;
-    }
-
-    public bool SupportsApplyToSystem => false;
-    public void ApplyToSystem() { }
-
-    public void RefreshFromSystem()
-    {
-        LoadValues();
-        _warmLoadSkip = true;
     }
 
     private Panel BuildRemoteSection()
@@ -87,9 +47,13 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
             try
             {
                 EasySettingsTweaks.SetRdpPort((int)_port.Value);
-                MessageBox.Show("已修改 RDP 端口。请同步检查防火墙。", "远程桌面", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "已修改 RDP 端口。请同步检查防火墙。", "远程桌面",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "远程桌面", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "远程桌面", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         };
 
         var portRow = new FlowLayoutPanel
@@ -110,9 +74,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         portRow.Controls.Add(_port);
         portRow.Controls.Add(portBtn);
 
-        var (card, host) = ThemedSettingsChrome.CreateSectionShell("远程桌面");
-        host.Controls.Add(_rdp);
-        host.Controls.Add(_ra);
+        var (card, host) = ThemedSettingsChrome.CreateSectionShell("远程桌面端口");
         host.Controls.Add(portRow);
         return card;
     }
@@ -127,7 +89,8 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         pfBtn.Click += (_, _) =>
         {
             EasySettingsTweaks.SetMaxPrefetchFiles((int)_prefetch.Value);
-            MessageBox.Show("已写入最大预取文件数。", "预取", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "已写入最大预取文件数。", "预取",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
 
         var pfRow = new FlowLayoutPanel
@@ -147,9 +110,16 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         pfRow.Controls.Add(_prefetch);
         pfRow.Controls.Add(pfBtn);
 
-        _prefetchRead.Enabled = false;
+        var tip = new Label
+        {
+            Text = "应用启动预取当前：" + (EasySettingsTweaks.IsAppLaunchPrefetchOn() ? "开启" : "关闭") + "（只读）",
+            AutoSize = true,
+            ForeColor = AppTheme.TextMute,
+            Margin = new Padding(4, 0, 0, 6),
+        };
+
         var (card, host) = ThemedSettingsChrome.CreateSectionShell("预取设置");
-        host.Controls.Add(_prefetchRead);
+        host.Controls.Add(tip);
         host.Controls.Add(pfRow);
         return card;
     }
@@ -166,7 +136,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         return card;
     }
 
-    private static Button MkBtn(string text, Action click)
+    private Button MkBtn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         b.AutoSize = true;
@@ -177,30 +147,13 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
             try
             {
                 click();
-                MessageBox.Show("已完成。", text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "已完成。", text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, ex.Message, text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
         return b;
-    }
-
-    private void LoadValues()
-    {
-        _hibernate.Bind(EasySettingsTweaks.IsHibernateDisabled(), EasySettingsTweaks.SetHibernate);
-        _fast.Bind(EasySettingsTweaks.IsFastStartupDisabled(), EasySettingsTweaks.SetFastStartup);
-        _rdp.Bind(EasySettingsTweaks.IsRdpEnabled(), EasySettingsTweaks.SetRdpEnabled);
-        _ra.Bind(EasySettingsTweaks.IsRemoteAssistanceDisabled(), EasySettingsTweaks.SetRemoteAssistanceDisabled);
-        _sysmain.Bind(EasySettingsTweaks.IsSysMainDisabled(), EasySettingsTweaks.SetSysMain);
-        _memComp.Bind(EasySettingsTweaks.IsMemoryCompressionDisabled(), EasySettingsTweaks.SetMemoryCompressionDisabled);
-        _prelaunch.Bind(EasySettingsTweaks.IsAppPrelaunchDisabled(), EasySettingsTweaks.SetAppPrelaunchDisabled);
-        _page.Bind(EasySettingsTweaks.IsPageCombiningDisabled(), EasySettingsTweaks.SetPageCombiningDisabled);
-        _ucpd.Bind(EasySettingsTweaks.IsUcpdDisabled(), EasySettingsTweaks.SetUcpdDisabled);
-        _prefetchRead.Bind(EasySettingsTweaks.IsAppLaunchPrefetchOn(), _ => { });
-        _port.Value = Math.Min(_port.Maximum, Math.Max(_port.Minimum, EasySettingsTweaks.GetRdpPort()));
-        _prefetch.Value = Math.Min(_prefetch.Maximum, Math.Max(_prefetch.Minimum, EasySettingsTweaks.GetMaxPrefetchFiles()));
-        _loaded = true;
     }
 }
