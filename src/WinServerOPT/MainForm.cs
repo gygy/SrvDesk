@@ -16,6 +16,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动", SettingCatalog.DisableSysMain);
     private readonly SettingRow _visualPerf = Row("视觉效果调整为最佳性能", "系统自选", SettingCatalog.VisualBestPerf);
     private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启", SettingCatalog.PowerThrottlingOff);
+    private readonly SettingRow _boostMode = Row("显示处理器性能提升模式", "隐藏", SettingCatalog.ShowProcessorBoostMode);
     private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启", SettingCatalog.DisableHibernate);
     private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认", SettingCatalog.TcpOptimized);
     private readonly SettingRow _qosSpeed = Row("QoS 网速优化（零保留+入站TCP级别3）", "系统默认", SettingCatalog.QosSpeedOptimize);
@@ -246,7 +247,7 @@ internal sealed class MainForm : Form
     private SettingRow[] AllRows =>
     [
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-        _sysMain, _visualPerf, _powerThrottle, _hibernate, _tcp, _qosSpeed, _errorReport,
+        _sysMain, _visualPerf, _powerThrottle, _boostMode, _hibernate, _tcp, _qosSpeed, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
@@ -291,7 +292,7 @@ internal sealed class MainForm : Form
                 // 遥测与诊断
                 _telemetry, _dps, _ceip, _errorReport,
                 // 性能与显卡
-                _visualPerf, _powerThrottle, _gpuSched, _largeCache, _pca,
+                _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca,
                 // Windows 更新
                 _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035,
                 // 网络栈
@@ -354,7 +355,7 @@ internal sealed class MainForm : Form
                 _rdp, _ra,
             ]),
             ("电源与休眠", [
-                _hibernate, _fastStartup,
+                _hibernate, _fastStartup, _boostMode,
             ]),
             ("后台服务与内存", [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
@@ -1162,15 +1163,49 @@ internal sealed class MainForm : Form
     private bool EnsureAutologonReady()
     {
         if (!_autologon.Checked) return true;
-        if (_autologonSettings is not null) return true;
+
+        // 系统/基线已启用：只补齐会话缓存，绝不弹窗打扰其它优化项写入
+        var alreadyOn = _baselineState?.EnableAutologon == true;
+        if (alreadyOn)
+        {
+            if (!HasAutologonCredentials())
+                TryHydrateAutologonFromSystem();
+            return true;
+        }
+
+        // 新勾选启用：已有账户信息则直接用；否则弹配置窗
+        if (HasAutologonCredentials()) return true;
+        if (TryHydrateAutologonFromSystem()) return true;
         return ConfigureAutologonDialog();
+    }
+
+    private bool HasAutologonCredentials() =>
+        _autologonSettings is not null
+        && !string.IsNullOrWhiteSpace(_autologonSettings.Username);
+
+    /// <summary>从当前系统 Winlogon/LSA 状态填充会话缓存（保留已有密码，不弹窗）。</summary>
+    private bool TryHydrateAutologonFromSystem()
+    {
+        var status = AutologonHelper.Read();
+        if (!status.Enabled || string.IsNullOrWhiteSpace(status.Username))
+            return false;
+        _autologonSettings = AutologonHelper.FromStatus(status);
+        return true;
     }
 
     private bool ConfigureAutologonDialog()
     {
         var status = AutologonHelper.Read();
-        var initial = AutologonHelper.FromStatus(status);
-        using var dlg = new AutologonDialog(initial, status.Enabled);
+        var initial = _autologonSettings is not null
+            ? new AutologonSettings
+            {
+                Domain = _autologonSettings.Domain,
+                Username = _autologonSettings.Username,
+                Password = _autologonSettings.Password,
+                UpdatePassword = _autologonSettings.UpdatePassword,
+            }
+            : AutologonHelper.FromStatus(status);
+        using var dlg = new AutologonDialog(initial, status.Enabled || HasAutologonCredentials());
         if (dlg.ShowDialog(this) != DialogResult.OK) return false;
         _autologonSettings = dlg.Settings;
         return true;
@@ -1971,6 +2006,7 @@ internal sealed class MainForm : Form
         _sysMain.Checked = s.DisableSysMain;
         _visualPerf.Checked = s.VisualBestPerf;
         _powerThrottle.Checked = s.PowerThrottlingOff;
+        _boostMode.Checked = s.ShowProcessorBoostMode;
         _hibernate.Checked = s.DisableHibernate;
         _tcp.Checked = s.TcpOptimized;
         _qosSpeed.Checked = s.QosSpeedOptimize;
@@ -2110,6 +2146,11 @@ internal sealed class MainForm : Form
         _shutdownReason.Checked = s.DisableShutdownReason;
         _noCad.Checked = s.DisableCad;
         _autologon.Checked = s.EnableAutologon;
+        // 已启用时回填域/用户到会话缓存，避免「应用到系统」误弹窗，并与基线一致
+        if (s.EnableAutologon)
+            TryHydrateAutologonFromSystem();
+        else
+            _autologonSettings = null;
         _keyboardFilter.Checked = s.DisableLoginKeyboardFilters;
         RefreshAutologonDisplay();
         if (updateCurrentValues)
@@ -2136,6 +2177,7 @@ internal sealed class MainForm : Form
         DisableSysMain = _sysMain.Checked,
         VisualBestPerf = _visualPerf.Checked,
         PowerThrottlingOff = _powerThrottle.Checked,
+        ShowProcessorBoostMode = _boostMode.Checked,
         DisableHibernate = _hibernate.Checked,
         TcpOptimized = _tcp.Checked,
         QosSpeedOptimize = _qosSpeed.Checked,

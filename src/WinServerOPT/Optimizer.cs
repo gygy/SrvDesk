@@ -20,6 +20,9 @@ internal static class Optimizer
     internal const string QosPschedKey = @"SOFTWARE\Policies\Microsoft\Windows\Psched";
     internal const string QosPolicyKey = @"SOFTWARE\Policies\Microsoft\Windows\QoS";
     internal const string QosTcpAutotuningLevel = "Tcp Autotuning Level";
+    /// <summary>处理器电源管理 → 处理器性能提升模式（PERFBOOSTMODE）定义键。</summary>
+    internal const string ProcessorBoostModeKey =
+        @"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\be337238-0d82-4146-a960-4f3749d470c7";
 
     internal sealed class State
     {
@@ -35,6 +38,8 @@ internal static class Optimizer
         public bool DisableSysMain;
         public bool VisualBestPerf;
         public bool PowerThrottlingOff;
+        /// <summary>在电源选项高级设置中显示「处理器性能提升模式」(PERFBOOSTMODE)。</summary>
+        public bool ShowProcessorBoostMode;
         public bool DisableHibernate;
         public bool TcpOptimized;
         public bool QosSpeedOptimize;
@@ -236,6 +241,7 @@ internal static class Optimizer
             DisableSysMain = ServiceStartEquals("SysMain", 4),
             VisualBestPerf = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2),
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
+            ShowProcessorBoostMode = DwordEquals(Hive.HkLm, ProcessorBoostModeKey, "Attributes", 2),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
             TcpOptimized = IsTcpOptimized(),
             QosSpeedOptimize = IsQosSpeedOptimized(),
@@ -274,8 +280,6 @@ internal static class Optimizer
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
-
-            EnableAutologon = AutologonHelper.Read().Enabled,
 
             LongPathsEnabled = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", 1),
             DisableFastStartup = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0),
@@ -337,6 +341,14 @@ internal static class Optimizer
         };
         EasySettingsTweaks.ReadInto(state);
         CompetitorTweaks.ReadInto(state);
+        var auto = AutologonHelper.Read();
+        state.EnableAutologon = auto.Enabled;
+        if (auto.Enabled)
+        {
+            state.AutologonDomain = auto.Domain;
+            state.AutologonUser = auto.Username;
+            state.AutologonUpdatePassword = false;
+        }
         var searchMode = EasySettingsTweaks.GetSearchboxMode();
         if (searchMode is 0 or 1 or 2)
             state.TaskbarSearchMode = searchMode;
@@ -388,6 +400,8 @@ internal static class Optimizer
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", s.VisualBestPerf ? 2 : 3));
         Do(Ch(x => x.PowerThrottlingOff), "电源节流", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
+        Do(Ch(x => x.ShowProcessorBoostMode), "处理器提升模式可见", () =>
+            SetDword(Hive.HkLm, ProcessorBoostModeKey, "Attributes", s.ShowProcessorBoostMode ? 2 : 1));
         Do(Ch(x => x.DisableHibernate), "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
         Do(Ch(x => x.TcpOptimized), "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
         Do(Ch(x => x.QosSpeedOptimize), "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));

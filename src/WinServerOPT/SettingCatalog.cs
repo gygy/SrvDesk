@@ -117,6 +117,14 @@ internal static class SettingCatalog
         "立即生效。",
         PowerThrottle);
 
+    public static readonly SettingHelpInfo ShowProcessorBoostMode = H(
+        "在电源选项「高级设置」中显示「处理器性能提升模式」。",
+        "PERFBOOSTMODE 的 Attributes=2（取消隐藏）；关闭时改回 1。",
+        "可手动选择 Disabled / Enabled / Aggressive 等 Turbo Boost 策略。",
+        "仅显示设置项，不改当前提升模式数值；改数值请到电源计划高级选项。",
+        "立即生效；重新打开「电源选项 → 更改高级电源设置」可见。",
+        uiPlace: "控制面板 → 电源选项 → 更改计划设置 → 更改高级电源设置 → 处理器电源管理");
+
     public static readonly SettingHelpInfo DisableHibernate = H(
         "关闭休眠并删除 hiberfil.sys，释放 C 盘空间。",
         "powercfg -h off 关闭休眠文件。",

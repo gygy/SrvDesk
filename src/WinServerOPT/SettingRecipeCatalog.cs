@@ -82,6 +82,10 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.PowerThrottlingOff, ActionScript.DwordToggle(false,
             @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1, 0));
 
+        Add(SettingCatalog.ShowProcessorBoostMode, ActionScript.DwordToggle(false,
+            Optimizer.ProcessorBoostModeKey, "Attributes", 2, 1,
+            "Attributes=2 显示「处理器性能提升模式」；1 为隐藏。"));
+
         Add(SettingCatalog.DisableHibernate, ActionScript.Cmd(
             "powercfg.exe -h off",
             "powercfg.exe -h on"));
