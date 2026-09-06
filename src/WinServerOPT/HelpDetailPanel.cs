@@ -15,7 +15,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly Label _recipeNote = new();
     private readonly Button _tabEnable = new();
     private readonly Button _tabDisable = new();
-    private readonly TextBox _recipeBox = new();
+    private readonly ScriptSyntaxEditor _recipeBox = new();
     private readonly Button _btnCopy = new();
     private readonly Button _btnSave = new();
     private readonly Label _emptyRecipe = new();
@@ -86,7 +86,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeHost.Padding = new Padding(8);
         _recipeHost.Visible = false;
 
-        _recipeCaption.Text = "配置脚本（可编辑）";
+        _recipeCaption.Text = "配置脚本（语法高亮 · 可编辑）";
         _recipeCaption.Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold);
         _recipeCaption.ForeColor = AppTheme.PrimaryDeep;
         _recipeCaption.BackColor = Color.Transparent;
@@ -97,7 +97,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeKind.ForeColor = AppTheme.TextMute;
         _recipeKind.BackColor = Color.Transparent;
         _recipeKind.AutoSize = true;
-        _recipeKind.Location = new Point(128, 8);
+        _recipeKind.Location = new Point(168, 8);
 
         StyleTab(_tabEnable, "开启", true);
         StyleTab(_tabDisable, "关闭", false);
@@ -106,19 +106,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _tabEnable.Click += (_, _) => SetRecipeSide(true);
         _tabDisable.Click += (_, _) => SetRecipeSide(false);
 
-        _recipeBox.Multiline = true;
-        _recipeBox.ReadOnly = false; // 允许用户改完再复制/保存
-        _recipeBox.ScrollBars = ScrollBars.Vertical;
-        _recipeBox.Font = new Font("Consolas", 8.25F);
-        _recipeBox.BackColor = Color.White;
-        _recipeBox.ForeColor = AppTheme.TextMain;
-        _recipeBox.BorderStyle = BorderStyle.FixedSingle;
         _recipeBox.Location = new Point(8, 58);
-        _recipeBox.Height = 150;
-        _recipeBox.WordWrap = false;
-        _recipeBox.ShortcutsEnabled = true;
-        _recipeBox.AcceptsReturn = true;
-        _recipeBox.AcceptsTab = true;
+        _recipeBox.Height = 160;
+        _recipeBox.Width = 240;
 
         StyleAction(_btnCopy, "复制");
         StyleAction(_btnSave, "保存…");
@@ -211,7 +201,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         BuildSections([
             ("操作", "开=采用优化建议；关=恢复「系统默认值」。改完后点「应用到系统」。"),
             ("配置脚本", "脚本可直接改字；「复制」到剪贴板，「保存…」另存为 .reg/.cmd/.ps1 后手工执行。"),
-            ("面板宽度", "拖动左右分隔条可调整本栏宽度，下次启动会记住。"),
+            ("面板位置", "「视图 → 配置脚本 · 靠右 / 靠底」可切换；拖动分隔条调宽/调高，下次启动会记住。"),
             ("说明列", "写明对应系统哪里、何时建议开，悬停可看全文。"),
             ("搜索", "可搜项目名、说明或摘要；「视图」可隐藏当前系统不适用的项。"),
         ]);
@@ -321,11 +311,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         ApplyTabVisual(_tabEnable, enable);
         ApplyTabVisual(_tabDisable, !enable);
         if (_recipe is not null)
-            _recipeBox.Text = _recipe.ContentFor(enable);
+            _recipeBox.SetScript(_recipe.ContentFor(enable), _recipe.Kind);
         LayoutInner();
     }
 
-    private string CurrentScriptText() => _recipeBox.Text;
+    private string CurrentScriptText() => _recipeBox.PlainText;
 
     private void CopyRecipe()
     {

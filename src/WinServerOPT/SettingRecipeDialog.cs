@@ -5,7 +5,7 @@ internal sealed class SettingRecipeDialog : Form
 {
     private readonly SettingActionRecipe? _recipe;
     private readonly string _itemTitle;
-    private readonly TextBox _box = new();
+    private readonly ScriptSyntaxEditor _box = new();
     private readonly Button _tabOn = new();
     private readonly Button _tabOff = new();
     private readonly Label _kind = new();
@@ -23,7 +23,7 @@ internal sealed class SettingRecipeDialog : Form
         _itemTitle = itemTitle;
         _recipe = SettingRecipeCatalog.Get(help);
 
-            Text = "配置脚本 · " + itemTitle;
+        Text = "配置脚本 · " + itemTitle;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -45,7 +45,7 @@ internal sealed class SettingRecipeDialog : Form
 
         var hint = new Label
         {
-            Text = "与软件「开/关」一致。可直接编辑，再复制或保存为文件手工执行。",
+            Text = "语法高亮显示。可直接编辑，再复制或保存为文件手工执行。",
             Location = new Point(16, 38),
             Size = new Size(520, 20),
             ForeColor = AppTheme.TextMute,
@@ -66,15 +66,6 @@ internal sealed class SettingRecipeDialog : Form
 
         _box.Location = new Point(16, 100);
         _box.Size = new Size(528, 230);
-        _box.Multiline = true;
-        _box.ReadOnly = false;
-        _box.ScrollBars = ScrollBars.Both;
-        _box.WordWrap = false;
-        _box.Font = new Font("Consolas", 9F);
-        _box.BackColor = Color.White;
-        _box.BorderStyle = BorderStyle.FixedSingle;
-        _box.AcceptsReturn = true;
-        _box.AcceptsTab = true;
 
         _note.Location = new Point(16, 336);
         _note.Size = new Size(528, 36);
@@ -86,7 +77,7 @@ internal sealed class SettingRecipeDialog : Form
         {
             try
             {
-                Clipboard.SetText(_box.Text);
+                Clipboard.SetText(_box.PlainText);
                 copy.Text = "已复制";
                 var t = new System.Windows.Forms.Timer { Interval = 1200 };
                 t.Tick += (_, _) => { copy.Text = "复制到剪贴板"; t.Stop(); t.Dispose(); };
@@ -123,7 +114,9 @@ internal sealed class SettingRecipeDialog : Form
             copy.Enabled = false;
             save.Enabled = false;
             _kind.Text = "";
-            _box.Text = "此项为组合操作（DISM / 多服务 / 右键菜单集成等），未单独收录可复制脚本。\r\n\r\n请直接在列表中切换开关，再点「应用到系统」。";
+            _box.SetScript(
+                "此项为组合操作（DISM / 多服务 / 右键菜单集成等），未单独收录可复制脚本。\r\n\r\n请直接在列表中切换开关，再点「应用到系统」。",
+                SettingActionKind.Mixed);
             _note.Text = "";
         }
         else
@@ -140,7 +133,7 @@ internal sealed class SettingRecipeDialog : Form
         PaintTab(_tabOn, enable);
         PaintTab(_tabOff, !enable);
         if (_recipe is not null)
-            _box.Text = _recipe.ContentFor(enable);
+            _box.SetScript(_recipe.ContentFor(enable), _recipe.Kind);
     }
 
     private void SaveAs()
@@ -165,7 +158,7 @@ internal sealed class SettingRecipeDialog : Form
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            File.WriteAllText(dlg.FileName, _box.Text,
+            File.WriteAllText(dlg.FileName, _box.PlainText,
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         }
         catch (Exception ex)

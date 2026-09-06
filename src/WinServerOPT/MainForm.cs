@@ -491,6 +491,8 @@ internal sealed class MainForm : Form
             LayoutContent();
         };
 
+        _appMenu.ViewScriptDockRight.Click += (_, _) => ApplyConfigScriptDock(ConfigScriptDock.Right, fromMenu: true);
+        _appMenu.ViewScriptDockBottom.Click += (_, _) => ApplyConfigScriptDock(ConfigScriptDock.Bottom, fromMenu: true);
     }
 
     private void OpenLogFile(string path, string title)
@@ -547,6 +549,12 @@ internal sealed class MainForm : Form
         }
     }
 
+    private int _scriptPanelSize = UiPrefs.DefaultHelpPanelWidth;
+    private int _scriptPanelHeight = UiPrefs.DefaultHelpPanelHeight;
+    private ConfigScriptDock _scriptDock = ConfigScriptDock.Right;
+    private bool _applyingDock;
+    private System.Windows.Forms.Timer? _saveSplitTimer;
+
     private void BuildWorkArea(Panel sidebar)
     {
         UiBuffer.Enable(_workArea);
@@ -554,15 +562,17 @@ internal sealed class MainForm : Form
         sidebar.Dock = DockStyle.Left;
 
         var prefs = UiPrefs.Load();
-        var panelW = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
+        _scriptPanelSize = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
+        _scriptPanelHeight = UiPrefs.ClampHeight(prefs.HelpPanelHeight);
+        _scriptDock = UiPrefs.GetDock(prefs);
 
         _mainSplit.Dock = DockStyle.Fill;
-        _mainSplit.Orientation = Orientation.Vertical;
         _mainSplit.FixedPanel = FixedPanel.Panel2;
-        _mainSplit.SplitterWidth = 4;
+        _mainSplit.SplitterWidth = 5;
         _mainSplit.BackColor = AppTheme.BorderLight;
-        _mainSplit.Panel1MinSize = 360;
-        _mainSplit.Panel2MinSize = UiPrefs.MinHelpPanelWidth;
+        // 未布局前不要设过大的 MinSize，否则会抛 InvalidOperationException 导致进程直接退出
+        _mainSplit.Panel1MinSize = 50;
+        _mainSplit.Panel2MinSize = 50;
         _mainSplit.Panel1.BackColor = AppTheme.Surface;
         _mainSplit.Panel2.BackColor = AppTheme.SurfaceCard;
 
@@ -571,82 +581,160 @@ internal sealed class MainForm : Form
         _mainSplit.Panel1.Controls.Add(_contentHost);
         _mainSplit.Panel2.Controls.Add(_helpDetail);
 
-        // 先加入再设距离，避免未布局时 SplitterDistance 抛异常
         _workArea.Controls.Add(_mainSplit);
         _workArea.Controls.Add(sidebar);
 
-        void ApplyPanelWidth()
+        _saveSplitTimer = new System.Windows.Forms.Timer { Interval = 350 };
+        _saveSplitTimer.Tick += (_, _) =>
         {
-            try
-            {
-                var total = _mainSplit.Width;
-                if (total <= _mainSplit.Panel1MinSize + _mainSplit.Panel2MinSize + _mainSplit.SplitterWidth)
-                    return;
-                var w = Math.Min(panelW, total - _mainSplit.Panel1MinSize - _mainSplit.SplitterWidth);
-                w = Math.Max(_mainSplit.Panel2MinSize, w);
-                _mainSplit.SplitterDistance = total - w - _mainSplit.SplitterWidth;
-            }
-            catch
-            {
-                /* 布局未就绪时忽略 */
-            }
-        }
-
-        _mainSplit.HandleCreated += (_, _) => BeginInvoke(ApplyPanelWidth);
-        _mainSplit.SizeChanged += (_, _) =>
-        {
-            if (_mainSplit.Panel2Collapsed) return;
-            // 固定右侧宽度：窗口变宽时保持配置脚本面板宽度
-            try
-            {
-                var want = UiPrefs.ClampWidth(_mainSplit.Panel2.Width > 0 ? _mainSplit.Panel2.Width : panelW);
-                var total = _mainSplit.Width;
-                var maxRight = total - _mainSplit.Panel1MinSize - _mainSplit.SplitterWidth;
-                if (maxRight < _mainSplit.Panel2MinSize) return;
-                want = Math.Min(want, maxRight);
-                var dist = total - want - _mainSplit.SplitterWidth;
-                if (Math.Abs(_mainSplit.SplitterDistance - dist) > 2)
-                    _mainSplit.SplitterDistance = dist;
-            }
-            catch { /* ignore */ }
+            _saveSplitTimer!.Stop();
+            PersistScriptPanelSize();
         };
 
-        var saveWidthTimer = new System.Windows.Forms.Timer { Interval = 400 };
-        saveWidthTimer.Tick += (_, _) =>
-        {
-            saveWidthTimer.Stop();
-            if (_mainSplit.Panel2Collapsed) return;
-            var w = _mainSplit.Panel2.Width;
-            if (w >= UiPrefs.MinHelpPanelWidth)
-            {
-                panelW = w;
-                UiPrefs.SetHelpPanelWidth(w);
-            }
-        };
         _mainSplit.SplitterMoved += (_, _) =>
         {
-            saveWidthTimer.Stop();
-            saveWidthTimer.Start();
+            _saveSplitTimer!.Stop();
+            _saveSplitTimer.Start();
         };
 
-        SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+        _mainSplit.HandleCreated += (_, _) => BeginInvoke(() =>
+        {
+            ApplyConfigScriptDock(_scriptDock, fromMenu: false);
+            SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+        });
+
+        // 先按偏好设好菜单勾选；实际布局等 HandleCreated
         _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
+        SyncDockMenuChecks(_scriptDock);
+        _mainSplit.Orientation = _scriptDock == ConfigScriptDock.Bottom
+            ? Orientation.Horizontal
+            : Orientation.Vertical;
+    }
+
+    private void SyncDockMenuChecks(ConfigScriptDock dock)
+    {
+        _applyingDock = true;
+        try
+        {
+            _appMenu.ViewScriptDockRight.Checked = dock == ConfigScriptDock.Right;
+            _appMenu.ViewScriptDockBottom.Checked = dock == ConfigScriptDock.Bottom;
+        }
+        finally
+        {
+            _applyingDock = false;
+        }
+    }
+
+    private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromMenu)
+    {
+        if (_applyingDock && fromMenu) return;
+        _scriptDock = dock;
+        SyncDockMenuChecks(dock);
+        if (fromMenu)
+            UiPrefs.SetHelpPanelDock(dock);
+
+        var visible = !_mainSplit.Panel2Collapsed && _appMenu.ViewHelpPanel.Checked;
+        try
+        {
+            _mainSplit.SuspendLayout();
+            // 切换方向前先降 MinSize，避免约束冲突
+            _mainSplit.Panel1MinSize = 50;
+            _mainSplit.Panel2MinSize = 50;
+            _mainSplit.Orientation = dock == ConfigScriptDock.Bottom
+                ? Orientation.Horizontal
+                : Orientation.Vertical;
+            ApplyScriptPanelDistance();
+            // 布局完成后再抬高下限，限制拖得过小
+            if (_mainSplit.Width > 200 && _mainSplit.Height > 200)
+            {
+                _mainSplit.Panel1MinSize = dock == ConfigScriptDock.Bottom ? 120 : 280;
+                _mainSplit.Panel2MinSize = dock == ConfigScriptDock.Bottom
+                    ? UiPrefs.MinHelpPanelHeight
+                    : UiPrefs.MinHelpPanelWidth;
+            }
+        }
+        catch
+        {
+            /* 布局未就绪 */
+        }
+        finally
+        {
+            _mainSplit.ResumeLayout(true);
+        }
+
+        if (!visible)
+            _mainSplit.Panel2Collapsed = true;
+
+        LayoutContent();
+    }
+
+    private void ApplyScriptPanelDistance()
+    {
+        if (_mainSplit.Panel2Collapsed) return;
+        try
+        {
+            if (_scriptDock == ConfigScriptDock.Bottom)
+            {
+                var total = _mainSplit.Height;
+                var h = Math.Min(_scriptPanelHeight, Math.Max(80, total - 120));
+                h = Math.Max(80, h);
+                if (total <= h + _mainSplit.SplitterWidth + 80) return;
+                _mainSplit.SplitterDistance = total - h - _mainSplit.SplitterWidth;
+            }
+            else
+            {
+                var total = _mainSplit.Width;
+                var w = Math.Min(_scriptPanelSize, Math.Max(120, total - 320));
+                w = Math.Max(120, w);
+                if (total <= w + _mainSplit.SplitterWidth + 200) return;
+                _mainSplit.SplitterDistance = total - w - _mainSplit.SplitterWidth;
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+    }
+
+    private void PersistScriptPanelSize()
+    {
+        if (_mainSplit.Panel2Collapsed) return;
+        try
+        {
+            if (_scriptDock == ConfigScriptDock.Bottom)
+            {
+                var h = _mainSplit.Panel2.Height;
+                if (h >= 80)
+                {
+                    _scriptPanelHeight = UiPrefs.ClampHeight(h);
+                    UiPrefs.SetHelpPanelHeight(_scriptPanelHeight);
+                }
+            }
+            else
+            {
+                var w = _mainSplit.Panel2.Width;
+                if (w >= 120)
+                {
+                    _scriptPaneSize = UiPrefs.ClampWidth(w);
+                    UiPrefs.SetHelpPanelWidth(_scriptPaneSize);
+                }
+            }
+        }
+        catch { /* ignore */ }
     }
 
     private void SetConfigScriptPanelVisible(bool visible)
     {
-        _mainSplit.Panel2Collapsed = !visible;
-        _helpDetail.Visible = visible;
-        if (visible)
+        try
         {
-            try
-            {
-                var want = UiPrefs.ClampWidth(UiPrefs.Load().HelpPanelWidth);
-                var total = _mainSplit.Width;
-                if (total > _mainSplit.Panel1MinSize + want + _mainSplit.SplitterWidth)
-                    _mainSplit.SplitterDistance = total - want - _mainSplit.SplitterWidth;
-            }
-            catch { /* 布局未就绪 */ }
+            _mainSplit.Panel2Collapsed = !visible;
+            _helpDetail.Visible = visible;
+            if (visible)
+                BeginInvoke(ApplyScriptPanelDistance);
+        }
+        catch
+        {
+            _helpDetail.Visible = visible;
         }
     }
 

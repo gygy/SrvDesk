@@ -31,6 +31,8 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ViewAllOff { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
     public ToolStripMenuItem ViewHelpPanel { get; }
+    public ToolStripMenuItem ViewScriptDockRight { get; }
+    public ToolStripMenuItem ViewScriptDockBottom { get; }
     public ToolStripMenuItem HelpUsage { get; }
     public ToolStripMenuItem HelpLegend { get; }
     public ToolStripMenuItem HelpChangeLog { get; }
@@ -95,10 +97,16 @@ internal sealed class AppMenuStrip : MenuStrip
         ViewHelpPanel = Item("显示配置脚本", MenuIcons.ViewHelpPanel);
         ViewHelpPanel.CheckOnClick = true;
         ViewHelpPanel.Checked = true;
-        ViewHelpPanel.ToolTipText = "右侧面板：查看/编辑当前配置项的开启与关闭脚本（可复制、另存为）";
+        ViewHelpPanel.ToolTipText = "显示配置脚本面板：查看/编辑开启与关闭脚本";
+        ViewScriptDockRight = Item("配置脚本 · 靠右", MenuIcons.ViewHelpPanel);
+        ViewScriptDockRight.ToolTipText = "将配置脚本面板放在窗口右侧";
+        ViewScriptDockBottom = Item("配置脚本 · 靠底", MenuIcons.ViewHelpPanel);
+        ViewScriptDockBottom.ToolTipText = "将配置脚本面板放在窗口底部";
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
-            ViewHideIncompatible, ViewHelpPanel
+            ViewHideIncompatible, ViewHelpPanel,
+            new ToolStripSeparator(),
+            ViewScriptDockRight, ViewScriptDockBottom,
         ]);
 
         var help = new ToolStripMenuItem("帮助(&H)");
