@@ -168,7 +168,7 @@ internal static class ThemedSettingsChrome
         return header;
     }
 
-    public static Panel CreateFooter(Form form, string hint, Action? onRefresh = null, bool showClose = true)
+    public static Panel CreateFooter(Form form, string hint, Action? onRefresh = null, bool showClose = true, Action? onApply = null)
     {
         var footer = new Panel
         {
@@ -182,43 +182,67 @@ internal static class ThemedSettingsChrome
             e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0);
         };
 
-        var right = (showClose ? 104 : 16) + (onRefresh is not null ? 100 : 0);
+        var rightPad = 16;
+        if (showClose) rightPad += 96;
+        if (onApply is not null) rightPad += 112;
+        if (onRefresh is not null) rightPad += 96;
+
         var label = new Label
         {
             Text = hint,
             AutoSize = false,
             Location = new Point(16, 4),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - right), 44),
+            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - rightPad), 44),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             ForeColor = AppTheme.TextMute,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = false,
         };
 
-        if (onRefresh is not null)
-        {
-            var refresh = CreateButton("刷新", false);
-            refresh.Size = new Size(88, 34);
-            refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            refresh.Location = new Point(form.ClientSize.Width - (showClose ? 204 : 104), 9);
-            refresh.Click += (_, _) => onRefresh();
-            footer.Controls.Add(refresh);
-        }
-
+        var x = form.ClientSize.Width - 16;
         if (showClose)
         {
-            var close = CreateButton("关闭", true);
+            x -= 96;
+            var close = CreateButton("关闭", onApply is null);
             close.Size = new Size(88, 34);
             close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            close.Location = new Point(form.ClientSize.Width - 104, 9);
+            close.Location = new Point(x, 9);
             close.DialogResult = DialogResult.Cancel;
             form.CancelButton = close;
             footer.Controls.Add(close);
         }
 
+        if (onApply is not null)
+        {
+            x -= 112;
+            var apply = CreateButton("应用到系统", true);
+            apply.Size = new Size(104, 34);
+            apply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            apply.Location = new Point(x, 9);
+            apply.Click += (_, _) => onApply();
+            footer.Controls.Add(apply);
+        }
+
+        if (onRefresh is not null)
+        {
+            x -= 96;
+            var refresh = CreateButton("刷新", false);
+            refresh.Size = new Size(88, 34);
+            refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            refresh.Location = new Point(x, 9);
+            refresh.Click += (_, _) => onRefresh();
+            footer.Controls.Add(refresh);
+        }
+
         footer.Controls.Add(label);
         footer.Resize += (_, _) =>
-            label.Width = Math.Max(80, footer.ClientSize.Width - 24 - right);
+        {
+            var pad = 16
+                + (showClose ? 96 : 0)
+                + (onApply is not null ? 112 : 0)
+                + (onRefresh is not null ? 96 : 0);
+            label.Width = Math.Max(80, footer.ClientSize.Width - 24 - pad);
+        };
         return footer;
     }
 
@@ -424,12 +448,13 @@ internal static class ThemedSettingsChrome
         string subtitle,
         Control body,
         string footerHint,
-        Action? onRefresh = null)
+        Action? onRefresh = null,
+        Action? onApply = null)
     {
         form.BackColor = AppTheme.Surface;
         form.Font = new Font("Microsoft YaHei UI", 9F);
         body.Dock = DockStyle.Fill;
-        var footer = CreateFooter(form, footerHint, onRefresh, showClose: false);
+        var footer = CreateFooter(form, footerHint, onRefresh, showClose: false, onApply: onApply);
         form.Controls.Add(body);
         form.Controls.Add(footer);
     }
