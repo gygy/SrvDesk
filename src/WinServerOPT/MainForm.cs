@@ -498,6 +498,12 @@ internal sealed class MainForm : Form
         _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
         _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
+        _appMenu.HelpDisclaimer.Click += (_, _) =>
+            LegalDocumentDialog.Show(this, "免责声明", "WinOpt.DISCLAIMER.md");
+        _appMenu.HelpPrivacy.Click += (_, _) =>
+            LegalDocumentDialog.Show(this, "隐私说明", "WinOpt.PRIVACY.md");
+        _appMenu.HelpLicense.Click += (_, _) =>
+            LegalDocumentDialog.Show(this, "许可证（MIT）", "WinOpt.LICENSE");
         _appMenu.HelpSupport.Click += (_, _) => ShowSupportDialog();
 
         _appMenu.ViewHideIncompatible.CheckedChanged += (_, _) =>

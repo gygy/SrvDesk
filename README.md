@@ -23,4 +23,6 @@ This public repo contains the **user guide** and **license** only. Get the compi
 
 Full guide (中文): [README_cn.md](README_cn.md)
 
-License: [MIT](LICENSE) · Issues: [github.com/gygy/SrvDesk/issues](https://github.com/gygy/SrvDesk/issues)
+License: [MIT](LICENSE) · [Disclaimer](DISCLAIMER.md) · [Privacy](PRIVACY.md)  
+In-app: **Help → 免责声明 / 隐私说明 / 许可证**  
+Issues: [github.com/gygy/SrvDesk/issues](https://github.com/gygy/SrvDesk/issues)

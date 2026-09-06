@@ -34,7 +34,7 @@ SrvDesk 帮助把 **Windows Server 2022/2025** 配置成适合日常桌面使用
 3. **右键 → 以管理员身份运行**。
 4. 若 SmartScreen 提示，选「仍要运行」（未签名 exe 常见现象）。
 
-> GitHub 公开仓库仅提供 **使用说明**（本页）与 **版权说明**（[LICENSE](LICENSE)）；程序请从 [Releases](https://github.com/gygy/SrvDesk/releases) 下载。
+> GitHub 公开仓库提供 **使用说明**（本页）、**版权**（[LICENSE](LICENSE)）、**免责声明**（[DISCLAIMER.md](DISCLAIMER.md)）与 **隐私说明**（[PRIVACY.md](PRIVACY.md)）；程序请从 [Releases](https://github.com/gygy/SrvDesk/releases) 下载。
 
 ---
 
@@ -159,9 +159,11 @@ A：可以，但「Server 专属」项会自动标记或隐藏。
 
 ---
 
-## 许可证
+## 许可证 · 免责 · 隐私
 
-[MIT License](LICENSE)
+- [MIT License](LICENSE)
+- [免责声明](DISCLAIMER.md)（使用前请阅读；程序内：**帮助 → 免责声明**）
+- [隐私说明](PRIVACY.md)（本工具自身数据处理；程序内：**帮助 → 隐私说明**）
 
 ## 反馈
 

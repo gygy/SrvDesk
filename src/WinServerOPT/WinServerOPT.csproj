@@ -15,7 +15,7 @@
     <Product>Windows server优化助手SrvDesk</Product>
     <Company>WinOpt</Company>
     <Authors>WinOpt</Authors>
-    <Copyright>Copyright (c) 2026 WinOpt</Copyright>
+    <Copyright>Copyright (c) 2026 gygy</Copyright>
     <Description>Windows Server 与桌面系统设置优化工具</Description>
     <Version>1.0.13</Version>
     <FileVersion>1.0.13.0</FileVersion>
@@ -38,6 +38,9 @@
   <ItemGroup>
     <EmbeddedResource Include="app.ico" LogicalName="WinOpt.app.ico" />
     <EmbeddedResource Include="app.png" LogicalName="WinOpt.app.png" />
+    <EmbeddedResource Include="..\..\LICENSE" Link="Legal\LICENSE" LogicalName="WinOpt.LICENSE" />
+    <EmbeddedResource Include="..\..\DISCLAIMER.md" Link="Legal\DISCLAIMER.md" LogicalName="WinOpt.DISCLAIMER.md" />
+    <EmbeddedResource Include="..\..\PRIVACY.md" Link="Legal\PRIVACY.md" LogicalName="WinOpt.PRIVACY.md" />
   </ItemGroup>
   <Target Name="RemoveAppConfigAfterBuild" AfterTargets="Build">
     <Delete Files="$(TargetPath).config" Condition="Exists('$(TargetPath).config')" />
