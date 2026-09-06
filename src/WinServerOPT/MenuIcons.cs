@@ -83,6 +83,10 @@ internal static class MenuIcons
         [FileCand(Sys("OptionalFeatures.exe")), FileCand(Sys("optionalfeatures.exe"))],
         DrawWin);
 
+    public static Image SecurityCenter => Get("securitycenter",
+        [FileCand(Sys("wscui.cpl")), FileCand(Sys("SecurityHealthSystray.exe"))],
+        DrawShield);
+
     /// <summary>右键菜单：鼠标 + 弹出菜单（不用 shell32#0，避免与刷新撞图标）。</summary>
     public static Image ContextMenu => Get("contextmenu",
         Array.Empty<Cand>(),

@@ -446,6 +446,11 @@ internal sealed class MainForm : Form
             using var d = new WindowsFeaturesDialog();
             d.ShowDialog(this);
         };
+        _appMenu.ToolSecurityCenter.Click += (_, _) =>
+        {
+            using var d = new SecurityCenterDialog();
+            d.ShowDialog(this);
+        };
         _appMenu.ToolContextMenu.Click += (_, _) =>
         {
             using var d = new ContextMenuSettingsDialog();
