@@ -437,16 +437,17 @@ internal static class ThemedSettingsChrome
         string subtitle,
         Control body,
         string footerHint,
-        Action? onRefresh = null)
+        Action? onRefresh = null,
+        bool showHeader = true)
     {
         form.BackColor = AppTheme.Surface;
         form.Font = new Font("Microsoft YaHei UI", 9F);
         body.Dock = DockStyle.Fill;
-        var header = CreateHeader(title, subtitle);
         var footer = CreateFooter(form, footerHint, onRefresh, showClose: true);
         form.Controls.Add(body);
         form.Controls.Add(footer);
-        form.Controls.Add(header);
+        if (showHeader)
+            form.Controls.Add(CreateHeader(title, subtitle));
     }
 
     public static void MountEmbedded(

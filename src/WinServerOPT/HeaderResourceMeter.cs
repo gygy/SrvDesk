@@ -25,7 +25,7 @@ internal sealed class HeaderResourceMeter : Panel
 
     public HeaderResourceMeter()
     {
-        Width = 300;
+        Width = 360;
         Height = 48;
         BackColor = Color.Transparent;
         DoubleBuffered = true;
@@ -80,32 +80,40 @@ internal sealed class HeaderResourceMeter : Panel
             }
         }
 
-        GetMemory(out var memLoad, out var usedGb, out var totalGb);
+        GetMemory(out var memLoad, out var usedGb, out var totalGb, out var freeGbMem);
         GetDisk(out var diskLoad, out var freeGb, out var diskTotalGb);
 
-        _text.Text = $"CPU {cpu:0}%    内存 {usedGb:0.0}G    {_systemDrive} 剩{freeGb:0.#}G";
+        var cpuFree = Math.Max(0, Math.Min(100, 100 - cpu));
+        var memFreePct = totalGb > 0
+            ? Math.Max(0, Math.Min(100, (int)Math.Round(freeGbMem * 100 / totalGb)))
+            : Math.Max(0, 100 - (int)memLoad);
+
+        // 与磁盘一致：显示剩余率 / 剩余量
+        _text.Text =
+            $"CPU 剩{cpuFree:0}%    内存 剩{freeGbMem:0.0}G({memFreePct}%)    {_systemDrive} 剩{freeGb:0.#}G";
 
         var tip =
-            $"CPU：{cpu:0.0}%\r\n" +
-            $"内存：已用 {usedGb:0.00} GB / 共 {totalGb:0.00} GB（{memLoad:0}%）\r\n" +
+            $"CPU：占用 {cpu:0.0}% · 空闲 {cpuFree:0.0}%\r\n" +
+            $"内存：剩余 {freeGbMem:0.00} GB（{memFreePct}%）· 已用 {usedGb:0.00} GB / 共 {totalGb:0.00} GB\r\n" +
             $"系统盘 {_systemDrive}：剩余 {freeGb:0.00} GB / 共 {diskTotalGb:0.00} GB（已用 {diskLoad:0}%）";
         _toolTip ??= new ToolTip { ShowAlways = true, AutoPopDelay = 8000 };
         _toolTip.SetToolTip(this, tip);
         _toolTip.SetToolTip(_text, tip);
     }
 
-    private static void GetMemory(out float loadPct, out double usedGb, out double totalGb)
+    private static void GetMemory(out float loadPct, out double usedGb, out double totalGb, out double freeGb)
     {
         loadPct = 0;
         usedGb = 0;
         totalGb = 0;
+        freeGb = 0;
         try
         {
             var st = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
             if (!GlobalMemoryStatusEx(ref st) || st.TotalPhys == 0) return;
             totalGb = st.TotalPhys / (1024d * 1024d * 1024d);
-            var availGb = st.AvailPhys / (1024d * 1024d * 1024d);
-            usedGb = Math.Max(0, totalGb - availGb);
+            freeGb = st.AvailPhys / (1024d * 1024d * 1024d);
+            usedGb = Math.Max(0, totalGb - freeGb);
             loadPct = st.MemoryLoad;
         }
         catch { /* ignore */ }
