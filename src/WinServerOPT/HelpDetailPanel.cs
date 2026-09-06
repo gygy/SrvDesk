@@ -170,8 +170,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _tabDisable.Click += (_, _) => SetRecipeSide(false);
 
         _recipeBox.Location = new Point(8, 58);
-        _recipeBox.Height = 160;
+        _recipeBox.Height = 220;
         _recipeBox.Width = 240;
+        _recipeBox.ReadOnly = false;
+        _recipeBox.DetectUrls = false;
+        _tip.SetToolTip(_recipeBox, "可直接编辑；改完会自动记住。可用复制/导出/恢复默认。");
 
         StyleAction(_btnCopy, "复制");
         StyleAction(_btnSave, "导出");
@@ -270,7 +273,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         HideRecipe();
         _caption.Text = "配置脚本";
         _title.Text = groupTitle is null ? "选择左侧配置项" : groupTitle;
-        _summary.Text = "点选配置项后，在此查看开启/关闭脚本。改完点「应用到系统」。";
+        _summary.Text = "点选一项后，下方可查看并编辑开启/关闭脚本。";
         BuildSections([]);
         _footer.Text = "";
     }
@@ -651,22 +654,32 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var y = _summary.Bottom + 8;
         if (_recipeHost.Visible)
         {
+            // 先排简要说明，再把剩余高度留给可编辑脚本区
+            _sections.Top = y;
+            RelayoutSectionLabels(w);
+            y = _sections.Bottom + 8;
+
             _recipeHost.Top = y;
-            LayoutRecipe(w);
-            y = _recipeHost.Bottom + 10;
+            var avail = ClientSize.Height - y - 8;
+            if (avail < 200) avail = 200;
+            LayoutRecipe(w, avail);
+            y = _recipeHost.Bottom + 8;
+        }
+        else
+        {
+            _sections.Top = y;
+            RelayoutSectionLabels(w);
+            y = _sections.Bottom + 8;
         }
 
-        _sections.Top = y;
-        RelayoutSectionLabels(w);
-
-        _footer.Top = _sections.Bottom + 8;
+        _footer.Top = y;
         var footerH = string.IsNullOrEmpty(_footer.Text)
             ? 0
             : TextRenderer.MeasureText(
                 _footer.Text, _footer.Font, new Size(w, int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4;
         _footer.Height = Math.Max(footerH, 8);
-        AutoScrollMinSize = new Size(0, _footer.Bottom + 12);
+        AutoScrollMinSize = new Size(0, Math.Max(_footer.Bottom + 12, ClientSize.Height));
     }
 
     /// <summary>按当前宽度重新测量并纵向排布说明块，避免换行高度变化后文字重叠。</summary>
@@ -711,10 +724,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
             _recipeBox.Focus();
     }
 
-    private void LayoutRecipe(int w)
+    private void LayoutRecipe(int w, int hostHeight = 0)
     {
         var inner = Math.Max(220, w - 16);
         _recipeBox.Width = inner;
+        _recipeBox.ReadOnly = false;
         _emptyRecipe.SetBounds(8, 28, inner, 60);
         _recipeNote.Width = inner;
         _recipeNote.MaximumSize = new Size(inner, 0);
@@ -729,27 +743,38 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         if (_emptyRecipe.Visible)
         {
-            _recipeHost.Height = 100;
+            _recipeHost.Height = Math.Max(100, hostHeight > 0 ? Math.Min(hostHeight, 140) : 100);
             return;
         }
 
         // 类型标签跟在标题后，避免与长标题重叠
         _recipeKind.Location = new Point(_recipeCaption.Right + 8, 8);
 
+        const int tabsBottom = 58;
+        const int btnH = 26;
+        const int btnGap = 6;
+        var noteBlock = (_recipeNote.Visible && _recipeNote.Text.Length > 0) ? (_recipeNote.Height + 6) : 0;
+        var chrome = tabsBottom + btnGap + btnH + noteBlock + 10;
+        var boxH = hostHeight > 0
+            ? Math.Max(160, hostHeight - chrome)
+            : Math.Max(160, _recipeBox.Height);
+        _recipeBox.Height = boxH;
+        _recipeBox.Location = new Point(8, tabsBottom);
+
         var x = 8;
-        _btnCopy.Location = new Point(x, _recipeBox.Bottom + 6);
+        _btnCopy.Location = new Point(x, _recipeBox.Bottom + btnGap);
         x += _btnCopy.Width + 8;
-        _btnSave.Location = new Point(x, _recipeBox.Bottom + 6);
+        _btnSave.Location = new Point(x, _recipeBox.Bottom + btnGap);
         x += _btnSave.Width + 8;
-        _btnReset.Location = new Point(x, _recipeBox.Bottom + 6);
+        _btnReset.Location = new Point(x, _recipeBox.Bottom + btnGap);
         if (_recipeNote.Visible)
         {
             _recipeNote.Location = new Point(8, _btnCopy.Bottom + 6);
-            _recipeHost.Height = _recipeNote.Bottom + 10;
+            _recipeHost.Height = hostHeight > 0 ? hostHeight : _recipeNote.Bottom + 10;
         }
         else
         {
-            _recipeHost.Height = _btnCopy.Bottom + 10;
+            _recipeHost.Height = hostHeight > 0 ? hostHeight : _btnCopy.Bottom + 10;
         }
     }
 }

@@ -188,6 +188,7 @@ internal sealed class MainForm : Form
     private readonly TextBox _searchBox = new();
     private readonly CheckBox _hideIncompatible = new();
     private readonly ComboBox _categoryFilter = new();
+    private readonly ComboBox _presetCombo = new();
     private readonly FlowLayoutPanel _commandFlow = new();
     private SettingRow[] _activeRows = [];
     private ActiveSection[] _activeSections = [];
@@ -415,6 +416,7 @@ internal sealed class MainForm : Form
         }
 
         WireAppMenu();
+        WirePresetMenu();
         var header = BuildHeader();
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
@@ -940,21 +942,79 @@ internal sealed class MainForm : Form
             "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
         _commandFlow.Controls.Add(_categoryFilter);
 
+        _commandFlow.Controls.Add(BarLabel("预设"));
+        _presetCombo.Width = 168;
+        _presetCombo.Height = 26;
+        _presetCombo.Margin = new Padding(0, 2, 8, 0);
+        _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        _presetCombo.IntegralHeight = false;
+        foreach (var p in OptPresets.All)
+            _presetCombo.Items.Add(p);
+        if (_presetCombo.Items.Count > 0)
+            _presetCombo.SelectedIndex = 0;
+        var dropW = 168;
+        foreach (var p in OptPresets.All)
+        {
+            var tw = TextRenderer.MeasureText(p.Title, _presetCombo.Font).Width + 24;
+            if (tw > dropW) dropW = tw;
+        }
+        _presetCombo.DropDownWidth = Math.Max(_presetCombo.Width, dropW);
+        _toolTip.SetToolTip(_presetCombo, "选择预设方案后点「载入」，再检查开关并应用到系统");
+        _commandFlow.Controls.Add(_presetCombo);
+        _commandFlow.Controls.Add(BarQuickButton("载入", "把所选预设勾选到界面（不会立刻写入系统）", () =>
+        {
+            if (_presetCombo.SelectedItem is OptPresets.PresetInfo p)
+                LoadPreset(p);
+        }));
+
         // 顶部快捷入口
         var quickGap = new Label
         {
             Text = "",
             AutoSize = false,
-            Width = 16,
+            Width = 12,
             Height = 1,
             Margin = new Padding(0),
         };
         _commandFlow.Controls.Add(quickGap);
-        _commandFlow.Controls.Add(BarQuickButton("配置脚本", "显示或隐藏配置脚本面板（停靠位置在面板顶部切换）", ToggleConfigScriptPanel));
+        _commandFlow.Controls.Add(BarQuickButton("配置脚本", "显示或隐藏配置脚本面板（可查看/编辑）", ToggleConfigScriptPanel));
         _commandFlow.Controls.Add(BarQuickButton("常用软件", "打开常用软件安装与更新", ShowCommonSoftware));
 
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
+    }
+
+    private void WirePresetMenu()
+    {
+        foreach (var p in OptPresets.All)
+        {
+            var info = p;
+            var item = new ToolStripMenuItem(info.Title)
+            {
+                ToolTipText = info.Description,
+            };
+            item.Click += (_, _) =>
+            {
+                for (var i = 0; i < _presetCombo.Items.Count; i++)
+                {
+                    if (ReferenceEquals(_presetCombo.Items[i], info) ||
+                        (_presetCombo.Items[i] is OptPresets.PresetInfo x && x.Id == info.Id))
+                    {
+                        _presetCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+                LoadPreset(info);
+            };
+            _appMenu.PresetRoot.DropDownItems.Add(item);
+        }
+    }
+
+    private void LoadPreset(OptPresets.PresetInfo preset)
+    {
+        Bind(preset.Build(), updateCurrentValues: false);
+        _status.Text = $"已载入预设「{preset.Title}」。请检查后点「应用到系统」。";
+        ApplyLog.Write("载入预设 " + preset.Id + " / " + preset.Title);
     }
 
     private Button BarQuickButton(string text, string tip, Action click)

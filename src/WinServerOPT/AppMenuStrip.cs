@@ -31,6 +31,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ViewAllOff { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
     public ToolStripMenuItem ViewHelpPanel { get; }
+    public ToolStripMenuItem PresetRoot { get; }
     public ToolStripMenuItem HelpChangeLog { get; }
     public ToolStripMenuItem HelpLog { get; }
     public ToolStripMenuItem HelpDisclaimer { get; }
@@ -102,6 +103,8 @@ internal sealed class AppMenuStrip : MenuStrip
             ViewHideIncompatible, ViewHelpPanel,
         ]);
 
+        PresetRoot = new ToolStripMenuItem("预设(&P)");
+
         var help = new ToolStripMenuItem("帮助(&H)");
         HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
         HelpLog = Item("操作日志...", MenuIcons.HelpLog);
@@ -117,7 +120,7 @@ internal sealed class AppMenuStrip : MenuStrip
             HelpSupport,
         ]);
 
-        Items.AddRange([file, tools, view, help]);
+        Items.AddRange([file, PresetRoot, tools, view, help]);
     }
 
     private static ToolStripMenuItem Item(string text, Image image, Keys shortcut = Keys.None)

@@ -26,7 +26,7 @@ internal sealed class UiPrefsData
 
 internal static class UiPrefs
 {
-    public const int DefaultHelpPanelWidth = 360;
+    public const int DefaultHelpPanelWidth = 420;
     public const int MinHelpPanelWidth = 240;
     public const int MaxHelpPanelWidth = 720;
     public const int DefaultHelpPanelHeight = 280;
