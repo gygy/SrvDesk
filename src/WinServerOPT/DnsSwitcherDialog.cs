@@ -163,6 +163,9 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         return true;
     }
 
+    public bool SupportsApplyToSystem => false;
+    public void ApplyToSystem() { }
+
     public void RefreshFromSystem()
     {
         RefreshAdapters(preserveChecks: _userCheckedAdapters);

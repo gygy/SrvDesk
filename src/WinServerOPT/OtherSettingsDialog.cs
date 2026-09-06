@@ -66,6 +66,9 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         return true;
     }
 
+    public bool SupportsApplyToSystem => false;
+    public void ApplyToSystem() { }
+
     public void RefreshFromSystem()
     {
         LoadValues();

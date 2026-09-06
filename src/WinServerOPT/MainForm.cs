@@ -181,9 +181,18 @@ internal sealed class MainForm : Form
     private SettingRow[] _activeRows = [];
     private ActiveSection[] _activeSections = [];
     private Panel? _activeWrap;
+    private readonly Dictionary<string, CachedBatchPage> _batchPageCache = new(StringComparer.Ordinal);
+    private bool _inBatchMode = true;
     private readonly Panel _bottomPanel = new();
     private FlowLayoutPanel? _bottomActions;
     private string _defaultStatusText = "";
+
+    private sealed class CachedBatchPage
+    {
+        public Panel Wrap = null!;
+        public ActiveSection[] Sections = [];
+        public SettingRow[] Rows = [];
+    }
 
     private sealed class ActiveSection
     {
@@ -1052,112 +1061,146 @@ internal sealed class MainForm : Form
         var groupIndex = FindBatchGroupIndex(title);
         if (groupIndex < 0) return;
 
-        SetBatchMode(batch: true);
-        var fromPage = _embeddedPage is not null;
-        DisposeEmbeddedPage();
-        _contentHost.SuspendLayout();
-        _contentHost.Controls.Clear();
-        // 先关滚动再重建，避免从即时页切回时残留滚动偏移，把列表顶到下方留白
-        _contentHost.AutoScroll = false;
-        _contentHost.Padding = new Padding(12, 8, 12, 8);
-
-        var wrap = new BufferedPanel
+        using (UiBuffer.SuspendRedraw(_workArea))
         {
-            Location = new Point(0, 0),
-            Width = ContentWidth(),
-            AutoSize = false,
-            BackColor = AppTheme.SurfaceCard,
-        };
-        wrap.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawRectangle(pen, 0, 0, wrap.Width - 1, wrap.Height - 1);
-        };
+            SetBatchMode(batch: true);
+            var fromPage = _embeddedPage is not null;
+            DetachEmbeddedPage();
+            DetachActiveBatchWrap();
 
-        var header = BuildTableHeader();
-        wrap.Controls.Add(header);
+            _contentHost.SuspendLayout();
+            _contentHost.AutoScroll = false;
+            _contentHost.Padding = new Padding(12, 8, 12, 8);
 
-        var group = _groups[groupIndex];
-        var sections = new List<ActiveSection>();
-        var allRows = new List<SettingRow>();
-        var y = header.Height;
-        foreach (var (sectionTitle, rows) in group.Sections)
-        {
-            var ordered = OrderRowsByRecommend(rows);
-            var section = BuildGroupSection(sectionTitle, ordered);
-            section.Location = new Point(0, y);
-            wrap.Controls.Add(section);
-            sections.Add(new ActiveSection
+            if (_batchPageCache.TryGetValue(title, out var cached))
             {
-                Panel = section,
-                Body = (Panel)section.Tag!,
-                Rows = ordered,
-                Expanded = true,
-            });
-            allRows.AddRange(ordered);
-            y = section.Bottom;
+                _activeRows = cached.Rows;
+                _activeSections = cached.Sections;
+                _activeWrap = cached.Wrap;
+                if (!_contentHost.Controls.Contains(cached.Wrap))
+                    _contentHost.Controls.Add(cached.Wrap);
+                cached.Wrap.Visible = true;
+                _contentHost.AutoScrollMinSize = Size.Empty;
+                _contentHost.AutoScroll = true;
+                _contentHost.ResumeLayout(true);
+                try { _contentHost.AutoScrollPosition = Point.Empty; }
+                catch { /* ignore */ }
+                ShowHelpPlaceholder(title);
+                ApplySearchFilter();
+                if (fromPage) LoadState(fullScan: false);
+                return;
+            }
+
+            var wrap = new BufferedPanel
+            {
+                Location = new Point(0, 0),
+                Width = ContentWidth(),
+                AutoSize = false,
+                BackColor = AppTheme.SurfaceCard,
+            };
+            wrap.Paint += (_, e) =>
+            {
+                using var pen = new Pen(AppTheme.BorderLight);
+                e.Graphics.DrawRectangle(pen, 0, 0, wrap.Width - 1, wrap.Height - 1);
+            };
+
+            var header = BuildTableHeader();
+            wrap.Controls.Add(header);
+
+            var group = _groups[groupIndex];
+            var sections = new List<ActiveSection>();
+            var allRows = new List<SettingRow>();
+            var y = header.Height;
+            foreach (var (sectionTitle, rows) in group.Sections)
+            {
+                var ordered = OrderRowsByRecommend(rows);
+                var section = BuildGroupSection(sectionTitle, ordered);
+                section.Location = new Point(0, y);
+                wrap.Controls.Add(section);
+                sections.Add(new ActiveSection
+                {
+                    Panel = section,
+                    Body = (Panel)section.Tag!,
+                    Rows = ordered,
+                    Expanded = true,
+                });
+                allRows.AddRange(ordered);
+                y = section.Bottom;
+            }
+
+            _activeRows = allRows.ToArray();
+            _activeSections = sections.ToArray();
+            _activeWrap = wrap;
+            _batchPageCache[title] = new CachedBatchPage
+            {
+                Wrap = wrap,
+                Sections = _activeSections,
+                Rows = _activeRows,
+            };
+
+            wrap.Height = Math.Max(y, 1);
+            _contentHost.Controls.Add(wrap);
+            _contentHost.AutoScrollMinSize = Size.Empty;
+            _contentHost.AutoScroll = true;
+            _contentHost.ResumeLayout(true);
+            try { _contentHost.AutoScrollPosition = Point.Empty; }
+            catch { /* ignore */ }
+            ShowHelpPlaceholder(group.Title);
+            ApplySearchFilter();
+            if (fromPage) LoadState(fullScan: false);
         }
-
-        _activeRows = allRows.ToArray();
-        _activeSections = sections.ToArray();
-        _activeWrap = wrap;
-
-        wrap.Height = Math.Max(y, 1);
-        _contentHost.Controls.Add(wrap);
-        _contentHost.AutoScrollMinSize = Size.Empty;
-        _contentHost.AutoScroll = true;
-        _contentHost.ResumeLayout(true);
-        try { _contentHost.AutoScrollPosition = Point.Empty; }
-        catch { /* ignore */ }
-        ShowHelpPlaceholder(group.Title);
-        ApplySearchFilter();
-        // 从即时页返回时异步刷新批量开关，不阻塞切换
-        if (fromPage) LoadState(fullScan: false);
     }
 
     private void ShowEmbeddedPage(int index)
     {
         var title = MenuItems[index];
-        SetBatchMode(batch: false, embeddedTitle: title);
-
-        if (_embeddedPage is not null)
+        using (UiBuffer.SuspendRedraw(_workArea))
         {
-            _contentHost.Controls.Remove(_embeddedPage);
-            _embeddedPage = null;
-        }
+            SetBatchMode(batch: false, embeddedTitle: title);
+            DetachActiveBatchWrap();
 
-        if (!_pageCache.TryGetValue(title, out var page))
-        {
-            page = title switch
+            if (_embeddedPage is not null)
             {
-                "资源管理器" => new ExplorerSettingsDialog(),
-                "电源与服务" => new OtherSettingsDialog(),
-                "登录启动项" => new StartupManagerDialog(),
-                "DNS 设置" => new DnsSwitcherDialog(),
-                _ => throw new InvalidOperationException(title),
-            };
-            page.TopLevel = false;
-            page.FormBorderStyle = FormBorderStyle.None;
-            page.ControlBox = false;
-            page.Dock = DockStyle.Fill;
-            _pageCache[title] = page;
-        }
+                var switchingAway = !_pageCache.TryGetValue(title, out var existing) ||
+                                    !ReferenceEquals(_embeddedPage, existing);
+                if (switchingAway)
+                    DetachEmbeddedPage();
+            }
 
-        _activeRows = [];
-        _activeSections = [];
-        _activeWrap = null;
-        _contentHost.Padding = new Padding(0);
-        _contentHost.AutoScroll = false;
-        _contentHost.SuspendLayout();
-        _contentHost.Controls.Clear();
-        _embeddedPage = page;
-        page.Visible = true;
-        _contentHost.Controls.Add(page);
-        if (!page.IsHandleCreated) page.Show();
-        _contentHost.ResumeLayout(true);
-        ShowHelpPlaceholder(title);
-        if (page is IEmbeddedSettingsPage embedded && !embedded.ConsumeWarmLoadSkip())
-            RunWhenHandleReady(embedded.RefreshFromSystem);
+            if (!_pageCache.TryGetValue(title, out var page))
+            {
+                page = title switch
+                {
+                    "资源管理器" => new ExplorerSettingsDialog(),
+                    "电源与服务" => new OtherSettingsDialog(),
+                    "登录启动项" => new StartupManagerDialog(),
+                    "DNS 设置" => new DnsSwitcherDialog(),
+                    _ => throw new InvalidOperationException(title),
+                };
+                page.TopLevel = false;
+                page.FormBorderStyle = FormBorderStyle.None;
+                page.ControlBox = false;
+                page.Dock = DockStyle.Fill;
+                _pageCache[title] = page;
+            }
+
+            _activeRows = [];
+            _activeSections = [];
+            _activeWrap = null;
+            _contentHost.Padding = new Padding(0);
+            _contentHost.AutoScroll = false;
+            _contentHost.SuspendLayout();
+            if (!_contentHost.Controls.Contains(page))
+                _contentHost.Controls.Add(page);
+            _embeddedPage = page;
+            page.Visible = true;
+            if (!page.IsHandleCreated) page.Show();
+            _contentHost.ResumeLayout(true);
+            UpdateBottomActionEnablement(title);
+            ShowHelpPlaceholder(title);
+            if (page is IEmbeddedSettingsPage embedded && !embedded.ConsumeWarmLoadSkip())
+                RunWhenHandleReady(embedded.RefreshFromSystem);
+        }
     }
 
     private void RunWhenHandleReady(Action action)
@@ -1183,19 +1226,36 @@ internal sealed class MainForm : Form
             page.RefreshFromSystem();
     }
 
-    private void DisposeEmbeddedPage()
+    private void DetachEmbeddedPage()
     {
         if (_embeddedPage is null) return;
+        _embeddedPage.Visible = false;
         _contentHost.Controls.Remove(_embeddedPage);
         _embeddedPage = null;
     }
 
+    private void DetachActiveBatchWrap()
+    {
+        if (_activeWrap is null) return;
+        _activeWrap.Visible = false;
+        _contentHost.Controls.Remove(_activeWrap);
+        _activeWrap = null;
+        _activeRows = [];
+        _activeSections = [];
+    }
+
+    private void DisposeEmbeddedPage() => DetachEmbeddedPage();
+
     private void ClearPageCache()
     {
-        DisposeEmbeddedPage();
+        DetachEmbeddedPage();
+        DetachActiveBatchWrap();
         foreach (var page in _pageCache.Values)
             page.Dispose();
         _pageCache.Clear();
+        foreach (var cached in _batchPageCache.Values)
+            cached.Wrap.Dispose();
+        _batchPageCache.Clear();
     }
 
     private void ShowHelp(SettingRow row)
@@ -1218,19 +1278,13 @@ internal sealed class MainForm : Form
 
     private void SetBatchMode(bool batch, string? embeddedTitle = null)
     {
-        // 批量页：显示搜索/分类命令栏；即时页：收起命令栏，说明只放底部状态栏
-        _commandBar.Visible = batch;
-        _commandBar.Height = batch ? 44 : 0;
+        _inBatchMode = batch;
+        // 命令栏高度始终保留，避免即时页/批量页切换时内容区上下跳动
+        _commandBar.Visible = true;
+        _commandBar.Height = 44;
         _commandFlow.Visible = batch;
-        _apply.Visible = batch;
-        _apply.Enabled = batch;
-        _restore.Visible = batch;
-        _restore.Enabled = batch;
-        if (_refreshBottom is not null)
-        {
-            _refreshBottom.Visible = !batch;
-            _refreshBottom.Enabled = !batch;
-        }
+
+        UpdateBottomActionEnablement(embeddedTitle);
 
         _appMenu.ViewAllOn.Enabled = batch;
         _appMenu.ViewAllOff.Enabled = batch;
@@ -1243,8 +1297,26 @@ internal sealed class MainForm : Form
         }
 
         _status.Text = embeddedTitle == "资源管理器"
-            ? "资源管理器页：任务栏隐藏/搜索等需点「应用到系统」后重启资源管理器才可见；其它项即时生效。可用底部「刷新」。"
-            : "此页修改立即生效，无需点击「应用到系统」。可用「工具 → 刷新」或底部「刷新」。";
+            ? "资源管理器页：任务栏相关改完后点「应用到系统」（会重启资源管理器）；其它项即时生效。"
+            : "此页修改立即生效，无需点击「应用到系统」。可用底部「刷新」。";
+    }
+
+    private void UpdateBottomActionEnablement(string? embeddedTitle = null)
+    {
+        // 底部按钮始终占位，仅改 Enabled，避免右侧按钮区宽度抖动
+        if (_refreshBottom is not null)
+        {
+            _refreshBottom.Visible = true;
+            _refreshBottom.Enabled = true;
+        }
+
+        _restore.Visible = true;
+        _restore.Enabled = _inBatchMode;
+
+        var explorer = embeddedTitle == "资源管理器"
+            || (_embeddedPage is IEmbeddedSettingsPage page && page.SupportsApplyToSystem);
+        _apply.Visible = true;
+        _apply.Enabled = _inBatchMode || (!_inBatchMode && explorer);
     }
 
     private int ContentWidth() =>
@@ -1453,9 +1525,8 @@ internal sealed class MainForm : Form
         };
         _bottomActions = actions;
 
-        // 批量页：应用到系统 / 恢复默认；即时页：仅刷新。其余入口在菜单。
+        // 底部三键始终占位：刷新 / 恢复默认 / 应用到系统（按页启用）
         _refreshBottom = ToolButton("刷新", () => LoadState(fullScan: true));
-        _refreshBottom.Visible = false;
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
@@ -1481,7 +1552,7 @@ internal sealed class MainForm : Form
         _apply.ForeColor = AppTheme.TextOnPrimary;
         _apply.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         _apply.Cursor = Cursors.Hand;
-        _apply.Click += (_, _) => ApplyRecommended();
+        _apply.Click += (_, _) => OnApplyClicked();
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
         _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
@@ -1505,7 +1576,7 @@ internal sealed class MainForm : Form
         using var back = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
         e.Graphics.FillRectangle(back, e.Bounds);
 
-        if (e.Index == _groups.Count)
+        if (MenuItems[e.Index] == "性能及安全")
         {
             using var sep = new Pen(AppTheme.BorderLight);
             e.Graphics.DrawLine(sep, e.Bounds.X + 12, e.Bounds.Y + 1, e.Bounds.Right - 12, e.Bounds.Y + 1);
@@ -1997,6 +2068,17 @@ internal sealed class MainForm : Form
         RunApply($"正在恢复「{title}」…", $"「{title}」已恢复为出厂默认。");
     }
 
+    private void OnApplyClicked()
+    {
+        if (!_inBatchMode && _embeddedPage is IEmbeddedSettingsPage page && page.SupportsApplyToSystem)
+        {
+            page.ApplyToSystem();
+            return;
+        }
+
+        ApplyRecommended();
+    }
+
     private void ApplyRecommended()
     {
         if (!RunApply("正在写入系统…", "已写入本次改动。仅同步有变化的开关。"))
@@ -2077,8 +2159,7 @@ internal sealed class MainForm : Form
             UseWaitCursor = false;
             Cursor = Cursors.Default;
             Application.UseWaitCursor = false;
-            _apply.Enabled = _apply.Visible;
-            _restore.Enabled = _restore.Visible;
+            UpdateBottomActionEnablement();
         }
 
         return ok;
