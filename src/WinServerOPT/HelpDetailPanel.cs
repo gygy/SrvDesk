@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>右侧配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、导出）。</summary>
+/// <summary>配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、导出）。</summary>
 internal sealed class HelpDetailPanel : BufferedPanel
 {
     private readonly Label _caption = new();
@@ -8,6 +8,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly Label _summary = new();
     private readonly Panel _sections = new();
     private readonly Label _footer = new();
+    private readonly Button _dockRight = new();
+    private readonly Button _dockBottom = new();
+    private readonly ToolTip _tip = new();
 
     private readonly Panel _recipeHost = new();
     private readonly Label _recipeCaption = new();
@@ -24,8 +27,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private SettingActionRecipe? _recipe;
     private string _itemTitle = "";
     private bool _showEnable = true;
+    private ConfigScriptDock _activeDock = ConfigScriptDock.Right;
     private readonly System.Windows.Forms.Timer _persistTimer = new() { Interval = 600 };
     private const int PadX = 12;
+
+    /// <summary>用户点击面板顶部停靠图标时触发。</summary>
+    public event Action<ConfigScriptDock>? DockRequested;
 
     public HelpDetailPanel() : base(composited: true)
     {
@@ -38,14 +45,22 @@ internal sealed class HelpDetailPanel : BufferedPanel
         Paint += (_, e) =>
         {
             using var edge = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawLine(edge, 0, 0, 0, Height);
+            if (_activeDock == ConfigScriptDock.Bottom)
+                e.Graphics.DrawLine(edge, 0, 0, Width, 0);
+            else
+                e.Graphics.DrawLine(edge, 0, 0, 0, Height);
         };
 
         _caption.Text = "配置脚本";
-        _caption.SetBounds(PadX, 10, 280, 18);
+        _caption.SetBounds(PadX, 10, 200, 18);
         _caption.ForeColor = AppTheme.TextMute;
         _caption.Font = new Font("Microsoft YaHei UI", 8F);
         _caption.BackColor = Color.Transparent;
+
+        StyleDockButton(_dockRight, MenuIcons.DockRight, "靠右停靠");
+        StyleDockButton(_dockBottom, MenuIcons.DockBottom, "靠底停靠");
+        _dockRight.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Right);
+        _dockBottom.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Bottom);
 
         _title.SetBounds(PadX, 30, 280, 44);
         _title.ForeColor = AppTheme.PrimaryDeep;
@@ -76,9 +91,49 @@ internal sealed class HelpDetailPanel : BufferedPanel
         Controls.Add(_summary);
         Controls.Add(_title);
         Controls.Add(_caption);
+        Controls.Add(_dockRight);
+        Controls.Add(_dockBottom);
 
         Resize += (_, _) => LayoutInner();
+        SetActiveDock(ConfigScriptDock.Right);
         ShowPlaceholder();
+    }
+
+    /// <summary>同步面板顶部停靠图标的选中态。</summary>
+    public void SetActiveDock(ConfigScriptDock dock)
+    {
+        _activeDock = dock;
+        ApplyDockButtonVisual(_dockRight, dock == ConfigScriptDock.Right);
+        ApplyDockButtonVisual(_dockBottom, dock == ConfigScriptDock.Bottom);
+        Invalidate();
+    }
+
+    private void StyleDockButton(Button b, Image image, string tip)
+    {
+        b.Size = new Size(24, 24);
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderSize = 1;
+        b.BackColor = Color.White;
+        b.Cursor = Cursors.Hand;
+        b.TabStop = false;
+        b.Image = image;
+        b.ImageAlign = ContentAlignment.MiddleCenter;
+        b.Text = "";
+        _tip.SetToolTip(b, tip);
+    }
+
+    private static void ApplyDockButtonVisual(Button b, bool selected)
+    {
+        if (selected)
+        {
+            b.BackColor = AppTheme.PrimaryPale;
+            b.FlatAppearance.BorderColor = AppTheme.Primary;
+        }
+        else
+        {
+            b.BackColor = Color.White;
+            b.FlatAppearance.BorderColor = AppTheme.BorderLight;
+        }
     }
 
     private void BuildRecipeHost()
@@ -542,12 +597,21 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private void LayoutInner()
     {
         var w = Math.Max(240, ClientSize.Width - PadX * 2);
+        const int dockBtn = 24;
+        const int dockGap = 4;
+        var dockTop = 8;
+        _dockBottom.SetBounds(ClientSize.Width - PadX - dockBtn, dockTop, dockBtn, dockBtn);
+        _dockRight.SetBounds(_dockBottom.Left - dockGap - dockBtn, dockTop, dockBtn, dockBtn);
+        _dockRight.BringToFront();
+        _dockBottom.BringToFront();
+
+        var captionW = Math.Max(80, _dockRight.Left - PadX - 8);
         _caption.Left = PadX;
+        _caption.Width = captionW;
         _title.Left = PadX;
         _summary.Left = PadX;
         _sections.Left = PadX;
         _footer.Left = PadX;
-        _caption.Width = w;
         _title.Width = w;
         _summary.Width = w;
         _sections.Width = w;

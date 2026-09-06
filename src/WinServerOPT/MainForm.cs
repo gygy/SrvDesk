@@ -495,8 +495,7 @@ internal sealed class MainForm : Form
             LayoutContent();
         };
 
-        _appMenu.ViewScriptDockRight.Click += (_, _) => ApplyConfigScriptDock(ConfigScriptDock.Right, fromMenu: true);
-        _appMenu.ViewScriptDockBottom.Click += (_, _) => ApplyConfigScriptDock(ConfigScriptDock.Bottom, fromMenu: true);
+        _helpDetail.DockRequested += dock => ApplyConfigScriptDock(dock, fromUser: true);
     }
 
     private void OpenLogFile(string path, string title)
@@ -603,75 +602,68 @@ internal sealed class MainForm : Form
 
         _mainSplit.HandleCreated += (_, _) => BeginInvoke(() =>
         {
-            ApplyConfigScriptDock(_scriptDock, fromMenu: false);
+            ApplyConfigScriptDock(_scriptDock, fromUser: false);
             SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
         });
 
         // 先按偏好设好菜单勾选；实际布局等 HandleCreated
         _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
-        SyncDockMenuChecks(_scriptDock);
+        _helpDetail.SetActiveDock(_scriptDock);
         _mainSplit.Orientation = _scriptDock == ConfigScriptDock.Bottom
             ? Orientation.Horizontal
             : Orientation.Vertical;
     }
 
-    private void SyncDockMenuChecks(ConfigScriptDock dock)
+    private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromUser)
     {
+        if (_applyingDock) return;
         _applyingDock = true;
         try
         {
-            _appMenu.ViewScriptDockRight.Checked = dock == ConfigScriptDock.Right;
-            _appMenu.ViewScriptDockBottom.Checked = dock == ConfigScriptDock.Bottom;
+            _scriptDock = dock;
+            _helpDetail.SetActiveDock(dock);
+            if (fromUser)
+                UiPrefs.SetHelpPanelDock(dock);
+
+            var visible = !_mainSplit.Panel2Collapsed && _appMenu.ViewHelpPanel.Checked;
+            try
+            {
+                _mainSplit.SuspendLayout();
+                // 切换方向前先降 MinSize，避免约束冲突
+                _mainSplit.Panel1MinSize = 50;
+                _mainSplit.Panel2MinSize = 50;
+                _mainSplit.Orientation = dock == ConfigScriptDock.Bottom
+                    ? Orientation.Horizontal
+                    : Orientation.Vertical;
+                ApplyScriptPanelDistance();
+                // 布局完成后再抬高最小值，限制拖得过小
+                if (_mainSplit.Width > 200 && _mainSplit.Height > 200)
+                {
+                    _mainSplit.Panel1MinSize = dock == ConfigScriptDock.Bottom ? 120 : 280;
+                    _mainSplit.Panel2MinSize = dock == ConfigScriptDock.Bottom
+                        ? UiPrefs.MinHelpPanelHeight
+                        : UiPrefs.MinHelpPanelWidth;
+                }
+            }
+            catch
+            {
+                /* 布局未就绪 */
+            }
+            finally
+            {
+                _mainSplit.ResumeLayout(true);
+            }
+
+            if (!visible)
+                _mainSplit.Panel2Collapsed = true;
+
+            LayoutContent();
         }
         finally
         {
             _applyingDock = false;
         }
     }
-
-    private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromMenu)
-    {
-        if (_applyingDock && fromMenu) return;
-        _scriptDock = dock;
-        SyncDockMenuChecks(dock);
-        if (fromMenu)
-            UiPrefs.SetHelpPanelDock(dock);
-
-        var visible = !_mainSplit.Panel2Collapsed && _appMenu.ViewHelpPanel.Checked;
-        try
-        {
-            _mainSplit.SuspendLayout();
-            // 切换方向前先降 MinSize，避免约束冲突
-            _mainSplit.Panel1MinSize = 50;
-            _mainSplit.Panel2MinSize = 50;
-            _mainSplit.Orientation = dock == ConfigScriptDock.Bottom
-                ? Orientation.Horizontal
-                : Orientation.Vertical;
-            ApplyScriptPanelDistance();
-            // 布局完成后再抬高下限，限制拖得过小
-            if (_mainSplit.Width > 200 && _mainSplit.Height > 200)
-            {
-                _mainSplit.Panel1MinSize = dock == ConfigScriptDock.Bottom ? 120 : 280;
-                _mainSplit.Panel2MinSize = dock == ConfigScriptDock.Bottom
-                    ? UiPrefs.MinHelpPanelHeight
-                    : UiPrefs.MinHelpPanelWidth;
-            }
-        }
-        catch
-        {
-            /* 布局未就绪 */
-        }
-        finally
-        {
-            _mainSplit.ResumeLayout(true);
-        }
-
-        if (!visible)
-            _mainSplit.Panel2Collapsed = true;
-
-        LayoutContent();
-    }
-
     private void ApplyScriptPanelDistance()
     {
         if (_mainSplit.Panel2Collapsed) return;
@@ -908,7 +900,7 @@ internal sealed class MainForm : Form
             Margin = new Padding(0),
         };
         _commandFlow.Controls.Add(quickGap);
-        _commandFlow.Controls.Add(BarQuickButton("配置脚本 · 靠右", "显示配置脚本面板并靠右停靠", OpenConfigScriptDockRight));
+        _commandFlow.Controls.Add(BarQuickButton("配置脚本", "显示或隐藏配置脚本面板（停靠位置在面板顶部切换）", ToggleConfigScriptPanel));
         _commandFlow.Controls.Add(BarQuickButton("常用软件", "打开常用软件安装与更新", ShowCommonSoftware));
 
         // 即时页不再在此显示提示（统一走底部状态栏）
@@ -940,14 +932,10 @@ internal sealed class MainForm : Form
         return b;
     }
 
-    /// <summary>快捷入口：打开配置脚本面板并靠右停靠。</summary>
-    private void OpenConfigScriptDockRight()
+    /// <summary>快捷入口：显示/隐藏配置脚本面板（不停靠强制）。</summary>
+    private void ToggleConfigScriptPanel()
     {
-        ApplyConfigScriptDock(ConfigScriptDock.Right, fromMenu: true);
-        if (!_appMenu.ViewHelpPanel.Checked)
-            _appMenu.ViewHelpPanel.Checked = true;
-        else
-            SetConfigScriptPanelVisible(true);
+        _appMenu.ViewHelpPanel.Checked = !_appMenu.ViewHelpPanel.Checked;
     }
 
     private static Label BarLabel(string text) => new()

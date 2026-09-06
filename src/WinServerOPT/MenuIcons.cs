@@ -127,6 +127,12 @@ internal static class MenuIcons
         [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
         DrawPanel);
 
+    /// <summary>配置脚本停靠右侧。</summary>
+    public static Image DockRight => Get("dock-right", Array.Empty<Cand>(), DrawDockRight);
+
+    /// <summary>配置脚本停靠底部。</summary>
+    public static Image DockBottom => Get("dock-bottom", Array.Empty<Cand>(), DrawDockBottom);
+
     /// <summary>列表行内「配置脚本」入口：文档 + 代码符号，一眼可辨。</summary>
     public static Image Script => Get("script",
         Array.Empty<Cand>(),
@@ -476,6 +482,22 @@ internal static class MenuIcons
         g.DrawRectangle(border, 2, 2, 12, 12);
         using var side = new SolidBrush(Color.FromArgb(0, 120, 215));
         g.FillRectangle(side, 10, 3, 3, 10);
+    }
+
+    private static void DrawDockRight(Graphics g)
+    {
+        using var frame = new Pen(Color.FromArgb(90, 90, 90));
+        using var fill = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.DrawRectangle(frame, 2, 2, 12, 12);
+        g.FillRectangle(fill, 10, 3, 3, 10);
+    }
+
+    private static void DrawDockBottom(Graphics g)
+    {
+        using var frame = new Pen(Color.FromArgb(90, 90, 90));
+        using var fill = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.DrawRectangle(frame, 2, 2, 12, 12);
+        g.FillRectangle(fill, 3, 10, 10, 3);
     }
 
     private static void DrawHelp(Graphics g)
