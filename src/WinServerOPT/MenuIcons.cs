@@ -127,6 +127,11 @@ internal static class MenuIcons
         [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
         DrawPanel);
 
+    /// <summary>列表行内「配置脚本」入口：文档 + 代码符号，一眼可辨。</summary>
+    public static Image Script => Get("script",
+        Array.Empty<Cand>(),
+        DrawScript);
+
     // —— 帮助 ——
     public static Image HelpUsage => Get("help-usage",
         [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
@@ -274,6 +279,31 @@ internal static class MenuIcons
         g.DrawLine(line, 5, 5, 11, 5);
         g.DrawLine(line, 5, 8, 11, 8);
         g.DrawLine(line, 5, 11, 9, 11);
+    }
+
+    /// <summary>配置脚本：白底文档页 + 蓝色代码括号，区别于普通「说明」图标。</summary>
+    private static void DrawScript(Graphics g)
+    {
+        using var page = new SolidBrush(Color.FromArgb(248, 251, 255));
+        using var border = new Pen(Color.FromArgb(0, 120, 215), 1.4f);
+        g.FillRectangle(page, 2, 1, 12, 14);
+        g.DrawRectangle(border, 2, 1, 12, 14);
+        // 折角
+        using var fold = new SolidBrush(Color.FromArgb(210, 230, 250));
+        g.FillPolygon(fold, new[] { new Point(10, 1), new Point(14, 5), new Point(10, 5) });
+        using var foldLine = new Pen(Color.FromArgb(0, 120, 215), 1f);
+        g.DrawLine(foldLine, 10, 1, 10, 5);
+        g.DrawLine(foldLine, 10, 5, 14, 5);
+        // </> 示意脚本
+        using var code = new Pen(Color.FromArgb(0, 120, 215), 1.6f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round,
+        };
+        g.DrawLines(code, new[] { new Point(6, 6), new Point(4, 9), new Point(6, 12) });
+        g.DrawLines(code, new[] { new Point(10, 6), new Point(12, 9), new Point(10, 12) });
+        g.DrawLine(code, 7, 12, 9, 6);
     }
 
     private static void DrawLog(Graphics g)

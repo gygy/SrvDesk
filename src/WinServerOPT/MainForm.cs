@@ -2471,7 +2471,7 @@ internal sealed class MainForm : Form
         private readonly Label _item;
         private readonly Label _scope;
         private readonly Label _info;
-        private readonly LinkLabel _script;
+        private readonly PictureBox _script;
         private readonly Label _level;
         private readonly Label _note;
         private readonly Label _system;
@@ -2517,17 +2517,13 @@ internal sealed class MainForm : Form
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
             };
-            _script = new LinkLabel
+            _script = new PictureBox
             {
-                Text = "脚本",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                LinkColor = AppTheme.PrimaryDark,
-                ActiveLinkColor = AppTheme.Primary,
-                VisitedLinkColor = AppTheme.PrimaryDark,
+                Image = MenuIcons.Script,
+                SizeMode = PictureBoxSizeMode.CenterImage,
                 BackColor = Color.Transparent,
-                Font = new Font("Microsoft YaHei UI", 8.25F),
                 Cursor = Cursors.Hand,
+                Size = new Size(SettingListLayout.ScriptW, 20),
             };
             _level = new Label
             {
@@ -2715,7 +2711,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明与一键脚本\r\n" + tip);
-            toolTip.SetToolTip(_script, "查看/编辑本项开启与关闭的配置脚本（可复制、导出）");
+            toolTip.SetToolTip(_script, "配置脚本：查看/编辑本项开启与关闭脚本");
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
@@ -2730,7 +2726,7 @@ internal sealed class MainForm : Form
             _level.Click += Select;
             _note.Click += Select;
             if (hasScope) _scope.Click += Select;
-            _script.LinkClicked += (_, _) => onShowRecipe(this);
+            _script.Click += (_, _) => onShowRecipe(this);
 
             wrap.Controls.Add(_current);
             wrap.Controls.Add(_system);

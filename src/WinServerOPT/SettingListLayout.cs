@@ -10,8 +10,8 @@ internal static class SettingListLayout
     public const int RecommendHeaderW = 84;
     public const int ToggleX = 376;
     public const int ToggleW = 52;
-    /// <summary>行内「脚本」链接宽度（紧挨开关左侧）。</summary>
-    public const int ScriptW = 36;
+    /// <summary>行内「配置脚本」图标按钮宽度（16px 图标 + 边距）。</summary>
+    public const int ScriptW = 22;
     public static int ScriptX => ToggleX - ScriptW - 4;
     /// <summary>系统默认值列。</summary>
     public const int SystemX = 456;
