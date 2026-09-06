@@ -38,7 +38,8 @@ internal static class SettingCatalog
         "将 EnableLUA 设为 0，降低用户账户控制拦截级别。",
         "个人桌面环境操作更顺畅，减少「是否允许」打断。",
         "仅建议在可信的个人/内网环境开启；企业或公网暴露环境请保持 UAC。",
-        "立即生效；部分程序需重启后完全生效。");
+        "立即生效；部分程序需重启后完全生效。",
+        recommend: RecommendLevel.Optional);
 
     public static readonly SettingHelpInfo DisableIeEsc = H(
         "关闭 Server 默认的 IE 增强安全模式。",
@@ -48,14 +49,16 @@ internal static class SettingCatalog
         "新开 IE/Edge IE 模式窗口后生效。",
         SettingScope.ServerExclusive,
         uiPlace: "服务器管理器→本地服务器→IE 增强安全配置",
-        whenHint: "当桌面用建议开");
+        whenHint: "当桌面用建议开",
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo HighPerfPower = H(
         "切换为「高性能」电源计划，避免 CPU 降频。",
         "激活 GUID 为高性能的 powercfg 计划，减少节能节流。",
         "提升响应速度与 sustained 性能，适合常开远程桌面或跑负载。",
         "笔记本/需省电时可关闭恢复「平衡」；台式 Server 桌面建议开启。",
-        "立即生效。");
+        "立即生效。",
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo DisableTelemetry = H(
         "关闭 Windows 遥测与 DiagTrack 诊断服务。",
@@ -63,14 +66,16 @@ internal static class SettingCatalog
         "减少后台上传与磁盘/网络占用，提升隐私。",
         "个人/内网 Server 桌面推荐开启；需参与 Windows 诊断计划则关闭。",
         "立即生效；DiagTrack 服务停止后生效。",
-        S2016);
+        S2016,
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo NoUpdateReboot = H(
         "有用户登录时，更新完成后不强制自动重启。",
         "设置 NoAutoRebootWithLoggedOnUsers 策略。",
         "避免半夜或工作中被更新重启打断；适合长期在线的桌面 Server。",
         "仍建议在方便时手动重启完成更新；无人值守服务器可按需关闭。",
-        "策略立即写入；下次更新周期生效。");
+        "策略立即写入；下次更新周期生效。",
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo DisableDeliveryOpt = H(
         "关闭更新 P2P 传递优化，不再对外/对内分发更新包。",
@@ -197,7 +202,8 @@ internal static class SettingCatalog
         "快速进入磁盘分区，符合传统 Windows 桌面习惯。",
         "喜欢简洁桌面可关闭；运维/开发桌面推荐开启。",
         "立即生效或刷新桌面。",
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo LaunchExplorerThisPc = H(
         "打开资源管理器时默认进入「此电脑」。",
@@ -237,7 +243,8 @@ internal static class SettingCatalog
         "识别伪装恶意文件（如 virus.txt.exe），运维更安全。",
         "强烈建议开启；无特殊理由不应隐藏扩展名。",
         "立即生效。",
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo EnableThemes = H(
         "启用 Themes 主题服务，完整 Aero/个性化外观。",
@@ -245,7 +252,8 @@ internal static class SettingCatalog
         "窗口边框、壁纸、颜色正常；非「经典灰」界面。",
         "Server 当桌面几乎必选；极致省资源可关（界面变简陋）。",
         "服务启动后生效，必要时注销。",
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo EnableSearch = H(
         "启用 Windows Search 索引服务。",
@@ -371,7 +379,8 @@ internal static class SettingCatalog
         "fDenyTSConnections 设为 0，并打开防火墙 RDP 规则。",
         "可从其他 PC/macOS/Linux 图形远程本机，Server 当桌面核心能力。",
         "不远程访问且要减攻击面时可关闭；需 RDP 必须开启。",
-        "立即生效；防火墙规则同步应用。");
+        "立即生效；防火墙规则同步应用。",
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo RdpGpuAccel = H(
         "RDP 会话启用 GPU 硬件加速与更好的图形管线。",
@@ -419,7 +428,8 @@ internal static class SettingCatalog
         "下次登录生效。",
         new SettingScope(serverOnly: true, minServer: "2012 R2+"),
         uiPlace: "服务器管理器→管理→服务器管理器属性",
-        whenHint: "当桌面用建议开");
+        whenHint: "当桌面用建议开",
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo HideServerManagerWacPrompt = H(
         "不再弹出「立即尝试 Windows Admin Center 并 Azure Arc」推广窗。",
@@ -645,7 +655,8 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisablePca = H(
         "禁用程序兼容性助手服务。", "停止 PcaSvc。", "减少兼容性弹窗。", "极老软件排查时可关闭本项。", "服务停止后生效。");
     public static readonly SettingHelpInfo PauseFeatureUpdatesUntil2035 = H(
-        "暂停功能更新至 2035 年。", "PauseFeatureUpdates 策略。", "长期跳过功能版升级。", "安全更新仍可能推送；请自行评估风险。", "策略写入后生效。", W10De);
+        "暂停功能更新至 2035 年。", "PauseFeatureUpdates 策略。", "长期跳过功能版升级。", "安全更新仍可能推送；请自行评估风险。", "策略写入后生效。", W10De,
+        recommend: RecommendLevel.Optional);
 
     public static readonly SettingHelpInfo HideProtectedOsFiles = H(
         "隐藏受保护的操作系统文件。", "ShowSuperHidden=0。", "避免误删系统文件。", "一般建议开启。", "重启资源管理器后生效。", W10De);
@@ -678,13 +689,17 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo ExcludeMsrtFromWu = H(
         "Windows 更新不含恶意软件删除工具。", "MRT DontOfferThroughWUAU=1。", "减少每月 MSRT 包。", "需自行维护杀软。", "下次更新扫描生效。");
     public static readonly SettingHelpInfo DisableMeltdownSpectre = H(
-        "关闭 Meltdown/Spectre 微码缓解。", "FeatureSettingsOverride=3。", "部分旧 CPU 可提升性能。", "降低侧信道防护，仅内网可信机建议。", "需重启。");
+        "关闭 Meltdown/Spectre 微码缓解。", "FeatureSettingsOverride=3。", "部分旧 CPU 可提升性能。", "降低侧信道防护，仅内网可信机建议。", "需重启。",
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableMemoryIntegrity = H(
-        "关闭内存完整性（HVCI）。", "HypervisorEnforcedCodeIntegrity Enabled=0。", "减少虚拟化开销、兼容部分驱动。", "降低内核防护。", "需重启。", W10);
+        "关闭内存完整性（HVCI）。", "HypervisorEnforcedCodeIntegrity Enabled=0。", "减少虚拟化开销、兼容部分驱动。", "降低内核防护。", "需重启。", W10,
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableWdac = H(
-        "关闭 WDAC 应用控制策略部署。", "ConfigCIPolicyEnable=0。", "避免企业策略误拦程序。", "有合规 WDAC 时勿开。", "需重启。", W10);
+        "关闭 WDAC 应用控制策略部署。", "ConfigCIPolicyEnable=0。", "避免企业策略误拦程序。", "有合规 WDAC 时勿开。", "需重启。", W10,
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableVbs = H(
-        "强制关闭基于虚拟化的安全性。", "EnableVirtualizationBasedSecurity=0。", "减少 VBS 性能损耗。", "Credential Guard/HVCI 将不可用。", "需重启。", W10);
+        "强制关闭基于虚拟化的安全性。", "EnableVirtualizationBasedSecurity=0。", "减少 VBS 性能损耗。", "Credential Guard/HVCI 将不可用。", "需重启。", W10,
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo EnableTcpBbr2 = H(
         "TCP 拥塞控制改用 BBR2。", "netsh int tcp set supplemental CongestionProvider=bbr2。", "部分广域网吞吐更好。", "旧系统或不支持时会失败并保持 CUBIC。", "立即生效。", W10);
     public static readonly SettingHelpInfo DisableSystemRestore = H(
@@ -759,6 +774,35 @@ internal static class SettingCatalog
         string effect,
         SettingScope? scope = null,
         string? uiPlace = null,
-        string? whenHint = null) =>
-        new(summary, purpose, benefit, guide, effect, scope, uiPlace, whenHint);
+        string? whenHint = null,
+        RecommendLevel? recommend = null) =>
+        new(summary, purpose, benefit, guide, effect, scope, uiPlace, whenHint,
+            recommend ?? InferRecommend(guide, whenHint, scope));
+
+    /// <summary>未显式标注时，根据指引文案推断推荐强度。</summary>
+    static RecommendLevel InferRecommend(string guide, string? whenHint, SettingScope? scope)
+    {
+        var t = (guide ?? "") + "\n" + (whenHint ?? "");
+        // 风险/按需 → 可选
+        if (ContainsAny(t, "谨慎", "勿开", "不要开", "按需", "可选", "可关闭", "请自行评估", "有兼容", "会失效", "受影响"))
+            return RecommendLevel.Optional;
+        // 必做语境
+        if (ContainsAny(t, "务必", "必须", "必开", "几乎必") ||
+            (scope?.ServerOnly == true && ContainsAny(t, "当桌面用建议", "个人桌面推荐开启")))
+            return RecommendLevel.Must;
+        // 强烈
+        if (ContainsAny(t, "强烈", "强烈建议", "强烈推荐", "当桌面用建议", "个人桌面推荐", "推荐开启", "建议开启"))
+            return RecommendLevel.Strong;
+        return RecommendLevel.Suggested;
+    }
+
+    static bool ContainsAny(string text, params string[] keys)
+    {
+        foreach (var k in keys)
+        {
+            if (text.IndexOf(k, StringComparison.Ordinal) >= 0)
+                return true;
+        }
+        return false;
+    }
 }

@@ -12,6 +12,8 @@ internal sealed class SettingHelpInfo
     public string UiPlace { get; }
     /// <summary>何时建议优化，列表「说明」列用。</summary>
     public string WhenHint { get; }
+    /// <summary>推荐强度（列表「推荐值」列）。</summary>
+    public RecommendLevel Recommend { get; }
 
     public SettingHelpInfo(
         string summary,
@@ -21,7 +23,8 @@ internal sealed class SettingHelpInfo
         string effect,
         SettingScope? scope = null,
         string? uiPlace = null,
-        string? whenHint = null)
+        string? whenHint = null,
+        RecommendLevel recommend = RecommendLevel.Suggested)
     {
         Summary = summary;
         Purpose = purpose;
@@ -31,6 +34,7 @@ internal sealed class SettingHelpInfo
         Scope = scope ?? SettingScope.Universal;
         UiPlace = uiPlace ?? "";
         WhenHint = whenHint ?? "";
+        Recommend = recommend;
     }
 
     /// <summary>列表「说明」列：先短建议，再对应位置（窄列时建议仍可见）。</summary>
@@ -48,6 +52,7 @@ internal sealed class SettingHelpInfo
 
     public string FormatDetail() =>
         Scope.FormatHelpSection() +
+        "\r\n【推荐】" + RecommendLevelUi.Tip(Recommend) +
         (UiPlace.Length > 0 ? "\r\n【对应】" + UiPlace : "") +
         (WhenHint.Length > 0 ? "\r\n【建议】" + WhenHint : "") +
         "\r\n【作用】" + Purpose +

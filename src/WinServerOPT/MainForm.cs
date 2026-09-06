@@ -254,7 +254,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = AppBrand.ProductName;
+        Text = $"{AppBrand.ProductName} v{AppBrand.VersionText}";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(1180, 720);
         ClientSize = new Size(1280, 760);
@@ -959,7 +959,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildHeader()
     {
-        var header = new Panel { Height = 52, BackColor = AppTheme.PrimaryDeep };
+        var header = new Panel { Height = 48, BackColor = AppTheme.PrimaryDeep };
         header.Paint += (_, e) =>
         {
             var r = header.ClientRectangle;
@@ -970,7 +970,7 @@ internal sealed class MainForm : Form
 
         var logo = new PictureBox
         {
-            Size = new Size(36, 36),
+            Size = new Size(32, 32),
             Location = new Point(14, 8),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
@@ -978,34 +978,21 @@ internal sealed class MainForm : Form
         var logoImg = LoadLogo();
         if (logoImg is not null) logo.Image = logoImg;
 
-        var brand = new Label
-        {
-            Text = AppBrand.ProductName,
-            AutoSize = false,
-            Location = new Point(54, 8),
-            Size = new Size(420, 24),
-            ForeColor = AppTheme.TextOnPrimary,
-            Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = Color.Transparent,
-        };
-
+        // 蓝色顶栏只保留系统信息；产品名与版本在窗口标题栏显示
         _headerSubtitle.AutoSize = false;
         _headerSubtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _headerSubtitle.Location = new Point(54, 32);
-        _headerSubtitle.Height = 18;
+        _headerSubtitle.Location = new Point(54, 0);
+        _headerSubtitle.Height = 48;
         _headerSubtitle.ForeColor = AppTheme.TextOnPrimarySoft;
-        _headerSubtitle.Font = new Font("Microsoft YaHei UI", 8.5F);
+        _headerSubtitle.Font = new Font("Microsoft YaHei UI", 9F);
         _headerSubtitle.TextAlign = ContentAlignment.MiddleLeft;
         _headerSubtitle.BackColor = Color.Transparent;
         _headerSubtitle.Text = "Windows Server 桌面优化 · 菜单栏访问文件/工具/帮助";
 
         header.Controls.Add(_headerSubtitle);
-        header.Controls.Add(brand);
         header.Controls.Add(logo);
         header.Resize += (_, _) =>
         {
-            brand.Width = Math.Max(280, header.Width - 68);
             _headerSubtitle.Width = Math.Max(200, header.Width - 68);
         };
         return header;
@@ -1297,6 +1284,10 @@ internal sealed class MainForm : Form
         header.Controls.Add(MakeHeaderLabel("设置操作", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
+        var levelHeader = MakeHeaderLabel("推荐值", SettingListLayout.LevelX, SettingListLayout.LevelW, ContentAlignment.MiddleCenter);
+        levelHeader.Tag = "level-header";
+        _toolTip.SetToolTip(levelHeader, "●●● 必优化 · ●●○ 强烈推荐 · ●○○ 建议优化 · ○○○ 可选");
+        header.Controls.Add(levelHeader);
         var noteHeader = MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
         noteHeader.Tag = "note-header";
         header.Controls.Add(noteHeader);
@@ -2129,6 +2120,7 @@ internal sealed class MainForm : Form
         private readonly Label _item;
         private readonly Label _scope;
         private readonly Label _info;
+        private readonly Label _level;
         private readonly Label _note;
         private readonly Label _system;
         private readonly Label _current;
