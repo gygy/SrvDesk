@@ -496,6 +496,22 @@ internal static class SettingRecipeCatalog
                 ActionScript.DeleteValue("PauseFeatureUpdatesStartTime"),
                 ActionScript.DeleteValue("PauseFeatureUpdatesEndTime")),
             "结束时间约 2035-01-01 UTC。"));
+        Add(SettingCatalog.PauseWindowsUpdatesUx, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+                ActionScript.Sz("PauseUpdatesStartTime", "1990-11-22T15:09:05Z"),
+                ActionScript.Sz("PauseFeatureUpdatesStartTime", "1990-11-22T15:09:05Z"),
+                ActionScript.Sz("PauseQualityUpdatesStartTime", "1990-11-22T15:09:05Z"),
+                ActionScript.Sz("PauseFeatureUpdatesEndTime", "2099-05-28T11:11:11Z"),
+                ActionScript.Sz("PauseQualityUpdatesEndTime", "2099-05-28T11:11:11Z"),
+                ActionScript.Sz("PauseUpdatesExpiryTime", "2099-05-28T16:38:59Z")),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+                ActionScript.DeleteValue("PauseUpdatesStartTime"),
+                ActionScript.DeleteValue("PauseFeatureUpdatesStartTime"),
+                ActionScript.DeleteValue("PauseQualityUpdatesStartTime"),
+                ActionScript.DeleteValue("PauseFeatureUpdatesEndTime"),
+                ActionScript.DeleteValue("PauseQualityUpdatesEndTime"),
+                ActionScript.DeleteValue("PauseUpdatesExpiryTime")),
+            "UX 层暂停功能+质量更新至约 2099。"));
 
         // —— 轻松设置 ——
         Add(SettingCatalog.HideProtectedOsFiles, ActionScript.DwordToggle(true,

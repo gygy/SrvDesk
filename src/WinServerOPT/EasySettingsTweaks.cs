@@ -79,6 +79,7 @@ internal static class EasySettingsTweaks
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
         Win11DesktopTweaks.SetFeatureUpdatePause(s.PauseFeatureUpdatesUntil2035);
+        Win11DesktopTweaks.SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
     }
 
     public static void Apply(Optimizer.State s)
@@ -152,6 +153,7 @@ internal static class EasySettingsTweaks
         s.DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100);
         s.ExcludeMsrtFromWu = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", 1);
         s.PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On();
+        s.PauseWindowsUpdatesUx = Win11DesktopTweaks.IsPauseWindowsUpdatesUxOn();
 
         s.DisableMeltdownSpectre = IsMeltdownSpectreDisabled();
         s.DisableMemoryIntegrity = DwordEquals(Hive.HkLm, Hvci, "Enabled", 0);

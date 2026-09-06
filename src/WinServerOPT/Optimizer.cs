@@ -140,6 +140,8 @@ internal static class Optimizer
         public bool DisableStickyKeys;
         public bool DisablePca;
         public bool PauseFeatureUpdatesUntil2035;
+        /// <summary>通过 WindowsUpdate\\UX\\Settings 长期暂停功能+质量更新（至约 2099）。</summary>
+        public bool PauseWindowsUpdatesUx;
 
         public bool HideProtectedOsFiles;
         public bool AlwaysShowIconsNeverThumbnails;
@@ -337,6 +339,7 @@ internal static class Optimizer
             DisableStickyKeys = Win11DesktopTweaks.IsDisableStickyKeysOn(),
             DisablePca = ServiceStartEquals("PcaSvc", 4),
             PauseFeatureUpdatesUntil2035 = Win11DesktopTweaks.IsPauseFeatureUpdatesUntil2035On(),
+            PauseWindowsUpdatesUx = Win11DesktopTweaks.IsPauseWindowsUpdatesUxOn(),
             TaskbarSearchMode = -1,
         };
         EasySettingsTweaks.ReadInto(state);
@@ -572,7 +575,8 @@ internal static class Optimizer
             || b.DisableAdTracking != s.DisableAdTracking
             || b.DisableSearchHistory != s.DisableSearchHistory
             || b.DisableStickyKeys != s.DisableStickyKeys
-            || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035;
+            || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035
+            || b.PauseWindowsUpdatesUx != s.PauseWindowsUpdatesUx;
     }
 
     private static bool AnyEasySettingsChanged(State? b, State s)
@@ -603,6 +607,7 @@ internal static class Optimizer
             || b.DisableDeliveryOpt != s.DisableDeliveryOpt
             || b.ExcludeMsrtFromWu != s.ExcludeMsrtFromWu
             || b.PauseFeatureUpdatesUntil2035 != s.PauseFeatureUpdatesUntil2035
+            || b.PauseWindowsUpdatesUx != s.PauseWindowsUpdatesUx
             || b.DisableMeltdownSpectre != s.DisableMeltdownSpectre
             || b.DisableMemoryIntegrity != s.DisableMemoryIntegrity
             || b.DisableWdac != s.DisableWdac

@@ -34,6 +34,7 @@ internal static class Win11DesktopTweaks
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
         SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
         SetFeatureUpdatePause2035(s.PauseFeatureUpdatesUntil2035);
+        SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
     }
 
     public static bool IsShowItemCheckboxesOn() =>
@@ -131,6 +132,8 @@ internal static class Win11DesktopTweaks
         GetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags") == "506";
 
     public static bool IsPauseFeatureUpdatesUntil2035On() => IsFeatureUpdatePausedUntil2035();
+
+    public static bool IsPauseWindowsUpdatesUxOn() => IsWindowsUpdateUxPausedLong();
 
     public static void SetShortcutArrowHidden(bool hide)
     {
@@ -306,12 +309,62 @@ internal static class Win11DesktopTweaks
 
     public static void SetFeatureUpdatePause(bool pause) => SetFeatureUpdatePause2035(pause);
 
+    public static void SetWindowsUpdateUxPause(bool pause)
+    {
+        const string key = @"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings";
+        // 与常见「延迟更新至 2099」.reg 对齐：暂停功能更新 + 质量更新
+        const string start = "1990-11-22T15:09:05Z";
+        const string endFeature = "2099-05-28T11:11:11Z";
+        const string endExpiry = "2099-05-28T16:38:59Z";
+        if (pause)
+        {
+            SetString(Hive.HkLm, key, "PauseUpdatesStartTime", start);
+            SetString(Hive.HkLm, key, "PauseFeatureUpdatesStartTime", start);
+            SetString(Hive.HkLm, key, "PauseQualityUpdatesStartTime", start);
+            SetString(Hive.HkLm, key, "PauseFeatureUpdatesEndTime", endFeature);
+            SetString(Hive.HkLm, key, "PauseQualityUpdatesEndTime", endFeature);
+            SetString(Hive.HkLm, key, "PauseUpdatesExpiryTime", endExpiry);
+        }
+        else
+        {
+            DeleteValue(Hive.HkLm, key, "PauseUpdatesStartTime");
+            DeleteValue(Hive.HkLm, key, "PauseFeatureUpdatesStartTime");
+            DeleteValue(Hive.HkLm, key, "PauseQualityUpdatesStartTime");
+            DeleteValue(Hive.HkLm, key, "PauseFeatureUpdatesEndTime");
+            DeleteValue(Hive.HkLm, key, "PauseQualityUpdatesEndTime");
+            DeleteValue(Hive.HkLm, key, "PauseUpdatesExpiryTime");
+        }
+    }
+
     private static bool IsFeatureUpdatePausedUntil2035()
     {
         if (!DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "PauseFeatureUpdates", 1))
             return false;
         var end = GetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "PauseFeatureUpdatesEndTime");
         return end >= 2051222400;
+    }
+
+    private static bool IsWindowsUpdateUxPausedLong()
+    {
+        const string key = @"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings";
+        if (TryParseUxUtc(GetString(Hive.HkLm, key, "PauseUpdatesExpiryTime"), out var expiry) && expiry.Year >= 2090)
+            return true;
+        if (TryParseUxUtc(GetString(Hive.HkLm, key, "PauseFeatureUpdatesEndTime"), out var featureEnd) && featureEnd.Year >= 2090)
+            return true;
+        if (TryParseUxUtc(GetString(Hive.HkLm, key, "PauseQualityUpdatesEndTime"), out var qualityEnd) && qualityEnd.Year >= 2090)
+            return true;
+        return false;
+    }
+
+    private static bool TryParseUxUtc(string? text, out DateTimeOffset dto)
+    {
+        dto = default;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        return DateTimeOffset.TryParse(
+            text,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+            out dto);
     }
 
     private static void SetFeatureUpdatePause2035(bool pause)

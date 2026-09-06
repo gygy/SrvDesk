@@ -34,6 +34,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _gpuSched = Row("启用 GPU 硬件加速计划", "关闭", SettingCatalog.EnableGpuHwScheduling);
     private readonly SettingRow _pca = Row("禁用程序兼容性助手 PCA", "开启", SettingCatalog.DisablePca);
     private readonly SettingRow _wuPause2035 = Row("暂停功能更新至 2035", "不暂停", SettingCatalog.PauseFeatureUpdatesUntil2035);
+    private readonly SettingRow _wuPauseUx = Row("延迟 Windows 更新至 2099", "不延迟", SettingCatalog.PauseWindowsUpdatesUx);
     private readonly SettingRow _meltdown = Row("关闭 Meltdown/Spectre 缓解", "系统默认", SettingCatalog.DisableMeltdownSpectre);
     private readonly SettingRow _hvci = Row("关闭内存完整性 HVCI", "由系统决定", SettingCatalog.DisableMemoryIntegrity);
     private readonly SettingRow _wdac = Row("关闭 WDAC 应用控制", "系统默认", SettingCatalog.DisableWdac);
@@ -249,7 +250,7 @@ internal sealed class MainForm : Form
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
         _sysMain, _visualPerf, _powerThrottle, _boostMode, _hibernate, _tcp, _qosSpeed, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
-        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035,
+        _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035, _wuPauseUx,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
         _memComp, _prelaunch, _pageCombine, _ucpd,
         _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
@@ -294,7 +295,7 @@ internal sealed class MainForm : Form
                 // 性能与显卡
                 _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca,
                 // Windows 更新
-                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035,
+                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx,
                 // 网络栈
                 _tcp, _qosSpeed, _bbr2, _netThrottle,
                 // 安全服务
@@ -355,7 +356,7 @@ internal sealed class MainForm : Form
                 _rdp, _ra,
             ]),
             ("电源与休眠", [
-                _hibernate, _fastStartup, _boostMode,
+                _hibernate, _fastStartup,
             ]),
             ("后台服务与内存", [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
@@ -2069,6 +2070,7 @@ internal sealed class MainForm : Form
         _stickyKeys.Checked = s.DisableStickyKeys;
         _pca.Checked = s.DisablePca;
         _wuPause2035.Checked = s.PauseFeatureUpdatesUntil2035;
+        _wuPauseUx.Checked = s.PauseWindowsUpdatesUx;
         _meltdown.Checked = s.DisableMeltdownSpectre;
         _hvci.Checked = s.DisableMemoryIntegrity;
         _wdac.Checked = s.DisableWdac;
@@ -2195,6 +2197,7 @@ internal sealed class MainForm : Form
         EnableGpuHwScheduling = _gpuSched.Checked,
         DisablePca = _pca.Checked,
         PauseFeatureUpdatesUntil2035 = _wuPause2035.Checked,
+        PauseWindowsUpdatesUx = _wuPauseUx.Checked,
         DisableMeltdownSpectre = _meltdown.Checked,
         DisableMemoryIntegrity = _hvci.Checked,
         DisableWdac = _wdac.Checked,

@@ -16,6 +16,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _delivery = new("禁止更新传递优化");
     private readonly InstantToggleRow _msrt = new("更新不含恶意软件删除工具");
     private readonly InstantToggleRow _major = new("暂停功能更新至 2035");
+    private readonly InstantToggleRow _wuUx = new("延迟 Windows 更新至 2099");
 
     public PrivacySettingsDialog()
     {
@@ -80,6 +81,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         rightBody.Controls.Add(_delivery);
         rightBody.Controls.Add(_msrt);
         rightBody.Controls.Add(_major);
+        rightBody.Controls.Add(_wuUx);
 
         var cols = new TableLayoutPanel
         {
@@ -133,6 +135,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         _delivery.Bind(s.DisableDeliveryOpt, v => { s.DisableDeliveryOpt = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _msrt.Bind(s.ExcludeMsrtFromWu, v => { s.ExcludeMsrtFromWu = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _major.Bind(s.PauseFeatureUpdatesUntil2035, v => { s.PauseFeatureUpdatesUntil2035 = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
+        _wuUx.Bind(s.PauseWindowsUpdatesUx, v => { s.PauseWindowsUpdatesUx = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
     }
 
     private static Button Btn(string text, Action click)

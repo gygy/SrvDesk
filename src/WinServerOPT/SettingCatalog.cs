@@ -671,6 +671,15 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo PauseFeatureUpdatesUntil2035 = H(
         "暂停功能更新至 2035 年。", "PauseFeatureUpdates 策略。", "长期跳过功能版升级。", "安全更新仍可能推送；请自行评估风险。", "策略写入后生效。", W10De,
         recommend: RecommendLevel.Optional);
+    public static readonly SettingHelpInfo PauseWindowsUpdatesUx = H(
+        "通过更新界面设置长期暂停功能更新与质量更新（至约 2099）。",
+        "HKLM\\…\\WindowsUpdate\\UX\\Settings 的 Pause*Start/End/ExpiryTime。",
+        "对应「设置 → Windows 更新 → 暂停更新」的底层键值，比仅停功能更新更彻底。",
+        "长期不装安全补丁有风险；仅建议隔离/内网机。与「暂停功能更新至 2035」策略项可并存。",
+        "写入后打开 Windows 更新页可见暂停状态。",
+        W10De,
+        uiPlace: "设置 → Windows 更新 → 暂停更新",
+        recommend: RecommendLevel.Optional);
 
     public static readonly SettingHelpInfo HideProtectedOsFiles = H(
         "隐藏受保护的操作系统文件。", "ShowSuperHidden=0。", "避免误删系统文件。", "一般建议开启。", "重启资源管理器后生效。", W10De);
