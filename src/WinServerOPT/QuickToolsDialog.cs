@@ -49,6 +49,7 @@ internal sealed class QuickToolsDialog : Form
         _list.Dock = DockStyle.Fill;
         _list.BackColor = AppTheme.SurfaceCard;
         _list.BorderStyle = BorderStyle.FixedSingle;
+        UiBuffer.Enable(_list);
         _list.Columns.Add("分类", 108);
         _list.Columns.Add("工具", 200);
         _list.Columns.Add("说明", 260);

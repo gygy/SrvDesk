@@ -10,6 +10,13 @@ internal sealed class InstantToggleRow : Panel
     public InstantToggleRow(string title)
     {
         Title = title;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.OptimizedDoubleBuffer
+            | ControlStyles.UserPaint
+            | ControlStyles.ResizeRedraw,
+            true);
+        DoubleBuffered = true;
         Height = 36;
         MinimumSize = new Size(200, 36);
         Margin = new Padding(0, 0, 0, 4);
@@ -270,7 +277,7 @@ internal static class ThemedSettingsChrome
     /// <summary>带标题分区：高度随正文自适应，标题完整显示。</summary>
     public static (Panel Card, FlowLayoutPanel Body) CreateSectionShell(string title, int minHeight = 0)
     {
-        var card = new Panel
+        var card = new BufferedPanel
         {
             BackColor = AppTheme.SurfaceCard,
             Padding = new Padding(10, 8, 10, 10),
@@ -299,7 +306,7 @@ internal static class ThemedSettingsChrome
             AutoEllipsis = false,
         };
 
-        var body = new FlowLayoutPanel
+        var body = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
@@ -341,7 +348,7 @@ internal static class ThemedSettingsChrome
 
     public static Panel CreateBodyPanel()
     {
-        return new Panel
+        return new BufferedPanel(composited: true)
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(12),
@@ -352,7 +359,7 @@ internal static class ThemedSettingsChrome
 
     public static FlowLayoutPanel CreateToggleStack()
     {
-        var p = new FlowLayoutPanel
+        var p = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,

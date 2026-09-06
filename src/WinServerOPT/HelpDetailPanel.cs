@@ -1,7 +1,7 @@
 namespace WinOpt;
 
 /// <summary>右侧上下文帮助面板：结构化展示选中项说明。</summary>
-internal sealed class HelpDetailPanel : Panel
+internal sealed class HelpDetailPanel : BufferedPanel
 {
     private readonly Label _caption = new();
     private readonly Label _title = new();
@@ -9,7 +9,7 @@ internal sealed class HelpDetailPanel : Panel
     private readonly Panel _sections = new();
     private readonly Label _footer = new();
 
-    public HelpDetailPanel()
+    public HelpDetailPanel() : base(composited: true)
     {
         Width = 300;
         BackColor = AppTheme.PrimaryPale;

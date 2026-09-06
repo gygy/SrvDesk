@@ -99,6 +99,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         _adapters.IntegralHeight = false;
         _adapters.BorderStyle = BorderStyle.FixedSingle;
         _adapters.BackColor = AppTheme.Surface;
+        UiBuffer.Enable(_adapters);
         _adapters.HorizontalScrollbar = true;
         _adapters.ItemCheck += (_, _) => _userCheckedAdapters = true;
 

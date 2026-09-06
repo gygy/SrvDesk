@@ -34,6 +34,7 @@ internal sealed class SoftwareUpdateDialog : Form
 
         _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
+        UiBuffer.Enable(_list);
         _list.FullRowSelect = true;
         _list.CheckBoxes = true;
         _list.GridLines = true;

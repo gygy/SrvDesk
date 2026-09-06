@@ -22,6 +22,7 @@ internal sealed class SystemInfoDialog : Form
 
         _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
+        UiBuffer.Enable(_list);
         _list.FullRowSelect = true;
         _list.GridLines = true;
         _list.ShowGroups = true;

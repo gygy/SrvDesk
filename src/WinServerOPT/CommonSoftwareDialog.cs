@@ -3,7 +3,7 @@ namespace WinOpt;
 internal sealed class CommonSoftwareDialog : Form
 {
     private readonly CheckBox _askBeforeInstall = new();
-    private readonly Panel _listHost = new();
+    private readonly Panel _listHost = new BufferedPanel(composited: true);
     private readonly Label _wingetHint = new();
     private readonly Button _installWingetBtn = new();
     private readonly ListBox _categoryMenu = new();
@@ -921,6 +921,13 @@ internal sealed class CommonSoftwareDialog : Form
             _item = item;
             _onInstall = onInstall;
             _onUninstall = onUninstall;
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.UserPaint
+                | ControlStyles.ResizeRedraw,
+                true);
+            DoubleBuffered = true;
             Height = height;
             BackColor = bg;
 

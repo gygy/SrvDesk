@@ -38,6 +38,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _list.MultiSelect = false;
         _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Dock = DockStyle.Fill;
+        UiBuffer.Enable(_list);
         _list.BackColor = AppTheme.SurfaceCard;
         _list.ForeColor = AppTheme.TextMain;
         _list.Columns.Add("名称", 180);

@@ -58,6 +58,7 @@ internal sealed class WindowsFeaturesDialog : Form
         _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Dock = DockStyle.Fill;
         _list.BackColor = AppTheme.SurfaceCard;
+        UiBuffer.Enable(_list);
         _list.Columns.Add("名称", 420);
         _list.Columns.Add("类型", 100);
         _list.Columns.Add("状态", 90);

@@ -163,13 +163,13 @@ internal sealed class MainForm : Form
     private readonly Panel _workArea = new();
     private readonly Label _headerSubtitle = new();
     private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
-    private readonly Panel _contentHost = new();
+    private readonly Panel _contentHost = new BufferedPanel(composited: true);
     private readonly Label _status = new();
     private Optimizer.State? _baselineState;
     private readonly Button _apply = new();
     private readonly Button _restore = new();
     private Button? _refreshBottom;
-    private readonly List<(string Title, SettingRow[] Rows)> _groups = [];
+    private readonly List<(string Title, (string Section, SettingRow[] Rows)[] Sections)> _groups = [];
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
     private SettingRow? _selectedRow;
@@ -179,12 +179,19 @@ internal sealed class MainForm : Form
     private readonly ComboBox _categoryFilter = new();
     private readonly FlowLayoutPanel _commandFlow = new();
     private SettingRow[] _activeRows = [];
-    private Panel? _activeBody;
-    private Panel? _activeSection;
+    private ActiveSection[] _activeSections = [];
     private Panel? _activeWrap;
     private readonly Panel _bottomPanel = new();
     private FlowLayoutPanel? _bottomActions;
     private string _defaultStatusText = "";
+
+    private sealed class ActiveSection
+    {
+        public Panel Panel = null!;
+        public Panel Body = null!;
+        public SettingRow[] Rows = [];
+        public bool Expanded = true;
+    }
 
     private enum RowCategoryFilter
     {
@@ -258,71 +265,81 @@ internal sealed class MainForm : Form
         KeyPreview = true;
         MainMenuStrip = _appMenu;
 
-        // 批量分组顺序与 MenuItems 中分组项一致；组内：高频 → 同类成块 → 进阶
+        // 批量分组顺序与 MenuItems 中分组项一致；组内可再分可折叠分区
         _groups.Add(("性能及安全", [
-            // Server 桌面必备
-            _ie, _uac, _highPerf,
-            // 遥测与诊断
-            _telemetry, _dps, _ceip, _errorReport,
-            // 性能与显卡
-            _visualPerf, _powerThrottle, _gpuSched, _largeCache, _pca,
-            // Windows 更新
-            _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035,
-            // 网络栈
-            _tcp, _qosSpeed, _bbr2, _netThrottle,
-            // 安全服务
-            _smb1, _remoteReg, _spooler,
-            // 进阶安全（低频）
-            _dep, _cpu, _meltdown, _hvci, _wdac, _vbs, _sysRestore,
-            // 存储与文件系统
-            _longPaths, _ntfsStamp, _reservedStorage, _srvSplit,
-            // 维护与启动
-            _autoMaint, _utc, _hpet, _loginVerbose, _f8,
-            // 少见服务
-            _xbox, _fax, _wmpShare,
+            ("性能及安全", [
+                // Server 桌面必备
+                _ie, _uac, _highPerf,
+                // 遥测与诊断
+                _telemetry, _dps, _ceip, _errorReport,
+                // 性能与显卡
+                _visualPerf, _powerThrottle, _gpuSched, _largeCache, _pca,
+                // Windows 更新
+                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035,
+                // 网络栈
+                _tcp, _qosSpeed, _bbr2, _netThrottle,
+                // 安全服务
+                _smb1, _remoteReg, _spooler,
+                // 进阶安全（低频）
+                _dep, _cpu, _meltdown, _hvci, _wdac, _vbs, _sysRestore,
+                // 存储与文件系统
+                _longPaths, _ntfsStamp, _reservedStorage, _srvSplit,
+                // 维护与启动
+                _autoMaint, _utc, _hpet, _loginVerbose, _f8,
+                // 少见服务
+                _xbox, _fax, _wmpShare,
+            ]),
         ]));
         _groups.Add(("桌面外观", [
-            // 桌面与任务栏常用
-            _thisPc, _desktopIcons, _taskbar, _confirmDel,
-            _themes, _audio, _search,
-            // 安全与反馈
-            _smartScreen, _noLockScreen, _feedback,
-            // 搜索模式
-            _classicSearch, _searchEngine,
-            // 任务栏扩展
-            _allTrayIcons, _tbEndTask, _news,
-            // 右键菜单
-            _takeOwn, _openCmd,
+            ("桌面图标", [
+                _thisPc, _desktopIcons, _confirmDel,
+            ]),
+            ("任务栏", [
+                _taskbar, _allTrayIcons, _tbEndTask, _news,
+            ]),
+            ("桌面服务", [
+                _themes, _audio, _search,
+            ]),
+            ("安全与锁屏", [
+                _smartScreen, _noLockScreen, _feedback,
+            ]),
+            ("搜索模式", [
+                _classicSearch, _searchEngine,
+            ]),
+            ("右键菜单", [
+                _takeOwn, _openCmd,
+            ]),
         ]));
         _groups.Add(("远程与网络", [
-            // RDP 常用放前
-            _rdp, _rdpGpu, _rdpFps, _rdpNla,
-            _netDiscovery, _ra, _smRemoting,
+            ("远程与网络", [
+                _rdp, _rdpGpu, _rdpFps, _rdpNla,
+                _netDiscovery, _ra, _smRemoting,
+            ]),
         ]));
         _groups.Add(("隐私与体验", [
-            // 开始菜单/搜索打扰（高频）
-            _tips, _recommended, _searchHighlights, _cortana, _copilotAi,
-            // 隐私与跟踪
-            _adTracking, _cloudSearch, _webSearch, _searchHistory,
-            _trackApps, _langList, _location, _activityHist, _clipCloud,
-            // 界面效果
-            _animations, _transparency, _stickyKeys, _backgroundApps,
-            _storageSense, _autoplay,
-            // 设置建议
-            _settingsSuggest, _inking, _consumer, _edgePre,
-            // 更新与推送
-            _deliveryOpt, _msrt, _insider, _storeUpd,
-            // 应用与网络
-            _gameDvr, _officeTel, _teredo,
+            ("隐私与体验", [
+                _tips, _recommended, _searchHighlights, _cortana, _copilotAi,
+                _adTracking, _cloudSearch, _webSearch, _searchHistory,
+                _trackApps, _langList, _location, _activityHist, _clipCloud,
+                _animations, _transparency, _stickyKeys, _backgroundApps,
+                _storageSense, _autoplay,
+                _settingsSuggest, _inking, _consumer, _edgePre,
+                _deliveryOpt, _msrt, _insider, _storeUpd,
+                _gameDvr, _officeTel, _teredo,
+            ]),
         ]));
         _groups.Add(("Server专属", [
-            _svrMgr, _wacPrompt, _azure,
-            _mediaFeatures, _bloatFeatures,
-            _installer, _wia,
+            ("Server专属", [
+                _svrMgr, _wacPrompt, _azure,
+                _mediaFeatures, _bloatFeatures,
+                _installer, _wia,
+            ]),
         ]));
         _groups.Add(("账户策略", [
-            _autologon, _pwd, _pwdExpire, _noCad,
-            _shutdownLogon, _shutdownReason, _keyboardFilter,
+            ("账户策略", [
+                _autologon, _pwd, _pwdExpire, _noCad,
+                _shutdownLogon, _shutdownReason, _keyboardFilter,
+            ]),
         ]));
 
         foreach (var row in AllRows)
@@ -508,6 +525,7 @@ internal sealed class MainForm : Form
 
     private void BuildWorkArea(Panel sidebar)
     {
+        UiBuffer.Enable(_workArea);
         _workArea.BackColor = AppTheme.Surface;
         sidebar.Dock = DockStyle.Left;
         _helpDetail.Dock = DockStyle.Right;
@@ -870,42 +888,49 @@ internal sealed class MainForm : Form
 
     private void ApplySearchFilter()
     {
-        if (_activeRows.Length == 0 || _activeBody is null || _activeSection is null) return;
+        if (_activeSections.Length == 0 || _activeWrap is null) return;
         const int headerH = 34;
         const int rowH = 44;
         var query = _searchBox.Text;
         var hideDe = _hideIncompatible.Checked;
         var category = CurrentCategoryFilter();
-        var visible = 0;
-        foreach (var row in _activeRows)
+        var totalVisible = 0;
+        foreach (var sec in _activeSections)
         {
-            var show = row.MatchesFilter(query, _systemFacts, hideDe)
-                && row.MatchesCategory(category);
-            row.SetVisible(show);
-            if (!show) continue;
-            row.SetLocationY(visible * rowH);
-            visible++;
+            var visible = 0;
+            foreach (var row in sec.Rows)
+            {
+                var show = row.MatchesFilter(query, _systemFacts, hideDe)
+                    && row.MatchesCategory(category);
+                row.SetVisible(show);
+                if (!show) continue;
+                row.SetLocationY(visible * rowH);
+                visible++;
+            }
+
+            totalVisible += visible;
+            sec.Body.Height = Math.Max(visible, 1) * rowH;
+            sec.Panel.Visible = visible > 0;
+            if (!sec.Panel.Visible) continue;
+            sec.Panel.Height = sec.Expanded ? headerH + sec.Body.Height : headerH;
+            sec.Body.Visible = sec.Expanded;
         }
-        _activeBody.Height = Math.Max(visible, 1) * rowH;
-        _activeSection.Height = headerH + _activeBody.Height;
-        RelayoutActiveWrap();
-        if (visible == 0 && (!string.IsNullOrWhiteSpace(query) || category != RowCategoryFilter.All))
+
+        RelayoutActiveSections();
+        if (totalVisible == 0 && (!string.IsNullOrWhiteSpace(query) || category != RowCategoryFilter.All))
             _status.Text = "无匹配项，请调整搜索或分类筛选。";
         else if (_status.Text.StartsWith("无匹配项", StringComparison.Ordinal))
             _status.Text = _defaultStatusText;
     }
 
-    private void RelayoutActiveWrap()
+    private void RelayoutActiveWrap() => RelayoutActiveSections();
+
+    private void RelayoutActiveSections()
     {
-        if (_activeWrap is null || _activeSection is null) return;
+        if (_activeWrap is null) return;
         var w = ContentWidth();
         _activeWrap.Width = w;
-        _activeWrap.Height = Math.Max(_activeSection.Bottom, 1);
-        _activeSection.Width = w;
-        if (_activeBody is not null)
-            _activeBody.Width = w;
-        foreach (var row in _activeRows)
-            row.ApplyLayoutWidth(w);
+        var y = 0;
         foreach (Control c in _activeWrap.Controls)
         {
             if (c.Tag as string != "table-header") continue;
@@ -915,7 +940,21 @@ internal sealed class MainForm : Form
                 if (h.Tag as string == "note-header")
                     h.Width = SettingListLayout.NoteWidthFor(w);
             }
+            y = c.Bottom;
         }
+
+        foreach (var sec in _activeSections)
+        {
+            if (!sec.Panel.Visible) continue;
+            sec.Panel.Width = w;
+            sec.Panel.Top = y;
+            sec.Body.Width = w;
+            foreach (var row in sec.Rows)
+                row.ApplyLayoutWidth(w);
+            y = sec.Panel.Bottom;
+        }
+
+        _activeWrap.Height = Math.Max(y, 1);
     }
 
     private Panel BuildHeader()
@@ -1037,7 +1076,7 @@ internal sealed class MainForm : Form
         _contentHost.AutoScroll = false;
         _contentHost.Padding = new Padding(12, 8, 12, 8);
 
-        var wrap = new Panel
+        var wrap = new BufferedPanel
         {
             Location = new Point(0, 0),
             Width = ContentWidth(),
@@ -1054,16 +1093,30 @@ internal sealed class MainForm : Form
         wrap.Controls.Add(header);
 
         var group = _groups[groupIndex];
-        var section = BuildGroupSection(group.Title, group.Rows);
-        section.Location = new Point(0, header.Height);
-        wrap.Controls.Add(section);
+        var sections = new List<ActiveSection>();
+        var allRows = new List<SettingRow>();
+        var y = header.Height;
+        foreach (var (sectionTitle, rows) in group.Sections)
+        {
+            var section = BuildGroupSection(sectionTitle, rows);
+            section.Location = new Point(0, y);
+            wrap.Controls.Add(section);
+            sections.Add(new ActiveSection
+            {
+                Panel = section,
+                Body = (Panel)section.Tag!,
+                Rows = rows,
+                Expanded = true,
+            });
+            allRows.AddRange(rows);
+            y = section.Bottom;
+        }
 
-        _activeRows = group.Rows;
-        _activeSection = section;
-        _activeBody = section.Tag as Panel;
+        _activeRows = allRows.ToArray();
+        _activeSections = sections.ToArray();
         _activeWrap = wrap;
 
-        wrap.Height = section.Bottom;
+        wrap.Height = Math.Max(y, 1);
         _contentHost.Controls.Add(wrap);
         _contentHost.AutoScrollMinSize = Size.Empty;
         _contentHost.AutoScroll = true;
@@ -1105,8 +1158,7 @@ internal sealed class MainForm : Form
         }
 
         _activeRows = [];
-        _activeSection = null;
-        _activeBody = null;
+        _activeSections = [];
         _activeWrap = null;
         _contentHost.Padding = new Padding(0);
         _contentHost.AutoScroll = false;
@@ -1229,7 +1281,7 @@ internal sealed class MainForm : Form
     private Panel BuildTableHeader()
     {
         const int h = 36;
-        var header = new Panel
+        var header = new BufferedPanel
         {
             Location = new Point(0, 0),
             Size = new Size(ContentWidth(), h),
@@ -1267,7 +1319,7 @@ internal sealed class MainForm : Form
         const int headerH = 34;
         const int rowH = 44;
         var expanded = true;
-        var section = new Panel
+        var section = new BufferedPanel
         {
             Location = new Point(0, 0),
             Width = ContentWidth(),
@@ -1275,7 +1327,7 @@ internal sealed class MainForm : Form
             BackColor = AppTheme.SurfaceCard,
         };
 
-        var head = new Panel
+        var head = new BufferedPanel
         {
             Location = new Point(0, 0),
             Size = new Size(section.Width, headerH),
@@ -1304,7 +1356,7 @@ internal sealed class MainForm : Form
         head.Controls.Add(arrow);
         head.Controls.Add(titleLabel);
 
-        var body = new Panel
+        var body = new BufferedPanel
         {
             Location = new Point(0, headerH),
             Size = new Size(section.Width, rows.Length * rowH),
@@ -1319,10 +1371,21 @@ internal sealed class MainForm : Form
 
         void Toggle(object? _, EventArgs __)
         {
-            expanded = !expanded;
+            var sec = Array.Find(_activeSections, s => ReferenceEquals(s.Panel, section));
+            if (sec is not null)
+            {
+                sec.Expanded = !sec.Expanded;
+                expanded = sec.Expanded;
+            }
+            else
+            {
+                expanded = !expanded;
+            }
+
             arrow.Text = expanded ? "▼" : "▶";
             body.Visible = expanded;
-            section.Height = expanded ? headerH + rows.Length * rowH : headerH;
+            section.Height = expanded ? headerH + Math.Max(body.Height, rowH) : headerH;
+            RelayoutActiveSections();
         }
 
         head.Click += Toggle;
@@ -1825,17 +1888,19 @@ internal sealed class MainForm : Form
     /// <summary>仅操作左侧分组中可见的项，避免改到即时页专属的「幽灵开关」。</summary>
     private void SetVisibleAll(bool on)
     {
-        foreach (var (_, rows) in _groups)
-            foreach (var row in rows)
-                row.Checked = on;
+        foreach (var (_, sections) in _groups)
+            foreach (var (_, rows) in sections)
+                foreach (var row in rows)
+                    row.Checked = on;
     }
 
     private HashSet<SettingRow> VisibleRowSet()
     {
         var set = new HashSet<SettingRow>();
-        foreach (var (_, rows) in _groups)
-            foreach (var row in rows)
-                set.Add(row);
+        foreach (var (_, sections) in _groups)
+            foreach (var (_, rows) in sections)
+                foreach (var row in rows)
+                    set.Add(row);
         return set;
     }
 
@@ -2240,7 +2305,7 @@ internal sealed class MainForm : Form
             var itemX = SettingListLayout.ItemX;
 
             _normalBg = bg;
-            var wrap = new Panel
+            var wrap = new BufferedPanel
             {
                 Location = new Point(0, y),
                 Size = new Size(width, h),
