@@ -20,6 +20,9 @@
   <Var name="SuppressIldasm" value="true" />
   <Var name="RegenerateDebugInfo" value="false" />
 
+  <!-- publish.ps1 会替换为本机 .NET Framework 目录，供解析 WinForms 等依赖 -->
+  <AssemblySearchPath path="./framework" />
+
   <Module file="$(InPath)\SrvDesk.exe">
     <!-- 配置 JSON：DataContract 成员名 -->
     <SkipType name="WinOpt.UiPrefsData" skipProperties="true" skipFields="true" skipMethods="true" />

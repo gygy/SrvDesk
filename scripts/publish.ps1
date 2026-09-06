@@ -91,8 +91,28 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
     $xml = Get-Content -LiteralPath $obfuscarXml -Raw -Encoding UTF8
     $xml = $xml.Replace('value="./in"', ('value="' + $obfIn + '"'))
     $xml = $xml.Replace('value="./out"', ('value="' + $obfOut + '"'))
+
+    $fxSearch = @(
+        "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8",
+        "${env:ProgramFiles}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8",
+        "C:\Windows\Microsoft.NET\Framework64\v4.0.30319",
+        "C:\Windows\Microsoft.NET\Framework\v4.0.30319"
+    ) | Where-Object { Test-Path (Join-Path $_ "System.Windows.Forms.dll") } | Select-Object -First 1
+    if (-not $fxSearch) {
+        throw "Cannot find System.Windows.Forms.dll for Obfuscar AssemblySearchPath"
+    }
+    $xml = $xml.Replace('path="./framework"', ('path="' + $fxSearch + '"'))
+
     $utf8Bom = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText($cfg, $xml, $utf8Bom)
+
+    # Local SDK under %LOCALAPPDATA%\dotnet needs DOTNET_ROOT for apphost tools
+    $dotnetRoot = Split-Path $dotnet -Parent
+    if ($dotnet -eq "dotnet") {
+        $dotnetRoot = $env:DOTNET_ROOT
+    }
+    $prevDotnetRoot = $env:DOTNET_ROOT
+    if ($dotnetRoot) { $env:DOTNET_ROOT = $dotnetRoot }
 
     Push-Location $repo
     try {
@@ -103,6 +123,8 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
     }
     finally {
         Pop-Location
+        if ($null -eq $prevDotnetRoot) { Remove-Item Env:DOTNET_ROOT -ErrorAction SilentlyContinue }
+        else { $env:DOTNET_ROOT = $prevDotnetRoot }
     }
 
     $outExe = Join-Path $obfOut "SrvDesk.exe"

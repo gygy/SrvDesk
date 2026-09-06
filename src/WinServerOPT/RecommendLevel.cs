@@ -91,7 +91,14 @@ internal sealed class RecommendStarsRow : Control
 
     public RecommendStarsRow()
     {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        // SupportsTransparentBackColor：基类 Control 默认不支持 Transparent，否则会抛「控件不支持透明的背景色」
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.UserPaint
+            | ControlStyles.OptimizedDoubleBuffer
+            | ControlStyles.ResizeRedraw
+            | ControlStyles.SupportsTransparentBackColor,
+            true);
         Height = 22;
         BackColor = Color.Transparent;
     }
