@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace WinOpt;
 
@@ -24,7 +25,7 @@ internal sealed class LegalDocumentDialog : Form
         {
             Multiline = true,
             ReadOnly = true,
-            ScrollBars = ScrollBars.Both,
+            ScrollBars = ScrollBars.Vertical,
             WordWrap = true,
             BorderStyle = BorderStyle.FixedSingle,
             BackColor = AppTheme.Surface,
@@ -69,7 +70,8 @@ internal sealed class LegalDocumentDialog : Form
 
     public static void Show(IWin32Window? owner, string title, string resourceLogicalName)
     {
-        var body = LoadEmbeddedText(resourceLogicalName);
+        var raw = LoadEmbeddedText(resourceLogicalName);
+        var body = ToReadableText(raw, windowTitle: title);
         using var dlg = new LegalDocumentDialog(title, body);
         dlg.ShowDialog(owner);
     }
@@ -83,5 +85,99 @@ internal sealed class LegalDocumentDialog : Form
 
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd().Trim();
+    }
+
+    /// <summary>
+    /// 将仓库 Markdown / 许可证原文转为对话框可读纯文本（去掉 #、**、链接语法等）。
+    /// </summary>
+    internal static string ToReadableText(string source, string? windowTitle = null)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return source;
+
+        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var sb = new StringBuilder(source.Length);
+        var skipNextBlank = false;
+
+        foreach (var raw in lines)
+        {
+            var line = raw.TrimEnd();
+
+            // ATX 标题：# 标题 → 标题（窗口标题已有时跳过同名一级标题）
+            var heading = Regex.Match(line, @"^(#{1,6})\s+(.*)$");
+            if (heading.Success)
+            {
+                var level = heading.Groups[1].Value.Length;
+                var text = heading.Groups[2].Value.Trim();
+                text = StripInlineMarkdown(text);
+                if (level == 1 &&
+                    windowTitle is { Length: > 0 } title &&
+                    string.Equals(text, title.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    skipNextBlank = true;
+                    continue;
+                }
+
+                if (sb.Length > 0 && sb[sb.Length - 1] != '\n')
+                    sb.AppendLine();
+                sb.AppendLine(text);
+                if (level <= 2)
+                    sb.AppendLine();
+                skipNextBlank = false;
+                continue;
+            }
+
+            if (skipNextBlank && string.IsNullOrWhiteSpace(line))
+            {
+                skipNextBlank = false;
+                continue;
+            }
+            skipNextBlank = false;
+
+            // 无序列表
+            var bullet = Regex.Match(line, @"^(\s*)[-*+]\s+(.*)$");
+            if (bullet.Success)
+            {
+                var indent = bullet.Groups[1].Value.Length >= 2 ? "  " : "";
+                sb.Append(indent).Append("· ").AppendLine(StripInlineMarkdown(bullet.Groups[2].Value));
+                continue;
+            }
+
+            // 水平线
+            if (Regex.IsMatch(line, @"^\s*(-{3,}|\*{3,}|_{3,})\s*$"))
+            {
+                sb.AppendLine();
+                continue;
+            }
+
+            sb.AppendLine(StripInlineMarkdown(line));
+        }
+
+        var textOut = sb.ToString().Replace("\n", "\r\n").Trim();
+        textOut = Regex.Replace(textOut, @"(?:\r\n){3,}", "\r\n\r\n");
+        return textOut;
+    }
+
+    private static string StripInlineMarkdown(string line)
+    {
+        if (string.IsNullOrEmpty(line))
+            return line;
+
+        // [文字](url) → 文字（绝对链接时附 URL）
+        line = Regex.Replace(line, @"\[([^\]]+)\]\(([^)]+)\)", m =>
+        {
+            var label = m.Groups[1].Value.Trim();
+            var url = m.Groups[2].Value.Trim();
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return $"{label}（{url}）";
+            return label;
+        });
+
+        line = Regex.Replace(line, @"\*\*(.+?)\*\*", "$1");
+        line = Regex.Replace(line, @"__(.+?)__", "$1");
+        line = Regex.Replace(line, @"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", "$1");
+        line = Regex.Replace(line, @"`([^`]+)`", "$1");
+        return line;
     }
 }
