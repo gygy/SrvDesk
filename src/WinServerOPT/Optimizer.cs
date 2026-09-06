@@ -146,6 +146,7 @@ internal static class Optimizer
         public bool HideTaskbarChat;
         public bool HideTaskbarCopilot;
         public bool NotepadWordWrap;
+        public bool NotepadStatusBar;
         public int TaskbarSearchMode = -1;
 
         public bool DisableCloudSearch;
@@ -190,6 +191,7 @@ internal static class Optimizer
         public bool ContextMenuTakeOwnership;
         public bool ContextMenuOpenCmd;
         public bool ContextMenuCopyMoveTo;
+        public bool ContextMenuQuickOps;
         public bool DisableMediaPlayerSharing;
         public bool DisableInsiderService;
         public bool DisableStoreAutoUpdate;
@@ -566,6 +568,7 @@ internal static class Optimizer
             || b.HideTaskbarChat != s.HideTaskbarChat
             || b.HideTaskbarCopilot != s.HideTaskbarCopilot
             || b.NotepadWordWrap != s.NotepadWordWrap
+            || b.NotepadStatusBar != s.NotepadStatusBar
             || b.DisableCloudSearch != s.DisableCloudSearch
             || b.DisableWebSearch != s.DisableWebSearch
             || b.DisableSearchHistory != s.DisableSearchHistory
@@ -615,6 +618,7 @@ internal static class Optimizer
             || b.ContextMenuTakeOwnership != s.ContextMenuTakeOwnership
             || b.ContextMenuOpenCmd != s.ContextMenuOpenCmd
             || b.ContextMenuCopyMoveTo != s.ContextMenuCopyMoveTo
+            || b.ContextMenuQuickOps != s.ContextMenuQuickOps
             || b.DisableMediaPlayerSharing != s.DisableMediaPlayerSharing
             || b.DisableInsiderService != s.DisableInsiderService
             || b.DisableStoreAutoUpdate != s.DisableStoreAutoUpdate

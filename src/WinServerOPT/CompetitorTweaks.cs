@@ -28,6 +28,7 @@ internal static class CompetitorTweaks
         ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
         ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
         ContextMenuTweaks.SetCopyMoveTo(s.ContextMenuCopyMoveTo);
+        ContextMenuTweaks.SetQuickOpsMenu(s.ContextMenuQuickOps);
         SetMediaSharing(!s.DisableMediaPlayerSharing);
         SetInsider(!s.DisableInsiderService);
         SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
@@ -56,6 +57,7 @@ internal static class CompetitorTweaks
         s.ContextMenuTakeOwnership = ContextMenuTweaks.IsTakeOwnershipOn();
         s.ContextMenuOpenCmd = ContextMenuTweaks.IsOpenCmdOn();
         s.ContextMenuCopyMoveTo = ContextMenuTweaks.IsCopyMoveToOn();
+        s.ContextMenuQuickOps = ContextMenuTweaks.IsQuickOpsMenuOn();
         s.DisableMediaPlayerSharing = ServiceDisabled("WMPNetworkSvc");
         s.DisableInsiderService = ServiceDisabled("wisvc");
         s.DisableStoreAutoUpdate = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload", 2);

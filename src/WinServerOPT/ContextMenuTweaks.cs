@@ -26,6 +26,12 @@ internal static class ContextMenuTweaks
         GetDword(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked",
             "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}") == 1;
 
+    /// <summary>桌面/文件夹空白处「快捷操作组」（对齐 QwhMenu .reg）。</summary>
+    public static bool IsQuickOpsMenuOn() =>
+        KeyExists(@"Directory\Background\shell\QwhMenu")
+        || KeyExists(@"LibraryFolder\Background\shell\QwhMenu")
+        || KeyExists(@"*\shell\QwhMenu");
+
     /// <summary>资源管理器右键「复制到文件夹 / 移动到文件夹」（两者同一开关）。</summary>
     public static bool IsCopyMoveToOn()
     {
@@ -176,6 +182,46 @@ internal static class ContextMenuTweaks
             "notepad.exe \"%1\"");
     }
 
+    /// <summary>
+    /// 空白处右键「快捷操作组」（对齐「桌面和文件夹空白处右键菜单添加快捷操作组」.reg /
+    /// 「删除右键快捷操作组菜单」.reg；键名 QwhMenu + CommandStore）。
+    /// </summary>
+    public static void SetQuickOpsMenu(bool enable)
+    {
+        // 关闭时先清级联菜单（与删除 .reg 一致）；CommandStore 条目保留无害，开启时再覆盖写入
+        DeleteTree(@"Directory\Background\shell\QwhMenu");
+        DeleteTree(@"LibraryFolder\Background\shell\QwhMenu");
+        DeleteTree(@"*\shell\QwhMenu");
+        if (!enable) return;
+
+        const string dirSubs =
+            "My Computer;My Documents;Control Panel;AddremoveRro;Command Prompt;Wordpad;Notepad;Paint;Calculator;Regedit;Restart Explorer";
+        const string libSubs =
+            "My Computer;Control Panel;AddremoveRro;Command Prompt;Wordpad;Notepad;Paint;Calculator;Regedit;Restart Explorer";
+
+        SetCascadeMenu(@"Directory\Background\shell\QwhMenu", dirSubs);
+        SetCascadeMenu(@"LibraryFolder\Background\shell\QwhMenu", libSubs);
+
+        SetCommandStore("Calculator", "计算器", "calc.exe", "calc.exe");
+        SetCommandStore("Command Prompt", "命令提示符", "cmd.exe", "cmd.exe");
+        SetCommandStore("Control Panel", "控制面板", "shell32.dll,21",
+            "rundll32.exe shell32.dll,Control_RunDLL");
+        SetCommandStore("My Computer", "此电脑", "imageres.dll,105",
+            "explorer.exe /e,::{20D04FE0-3AEA-1069-A2D8-08002B30309D}");
+        SetCommandStore("My Documents", "我的文档", "shell32.dll,4",
+            "explorer.exe /e,::{450D8FBA-AD25-11D0-98A8-0800361B1103}");
+        SetCommandStore("Notepad", "记事本", "notepad.exe", "notepad.exe");
+        SetCommandStore("Paint", "画图", "mspaint.exe", "mspaint.exe");
+        SetCommandStore("Regedit", "注册表编辑器", "Regedit.exe", "Regedit.exe");
+        SetCommandStore("Restart Explorer", "重启资源管理器", "shell32.dll,238", "tskill explorer");
+        SetCommandStore("Wordpad", "写字板",
+            @"%ProgramFiles%\Windows NT\Accessories\wordpad.exe", "wordpad.exe",
+            iconExpand: true);
+        SetCommandStore("AddremoveRro", "添加或删除程序", "shell32.dll,162",
+            "rundll32.exe shell32.dll,Control_RunDLL appwiz.cpl",
+            commandExpand: true);
+    }
+
     /// <summary>屏蔽「授予访问权限 / 共享」相关 shell 扩展（常见干扰项）。</summary>
     public static void SetBlockAccessMenu(bool block)
     {
@@ -224,6 +270,36 @@ internal static class ContextMenuTweaks
         if (luaShield) k.SetValue("HasLUAShield", "");
         using var cmd = Registry.ClassesRoot.CreateSubKey(path + @"\command");
         cmd?.SetValue("", command);
+    }
+
+    private static void SetCascadeMenu(string path, string subCommands)
+    {
+        ApplyLog.RegistryKeyWrite("HKCR", path, $"快捷操作组 MUIVerb；SubCommands={subCommands}");
+        using var k = Registry.ClassesRoot.CreateSubKey(path)
+            ?? throw new InvalidOperationException("无法写入：" + path);
+        k.SetValue("Position", "top");
+        k.SetValue("Icon", "shell32.dll,319");
+        k.SetValue("MUIVerb", "快捷操作组");
+        k.SetValue("SubCommands", subCommands);
+    }
+
+    /// <summary>Explorer CommandStore 项（HKLM，供 SubCommands 引用）。</summary>
+    private static void SetCommandStore(
+        string name, string title, string icon, string command,
+        bool iconExpand = false, bool commandExpand = false)
+    {
+        const string root = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell";
+        var path = root + @"\" + name;
+        ApplyLog.RegistryKeyWrite("HKLM", path, $"@=\"{title}\"; command=\"{command}\"");
+        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using var k = baseKey.CreateSubKey(path, true)
+            ?? throw new InvalidOperationException("无法写入：" + path);
+        k.SetValue("", title);
+        k.SetValue("icon", icon,
+            iconExpand ? RegistryValueKind.ExpandString : RegistryValueKind.String);
+        using var cmd = baseKey.CreateSubKey(path + @"\command", true);
+        cmd?.SetValue("", command,
+            commandExpand ? RegistryValueKind.ExpandString : RegistryValueKind.String);
     }
 
     private static bool KeyExists(string relative)

@@ -513,6 +513,9 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.NotepadWordWrap, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Notepad", "fWrap", 1, 0,
             "经典记事本；商店版记事本不读此键。"));
+        Add(SettingCatalog.NotepadStatusBar, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Notepad", "StatusBar", 1, 0,
+            "经典记事本；开启自动换行时状态栏可能被隐藏。"));
         Add(SettingCatalog.ShowFrequentPlaces, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowFrequent", 1, 0));
         Add(SettingCatalog.HideOfficeCloudFiles, ActionScript.DwordToggle(true,
@@ -716,6 +719,10 @@ internal static class SettingRecipeCatalog
             "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Copy To]\r\n" +
             "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Move To]\r\n",
             "开启后文件/文件夹右键出现「复制到文件夹」「移动到文件夹」。"));
+        Add(SettingCatalog.ContextMenuQuickOps, ActionScript.Cmd(
+            "echo 快捷操作组（QwhMenu + CommandStore）由 ContextMenuTweaks 写入；请用软件开关一键应用。",
+            "echo 关闭请用软件关闭本项（对齐删除右键快捷操作组菜单.reg）。",
+            "级联菜单 + 多条 CommandStore，建议软件应用。"));
         Add(SettingCatalog.DisableMediaPlayerSharing, ActionScript.Service("WMPNetworkSvc", enableMeansStart: false));
         Add(SettingCatalog.DisableInsiderService, ActionScript.Service("wisvc", enableMeansStart: false));
         Add(SettingCatalog.DisableStoreAutoUpdate, ActionScript.DwordToggle(false,

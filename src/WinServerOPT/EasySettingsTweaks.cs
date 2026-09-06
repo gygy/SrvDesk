@@ -32,6 +32,7 @@ internal static class EasySettingsTweaks
         SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
         SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
+        SetDword(Hive.HkCu, NotepadKey, "StatusBar", s.NotepadStatusBar ? 1 : 0);
     }
 
     public static void ApplyPrivacyBits(Optimizer.State s)
@@ -96,6 +97,7 @@ internal static class EasySettingsTweaks
 
         s.DisableOneDrive = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", 1);
         s.NotepadWordWrap = DwordEquals(Hive.HkCu, NotepadKey, "fWrap", 1);
+        s.NotepadStatusBar = DwordEquals(Hive.HkCu, NotepadKey, "StatusBar", 1);
     }
 
     public static void ReadInto(Optimizer.State s)

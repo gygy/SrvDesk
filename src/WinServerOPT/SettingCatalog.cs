@@ -689,6 +689,16 @@ internal static class SettingCatalog
         uiPlace: "记事本 → 格式 → 自动换行",
         whenHint: "常用记事本看日志/说明时可开",
         recommend: RecommendLevel.Suggested);
+    public static readonly SettingHelpInfo NotepadStatusBar = H(
+        "经典记事本默认显示状态栏（行号/列号等）。",
+        "HKCU\\Software\\Microsoft\\Notepad\\StatusBar=1（对齐「设置记事本显示状态栏」.reg）。",
+        "打开文本时底部可见光标位置，便于对照行号。",
+        "仅影响系统自带 notepad.exe；商店版记事本用应用内设置。开启自动换行时经典记事本可能隐藏状态栏。",
+        "新打开的记事本窗口生效。",
+        W10De,
+        uiPlace: "记事本 → 查看 → 状态栏",
+        whenHint: "常用记事本对照行号时可开",
+        recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo ShowFrequentPlaces = H(
         "快速访问显示常用文件夹。", "Explorer\\ShowFrequent。", "常用目录更快。", "隐私场景可关闭。", "立即生效。", W10De);
     public static readonly SettingHelpInfo HideOfficeCloudFiles = H(
@@ -797,6 +807,16 @@ internal static class SettingCatalog
         W10De,
         uiPlace: "资源管理器 → 文件/文件夹右键",
         whenHint: "需要快速复制/移动到其它目录时开启",
+        recommend: RecommendLevel.Suggested);
+    public static readonly SettingHelpInfo ContextMenuQuickOps = H(
+        "桌面与文件夹空白处右键增加「快捷操作组」级联菜单。",
+        "HKCR Directory/LibraryFolder\\Background\\shell\\QwhMenu + Explorer CommandStore（对齐添加/删除快捷操作组 .reg）。",
+        "一键打开此电脑、控制面板、CMD、记事本、画图、注册表、重启资源管理器等。",
+        "桌面运维常用可开；菜单偏多时可关。关闭仅删级联键（与删除 .reg 一致）。",
+        "立即生效；若未出现可刷新资源管理器。",
+        W10De,
+        uiPlace: "桌面 / 文件夹空白处右键",
+        whenHint: "需要空白处快速入口时开启",
         recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo DisableMediaPlayerSharing = H(
         "禁用 Windows Media Player 网络共享。", "WMPNetworkSvc。", "减少共享端口。", "不共享媒体库可开。", "服务停止后生效。");

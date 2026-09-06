@@ -51,6 +51,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _tbChat = Row("隐藏任务栏聊天", "显示", SettingCatalog.HideTaskbarChat);
     private readonly SettingRow _tbCopilot = Row("隐藏任务栏 Copilot", "显示", SettingCatalog.HideTaskbarCopilot);
     private readonly SettingRow _notepadWrap = Row("记事本默认自动换行", "不换行", SettingCatalog.NotepadWordWrap);
+    private readonly SettingRow _notepadStatus = Row("记事本显示状态栏", "不显示", SettingCatalog.NotepadStatusBar);
     private readonly SettingRow _cloudSearch = Row("禁止搜索云内容", "允许", SettingCatalog.DisableCloudSearch);
     private readonly SettingRow _langList = Row("禁止网站读取语言列表", "允许", SettingCatalog.DisableWebsiteLangList);
     private readonly SettingRow _trackApps = Row("关闭应用启动跟踪", "开启", SettingCatalog.DisableAppLaunchTracking);
@@ -82,6 +83,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _takeOwn = Row("右键菜单：取得所有权", "无", SettingCatalog.ContextMenuTakeOwnership);
     private readonly SettingRow _openCmd = Row("右键菜单：在此处打开 CMD", "无", SettingCatalog.ContextMenuOpenCmd);
     private readonly SettingRow _copyMoveTo = Row("右键菜单：复制到 / 移动到", "无", SettingCatalog.ContextMenuCopyMoveTo);
+    private readonly SettingRow _quickOps = Row("右键菜单：快捷操作组", "无", SettingCatalog.ContextMenuQuickOps);
     private readonly SettingRow _wmpShare = Row("禁用媒体播放器网络共享", "手动", SettingCatalog.DisableMediaPlayerSharing);
     private readonly SettingRow _insider = Row("禁用 Windows Insider 服务", "手动", SettingCatalog.DisableInsiderService);
     private readonly SettingRow _storeUpd = Row("禁止商店自动更新应用", "自动", SettingCatalog.DisableStoreAutoUpdate);
@@ -252,7 +254,7 @@ internal sealed class MainForm : Form
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
-        _notepadWrap, _takeOwn, _openCmd, _copyMoveTo, _news,
+        _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
@@ -309,7 +311,7 @@ internal sealed class MainForm : Form
                 _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
             ("桌面服务", [
-                _themes, _audio, _search, _notepadWrap,
+                _themes, _audio, _search, _notepadWrap, _notepadStatus,
             ]),
             ("安全与锁屏", [
                 _smartScreen, _noLockScreen, _feedback,
@@ -318,7 +320,7 @@ internal sealed class MainForm : Form
                 _classicSearch, _searchEngine,
             ]),
             ("右键菜单", [
-                _takeOwn, _openCmd, _copyMoveTo,
+                _takeOwn, _openCmd, _copyMoveTo, _quickOps,
             ]),
         ]));
         _groups.Add(("资源管理器", [
@@ -1902,9 +1904,11 @@ internal sealed class MainForm : Form
         _takeOwn.Checked = ContextMenuTweaks.IsTakeOwnershipOn();
         _openCmd.Checked = ContextMenuTweaks.IsOpenCmdOn();
         _copyMoveTo.Checked = ContextMenuTweaks.IsCopyMoveToOn();
+        _quickOps.Checked = ContextMenuTweaks.IsQuickOpsMenuOn();
         _takeOwn.SyncCurrentValueFromState();
         _openCmd.SyncCurrentValueFromState();
         _copyMoveTo.SyncCurrentValueFromState();
+        _quickOps.SyncCurrentValueFromState();
     }
 
     private void Bind(Optimizer.State s, bool updateCurrentValues = false)
@@ -2001,6 +2005,7 @@ internal sealed class MainForm : Form
         _tbChat.Checked = s.HideTaskbarChat;
         _tbCopilot.Checked = s.HideTaskbarCopilot;
         _notepadWrap.Checked = s.NotepadWordWrap;
+        _notepadStatus.Checked = s.NotepadStatusBar;
         _cloudSearch.Checked = s.DisableCloudSearch;
         _langList.Checked = s.DisableWebsiteLangList;
         _trackApps.Checked = s.DisableAppLaunchTracking;
@@ -2032,6 +2037,7 @@ internal sealed class MainForm : Form
         _takeOwn.Checked = s.ContextMenuTakeOwnership;
         _openCmd.Checked = s.ContextMenuOpenCmd;
         _copyMoveTo.Checked = s.ContextMenuCopyMoveTo;
+        _quickOps.Checked = s.ContextMenuQuickOps;
         _wmpShare.Checked = s.DisableMediaPlayerSharing;
         _insider.Checked = s.DisableInsiderService;
         _storeUpd.Checked = s.DisableStoreAutoUpdate;
@@ -2116,6 +2122,7 @@ internal sealed class MainForm : Form
         HideTaskbarChat = _tbChat.Checked,
         HideTaskbarCopilot = _tbCopilot.Checked,
         NotepadWordWrap = _notepadWrap.Checked,
+        NotepadStatusBar = _notepadStatus.Checked,
         DisableCloudSearch = _cloudSearch.Checked,
         DisableWebsiteLangList = _langList.Checked,
         DisableAppLaunchTracking = _trackApps.Checked,
@@ -2147,6 +2154,7 @@ internal sealed class MainForm : Form
         ContextMenuTakeOwnership = _takeOwn.Checked,
         ContextMenuOpenCmd = _openCmd.Checked,
         ContextMenuCopyMoveTo = _copyMoveTo.Checked,
+        ContextMenuQuickOps = _quickOps.Checked,
         DisableMediaPlayerSharing = _wmpShare.Checked,
         DisableInsiderService = _insider.Checked,
         DisableStoreAutoUpdate = _storeUpd.Checked,
@@ -2299,9 +2307,11 @@ internal sealed class MainForm : Form
         Sync(_tbChat, s.HideTaskbarChat);
         Sync(_tbCopilot, s.HideTaskbarCopilot);
         Sync(_notepadWrap, s.NotepadWordWrap);
+        Sync(_notepadStatus, s.NotepadStatusBar);
         Sync(_takeOwn, s.ContextMenuTakeOwnership);
         Sync(_openCmd, s.ContextMenuOpenCmd);
         Sync(_copyMoveTo, s.ContextMenuCopyMoveTo);
+        Sync(_quickOps, s.ContextMenuQuickOps);
     }
 
     private void SetRowsChecked(IEnumerable<SettingRow> rows, bool on)

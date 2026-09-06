@@ -10,6 +10,7 @@ internal sealed class ContextMenuSettingsDialog : Form
     private readonly InstantToggleRow _openWtAdmin = new("Terminal（管理员）");
     private readonly InstantToggleRow _copyPath = new("复制完整路径");
     private readonly InstantToggleRow _copyMoveTo = new("复制到 / 移动到文件夹");
+    private readonly InstantToggleRow _quickOps = new("空白处「快捷操作组」");
     private readonly InstantToggleRow _paint = new("用画图编辑图片");
     private readonly InstantToggleRow _notepad = new("用记事本编辑文件");
     private readonly InstantToggleRow _blockShare = new("屏蔽「授予访问权限」");
@@ -27,7 +28,7 @@ internal sealed class ContextMenuSettingsDialog : Form
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
-        var common = ThemedSettingsChrome.CreateSection("常用", [_takeOwn, _openCmd, _copyPath, _copyMoveTo]);
+        var common = ThemedSettingsChrome.CreateSection("常用", [_takeOwn, _openCmd, _copyPath, _copyMoveTo, _quickOps]);
         var terminal = ThemedSettingsChrome.CreateSection("终端", [
             _openPs, _openPsAdmin, _openWt, _openWtAdmin,
         ]);
@@ -71,6 +72,7 @@ internal sealed class ContextMenuSettingsDialog : Form
         Bind(_openWtAdmin, ContextMenuTweaks.IsOpenTerminalAdminOn(), ContextMenuTweaks.SetOpenTerminalAdmin);
         Bind(_copyPath, ContextMenuTweaks.IsCopyPathOn(), ContextMenuTweaks.SetCopyPath);
         Bind(_copyMoveTo, ContextMenuTweaks.IsCopyMoveToOn(), ContextMenuTweaks.SetCopyMoveTo);
+        Bind(_quickOps, ContextMenuTweaks.IsQuickOpsMenuOn(), ContextMenuTweaks.SetQuickOpsMenu);
         Bind(_paint, ContextMenuTweaks.IsEditWithPaintOn(), ContextMenuTweaks.SetEditWithPaint);
         Bind(_notepad, ContextMenuTweaks.IsEditWithNotepadOn(), ContextMenuTweaks.SetEditWithNotepad);
         Bind(_blockShare, ContextMenuTweaks.IsBlockAccessMenuOn(), ContextMenuTweaks.SetBlockAccessMenu);
