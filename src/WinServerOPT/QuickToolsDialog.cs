@@ -5,7 +5,6 @@ internal sealed class QuickToolsDialog : Form
     private readonly SystemFacts _facts;
     private readonly ListView _list = new();
     private readonly TextBox _search = new();
-    private readonly Label _desc = new();
     private readonly Label _count = new();
     private List<QuickTool> _tools = [];
 
@@ -54,12 +53,6 @@ internal sealed class QuickToolsDialog : Form
         _list.Columns.Add("工具", 200);
         _list.Columns.Add("说明", 260);
         _list.DoubleClick += (_, _) => OpenSelected();
-        _list.SelectedIndexChanged += (_, _) => UpdateDescription();
-
-        _desc.Dock = DockStyle.Bottom;
-        _desc.Height = 40;
-        _desc.ForeColor = AppTheme.TextMute;
-        _desc.Padding = new Padding(0, 6, 0, 0);
 
         var openBtn = ThemedSettingsChrome.CreateButton("打开", true);
         openBtn.Size = new Size(88, 34);
@@ -67,7 +60,6 @@ internal sealed class QuickToolsDialog : Form
         openBtn.Click += (_, _) => OpenSelected();
 
         body.Controls.Add(_list);
-        body.Controls.Add(_desc);
         body.Controls.Add(toolbar);
         body.Controls.Add(openBtn);
 
@@ -76,7 +68,7 @@ internal sealed class QuickToolsDialog : Form
             "快速工具",
             "系统管理工具快捷入口 · 已按 Server 桌面场景筛选",
             body,
-            "双击列表项或点「打开」启动。");
+            "");
 
         Load += (_, _) =>
         {
@@ -107,7 +99,6 @@ internal sealed class QuickToolsDialog : Form
         _list.EndUpdate();
         if (_list.Items.Count > 0) _list.Items[0].Selected = true;
         _count.Text = $"当前 {_list.Items.Count} 项 / 共 {_tools.Count} 项";
-        UpdateDescription();
     }
 
     private void ApplyFilter()
@@ -119,13 +110,6 @@ internal sealed class QuickToolsDialog : Form
                 t.Title.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 t.Category.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
                 t.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0));
-    }
-
-    private void UpdateDescription()
-    {
-        _desc.Text = _list.SelectedItems.Count > 0 && _list.SelectedItems[0].Tag is QuickTool t
-            ? t.Description
-            : "";
     }
 
     private void OpenSelected()
