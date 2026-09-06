@@ -94,7 +94,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ViewHideIncompatible.CheckOnClick = true;
         ViewHelpPanel = Item("显示帮助面板", MenuIcons.ViewHelpPanel);
         ViewHelpPanel.CheckOnClick = true;
-        ViewHelpPanel.Checked = false;
+        ViewHelpPanel.Checked = true;
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
             ViewHideIncompatible, ViewHelpPanel

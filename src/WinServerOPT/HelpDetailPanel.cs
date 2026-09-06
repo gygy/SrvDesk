@@ -427,7 +427,17 @@ internal sealed class HelpDetailPanel : BufferedPanel
             _summary.Text, _summary.Font, new Size(w, int.MaxValue),
             TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
         _summary.Height = Math.Min(summaryH, 96);
-        _sections.Top = _summary.Bottom + 8;
+
+        // 一键脚本紧跟摘要下方，避免滚到长说明末尾才看见
+        var y = _summary.Bottom + 8;
+        if (_recipeHost.Visible)
+        {
+            _recipeHost.Top = y;
+            LayoutRecipe(w);
+            y = _recipeHost.Bottom + 10;
+        }
+
+        _sections.Top = y;
 
         foreach (Control c in _sections.Controls)
         {
@@ -437,17 +447,18 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 body.MaximumSize = new Size(w, 0);
         }
 
-        var y = _sections.Bottom + 10;
-        if (_recipeHost.Visible)
-        {
-            _recipeHost.Top = y;
-            LayoutRecipe(w);
-            y = _recipeHost.Bottom + 8;
-        }
-
-        _footer.Top = y;
+        _footer.Top = _sections.Bottom + 8;
         var contentH = _footer.Bottom + 12;
         AutoScrollMinSize = new Size(0, contentH);
+    }
+
+    /// <summary>选中项后滚动到一键脚本区域，保证入口可见。</summary>
+    public void FocusRecipe()
+    {
+        if (!_recipeHost.Visible) return;
+        // 先把脚本区滚进可视范围
+        AutoScrollPosition = new Point(0, Math.Max(0, _recipeHost.Top - 8));
+        _recipeBox.Focus();
     }
 
     private void LayoutRecipe(int w)
@@ -458,10 +469,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeNote.Width = inner;
         _recipeNote.MaximumSize = new Size(inner, 0);
 
-        var noteH = 0;
         if (_recipeNote.Visible && _recipeNote.Text.Length > 0)
         {
-            noteH = TextRenderer.MeasureText(
+            var noteH = TextRenderer.MeasureText(
                 _recipeNote.Text, _recipeNote.Font, new Size(inner, int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height + 4;
             _recipeNote.Height = Math.Min(noteH, 48);
