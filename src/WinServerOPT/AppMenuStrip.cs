@@ -31,7 +31,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ViewAllOff { get; }
     public ToolStripMenuItem ViewHideIncompatible { get; }
     public ToolStripMenuItem ViewHelpPanel { get; }
-    public ToolStripMenuItem HelpUsage { get; }
     public ToolStripMenuItem HelpChangeLog { get; }
     public ToolStripMenuItem HelpLog { get; }
     public ToolStripMenuItem HelpSupport { get; }
@@ -101,12 +100,10 @@ internal sealed class AppMenuStrip : MenuStrip
         ]);
 
         var help = new ToolStripMenuItem("帮助(&H)");
-        HelpUsage = Item("使用说明", MenuIcons.HelpUsage, Keys.F1);
         HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
         HelpLog = Item("操作日志...", MenuIcons.HelpLog);
         HelpSupport = Item("支持", MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
-            HelpUsage, new ToolStripSeparator(),
             HelpChangeLog, HelpLog, HelpSupport
         ]);
 

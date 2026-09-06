@@ -453,7 +453,7 @@ internal static class ThemedSettingsChrome
         Control body,
         string footerHint,
         Action? onRefresh = null,
-        bool showHeader = true)
+        bool showHeader = false)
     {
         form.BackColor = AppTheme.Surface;
         form.Font = new Font("Microsoft YaHei UI", 9F);

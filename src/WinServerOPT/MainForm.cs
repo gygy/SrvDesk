@@ -474,8 +474,6 @@ internal sealed class MainForm : Form
         _appMenu.ToolRestoreDefaults.Click += (_, _) => RestoreDefaults();
         _appMenu.ViewAllOn.Click += (_, _) => SetVisibleAll(true);
         _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
-        _appMenu.HelpUsage.Click += (_, _) => _helpDetail.ShowUsageGuide();
-        _appMenu.HelpLegend.Click += (_, _) => _helpDetail.ShowScopeLegend();
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
         _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
         _appMenu.HelpSupport.Click += (_, _) => ShowSupportDialog();

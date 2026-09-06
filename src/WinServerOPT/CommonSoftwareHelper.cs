@@ -571,10 +571,7 @@ internal static class CommonSoftwareHelper
             Report(onProgress, "正在调用 winget（静默）…", 5);
             // --silent：跳过安装包 UI；--source winget：避开较慢的 msstore；
             // 源自动更新已在设置中关闭，避免每次 install 先同步索引
-            var code = RunWinget(
-                $"install -e --id {item.WingetId} --source winget --silent " +
-                "--accept-package-agreements --accept-source-agreements --disable-interactivity",
-                onProgress);
+            var code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: true), onProgress);
             if (code == 0)
             {
                 Report(onProgress, "安装完成", 100);
@@ -592,10 +589,7 @@ internal static class CommonSoftwareHelper
             if (!item.PreferOfflineInstall && !item.PreferAppxSideload)
             {
                 Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
-                code = RunWinget(
-                    $"install -e --id {item.WingetId} --silent " +
-                    "--accept-package-agreements --accept-source-agreements --disable-interactivity",
-                    onProgress);
+                code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: false), onProgress);
                 if (code == 0)
                 {
                     Report(onProgress, "安装完成", 100);

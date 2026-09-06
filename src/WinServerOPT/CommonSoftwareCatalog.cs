@@ -19,6 +19,9 @@ internal sealed class CommonSoftwareItem
     /// <summary>为 true 时先尝试 EXE 离线包（无 Appx 旁加载时）。</summary>
     public bool PreferOfflineInstall { get; set; }
 
+    /// <summary>用户自定义项（来自 AppData，可用 winget 安装）。</summary>
+    public bool IsCustom { get; set; }
+
     /// <summary>微软商店 ProductId（如 9PKTQ5699M62），用于解析 Appx 直链。</summary>
     public string StoreProductId { get; set; } = "";
 
@@ -33,7 +36,10 @@ internal sealed class CommonSoftwareItem
 
 internal static class CommonSoftwareCatalog
 {
-    public static IReadOnlyList<CommonSoftwareItem> All { get; } =
+    public const string CustomCategory = "自定义";
+
+    /// <summary>内置目录（不含用户自定义）。</summary>
+    public static IReadOnlyList<CommonSoftwareItem> BuiltIn { get; } =
     [
         Item("winget", "Windows 包管理器 (winget)", "必备", "Microsoft.AppInstaller",
             ["App Installer", "Windows Package Manager"], "https://aka.ms/getwinget", essential: true),
@@ -69,6 +75,8 @@ internal static class CommonSoftwareCatalog
             ["Yandex Browser", "Yandex"], "https://browser.yandex.com/", essential: false),
         Item("vivaldi", "Vivaldi 浏览器", "浏览器", "Vivaldi.Vivaldi",
             ["Vivaldi"], "https://vivaldi.com/download/", essential: false),
+        Item("chrome", "Google Chrome", "浏览器", "Google.Chrome",
+            ["Google Chrome", "Chrome"], "https://www.google.com/chrome/", essential: false),
 
         Item("qq-classic", "腾讯QQ（经典版）", "通讯", "Tencent.QQ",
             ["腾讯QQ"], "https://im.qq.com/pcqq", essential: false),
@@ -78,6 +86,8 @@ internal static class CommonSoftwareCatalog
             ["微信"], "https://weixin.qq.com/", essential: false),
         Item("tim", "腾讯TIM（QQ简化版）", "通讯", "Tencent.TIM",
             ["TIM"], "https://office.qq.com/", essential: false),
+        Item("mailmaster", "网易邮箱大师", "通讯", "NetEase.MailMaster",
+            ["网易邮箱大师", "MailMaster"], "https://dashi.163.com/", essential: false),
 
         Item("baidunetdisk", "百度网盘", "网盘", "Baidu.BaiduNetdisk",
             ["百度网盘"], "https://pan.baidu.com/download", essential: false),
@@ -179,8 +189,21 @@ internal static class CommonSoftwareCatalog
             essential: false),
     ];
 
+    /// <summary>内置 + 用户自定义（每次读取最新自定义列表）。</summary>
+    public static IReadOnlyList<CommonSoftwareItem> All => GetAll();
+
+    public static IReadOnlyList<CommonSoftwareItem> GetAll()
+    {
+        var custom = CustomSoftwareStore.LoadAsItems();
+        if (custom.Count == 0) return BuiltIn;
+        var list = new List<CommonSoftwareItem>(BuiltIn.Count + custom.Count);
+        list.AddRange(BuiltIn);
+        list.AddRange(custom);
+        return list;
+    }
+
     public static CommonSoftwareItem? Find(string id) =>
-        All.FirstOrDefault(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+        GetAll().FirstOrDefault(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
     private static CommonSoftwareItem Item(
         string id, string title, string category, string wingetId,
