@@ -87,7 +87,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeHost.Padding = new Padding(8);
         _recipeHost.Visible = false;
 
-        _recipeCaption.Text = "配置脚本（语法高亮 · 可编辑）";
+        _recipeCaption.Text = "配置脚本";
         _recipeCaption.Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold);
         _recipeCaption.ForeColor = AppTheme.PrimaryDeep;
         _recipeCaption.BackColor = Color.Transparent;
@@ -98,12 +98,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeKind.ForeColor = AppTheme.TextMute;
         _recipeKind.BackColor = Color.Transparent;
         _recipeKind.AutoSize = true;
-        _recipeKind.Location = new Point(168, 8);
+        _recipeKind.Location = new Point(80, 8);
 
         StyleTab(_tabEnable, "开启", true);
         StyleTab(_tabDisable, "关闭", false);
         _tabEnable.Location = new Point(8, 28);
-        _tabDisable.Location = new Point(88, 28);
+        _tabDisable.Location = new Point(8 + _tabEnable.Width + 8, 28);
         _tabEnable.Click += (_, _) => SetRecipeSide(true);
         _tabDisable.Click += (_, _) => SetRecipeSide(false);
 
@@ -114,7 +114,6 @@ internal sealed class HelpDetailPanel : BufferedPanel
         StyleAction(_btnCopy, "复制");
         StyleAction(_btnSave, "导出");
         StyleAction(_btnReset, "恢复默认");
-        _btnReset.Width = 72;
         _btnCopy.Click += (_, _) => CopyRecipe();
         _btnSave.Click += (_, _) => ExportRecipe();
         _btnReset.Click += (_, _) => ResetRecipeToBuiltin();
@@ -158,9 +157,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private static void StyleTab(Button b, string text, bool primaryLook)
     {
         b.Text = text;
-        b.Size = new Size(72, 26);
-        b.FlatStyle = FlatStyle.Flat;
         b.Font = new Font("Microsoft YaHei UI", 8.5F);
+        b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
+        b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
         ApplyTabVisual(b, selected: primaryLook && text == "开启");
@@ -185,9 +184,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private static void StyleAction(Button b, string text)
     {
         b.Text = text;
-        b.Size = new Size(72, 26);
-        b.FlatStyle = FlatStyle.Flat;
         b.Font = new Font("Microsoft YaHei UI", 8.5F);
+        b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
+        b.FlatStyle = FlatStyle.Flat;
         b.BackColor = Color.White;
         b.ForeColor = AppTheme.PrimaryDeep;
         b.FlatAppearance.BorderColor = AppTheme.Primary;
@@ -642,7 +641,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
             var noteH = TextRenderer.MeasureText(
                 _recipeNote.Text, _recipeNote.Font, new Size(inner, int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height + 4;
-            _recipeNote.Height = Math.Min(noteH, 48);
+            _recipeNote.Height = Math.Min(noteH, 72);
         }
 
         if (_emptyRecipe.Visible)
@@ -651,9 +650,15 @@ internal sealed class HelpDetailPanel : BufferedPanel
             return;
         }
 
-        _btnCopy.Location = new Point(8, _recipeBox.Bottom + 6);
-        _btnSave.Location = new Point(88, _recipeBox.Bottom + 6);
-        _btnReset.Location = new Point(168, _recipeBox.Bottom + 6);
+        // 类型标签跟在标题后，避免与长标题重叠
+        _recipeKind.Location = new Point(_recipeCaption.Right + 8, 8);
+
+        var x = 8;
+        _btnCopy.Location = new Point(x, _recipeBox.Bottom + 6);
+        x += _btnCopy.Width + 8;
+        _btnSave.Location = new Point(x, _recipeBox.Bottom + 6);
+        x += _btnSave.Width + 8;
+        _btnReset.Location = new Point(x, _recipeBox.Bottom + 6);
         if (_recipeNote.Visible)
         {
             _recipeNote.Location = new Point(8, _btnCopy.Bottom + 6);

@@ -255,6 +255,7 @@ internal static class ThemedSettingsChrome
 
     public static Button CreateButton(string text, bool primary)
     {
+        var font = new Font("Microsoft YaHei UI", 9F);
         var b = new Button
         {
             Text = text,
@@ -262,7 +263,8 @@ internal static class ThemedSettingsChrome
             Cursor = Cursors.Hand,
             BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
             ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-            Font = new Font("Microsoft YaHei UI", 9F),
+            Font = font,
+            Size = UiFit.ButtonSize(text, 34, font),
         };
         if (primary) b.FlatAppearance.BorderSize = 0;
         else

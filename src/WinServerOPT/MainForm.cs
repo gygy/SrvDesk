@@ -1731,7 +1731,6 @@ internal sealed class MainForm : Form
         {
             Text = "恢复本组默认",
             AutoSize = true,
-            Location = new Point(section.Width - 108, 8),
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             LinkColor = AppTheme.PrimaryDark,
             ActiveLinkColor = AppTheme.Primary,
@@ -1741,18 +1740,22 @@ internal sealed class MainForm : Form
         restoreGroup.Click += (_, _) => RestoreGroup(title, rows);
         head.Controls.Add(restoreGroup);
 
-        section.Controls.Add(body);
-        section.Controls.Add(head);
-        section.Tag = body;
-        section.Resize += (_, _) =>
+        void LayoutSectionHeader()
         {
             head.Width = section.Width;
             body.Width = section.Width;
-            titleLabel.Width = section.Width - 120;
-            restoreGroup.Location = new Point(section.Width - 108, 8);
+            var linkW = Math.Max(restoreGroup.PreferredSize.Width, UiFit.TextWidth(restoreGroup.Text) + 4);
+            restoreGroup.Location = new Point(Math.Max(80, section.Width - linkW - 12), 8);
+            titleLabel.Width = Math.Max(80, restoreGroup.Left - titleLabel.Left - 8);
             foreach (var row in rows)
                 row.ApplyLayoutWidth(section.Width);
-        };
+        }
+
+        section.Controls.Add(body);
+        section.Controls.Add(head);
+        section.Tag = body;
+        section.Resize += (_, _) => LayoutSectionHeader();
+        LayoutSectionHeader();
         return section;
     }
 
@@ -1787,7 +1790,7 @@ internal sealed class MainForm : Form
 
         _restore.Text = "恢复默认";
         _restore.AutoSize = false;
-        _restore.Size = new Size(92, 36);
+        _restore.Size = UiFit.ButtonSize("恢复默认", 36, new Font("Microsoft YaHei UI", 9F, FontStyle.Bold), padding: 28);
         _restore.Margin = new Padding(8, 0, 0, 0);
         _restore.FlatStyle = FlatStyle.Flat;
         _restore.BackColor = AppTheme.SurfaceCard;
@@ -1801,7 +1804,7 @@ internal sealed class MainForm : Form
 
         _apply.Text = "应用到系统";
         _apply.AutoSize = false;
-        _apply.Size = new Size(108, 36);
+        _apply.Size = UiFit.ButtonSize("应用到系统", 36, new Font("Microsoft YaHei UI", 9F, FontStyle.Bold), padding: 28);
         _apply.Margin = new Padding(8, 0, 0, 0);
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
@@ -2596,7 +2599,7 @@ internal sealed class MainForm : Form
                 return "关闭";
             if (string.Equals(systemDefault, "关闭", StringComparison.Ordinal))
                 return "开启";
-            return "已是优化建议";
+            return "已优化";
         }
 
         public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
