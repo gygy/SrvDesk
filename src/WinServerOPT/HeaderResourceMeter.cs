@@ -155,10 +155,18 @@ internal sealed class HeaderResourceMeter : Panel
                     NetworkInterfaceType.Wireless80211 => 20,
                     _ => 10,
                 };
+                // 降低 Tailscale/CGNAT(100.64/10)、常见虚拟网段权重，优先局域网地址
+                var candidate = ips[0];
+                if (candidate.StartsWith("100.", StringComparison.Ordinal))
+                    score -= 15;
+                else if (candidate.StartsWith("172.1", StringComparison.Ordinal) ||
+                         candidate.StartsWith("172.2", StringComparison.Ordinal) ||
+                         candidate.StartsWith("172.3", StringComparison.Ordinal))
+                    score -= 5;
                 if (score > primaryScore)
                 {
                     primaryScore = score;
-                    primary = ips[0];
+                    primary = candidate;
                 }
             }
 

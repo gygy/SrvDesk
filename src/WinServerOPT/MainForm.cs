@@ -287,26 +287,34 @@ internal sealed class MainForm : Form
 
         // 批量分组顺序与 MenuItems 中分组项一致；组内可再分可折叠分区
         _groups.Add(("性能及安全", [
-            ("性能及安全", [
-                // Server 桌面必备
+            ("常用开关", [
                 _ie, _uac, _highPerf,
-                // 遥测与诊断
-                _telemetry, _dps, _ceip, _errorReport,
-                // 性能与显卡
-                _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca,
-                // Windows 更新
-                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx,
-                // 网络栈
+            ]),
+            ("性能加速", [
+                _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu,
+            ]),
+            ("Windows 更新", [
+                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt,
+            ]),
+            ("网络优化", [
                 _tcp, _qosSpeed, _bbr2, _netThrottle,
-                // 安全服务
-                _smb1, _remoteReg, _spooler,
-                // 进阶安全（低频）
-                _dep, _cpu, _meltdown, _hvci, _wdac, _vbs, _sysRestore,
-                // 存储与文件系统
+            ]),
+            ("遥测与诊断", [
+                _telemetry, _dps, _ceip, _errorReport,
+            ]),
+            ("安全服务", [
+                _smb1, _remoteReg, _spooler, _dep,
+            ]),
+            ("进阶安全", [
+                _meltdown, _hvci, _wdac, _vbs, _sysRestore,
+            ]),
+            ("磁盘与文件", [
                 _longPaths, _ntfsStamp, _reservedStorage, _srvSplit,
-                // 维护与启动
+            ]),
+            ("启动与维护", [
                 _autoMaint, _utc, _hpet, _loginVerbose, _f8,
-                // 少见服务
+            ]),
+            ("少用服务", [
                 _xbox, _fax, _wmpShare,
             ]),
         ]));
@@ -363,17 +371,23 @@ internal sealed class MainForm : Form
             ]),
         ]));
         _groups.Add(("隐私与体验", [
-            ("隐私与体验", [
-                _tips, _recommended, _searchHighlights, _cortana, _copilotAi,
-                _adTracking, _cloudSearch, _webSearch, _searchHistory,
-                _trackApps, _langList, _location, _activityHist, _clipCloud,
-                _animations, _transparency, _stickyKeys, _backgroundApps,
-                _storageSense, _autoplay,
-                _settingsSuggest, _inking,
-                _msPinyinEn, _msPinyinCloud, _msPinyinBar,
-                _consumer, _edgePre,
-                _deliveryOpt, _msrt, _insider, _storeUpd,
-                _gameDvr, _officeTel, _teredo,
+            ("广告与推荐", [
+                _tips, _recommended, _searchHighlights, _adTracking, _settingsSuggest, _consumer,
+            ]),
+            ("搜索与助手", [
+                _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi,
+            ]),
+            ("隐私数据", [
+                _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel,
+            ]),
+            ("输入法与键盘", [
+                _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys,
+            ]),
+            ("界面体验", [
+                _animations, _transparency, _backgroundApps, _storageSense, _autoplay, _edgePre, _gameDvr,
+            ]),
+            ("商店与预览", [
+                _insider, _storeUpd, _teredo,
             ]),
         ]));
         _groups.Add(("Server专属", [
