@@ -10,6 +10,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly Label _footer = new();
     private readonly Button _dockRight = new();
     private readonly Button _dockBottom = new();
+    private readonly Button _dockClose = new();
     private readonly ToolTip _tip = new();
 
     private readonly Panel _recipeHost = new();
@@ -33,6 +34,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
     /// <summary>用户点击面板顶部停靠图标时触发。</summary>
     public event Action<ConfigScriptDock>? DockRequested;
+
+    /// <summary>用户点击面板顶部关闭图标时触发。</summary>
+    public event Action? CloseRequested;
 
     public HelpDetailPanel() : base(composited: true)
     {
@@ -59,8 +63,10 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         StyleDockButton(_dockRight, MenuIcons.DockRight, "靠右停靠");
         StyleDockButton(_dockBottom, MenuIcons.DockBottom, "靠底停靠");
+        StyleDockButton(_dockClose, MenuIcons.PanelClose, "关闭配置脚本面板");
         _dockRight.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Right);
         _dockBottom.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Bottom);
+        _dockClose.Click += (_, _) => CloseRequested?.Invoke();
 
         _title.SetBounds(PadX, 30, 280, 44);
         _title.ForeColor = AppTheme.PrimaryDeep;
@@ -93,6 +99,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         Controls.Add(_caption);
         Controls.Add(_dockRight);
         Controls.Add(_dockBottom);
+        Controls.Add(_dockClose);
 
         Resize += (_, _) => LayoutInner();
         SetActiveDock(ConfigScriptDock.Right);
@@ -600,10 +607,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
         const int dockBtn = 24;
         const int dockGap = 4;
         var dockTop = 8;
-        _dockBottom.SetBounds(ClientSize.Width - PadX - dockBtn, dockTop, dockBtn, dockBtn);
+        // 从右到左：关闭 | 靠底 | 靠右
+        _dockClose.SetBounds(ClientSize.Width - PadX - dockBtn, dockTop, dockBtn, dockBtn);
+        _dockBottom.SetBounds(_dockClose.Left - dockGap - dockBtn, dockTop, dockBtn, dockBtn);
         _dockRight.SetBounds(_dockBottom.Left - dockGap - dockBtn, dockTop, dockBtn, dockBtn);
         _dockRight.BringToFront();
         _dockBottom.BringToFront();
+        _dockClose.BringToFront();
 
         var captionW = Math.Max(80, _dockRight.Left - PadX - 8);
         _caption.Left = PadX;

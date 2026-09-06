@@ -123,9 +123,9 @@ internal static class MenuIcons
         [FileCand(Sys("shell32.dll"), 22)],
         DrawEyeOff);
 
-    public static Image ViewHelpPanel => Get("view-helppanel",
-        [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
-        DrawPanel);
+    public static Image ViewHelpPanel => Get("view-configpanel",
+        Array.Empty<Cand>(),
+        DrawConfig);
 
     /// <summary>配置脚本停靠右侧。</summary>
     public static Image DockRight => Get("dock-right", Array.Empty<Cand>(), DrawDockRight);
@@ -133,10 +133,13 @@ internal static class MenuIcons
     /// <summary>配置脚本停靠底部。</summary>
     public static Image DockBottom => Get("dock-bottom", Array.Empty<Cand>(), DrawDockBottom);
 
-    /// <summary>列表行内「配置脚本」入口：文档 + 代码符号，一眼可辨。</summary>
-    public static Image Script => Get("script",
+    /// <summary>关闭配置脚本面板。</summary>
+    public static Image PanelClose => Get("panel-close", Array.Empty<Cand>(), DrawPanelClose);
+
+    /// <summary>列表行内「配置脚本」入口：齿轮，一眼可辨为配置。</summary>
+    public static Image Script => Get("script-config",
         Array.Empty<Cand>(),
-        DrawScript);
+        DrawConfig);
 
     // —— 帮助 ——
     public static Image HelpUsage => Get("help-usage",
@@ -287,29 +290,32 @@ internal static class MenuIcons
         g.DrawLine(line, 5, 11, 9, 11);
     }
 
-    /// <summary>配置脚本：白底文档页 + 蓝色代码括号，区别于普通「说明」图标。</summary>
-    private static void DrawScript(Graphics g)
+    /// <summary>配置：经典齿轮，一眼可辨。</summary>
+    private static void DrawConfig(Graphics g)
     {
-        using var page = new SolidBrush(Color.FromArgb(248, 251, 255));
-        using var border = new Pen(Color.FromArgb(0, 120, 215), 1.4f);
-        g.FillRectangle(page, 2, 1, 12, 14);
-        g.DrawRectangle(border, 2, 1, 12, 14);
-        // 折角
-        using var fold = new SolidBrush(Color.FromArgb(210, 230, 250));
-        g.FillPolygon(fold, new[] { new Point(10, 1), new Point(14, 5), new Point(10, 5) });
-        using var foldLine = new Pen(Color.FromArgb(0, 120, 215), 1f);
-        g.DrawLine(foldLine, 10, 1, 10, 5);
-        g.DrawLine(foldLine, 10, 5, 14, 5);
-        // </> 示意脚本
-        using var code = new Pen(Color.FromArgb(0, 120, 215), 1.6f)
+        var accent = Color.FromArgb(0, 120, 215);
+        var cx = 8f;
+        var cy = 8f;
+        // 外圈齿：6 个矩形齿
+        using (var tooth = new SolidBrush(accent))
         {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round,
-            LineJoin = LineJoin.Round,
-        };
-        g.DrawLines(code, new[] { new Point(6, 6), new Point(4, 9), new Point(6, 12) });
-        g.DrawLines(code, new[] { new Point(10, 6), new Point(12, 9), new Point(10, 12) });
-        g.DrawLine(code, 7, 12, 9, 6);
+            for (var i = 0; i < 6; i++)
+            {
+                var a = i * Math.PI / 3.0;
+                var dx = (float)(Math.Cos(a) * 5.2);
+                var dy = (float)(Math.Sin(a) * 5.2);
+                g.TranslateTransform(cx + dx, cy + dy);
+                g.RotateTransform((float)(a * 180 / Math.PI));
+                g.FillRectangle(tooth, -1.4f, -2.6f, 2.8f, 5.2f);
+                g.ResetTransform();
+            }
+        }
+        // 轮毂
+        using (var hub = new SolidBrush(accent))
+            g.FillEllipse(hub, cx - 4.2f, cy - 4.2f, 8.4f, 8.4f);
+        // 中心孔
+        using (var hole = new SolidBrush(Color.White))
+            g.FillEllipse(hole, cx - 1.8f, cy - 1.8f, 3.6f, 3.6f);
     }
 
     private static void DrawLog(Graphics g)
@@ -498,6 +504,17 @@ internal static class MenuIcons
         using var fill = new SolidBrush(Color.FromArgb(0, 120, 215));
         g.DrawRectangle(frame, 2, 2, 12, 12);
         g.FillRectangle(fill, 3, 10, 10, 3);
+    }
+
+    private static void DrawPanelClose(Graphics g)
+    {
+        using var p = new Pen(Color.FromArgb(120, 120, 120), 1.8f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        };
+        g.DrawLine(p, 4, 4, 12, 12);
+        g.DrawLine(p, 12, 4, 4, 12);
     }
 
     private static void DrawHelp(Graphics g)

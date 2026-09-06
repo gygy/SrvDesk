@@ -496,6 +496,11 @@ internal sealed class MainForm : Form
         };
 
         _helpDetail.DockRequested += dock => ApplyConfigScriptDock(dock, fromUser: true);
+        _helpDetail.CloseRequested += () =>
+        {
+            if (_appMenu.ViewHelpPanel.Checked)
+                _appMenu.ViewHelpPanel.Checked = false;
+        };
     }
 
     private void OpenLogFile(string path, string title)
