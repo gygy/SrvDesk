@@ -29,7 +29,7 @@ internal static class Win11DesktopTweaks
         SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarDa", s.DisableWidgets ? 0 : 1);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", s.DisableSearchHighlights ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdvanced, "Start_ShowRecentRecommendations", s.DisableRecommendedItems ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "Start_TrackDocs", s.DisableRecommendedItems ? 0 : 1);
+        // Start_TrackDocs 由 ShowRecentFiles（开始屏幕最近文件）统一管理，避免两开关互相覆盖
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
         SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");

@@ -471,13 +471,9 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarDa", 0, 1));
         Add(SettingCatalog.DisableSearchHighlights, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", 0, 1));
-        Add(SettingCatalog.DisableRecommendedItems, ActionScript.Reg(
-            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
-                ActionScript.Dword("Start_ShowRecentRecommendations", 0),
-                ActionScript.Dword("Start_TrackDocs", 0)),
-            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
-                ActionScript.Dword("Start_ShowRecentRecommendations", 1),
-                ActionScript.Dword("Start_TrackDocs", 1))));
+        Add(SettingCatalog.DisableRecommendedItems, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced",
+            "Start_ShowRecentRecommendations", 0, 1));
         Add(SettingCatalog.DisableAdTracking, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0, 1));
         Add(SettingCatalog.DisableSearchHistory, ActionScript.DwordToggle(true,
@@ -504,8 +500,19 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "IconsOnly", 1, 0));
         Add(SettingCatalog.ShowEmptyDrives, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideDrivesWithNoMedia", 0, 1));
-        Add(SettingCatalog.ShowRecentFiles, ActionScript.DwordToggle(true,
-            @"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowRecent", 1, 0));
+        Add(SettingCatalog.ShowRecentFiles, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer"),
+                ActionScript.Dword("ShowRecent", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("Start_TrackDocs", 1)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer"),
+                ActionScript.Dword("ShowRecent", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("Start_TrackDocs", 0)),
+            "开启=恢复显示；关闭=不显示（与开始屏幕 .reg 一致）。"));
+        Add(SettingCatalog.NotepadWordWrap, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Notepad", "fWrap", 1, 0,
+            "经典记事本；商店版记事本不读此键。"));
         Add(SettingCatalog.ShowFrequentPlaces, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowFrequent", 1, 0));
         Add(SettingCatalog.HideOfficeCloudFiles, ActionScript.DwordToggle(true,

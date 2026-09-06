@@ -145,6 +145,7 @@ internal static class Optimizer
         public bool DisableOneDrive;
         public bool HideTaskbarChat;
         public bool HideTaskbarCopilot;
+        public bool NotepadWordWrap;
         public int TaskbarSearchMode = -1;
 
         public bool DisableCloudSearch;
@@ -564,6 +565,7 @@ internal static class Optimizer
             || b.DisableOneDrive != s.DisableOneDrive
             || b.HideTaskbarChat != s.HideTaskbarChat
             || b.HideTaskbarCopilot != s.HideTaskbarCopilot
+            || b.NotepadWordWrap != s.NotepadWordWrap
             || b.DisableCloudSearch != s.DisableCloudSearch
             || b.DisableWebSearch != s.DisableWebSearch
             || b.DisableSearchHistory != s.DisableSearchHistory
@@ -735,6 +737,33 @@ internal static class Optimizer
         {
             /* ignore */
         }
+    }
+
+    private const string UacPolicyKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System";
+
+    /// <summary>UAC 滑块「从不通知」：ConsentPromptBehaviorAdmin=0 且 PromptOnSecureDesktop=0。
+    /// 兼容旧版本工具写过的 EnableLUA=0。</summary>
+    private static bool IsUacNeverNotify()
+    {
+        if (DwordEquals(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 0)
+            && DwordEquals(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 0))
+            return true;
+        return DwordEquals(Hive.HkLm, UacPolicyKey, "EnableLUA", 0);
+    }
+
+    private static void SetUacNeverNotify(bool neverNotify)
+    {
+        if (neverNotify)
+        {
+            SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 0);
+            SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 0);
+            return;
+        }
+
+        // 恢复默认通知级别，并确保未彻底关掉 LUA（纠正旧版 EnableLUA=0）
+        SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 5);
+        SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 1);
+        SetDword(Hive.HkLm, UacPolicyKey, "EnableLUA", 1);
     }
 
     private static void SetShutdownReason(bool enableUi)

@@ -11,7 +11,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _osFiles = new("隐藏受保护的系统文件");
     private readonly InstantToggleRow _iconsOnly = new("始终显示图标（无缩略图）");
     private readonly InstantToggleRow _emptyDrives = new("显示空驱动器");
-    private readonly InstantToggleRow _recent = new("显示最近使用的文件");
+    private readonly InstantToggleRow _recent = new("开始屏幕显示最近文件");
     private readonly InstantToggleRow _frequent = new("显示常用文件夹");
     private readonly InstantToggleRow _office = new("隐藏 office.com 云文件");
     private readonly InstantToggleRow _arrow = new("去掉快捷方式箭头");

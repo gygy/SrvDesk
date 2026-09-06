@@ -8,6 +8,8 @@ internal static class EasySettingsTweaks
 {
     private const string ExplorerAdv = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
     private const string Explorer = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
+    /// <summary>经典记事本；.reg 里偶见 NotePad/fwrap，注册表大小写不敏感。</summary>
+    private const string NotepadKey = @"Software\Microsoft\Notepad";
     private const string DeviceGuard = @"SYSTEM\CurrentControlSet\Control\DeviceGuard";
     private const string Hvci = @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity";
     private const string MemMgmt = @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management";
@@ -22,11 +24,14 @@ internal static class EasySettingsTweaks
         SetDword(Hive.HkCu, ExplorerAdv, "IconsOnly", s.AlwaysShowIconsNeverThumbnails ? 1 : 0);
         SetDword(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", s.ShowEmptyDrives ? 0 : 1);
         SetDword(Hive.HkCu, Explorer, "ShowRecent", s.ShowRecentFiles ? 1 : 0);
+        // 与「开始屏幕不显示/恢复最近使用的文件」.reg 对齐：同步 Start_TrackDocs
+        SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackDocs", s.ShowRecentFiles ? 1 : 0);
         SetDword(Hive.HkCu, Explorer, "ShowFrequent", s.ShowFrequentPlaces ? 1 : 0);
         SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
         SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
         SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
+        SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
     }
 
     public static void ApplyPrivacyBits(Optimizer.State s)
@@ -82,11 +87,15 @@ internal static class EasySettingsTweaks
 
         using (var exp = OpenKey(Hive.HkCu, Explorer))
         {
-            s.ShowRecentFiles = !DwordEquals(exp, "ShowRecent", 0);
+            // 两键皆为 0 视为已关闭（对齐「不显示最近使用的文件」.reg）
+            var hideRecent = DwordEquals(exp, "ShowRecent", 0)
+                && DwordEquals(Hive.HkCu, ExplorerAdv, "Start_TrackDocs", 0);
+            s.ShowRecentFiles = !hideRecent;
             s.ShowFrequentPlaces = !DwordEquals(exp, "ShowFrequent", 0);
         }
 
         s.DisableOneDrive = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", 1);
+        s.NotepadWordWrap = DwordEquals(Hive.HkCu, NotepadKey, "fWrap", 1);
     }
 
     public static void ReadInto(Optimizer.State s)

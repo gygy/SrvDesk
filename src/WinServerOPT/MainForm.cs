@@ -44,12 +44,13 @@ internal sealed class MainForm : Form
     private readonly SettingRow _hideOs = Row("隐藏受保护的系统文件", "显示", SettingCatalog.HideProtectedOsFiles);
     private readonly SettingRow _iconsOnly = Row("始终显示图标从不缩略图", "允许缩略图", SettingCatalog.AlwaysShowIconsNeverThumbnails);
     private readonly SettingRow _emptyDrives = Row("显示空驱动器", "隐藏", SettingCatalog.ShowEmptyDrives);
-    private readonly SettingRow _recentFiles = Row("显示最近使用的文件", "不显示", SettingCatalog.ShowRecentFiles);
+    private readonly SettingRow _recentFiles = Row("开始屏幕显示最近文件", "显示", SettingCatalog.ShowRecentFiles);
     private readonly SettingRow _frequent = Row("显示快速访问常用文件夹", "不显示", SettingCatalog.ShowFrequentPlaces);
     private readonly SettingRow _officeCloud = Row("隐藏 office.com 云文件", "显示", SettingCatalog.HideOfficeCloudFiles);
     private readonly SettingRow _onedrive = Row("禁止 OneDrive 同步", "允许", SettingCatalog.DisableOneDrive);
     private readonly SettingRow _tbChat = Row("隐藏任务栏聊天", "显示", SettingCatalog.HideTaskbarChat);
     private readonly SettingRow _tbCopilot = Row("隐藏任务栏 Copilot", "显示", SettingCatalog.HideTaskbarCopilot);
+    private readonly SettingRow _notepadWrap = Row("记事本默认自动换行", "不换行", SettingCatalog.NotepadWordWrap);
     private readonly SettingRow _cloudSearch = Row("禁止搜索云内容", "允许", SettingCatalog.DisableCloudSearch);
     private readonly SettingRow _langList = Row("禁止网站读取语言列表", "允许", SettingCatalog.DisableWebsiteLangList);
     private readonly SettingRow _trackApps = Row("关闭应用启动跟踪", "开启", SettingCatalog.DisableAppLaunchTracking);
@@ -251,7 +252,7 @@ internal sealed class MainForm : Form
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
-        _takeOwn, _openCmd, _copyMoveTo, _news,
+        _notepadWrap, _takeOwn, _openCmd, _copyMoveTo, _news,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
@@ -308,7 +309,7 @@ internal sealed class MainForm : Form
                 _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
             ("桌面服务", [
-                _themes, _audio, _search,
+                _themes, _audio, _search, _notepadWrap,
             ]),
             ("安全与锁屏", [
                 _smartScreen, _noLockScreen, _feedback,
@@ -1999,6 +2000,7 @@ internal sealed class MainForm : Form
         _onedrive.Checked = s.DisableOneDrive;
         _tbChat.Checked = s.HideTaskbarChat;
         _tbCopilot.Checked = s.HideTaskbarCopilot;
+        _notepadWrap.Checked = s.NotepadWordWrap;
         _cloudSearch.Checked = s.DisableCloudSearch;
         _langList.Checked = s.DisableWebsiteLangList;
         _trackApps.Checked = s.DisableAppLaunchTracking;
@@ -2113,6 +2115,7 @@ internal sealed class MainForm : Form
         DisableOneDrive = _onedrive.Checked,
         HideTaskbarChat = _tbChat.Checked,
         HideTaskbarCopilot = _tbCopilot.Checked,
+        NotepadWordWrap = _notepadWrap.Checked,
         DisableCloudSearch = _cloudSearch.Checked,
         DisableWebsiteLangList = _langList.Checked,
         DisableAppLaunchTracking = _trackApps.Checked,
@@ -2295,6 +2298,7 @@ internal sealed class MainForm : Form
         Sync(_onedrive, s.DisableOneDrive);
         Sync(_tbChat, s.HideTaskbarChat);
         Sync(_tbCopilot, s.HideTaskbarCopilot);
+        Sync(_notepadWrap, s.NotepadWordWrap);
         Sync(_takeOwn, s.ContextMenuTakeOwnership);
         Sync(_openCmd, s.ContextMenuOpenCmd);
         Sync(_copyMoveTo, s.ContextMenuCopyMoveTo);

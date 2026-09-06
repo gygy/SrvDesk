@@ -671,7 +671,24 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo ShowEmptyDrives = H(
         "显示没有介质的空驱动器。", "HideDrivesWithNoMedia=0。", "读卡器/空光驱可见。", "桌面按需。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo ShowRecentFiles = H(
-        "快速访问显示最近使用的文件。", "Explorer\\ShowRecent。", "方便找回文件。", "隐私场景可关闭。", "立即生效。", W10De);
+        "开始屏幕 / 快速访问显示最近使用的文件。",
+        "ShowRecent 与 Start_TrackDocs 同步（对齐「开始屏幕不显示/恢复最近使用的文件」.reg）。",
+        "方便找回文件；关闭后开始菜单与快速访问不再跟踪最近文档。",
+        "隐私场景可关闭本项（开关关闭=不显示）。",
+        "立即或重启资源管理器后生效。",
+        W10De,
+        uiPlace: "设置 → 个性化 → 开始 → 显示最近打开的项目",
+        whenHint: "注重隐私时可关闭");
+    public static readonly SettingHelpInfo NotepadWordWrap = H(
+        "经典记事本默认开启自动换行。",
+        "HKCU\\Software\\Microsoft\\Notepad\\fWrap=1（对齐「设置记事本默认为自动换行方式」.reg）。",
+        "打开长文本不必横向滚动。",
+        "仅影响系统自带 notepad.exe；微软商店新版记事本用应用内设置。",
+        "新打开的记事本窗口生效。",
+        W10De,
+        uiPlace: "记事本 → 格式 → 自动换行",
+        whenHint: "常用记事本看日志/说明时可开",
+        recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo ShowFrequentPlaces = H(
         "快速访问显示常用文件夹。", "Explorer\\ShowFrequent。", "常用目录更快。", "隐私场景可关闭。", "立即生效。", W10De);
     public static readonly SettingHelpInfo HideOfficeCloudFiles = H(
