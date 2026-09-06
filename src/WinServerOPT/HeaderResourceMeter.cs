@@ -22,7 +22,7 @@ internal sealed class HeaderResourceMeter : Panel
     {
         Width = 340;
         Height = 48;
-        BackColor = Color.Transparent;
+        BackColor = AppTheme.PrimaryDeep;
         DoubleBuffered = true;
 
         _systemDrive = Path.GetPathRoot(Environment.SystemDirectory)?.TrimEnd('\\') ?? "C:";
@@ -205,16 +205,22 @@ internal sealed class HeaderResourceMeter : Panel
 
         public MeterBar()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.UserPaint
+                | ControlStyles.SupportsTransparentBackColor
+                | ControlStyles.Opaque,
+                true);
             Height = 6;
-            BackColor = Color.Transparent;
+            BackColor = AppTheme.PrimaryDeep;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             var r = ClientRectangle;
-            using (var bg = new SolidBrush(Color.FromArgb(55, 255, 255, 255)))
+            using (var bg = new SolidBrush(Color.FromArgb(70, 255, 255, 255)))
                 g.FillRectangle(bg, r);
             var w = (int)Math.Round(r.Width * Math.Max(0, Math.Min(100, Value)) / 100f);
             if (w > 0)
