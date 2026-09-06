@@ -19,7 +19,8 @@ internal sealed class CommonSoftwareDialog : Form
     private int _categoryHover = -1;
     private string? _busyItemId;
 
-    private static readonly string[] Categories = ["全部", "必备", "工具", "浏览器", "通讯", "网盘", "开发"];
+    private static readonly string[] Categories =
+        ["全部", "必备", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发"];
 
     public CommonSoftwareDialog()
     {
@@ -305,6 +306,8 @@ internal sealed class CommonSoftwareDialog : Form
         selectMenu.Items.Add("全不选", null, (_, _) => SetAllSelected(false));
         selectMenu.Items.Add(new ToolStripSeparator());
         selectMenu.Items.Add("仅选必备", null, (_, _) => SelectBy(r => r.Item.Essential));
+        selectMenu.Items.Add("仅选运行库推荐", null, (_, _) =>
+            SelectBy(r => r.Item.Id.Equals("vcredist-2022-x64", StringComparison.OrdinalIgnoreCase)));
         selectMenu.Items.Add("仅选未安装", null, (_, _) => SelectBy(r => !r.IsInstalled));
         selectBtn.Click += (_, _) => selectMenu.Show(selectBtn, new Point(0, selectBtn.Height));
         _toolTip.SetToolTip(selectBtn, "快速勾选列表项，便于「安装所选」");
