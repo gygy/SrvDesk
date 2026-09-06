@@ -1,6 +1,7 @@
 ﻿param(
     [string]$Configuration = "Release",
-    [switch]$SkipObfuscate
+    [switch]$SkipObfuscate,
+    [switch]$NoBumpVersion
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,6 +15,46 @@ $toolsDir = Join-Path $repo "tools\obfuscar"
 $publishRaw = Join-Path $repo "artifacts\publish-raw"
 $obfIn = Join-Path $repo "artifacts\obfuscar-in"
 $obfOut = Join-Path $repo "artifacts\obfuscar-out"
+
+function Get-ProjectVersion([string]$CsprojPath) {
+    $raw = Get-Content -LiteralPath $CsprojPath -Raw -Encoding UTF8
+    $m = [regex]::Match($raw, '<Version>\s*([^<]+?)\s*</Version>')
+    if (-not $m.Success) {
+        throw "Cannot find <Version> in $CsprojPath"
+    }
+    return $m.Groups[1].Value.Trim()
+}
+
+function Set-ProjectVersion([string]$CsprojPath, [string]$NewVersion) {
+    $raw = Get-Content -LiteralPath $CsprojPath -Raw -Encoding UTF8
+    $fileVer = if ($NewVersion -match '^\d+\.\d+\.\d+$') { "$NewVersion.0" } else { $NewVersion }
+    $raw = [regex]::Replace($raw, '(?m)(<Version>)[^<]*(</Version>)', "`${1}$NewVersion`${2}")
+    $raw = [regex]::Replace($raw, '(?m)(<FileVersion>)[^<]*(</FileVersion>)', "`${1}$fileVer`${2}")
+    $raw = [regex]::Replace($raw, '(?m)(<InformationalVersion>)[^<]*(</InformationalVersion>)', "`${1}$NewVersion`${2}")
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($CsprojPath, $raw, $utf8)
+}
+
+function Bump-PatchVersion([string]$Version) {
+    if ($Version -notmatch '^(\d+)\.(\d+)\.(\d+)(.*)$') {
+        throw "Unsupported version format: $Version (expect major.minor.patch)"
+    }
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    $patch = [int]$Matches[3] + 1
+    $suffix = $Matches[4]
+    return "{0}.{1}.{2}{3}" -f $major, $minor, $patch, $suffix
+}
+
+if (-not $NoBumpVersion) {
+    $oldVer = Get-ProjectVersion $proj
+    $newVer = Bump-PatchVersion $oldVer
+    Set-ProjectVersion -CsprojPath $proj -NewVersion $newVer
+    Write-Host ("Version bumped: {0} → {1}" -f $oldVer, $newVer)
+}
+else {
+    Write-Host ("Version unchanged: {0}" -f (Get-ProjectVersion $proj))
+}
 
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
@@ -190,4 +231,5 @@ Remove-Item -LiteralPath $obfOut -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\obfuscar.generated.xml") -Force -ErrorAction SilentlyContinue
 
 $exe = Get-Item -LiteralPath $destExe
-Write-Host ("Published: {0} ({1} bytes) [light obfuscation]" -f $exe.FullName, $exe.Length)
+$ver = Get-ProjectVersion $proj
+Write-Host ("Published: {0} ({1} bytes) v{2} [light obfuscation]" -f $exe.FullName, $exe.Length, $ver)

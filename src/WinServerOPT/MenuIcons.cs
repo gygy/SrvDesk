@@ -413,17 +413,6 @@ internal static class MenuIcons
         g.FillRectangle(gr, 4, 12, 8, 1);
     }
 
-    private static void DrawShield(Graphics g)
-    {
-        using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
-        var pts = new[]
-        {
-            new Point(8, 1), new Point(14, 4), new Point(14, 9),
-            new Point(8, 15), new Point(2, 9), new Point(2, 4),
-        };
-        g.FillPolygon(b, pts);
-    }
-
     private static void DrawPrompt(Graphics g, Color? accent = null)
     {
         using var b = new SolidBrush(Color.FromArgb(30, 30, 30));
@@ -475,14 +464,6 @@ internal static class MenuIcons
         g.FillRectangle(b, 1, 2, 14, 10);
         using var t = new SolidBrush(Color.FromArgb(70, 70, 70));
         g.FillRectangle(t, 5, 12, 6, 2);
-    }
-
-    private static void DrawGear(Graphics g)
-    {
-        using var b = new SolidBrush(Color.FromArgb(90, 90, 90));
-        g.FillEllipse(b, 3, 3, 10, 10);
-        using var hole = new SolidBrush(Color.White);
-        g.FillEllipse(hole, 6, 6, 4, 4);
     }
 
     private static void DrawWin(Graphics g)

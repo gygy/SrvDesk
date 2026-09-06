@@ -19,6 +19,15 @@ internal sealed class CommonSoftwareItem
     /// <summary>为 true 时先尝试 EXE 离线包（无 Appx 旁加载时）。</summary>
     public bool PreferOfflineInstall { get; set; }
 
+    /// <summary>Windows Server 上优先离线包；非 Server 优先 winget。</summary>
+    public bool PreferOfflineOnServer { get; set; }
+
+    /// <summary>离线包为便携 EXE（非安装程序）：下载到本机工具目录并加入用户 PATH。</summary>
+    public bool OfflinePortable { get; set; }
+
+    /// <summary>通过可执行文件名检测是否已安装（如 codex.exe）。</summary>
+    public string[] DetectExeNames { get; set; } = [];
+
     /// <summary>用户自定义项（来自 AppData，可用 winget 安装）。</summary>
     public bool IsCustom { get; set; }
 
@@ -56,8 +65,29 @@ internal static class CommonSoftwareCatalog
         Item("everything", "Everything极速文件搜索", "必备", "voidtools.Everything",
             ["Everything"], "https://www.voidtools.com/downloads/", essential: true),
 
+        Item("git", "Git For Windows", "开发", "Git.Git",
+            ["Git"], "https://git-scm.com/download/win", essential: false),
+        Item("notepadpp", "Notepad++", "开发", "Notepad++.Notepad++",
+            ["Notepad++"], "https://notepad-plus-plus.org/downloads/", essential: false),
+        Item("tortoisegit", "TortoiseGit简体中文版", "开发", "TortoiseGit.TortoiseGit",
+            ["TortoiseGit"], "https://tortoisegit.org/download/", essential: false),
+        Item("codex", "OpenAI Codex CLI", "开发", "OpenAI.Codex",
+            ["Codex", "OpenAI Codex"],
+            "https://github.com/openai/codex/releases",
+            essential: false,
+            offlineInstallerUrl: "https://github.com/openai/codex/releases/latest/download/codex-x86_64-pc-windows-msvc.exe",
+            preferOfflineOnServer: true,
+            offlinePortable: true,
+            detectExeNames: ["codex.exe"]),
+
         Item("geek", "Geek Uninstaller（深度卸载）", "工具", "GeekUninstaller.GeekUninstaller",
             ["Geek Uninstaller", "Geek"], "https://geekuninstaller.com/download", essential: false),
+        Item("neatdm", "Neat Download Manager", "工具", "JavadMotallebi.NeatDownloadManager",
+            ["Neat Download Manager", "NeatDM", "Neat DownloadManager"],
+            "https://www.neatdownloadmanager.com/",
+            essential: false,
+            offlineInstallerUrl: "https://www.neatdownloadmanager.com/file/NeatDM_setup.exe",
+            offlineInstallArgs: "/VERYSILENT /NORESTART"),
         Item("pdfgear", "PDFgear（免费 PDF 编辑）", "工具", "PDFgear.PDFgear",
             ["PDFgear", "PDF gear"], "https://www.pdfgear.com/download.htm", essential: false),
         Item("stirling-pdf", "Stirling-PDF（本地 PDF 工具箱）", "工具", "StirlingTools.StirlingPDF",
