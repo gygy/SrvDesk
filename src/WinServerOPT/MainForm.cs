@@ -222,7 +222,7 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
-        "登录启动项", "DNS 设置",
+        "登录启动项", "DNS 设置", "自定义配置",
     ];
 
     private static readonly string[] MenuItems =
@@ -237,6 +237,7 @@ internal sealed class MainForm : Form
         "登录启动项",
         "电源与服务",
         "DNS 设置",
+        "自定义配置",
     ];
 
     private SettingRow[] AllRows =>
@@ -802,7 +803,7 @@ internal sealed class MainForm : Form
     {
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
-        var titles = new[] { "登录启动项", "DNS 设置" };
+        var titles = new[] { "登录启动项", "DNS 设置", "自定义配置" };
         var i = 0;
         var timer = new System.Windows.Forms.Timer { Interval = 40 };
         timer.Tick += (_, _) =>
@@ -822,6 +823,7 @@ internal sealed class MainForm : Form
                 {
                     "登录启动项" => new StartupManagerDialog(),
                     "DNS 设置" => new DnsSwitcherDialog(),
+                    "自定义配置" => new CustomConfigDialog(),
                     _ => throw new InvalidOperationException(title),
                 };
                 page.TopLevel = false;
@@ -1420,6 +1422,7 @@ internal sealed class MainForm : Form
                 {
                     "登录启动项" => new StartupManagerDialog(),
                     "DNS 设置" => new DnsSwitcherDialog(),
+                    "自定义配置" => new CustomConfigDialog(),
                     _ => throw new InvalidOperationException(title),
                 };
                 page.TopLevel = false;
