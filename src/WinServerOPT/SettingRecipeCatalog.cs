@@ -479,11 +479,11 @@ internal static class SettingRecipeCatalog
             ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\StickyKeys"), ActionScript.Sz("Flags", "510"))));
         Add(SettingCatalog.DisablePca, ActionScript.Service("PcaSvc", enableMeansStart: false));
         Add(SettingCatalog.PauseFeatureUpdatesUntil2035, ActionScript.Reg(
-            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"),
                 ActionScript.Dword("PauseFeatureUpdates", 1),
                 ActionScript.Dword("PauseFeatureUpdatesStartTime", (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
                 ActionScript.Dword("PauseFeatureUpdatesEndTime", 2051222400)),
-            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"),
                 ActionScript.DeleteValue("PauseFeatureUpdates"),
                 ActionScript.DeleteValue("PauseFeatureUpdatesStartTime"),
                 ActionScript.DeleteValue("PauseFeatureUpdatesEndTime")),
