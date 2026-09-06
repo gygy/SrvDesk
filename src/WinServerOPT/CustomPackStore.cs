@@ -361,6 +361,134 @@ internal static class CustomPackStore
         }
     }
 
+    /// <summary>导出全部自定义方案（含脚本正文），供配置备份。</summary>
+    public static List<CustomPackExport> ExportAll(out string? lastPackId)
+    {
+        lock (Gate)
+        {
+            var index = LoadIndexUnlocked();
+            lastPackId = index.LastPackId;
+            var list = new List<CustomPackExport>();
+            foreach (var summary in index.Packs)
+            {
+                var pack = LoadPackUnlocked(summary.Id);
+                if (pack is null) continue;
+                var export = new CustomPackExport
+                {
+                    Id = pack.Id,
+                    Name = pack.Name,
+                    Items = [],
+                };
+                foreach (var item in pack.Items)
+                {
+                    export.Items.Add(new CustomPackItemExport
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        FileName = item.FileName,
+                        Kind = item.Kind,
+                        Enabled = item.Enabled,
+                        Content = ReadContentUnlocked(pack.Id, item),
+                    });
+                }
+                list.Add(export);
+            }
+            return list;
+        }
+    }
+
+    /// <summary>用导入内容整体替换本机自定义方案。</summary>
+    public static void ReplaceAll(IReadOnlyList<CustomPackExport> packs, string? lastPackId)
+    {
+        lock (Gate)
+        {
+            EnsureRoot();
+            // 清空旧方案目录
+            foreach (var dir in Directory.Exists(RootDir)
+                         ? Directory.GetDirectories(RootDir)
+                         : [])
+            {
+                try { Directory.Delete(dir, recursive: true); }
+                catch { /* ignore */ }
+            }
+
+            var index = new CustomPackIndex { Packs = [], LastPackId = null };
+            foreach (var src in packs ?? Array.Empty<CustomPackExport>())
+            {
+                if (string.IsNullOrWhiteSpace(src.Id)) continue;
+                var pack = new CustomPackDetail
+                {
+                    Id = src.Id.Trim(),
+                    Name = string.IsNullOrWhiteSpace(src.Name) ? "未命名方案" : src.Name.Trim(),
+                    Items = [],
+                };
+                Directory.CreateDirectory(FilesDir(pack.Id));
+                foreach (var srcItem in src.Items ?? [])
+                {
+                    var kind = NormalizeKind(srcItem.Kind);
+                    var itemId = string.IsNullOrWhiteSpace(srcItem.Id)
+                        ? Guid.NewGuid().ToString("N")
+                        : srcItem.Id.Trim();
+                    var fileName = string.IsNullOrWhiteSpace(srcItem.FileName)
+                        ? itemId + "." + ExtForKind(kind)
+                        : Path.GetFileName(srcItem.FileName);
+                    // 确保扩展名与类型一致
+                    fileName = Path.GetFileNameWithoutExtension(fileName) + "." + ExtForKind(kind);
+                    var content = NormalizeContent(srcItem.Content ?? "");
+                    var dest = Path.Combine(FilesDir(pack.Id), fileName);
+                    WriteItemFile(dest, kind, content);
+                    pack.Items.Add(new CustomPackItem
+                    {
+                        Id = itemId,
+                        Name = string.IsNullOrWhiteSpace(srcItem.Name) ? DefaultName(kind) : srcItem.Name.Trim(),
+                        FileName = fileName,
+                        Kind = kind,
+                        Enabled = srcItem.Enabled,
+                    });
+                }
+                WriteJson(PackJsonPath(pack.Id), pack);
+                index.Packs.Add(new CustomPackSummary
+                {
+                    Id = pack.Id,
+                    Name = pack.Name,
+                    UpdatedUtc = DateTime.UtcNow.ToString("o"),
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastPackId)
+                && index.Packs.Any(p => string.Equals(p.Id, lastPackId, StringComparison.OrdinalIgnoreCase)))
+                index.LastPackId = lastPackId;
+            else
+                index.LastPackId = index.Packs.FirstOrDefault()?.Id;
+
+            WriteJson(IndexPath, index);
+        }
+    }
+
+    private static CustomPackDetail? LoadPackUnlocked(string packId)
+    {
+        var path = PackJsonPath(packId);
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var pack = ReadJson<CustomPackDetail>(path);
+            if (pack is null) return null;
+            pack.Items ??= [];
+            return pack;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string ReadContentUnlocked(string packId, CustomPackItem item)
+    {
+        var path = ItemPath(packId, item);
+        if (!File.Exists(path)) return "";
+        return File.ReadAllText(path, Encoding.UTF8);
+    }
+
     private static CustomPackIndex LoadIndexUnlocked()
     {
         EnsureRoot();

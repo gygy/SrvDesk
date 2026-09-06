@@ -78,6 +78,35 @@ internal static class SettingScriptStore
     public static bool HasOverride(string itemTitle, bool enable) =>
         TryGet(itemTitle, enable, out _);
 
+    /// <summary>导出全部脚本覆盖（供配置备份）。</summary>
+    public static Dictionary<string, string> ExportAll()
+    {
+        lock (Gate)
+        {
+            var data = Load();
+            return new Dictionary<string, string>(data.Scripts, StringComparer.Ordinal);
+        }
+    }
+
+    /// <summary>用导入内容整体替换本机脚本覆盖。</summary>
+    public static void ReplaceAll(Dictionary<string, string> scripts)
+    {
+        lock (Gate)
+        {
+            var data = new StoreFile
+            {
+                Scripts = new Dictionary<string, string>(
+                    scripts ?? new Dictionary<string, string>(),
+                    StringComparer.Ordinal),
+            };
+            // 规范化换行
+            var keys = data.Scripts.Keys.ToList();
+            foreach (var key in keys)
+                data.Scripts[key] = Normalize(data.Scripts[key]);
+            Save(data);
+        }
+    }
+
     private static string Normalize(string script) =>
         (script ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", "\r\n").TrimEnd() + "\r\n";
 

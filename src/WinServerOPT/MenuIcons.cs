@@ -290,32 +290,28 @@ internal static class MenuIcons
         g.DrawLine(line, 5, 11, 9, 11);
     }
 
-    /// <summary>配置：经典齿轮，一眼可辨。</summary>
+    /// <summary>配置：简洁齿轮（4 齿，小尺寸不糊）。</summary>
     private static void DrawConfig(Graphics g)
     {
         var accent = Color.FromArgb(0, 120, 215);
-        var cx = 8f;
-        var cy = 8f;
-        // 外圈齿：6 个矩形齿
-        using (var tooth = new SolidBrush(accent))
+        const float cx = 8f;
+        const float cy = 8f;
+        using var tooth = new SolidBrush(accent);
+        // 4 齿，留白更大，16px 下更清晰
+        for (var i = 0; i < 4; i++)
         {
-            for (var i = 0; i < 6; i++)
-            {
-                var a = i * Math.PI / 3.0;
-                var dx = (float)(Math.Cos(a) * 5.2);
-                var dy = (float)(Math.Sin(a) * 5.2);
-                g.TranslateTransform(cx + dx, cy + dy);
-                g.RotateTransform((float)(a * 180 / Math.PI));
-                g.FillRectangle(tooth, -1.4f, -2.6f, 2.8f, 5.2f);
-                g.ResetTransform();
-            }
+            var a = i * Math.PI / 2.0;
+            var dx = (float)(Math.Cos(a) * 4.6);
+            var dy = (float)(Math.Sin(a) * 4.6);
+            g.TranslateTransform(cx + dx, cy + dy);
+            g.RotateTransform((float)(a * 180 / Math.PI));
+            g.FillRectangle(tooth, -1.6f, -2.2f, 3.2f, 4.4f);
+            g.ResetTransform();
         }
-        // 轮毂
         using (var hub = new SolidBrush(accent))
-            g.FillEllipse(hub, cx - 4.2f, cy - 4.2f, 8.4f, 8.4f);
-        // 中心孔
+            g.FillEllipse(hub, cx - 3.6f, cy - 3.6f, 7.2f, 7.2f);
         using (var hole = new SolidBrush(Color.White))
-            g.FillEllipse(hole, cx - 1.8f, cy - 1.8f, 3.6f, 3.6f);
+            g.FillEllipse(hole, cx - 1.6f, cy - 1.6f, 3.2f, 3.2f);
     }
 
     private static void DrawLog(Graphics g)

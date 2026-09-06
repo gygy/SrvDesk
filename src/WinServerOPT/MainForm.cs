@@ -930,10 +930,27 @@ internal sealed class MainForm : Form
             ForeColor = AppTheme.TextMain,
             Cursor = Cursors.Hand,
             TabStop = false,
+            TextAlign = ContentAlignment.MiddleCenter,
         };
         b.FlatAppearance.BorderColor = AppTheme.Border;
-        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-        b.MouseLeave += (_, _) => b.BackColor = Color.White;
+        b.FlatAppearance.BorderSize = 1;
+        // Flat + 雅黑默认常偏下：覆盖绘制，保证垂直居中
+        b.Paint += (_, e) =>
+        {
+            var g = e.Graphics;
+            g.Clear(b.BackColor);
+            using var border = new Pen(b.FlatAppearance.BorderColor);
+            g.DrawRectangle(border, 0, 0, b.Width - 1, b.Height - 1);
+            TextRenderer.DrawText(
+                g,
+                text,
+                b.Font,
+                b.ClientRectangle,
+                b.ForeColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        };
+        b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
+        b.MouseLeave += (_, _) => { b.BackColor = Color.White; b.Invalidate(); };
         b.Click += (_, _) => click();
         _toolTip.SetToolTip(b, tip);
         return b;
@@ -976,7 +993,7 @@ internal sealed class MainForm : Form
         try
         {
             ProfileStore.Save(dlg.FileName, CaptureState(), "用户导出");
-            _status.Text = "已导出配置：" + dlg.FileName;
+            _status.Text = "已导出全部配置（开关 + 脚本覆盖 + 自定义方案）：" + dlg.FileName;
             ApplyLog.Write("导出配置 " + dlg.FileName);
         }
         catch (Exception ex)
@@ -995,15 +1012,44 @@ internal sealed class MainForm : Form
         if (dlg.ShowDialog() != DialogResult.OK) return;
         try
         {
-            var state = ProfileStore.Load(dlg.FileName);
-            Bind(state);
-            _status.Text = "已导入配置到界面：" + dlg.FileName + "（点击「应用到系统」生效）";
-            ApplyLog.Write("导入配置 " + dlg.FileName);
+            var bundle = ProfileStore.LoadBundle(dlg.FileName);
+            var parts = new List<string>();
+            if (bundle.HasSettings)
+            {
+                Bind(bundle.State);
+                parts.Add("开关");
+            }
+            if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
+            {
+                var tip = "将写入本机保存的配置脚本覆盖与自定义方案，覆盖现有本地内容。是否继续？";
+                if (MessageBox.Show(this, tip, "导入配置",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                {
+                    if (parts.Count > 0)
+                        _status.Text = "已导入开关到界面（未导入脚本）：" + dlg.FileName;
+                    return;
+                }
+                ProfileStore.ApplyLocalData(bundle);
+                if (bundle.HasScriptOverrides) parts.Add("脚本覆盖");
+                if (bundle.HasCustomPacks) parts.Add("自定义方案");
+                RefreshAfterProfileImport();
+            }
+
+            _status.Text = "已导入" + string.Join("、", parts) + "：" + dlg.FileName
+                           + (bundle.HasSettings ? "（开关需点「应用到系统」生效）" : "");
+            ApplyLog.Write("导入配置 " + dlg.FileName + " [" + string.Join(",", parts) + "]");
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void RefreshAfterProfileImport()
+    {
+        if (_pageCache.TryGetValue("自定义配置", out var page) && page is IEmbeddedSettingsPage embedded)
+            embedded.RefreshFromSystem();
+        _helpDetail.ReloadScriptsIfShowing();
     }
 
     private void ConfigureAutologon()
@@ -2451,7 +2497,7 @@ internal sealed class MainForm : Form
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
             "操作日志：" + ApplyLog.LogFilePath + "\r\n" +
             "变更日志：" + ApplyLog.ChangeLogFilePath + "\r\n\r\n" +
-            "配置 JSON 可导入导出。\r\n" +
+            "配置 JSON 可导入导出（含开关、脚本覆盖、自定义方案）。\r\n" +
             $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
             AppBrand.AboutDialogTitle,
             MessageBoxButtons.OK,
