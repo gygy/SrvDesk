@@ -180,10 +180,9 @@ internal static class SettingRecipeCatalog
 
         Add(SettingCatalog.NoShortcutArrow, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"),
-                ActionScript.Sz("29", @"%LOCALAPPDATA%\WinOpt\blank.ico,0")),
-            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"),
-                ActionScript.DeleteValue("29")),
-            "需先有 blank.ico（软件会生成）；导入后请重启资源管理器。"));
+                ActionScript.Sz("29", @"%systemroot%\system32\imageres.dll,197")),
+            ActionScript.HkLmDelete(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons") + "\r\n",
+            "开启=写 imageres 透明图标；关闭=删除整个 Shell Icons 键（与恢复箭头.reg 一致）。导入后请重启资源管理器。"));
 
         Add(SettingCatalog.ExplorerFullPath, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "FullPath", 1, 0));
@@ -434,7 +433,7 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "NavPaneShowAllFolders", 1, 0));
         Add(SettingCatalog.RemoveAdminShield, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"),
-                ActionScript.Sz("77", @"%LOCALAPPDATA%\WinOpt\blank.ico,0")),
+                ActionScript.Sz("77", @"%systemroot%\system32\imageres.dll,197")),
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"),
                 ActionScript.DeleteValue("77")),
             "导入后重启资源管理器。"));

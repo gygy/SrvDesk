@@ -95,6 +95,8 @@ internal static class ActionScript
 
     public static string HkLm(string subKey) => @"[HKEY_LOCAL_MACHINE\" + subKey + "]";
     public static string HkCu(string subKey) => @"[HKEY_CURRENT_USER\" + subKey + "]";
+    public static string HkLmDelete(string subKey) => @"[-HKEY_LOCAL_MACHINE\" + subKey + "]";
+    public static string HkCuDelete(string subKey) => @"[-HKEY_CURRENT_USER\" + subKey + "]";
 
     public static string Dword(string name, int value) =>
         "\"" + EscapeRegName(name) + "\"=dword:" + ((uint)value).ToString("x8");

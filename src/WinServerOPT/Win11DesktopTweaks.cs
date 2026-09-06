@@ -8,6 +8,8 @@ internal static class Win11DesktopTweaks
 {
     private const string ExplorerAdvanced = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
     private const string ShellIcons = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons";
+    /// <summary>透明空图标（与常见「删除快捷方式箭头.reg」一致），避免自建 blank.ico 失效。</summary>
+    private const string BlankOverlayIcon = @"%systemroot%\system32\imageres.dll,197";
     private const string ClassicMenuClsid = @"Software\Classes\CLSID\{86ca1aa0-3389-4ff8-b098-4136676466e2}\InprocServer32";
     private const string StuckRects = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3";
 
@@ -136,7 +138,17 @@ internal static class Win11DesktopTweaks
 
     public static void SetShortcutArrowHidden(bool hide)
     {
-        SetShellIconBlank(29, hide);
+        if (hide)
+        {
+            // 对齐「删除快捷方式箭头.reg」
+            SetString(Hive.HkLm, ShellIcons, "29", BlankOverlayIcon);
+        }
+        else
+        {
+            // 对齐「恢复快捷方式箭头.reg」：删除整个 Shell Icons 键
+            DeleteKeyTree(Hive.HkLm, ShellIcons);
+        }
+
         DesktopQuickActions.RestartExplorer();
     }
 
@@ -168,7 +180,12 @@ internal static class Win11DesktopTweaks
     private static bool IsShellIconBlank(int index)
     {
         var val = GetValue(Hive.HkLm, ShellIcons, index.ToString()) as string;
-        if (string.IsNullOrEmpty(val)) return val is not null; // 旧的空字符串写法也算「已开启」
+        if (val is null) return false;
+        if (val.Length == 0) return true; // 旧空字符串写法
+        if (val.IndexOf("imageres.dll", StringComparison.OrdinalIgnoreCase) >= 0 &&
+            val.IndexOf(",197", StringComparison.Ordinal) >= 0)
+            return true;
+        // 兼容本工具旧版 blank.ico 方案
         return val.IndexOf("blank.ico", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
@@ -176,34 +193,12 @@ internal static class Win11DesktopTweaks
     {
         if (blank)
         {
-            // 勿写空字符串：部分系统会把桌面图标渲成空白
-            SetString(Hive.HkLm, ShellIcons, index.ToString(), EnsureBlankIconPath() + ",0");
+            // 对齐 Win11 常用优化：指向 imageres 透明图标，不要写空串或自建 ico
+            SetString(Hive.HkLm, ShellIcons, index.ToString(), BlankOverlayIcon);
         }
         else
             DeleteValue(Hive.HkLm, ShellIcons, index.ToString());
     }
-
-    private static string EnsureBlankIconPath()
-    {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt");
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, "blank.ico");
-        if (!File.Exists(path) || new FileInfo(path).Length < 16)
-            File.WriteAllBytes(path, BlankIcoBytes);
-        return path;
-    }
-
-    // 1×1 透明 ICO，用作快捷方式箭头/盾牌的空 overlay
-    private static readonly byte[] BlankIcoBytes =
-    [
-        0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00,
-        0x30, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00,
-        0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-
     private static bool IsShortcutSuffixOff()
     {
         using (var naming = Registry.CurrentUser.OpenSubKey(
@@ -447,6 +442,22 @@ internal static class Win11DesktopTweaks
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
         using var k = baseKey.OpenSubKey(key, true);
         k?.DeleteValue(name, throwOnMissingValue: false);
+    }
+
+    private static void DeleteKeyTree(Hive hive, string key)
+    {
+        ApplyLog.RegistryDelete(hive == Hive.HkLm ? "HKLM" : "HKCU", key, "(key)", "(tree)");
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
+        try
+        {
+            baseKey.DeleteSubKeyTree(key, throwOnMissingSubKey: false);
+        }
+        catch
+        {
+            /* 键不存在或无权限 */
+        }
     }
 }
 

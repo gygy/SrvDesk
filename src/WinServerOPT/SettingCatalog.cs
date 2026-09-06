@@ -307,10 +307,10 @@ internal static class SettingCatalog
 
     public static readonly SettingHelpInfo NoShortcutArrow = H(
         "桌面与资源管理器中快捷方式去掉小箭头 overlay。",
-        "Shell Icons 29 置空，隐藏快捷方式箭头。",
-        "桌面更整洁，与 macOS/部分美化习惯一致。",
-        "需区分快捷方式与原件时可关闭；纯美观需求可开启。",
-        "注销或重启资源管理器后生效。",
+        @"Shell Icons 29 = %systemroot%\system32\imageres.dll,197（透明图标）。",
+        "桌面更整洁；与常见「删除快捷方式箭头.reg」相同写法。",
+        "需区分快捷方式与原件时可关闭。",
+        "写入后会重启资源管理器；关闭时删除整个 Shell Icons 键（与「恢复快捷方式箭头.reg」一致）。",
         SettingScope.DesktopExperience);
 
     public static readonly SettingHelpInfo ExplorerFullPath = H(
@@ -621,7 +621,12 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo ShowCommonFolders = H(
         "导航窗格显示所有文件夹。", "NavPaneShowAllFolders=1。", "快速访问常用目录。", "个人桌面推荐。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo RemoveAdminShield = H(
-        "快捷方式不显示管理员盾牌图标。", "Shell Icons 77 置空。", "界面更简洁。", "仅影响图标显示，不降低权限。", "重启资源管理器后生效。", W10De);
+        "快捷方式不显示管理员盾牌图标。",
+        @"Shell Icons 77 = %systemroot%\system32\imageres.dll,197。",
+        "界面更简洁。",
+        "仅影响图标显示，不降低权限。",
+        "重启资源管理器后生效。",
+        W10De);
     public static readonly SettingHelpInfo NoShortcutSuffix = H(
         "新建快捷方式时不自动加「快捷方式」后缀。",
         "NamingTemplates\\ShortcutNameTemplate（已弃用会弄丢桌面图标的 Link 写法）。",
