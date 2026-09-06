@@ -1,28 +1,49 @@
 # SrvDesk — Windows Server Desktop Optimizer
 
-**SrvDesk** (Windows server优化助手) tunes Windows Server for daily desktop use: Explorer, RDP, DNS, startup, privacy, and performance — via instant toggles and batch presets.
+Local optimizer for **Windows Server as a daily desktop**: registry / services / policy / DISM. Instant pages + batch toggles.
 
-**Download:** [Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`  
-**Requirements:** Windows Server 2016+ (2022/2025 recommended), .NET Framework 4.8, **Run as Administrator**
-
-This public repo contains the **user guide** and **license** only. Get the compiled app from [Releases](https://github.com/gygy/SrvDesk/releases).
+**Version:** 1.0.13 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
 
 Full guide (中文, default): [README.md](README.md)
 
+## Requirements
+
+Windows Server 2016+ (2022/2025 recommended, Desktop Experience). Also works on Windows 10/11 (Server-only items hide). .NET Framework 4.8. **Run as Administrator.**
+
+This public repo has **docs + license only** (no source). Get the binary from Releases.
+
 ## Quick start
 
-1. Run `SrvDesk.exe` **as Administrator**
-2. **Preset → Server Desktop (recommended)** → load preset
-3. Click **Apply recommended** at the bottom
-4. Reboot if prompted (DISM / some services need a restart)
+1. Run `SrvDesk.exe` as Administrator  
+2. **Preset → Server Desktop (recommended)** → load  
+3. Review left-side groups; click **Apply recommended**  
+4. Reboot if prompted  
 
-## Features
+First launch shows a one-time notice. Details: **Help → Disclaimer / Privacy / License**.
 
-- **Instant pages:** Explorer, power & services, startup, DNS
-- **Batch groups:** performance, desktop, remote, privacy, components, accounts
-- **Presets:** server-desktop, security, remote-work, minimal
-- **JSON profiles** import/export, CLI, operation log
+Header shows **IPv4, CPU, memory**.
 
-License: [MIT](LICENSE) · [Disclaimer](DISCLAIMER.md) · [Privacy](PRIVACY.md)  
-In-app: **Help → 免责声明 / 隐私说明 / 许可证**  
-Issues: [github.com/gygy/SrvDesk/issues](https://github.com/gygy/SrvDesk/issues)
+## Sidebar
+
+**Instant (apply immediately):** Startup items · DNS · Custom packs  
+
+**Batch (need Apply):** Server-only · Account policy · Explorer · Desktop · Remote/network · Privacy/experience · Performance/security · Power/services  
+
+Privacy and performance groups are split into foldable sections by scenario.
+
+## Tools (highlights)
+
+Common software (includes **AI**: Codex CLI/Desktop, Pi Agent) · hosts · cleanup · Windows features · Edge · context menu · security center · restore defaults
+
+## CLI (admin)
+
+```text
+SrvDesk.exe --apply-preset server-desktop
+SrvDesk.exe --load-profile D:\profile.json
+SrvDesk.exe --export-profile D:\current.json
+```
+
+## License
+
+[MIT](LICENSE) · [Disclaimer](DISCLAIMER.md) · [Privacy](PRIVACY.md)  
+Issues: https://github.com/gygy/SrvDesk/issues
