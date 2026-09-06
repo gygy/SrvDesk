@@ -23,14 +23,14 @@ internal static class UiPrefs
         try
         {
             if (!File.Exists(FilePath))
-                return new UiPrefsData { ShowHelpPanel = false };
+                return new UiPrefsData { ShowHelpPanel = true };
             using var ms = new MemoryStream(Encoding.UTF8.GetBytes(File.ReadAllText(FilePath, Encoding.UTF8)));
             return new DataContractJsonSerializer(typeof(UiPrefsData)).ReadObject(ms) as UiPrefsData
-                   ?? new UiPrefsData { ShowHelpPanel = false };
+                   ?? new UiPrefsData { ShowHelpPanel = true };
         }
         catch
         {
-            return new UiPrefsData { ShowHelpPanel = false };
+            return new UiPrefsData { ShowHelpPanel = true };
         }
     }
 

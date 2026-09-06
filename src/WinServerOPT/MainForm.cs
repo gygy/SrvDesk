@@ -1288,7 +1288,19 @@ internal sealed class MainForm : Form
         _selectedRow?.SetSelected(false);
         _selectedRow = row;
         row.SetSelected(true);
+        // 选中项时自动打开帮助面板，避免「一键脚本」藏在默认关闭的右侧栏里
+        if (!_appMenu.ViewHelpPanel.Checked)
+            _appMenu.ViewHelpPanel.Checked = true;
         _helpDetail.ShowSetting(row.ItemText, row.Help);
+        _helpDetail.FocusRecipe();
+    }
+
+    private void ShowRecipeDialog(SettingRow row)
+    {
+        _selectedRow?.SetSelected(false);
+        _selectedRow = row;
+        row.SetSelected(true);
+        SettingRecipeDialog.ShowFor(this, row.ItemText, row.Help);
     }
 
     private void ShowHelpPlaceholder(string? groupTitle = null)
@@ -1466,7 +1478,7 @@ internal sealed class MainForm : Form
         for (var i = 0; i < rows.Length; i++)
         {
             var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
-            rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp);
+            rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp, ShowRecipeDialog);
         }
 
         void Toggle(object? _, EventArgs __)
@@ -2236,6 +2248,7 @@ internal sealed class MainForm : Form
         private readonly Label _item;
         private readonly Label _scope;
         private readonly Label _info;
+        private readonly LinkLabel _script;
         private readonly Label _level;
         private readonly Label _note;
         private readonly Label _system;
@@ -2279,6 +2292,18 @@ internal sealed class MainForm : Form
                 ForeColor = AppTheme.Primary,
                 Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
                 BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+            };
+            _script = new LinkLabel
+            {
+                Text = "脚本",
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                LinkColor = AppTheme.PrimaryDark,
+                ActiveLinkColor = AppTheme.Primary,
+                VisitedLinkColor = AppTheme.PrimaryDark,
+                BackColor = Color.Transparent,
+                Font = new Font("Microsoft YaHei UI", 8.25F),
                 Cursor = Cursors.Hand,
             };
             _level = new Label
@@ -2419,7 +2444,8 @@ internal sealed class MainForm : Form
             Color bg,
             int width,
             ToolTip toolTip,
-            Action<SettingRow> onSelectHelp)
+            Action<SettingRow> onSelectHelp,
+            Action<SettingRow> onShowRecipe)
         {
             var toggleX = SettingListLayout.ToggleX;
             var systemX = SettingListLayout.SystemX;
@@ -2427,6 +2453,7 @@ internal sealed class MainForm : Form
             var levelX = SettingListLayout.LevelX;
             var noteX = SettingListLayout.NoteX;
             var itemX = SettingListLayout.ItemX;
+            var scriptX = SettingListLayout.ScriptX;
 
             _normalBg = bg;
             var wrap = new BufferedPanel
@@ -2438,7 +2465,7 @@ internal sealed class MainForm : Form
             _wrap = wrap;
             _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
 
-            var textW = Math.Max(160, toggleX - itemX - SettingListLayout.TextToggleGap);
+            var textW = Math.Max(120, scriptX - itemX - 4);
             var hasScope = Help.Scope.HasBadge;
             if (hasScope)
             {
@@ -2450,6 +2477,7 @@ internal sealed class MainForm : Form
                 _item.SetBounds(itemX, 0, textW, h);
             }
 
+            _script.SetBounds(scriptX, (h - 20) / 2, SettingListLayout.ScriptW, 20);
             _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
@@ -2463,7 +2491,8 @@ internal sealed class MainForm : Form
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
-            toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
+            toolTip.SetToolTip(_info, "点击查看详细说明与一键脚本\r\n" + tip);
+            toolTip.SetToolTip(_script, "查看本项开启/关闭对应的注册表或脚本（可复制、另存为）");
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
@@ -2478,6 +2507,7 @@ internal sealed class MainForm : Form
             _level.Click += Select;
             _note.Click += Select;
             if (hasScope) _scope.Click += Select;
+            _script.LinkClicked += (_, _) => onShowRecipe(this);
 
             wrap.Controls.Add(_current);
             wrap.Controls.Add(_system);
@@ -2486,6 +2516,7 @@ internal sealed class MainForm : Form
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
+            wrap.Controls.Add(_script);
             wrap.Controls.Add(_toggle);
             _toggle.BringToFront();
             wrap.Controls.Add(new Panel

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Configuration = "Release"
 )
 
@@ -11,34 +11,41 @@ $dist = Join-Path $repo "dist"
 
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
-# 每次发布前删除 dist 内全部旧产物（含历史时间戳 exe）
-function Clear-DistArtifacts {
-    param([string]$Dir)
-    $removed = 0
-    $locked = @()
-    Get-ChildItem -LiteralPath $Dir -Force -ErrorAction SilentlyContinue |
-        Where-Object { -not $_.PSIsContainer } |
-        ForEach-Object {
-            try {
-                Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop
-                $removed++
-            }
-            catch {
-                $locked += $_.Name
-            }
+# Stop processes running from dist so old EXEs can be deleted
+Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
+    $proc = $_
+    try {
+        $p = $proc.Path
+        if ($p -and $p.StartsWith($dist, [StringComparison]::OrdinalIgnoreCase)) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+            Write-Host ("Stopped process: {0} ({1})" -f $proc.ProcessName, $proc.Id)
         }
-    return @{ Removed = $removed; Locked = $locked }
+    }
+    catch { }
 }
+Start-Sleep -Milliseconds 400
 
-$clear = Clear-DistArtifacts -Dir $dist
-Write-Host "已清理 dist 旧文件: $($clear.Removed) 个"
-if ($clear.Locked.Count -gt 0) {
-    Write-Warning ("以下文件被占用未能删除: " + ($clear.Locked -join ", "))
+# Always clear previous dist artifacts before publish
+$removed = 0
+$locked = New-Object System.Collections.Generic.List[string]
+Get-ChildItem -LiteralPath $dist -Force -ErrorAction SilentlyContinue |
+    Where-Object { -not $_.PSIsContainer } |
+    ForEach-Object {
+        try {
+            Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop
+            $removed++
+        }
+        catch {
+            [void]$locked.Add($_.Name)
+        }
+    }
+Write-Host ("Cleared old dist files: {0}" -f $removed)
+if ($locked.Count -gt 0) {
+    Write-Warning ("Locked (not deleted): " + ($locked -join ", "))
 }
 
 & $dotnet publish $proj -c $Configuration -o $dist
 if ($LASTEXITCODE -ne 0) {
-    # 主文件被占用时，发布到临时目录再拷贝为带时间戳的新 exe
     $stamp = Get-Date -Format "HHmmss"
     $tmp = Join-Path $repo ("dist-tmp-" + $stamp)
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
@@ -47,12 +54,14 @@ if ($LASTEXITCODE -ne 0) {
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         $built = Get-ChildItem -LiteralPath $tmp -Filter "*.exe" | Select-Object -First 1
         if ($null -eq $built) {
-            Write-Error "发布目录中未找到 exe"
+            Write-Error "No exe found in publish output"
             exit 1
         }
+        Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
         $target = Join-Path $dist ("SrvDesk-" + $stamp + ".exe")
         Copy-Item -LiteralPath $built.FullName -Destination $target -Force
-        Write-Host "dist\SrvDesk.exe 被占用，已输出: $target ($($built.Length) bytes)"
+        Write-Host ("SrvDesk.exe locked; wrote: {0} ({1} bytes)" -f $target, $built.Length)
         exit 0
     }
     finally {
@@ -62,17 +71,16 @@ if ($LASTEXITCODE -ne 0) {
 
 Get-ChildItem -LiteralPath $dist -Filter "*.config" -ErrorAction SilentlyContinue | Remove-Item -Force
 Get-ChildItem -LiteralPath $dist -Filter "*.pdb" -ErrorAction SilentlyContinue | Remove-Item -Force
-
-# 再次清理：只保留本次 SrvDesk.exe（去掉误留的时间戳副本）
-Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
 
 $exe = Get-ChildItem -LiteralPath $dist -Filter "SrvDesk.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($null -eq $exe) {
     $exe = Get-ChildItem -LiteralPath $dist -Filter "*.exe" | Select-Object -First 1
 }
 if ($null -eq $exe) {
-    Write-Error "dist 目录中未找到 exe 文件"
+    Write-Error "No exe found in dist"
     exit 1
 }
 
-Write-Host "已发布: $($exe.FullName) ($($exe.Length) bytes)"
+Write-Host ("Published: {0} ({1} bytes)" -f $exe.FullName, $exe.Length)
