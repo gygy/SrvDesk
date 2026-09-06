@@ -437,6 +437,7 @@ internal sealed class MainForm : Form
         _menu.SelectedIndex = 0;
         ShowHelpPlaceholder();
         Load += (_, _) => InitializeRuntime();
+        Shown += (_, _) => TryShowFirstRunNotice();
         FormClosed += (_, _) =>
         {
             ClearPageCache();
@@ -444,6 +445,22 @@ internal sealed class MainForm : Form
         };
         Resize += (_, _) => LayoutContent();
         KeyDown += OnFormKeyDown;
+    }
+
+    private void TryShowFirstRunNotice()
+    {
+        if (!FirstRunNotice.NeedShow())
+            return;
+
+        // 等主窗体先画出来，避免抢焦点造成卡顿感
+        BeginInvoke(new Action(() =>
+        {
+            if (IsDisposed || !FirstRunNotice.NeedShow())
+                return;
+            using (var dlg = new FirstRunNoticeDialog())
+                dlg.ShowDialog(this);
+            FirstRunNotice.MarkDone();
+        }));
     }
 
     private void WireAppMenu()
