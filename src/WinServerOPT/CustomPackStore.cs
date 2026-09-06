@@ -24,6 +24,9 @@ internal sealed class CustomPackSummary
     [DataMember] public string Id { get; set; } = "";
     [DataMember] public string Name { get; set; } = "";
     [DataMember] public string UpdatedUtc { get; set; } = "";
+
+    public override string ToString() =>
+        string.IsNullOrWhiteSpace(Name) ? "(未命名)" : Name;
 }
 
 [DataContract]

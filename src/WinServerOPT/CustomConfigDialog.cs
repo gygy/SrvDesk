@@ -3,10 +3,12 @@
 /// <summary>自定义配置：多方案；项内容在界面粘贴/编辑并保存，不依赖外部文件路径。</summary>
 internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 {
-    private readonly ListBox _packs = new();
+    private readonly ComboBox _packs = new();
     private readonly ListView _items = new();
-    private readonly Label _packTitle = new();
     private readonly ToolTip _tip = new();
+    private readonly Button _btnNewPack;
+    private readonly Button _btnRenamePack;
+    private readonly Button _btnDeletePack;
 
     private CustomPackIndex _index = new();
     private CustomPackDetail? _current;
@@ -24,20 +26,22 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ForeColor = AppTheme.TextMain;
         KeyPreview = true;
 
-        var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface };
-        var sidebar = BuildPackSidebar();
-        sidebar.Dock = DockStyle.Left;
+        _btnNewPack = CompactBtn("新建", "新建方案", NewPack);
+        _btnRenamePack = CompactBtn("重命名", "重命名当前方案", RenamePack);
+        _btnDeletePack = CompactBtn("删除", "删除当前方案", DeletePack);
 
-        var main = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 10, 12, 8) };
+        var body = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(12, 10, 12, 8),
+        };
+
+        var top = BuildTopBar();
+        top.Dock = DockStyle.Top;
+
         var tools = BuildItemTools();
         tools.Dock = DockStyle.Top;
-
-        _packTitle.Dock = DockStyle.Top;
-        _packTitle.Height = 28;
-        _packTitle.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
-        _packTitle.ForeColor = AppTheme.PrimaryDeep;
-        _packTitle.Text = "选择或新建方案";
-        _packTitle.Padding = new Padding(0, 0, 0, 4);
 
         _items.View = View.Details;
         _items.FullRowSelect = true;
@@ -57,12 +61,10 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         _items.DoubleClick += (_, _) => EditSelected();
         _items.KeyDown += OnItemsKeyDown;
 
-        main.Controls.Add(_items);
-        main.Controls.Add(tools);
-        main.Controls.Add(_packTitle);
-
-        body.Controls.Add(main);
-        body.Controls.Add(sidebar);
+        // 先加列表再加工具栏/顶栏（后加的 Top 在上）
+        body.Controls.Add(_items);
+        body.Controls.Add(tools);
+        body.Controls.Add(top);
 
         ThemedSettingsChrome.MountEmbedded(
             this,
@@ -90,51 +92,32 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ReloadPackList(selectId: _index.LastPackId);
     }
 
-    private Panel BuildPackSidebar()
+    private Panel BuildTopBar()
     {
-        var side = new Panel
-        {
-            Width = 200,
-            BackColor = AppTheme.NavBg,
-            Padding = new Padding(8, 10, 8, 10),
-        };
+        var bar = new Panel { Height = 40, BackColor = AppTheme.Surface };
 
-        var title = new Label
+        var label = new Label
         {
             Text = "方案",
-            Dock = DockStyle.Top,
-            Height = 24,
-            ForeColor = AppTheme.TextMute,
-            Font = new Font("Microsoft YaHei UI", 8.5F),
+            Location = new Point(0, 10),
+            AutoSize = true,
+            ForeColor = AppTheme.TextHeader,
         };
 
-        var packTools = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 108,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            BackColor = AppTheme.NavBg,
-            Padding = new Padding(0, 8, 0, 0),
-        };
-        packTools.Controls.Add(SideButton("新建方案", NewPack));
-        packTools.Controls.Add(SideButton("重命名", RenamePack));
-        packTools.Controls.Add(SideButton("删除方案", DeletePack));
-
-        _packs.Dock = DockStyle.Fill;
-        _packs.BorderStyle = BorderStyle.None;
-        _packs.BackColor = AppTheme.NavBg;
-        _packs.ForeColor = AppTheme.TextMain;
-        _packs.IntegralHeight = false;
-        _packs.ItemHeight = 36;
-        _packs.DrawMode = DrawMode.OwnerDrawFixed;
-        _packs.DrawItem += DrawPackItem;
+        _packs.DropDownStyle = ComboBoxStyle.DropDownList;
+        _packs.SetBounds(40, 6, 220, 26);
         _packs.SelectedIndexChanged += (_, _) => OnPackSelected();
 
-        side.Controls.Add(_packs);
-        side.Controls.Add(packTools);
-        side.Controls.Add(title);
-        return side;
+        _btnNewPack.Location = new Point(272, 5);
+        _btnRenamePack.Location = new Point(272 + _btnNewPack.Width + 6, 5);
+        _btnDeletePack.Location = new Point(_btnRenamePack.Right + 6, 5);
+
+        bar.Controls.Add(label);
+        bar.Controls.Add(_packs);
+        bar.Controls.Add(_btnNewPack);
+        bar.Controls.Add(_btnRenamePack);
+        bar.Controls.Add(_btnDeletePack);
+        return bar;
     }
 
     private FlowLayoutPanel BuildItemTools()
@@ -156,13 +139,14 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         return tools;
     }
 
-    private Button SideButton(string text, Action click)
+    private Button CompactBtn(string text, string tip, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Width = 176;
         b.Height = 28;
-        b.Margin = new Padding(0, 0, 0, 6);
+        b.AutoSize = true;
+        b.MinimumSize = new Size(64, 28);
         b.Click += (_, _) => click();
+        _tip.SetToolTip(b, tip);
         return b;
     }
 
@@ -185,10 +169,12 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             foreach (var p in _index.Packs.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase))
                 _packs.Items.Add(p);
 
+            _btnRenamePack.Enabled = _packs.Items.Count > 0;
+            _btnDeletePack.Enabled = _packs.Items.Count > 0;
+
             if (_packs.Items.Count == 0)
             {
                 _current = null;
-                _packTitle.Text = "还没有方案 — 点左侧「新建方案」开始";
                 _items.Items.Clear();
                 return;
             }
@@ -227,7 +213,6 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 
         _current = CustomPackStore.LoadPack(summary.Id);
         CustomPackStore.SetLastPackId(summary.Id);
-        _packTitle.Text = _current?.Name ?? summary.Name;
         ReloadItems();
     }
 
@@ -550,30 +535,6 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         _items.Columns[0].Width = Math.Max(180, w - 340);
         _items.Columns[1].Width = 120;
         _items.Columns[2].Width = 200;
-    }
-
-    private void DrawPackItem(object? sender, DrawItemEventArgs e)
-    {
-        if (e.Index < 0) return;
-        e.DrawBackground();
-        var selected = (e.State & DrawItemState.Selected) != 0;
-        var bg = selected ? AppTheme.PrimaryPale : AppTheme.NavBg;
-        using (var b = new SolidBrush(bg))
-            e.Graphics.FillRectangle(b, e.Bounds);
-        if (selected)
-        {
-            using var pen = new Pen(AppTheme.Primary);
-            e.Graphics.DrawRectangle(pen, e.Bounds.X, e.Bounds.Y, e.Bounds.Width - 1, e.Bounds.Height - 1);
-        }
-
-        var text = _packs.Items[e.Index] is CustomPackSummary s ? s.Name : _packs.Items[e.Index]?.ToString() ?? "";
-        TextRenderer.DrawText(
-            e.Graphics,
-            text,
-            Font,
-            new Rectangle(e.Bounds.X + 10, e.Bounds.Y, e.Bounds.Width - 14, e.Bounds.Height),
-            AppTheme.TextMain,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
     }
 
     private static string? TryClipboardText()
