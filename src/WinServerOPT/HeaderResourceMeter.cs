@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace WinOpt;
 
-/// <summary>顶栏右侧：CPU / 内存 / 系统盘占用（纯文字）。</summary>
+/// <summary>顶栏右侧：本机 IP · CPU / 内存 / 系统盘占用（纯文字）。</summary>
 internal sealed class HeaderResourceMeter : Panel
 {
     private readonly Label _text = new()
@@ -22,10 +24,13 @@ internal sealed class HeaderResourceMeter : Panel
     private readonly string _systemDrive;
     private ToolTip? _toolTip;
     private bool _disposed;
+    private string _ipText = "…";
+    private string _ipTip = "";
+    private int _ipRefreshCountdown;
 
     public HeaderResourceMeter()
     {
-        Width = 360;
+        Width = 520;
         Height = 48;
         BackColor = Color.Transparent;
         DoubleBuffered = true;
@@ -37,6 +42,7 @@ internal sealed class HeaderResourceMeter : Panel
         HandleCreated += (_, _) =>
         {
             TryCreateCpuCounter();
+            RefreshIp(force: true);
             RefreshValues();
             _timer.Start();
         };
@@ -60,6 +66,9 @@ internal sealed class HeaderResourceMeter : Panel
     private void RefreshValues()
     {
         if (_disposed || !IsHandleCreated) return;
+
+        if (--_ipRefreshCountdown <= 0)
+            RefreshIp(force: false);
 
         float cpu = 0;
         if (_cpu is not null)
@@ -88,17 +97,71 @@ internal sealed class HeaderResourceMeter : Panel
             ? Math.Max(0, Math.Min(100, (int)Math.Round(freeGbMem * 100 / totalGb)))
             : Math.Max(0, 100 - (int)memLoad);
 
-        // 与磁盘一致：显示剩余率 / 剩余量
+        // IP 在 CPU/内存左侧
         _text.Text =
-            $"CPU 剩{cpuFree:0}%    内存 剩{freeGbMem:0.0}G({memFreePct}%)    {_systemDrive} 剩{freeGb:0.#}G";
+            $"IP {_ipText}    CPU 剩{cpuFree:0}%    内存 剩{freeGbMem:0.0}G({memFreePct}%)    {_systemDrive} 剩{freeGb:0.#}G";
 
         var tip =
+            (_ipTip.Length > 0 ? _ipTip + "\r\n" : "") +
             $"CPU：占用 {cpu:0.0}% · 空闲 {cpuFree:0.0}%\r\n" +
             $"内存：剩余 {freeGbMem:0.00} GB（{memFreePct}%）· 已用 {usedGb:0.00} GB / 共 {totalGb:0.00} GB\r\n" +
             $"系统盘 {_systemDrive}：剩余 {freeGb:0.00} GB / 共 {diskTotalGb:0.00} GB（已用 {diskLoad:0}%）";
         _toolTip ??= new ToolTip { ShowAlways = true, AutoPopDelay = 8000 };
         _toolTip.SetToolTip(this, tip);
         _toolTip.SetToolTip(_text, tip);
+    }
+
+    private void RefreshIp(bool force)
+    {
+        _ipRefreshCountdown = 5; // 约每 5 秒刷新一次
+        try
+        {
+            var primary = "";
+            var lines = new List<string>();
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
+                    continue;
+
+                var ips = nic.GetIPProperties().UnicastAddresses
+                    .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                    .Select(a => a.Address.ToString())
+                    .Where(ip => !ip.StartsWith("169.254.", StringComparison.Ordinal))
+                    .ToList();
+                if (ips.Count == 0) continue;
+
+                lines.Add(nic.Name + "：" + string.Join(" / ", ips));
+                if (primary.Length == 0)
+                {
+                    // 优先以太网/无线；否则取第一张已连接网卡
+                    var prefer = nic.NetworkInterfaceType is NetworkInterfaceType.Ethernet
+                        or NetworkInterfaceType.Wireless80211
+                        or NetworkInterfaceType.GigabitEthernet;
+                    if (prefer || primary.Length == 0)
+                        primary = ips[0];
+                }
+            }
+
+            if (primary.Length == 0)
+            {
+                _ipText = "—";
+                _ipTip = "本机 IP：未检测到可用 IPv4";
+            }
+            else
+            {
+                _ipText = primary;
+                _ipTip = "本机 IP（已连接）：\r\n" + string.Join("\r\n", lines);
+            }
+        }
+        catch
+        {
+            if (force || _ipText == "…")
+            {
+                _ipText = "—";
+                _ipTip = "本机 IP：读取失败";
+            }
+        }
     }
 
     private static void GetMemory(out float loadPct, out double usedGb, out double totalGb, out double freeGb)

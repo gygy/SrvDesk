@@ -650,8 +650,9 @@ internal static class CommonSoftwareHelper
 
     private static bool SkipMsStoreRetry(CommonSoftwareItem item) =>
         item.PreferOfflineInstall
-        || item.PreferAppxSideload
-        || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer());
+        || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer())
+        // Appx 旁加载仅在 Server 上跳过 msstore，桌面仍可用商店源装 Codex Desktop 等
+        || (item.PreferAppxSideload && Optimizer.IsWindowsServer());
 
     /// <summary>离线安装入口：便携 EXE 或静默安装包。成功返回文案；失败返回 null。</summary>
     private static string? TryInstallOffline(

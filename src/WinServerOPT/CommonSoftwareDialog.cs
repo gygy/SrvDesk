@@ -20,7 +20,7 @@ internal sealed class CommonSoftwareDialog : Form
     private string? _busyItemId;
 
     private static readonly string[] Categories =
-        ["全部", "必备", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发", "自定义"];
+        ["全部", "必备", "AI", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发", "自定义"];
 
     public CommonSoftwareDialog()
     {
