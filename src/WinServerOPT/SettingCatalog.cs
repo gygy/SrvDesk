@@ -23,14 +23,14 @@ internal static class SettingCatalog
         "调整 Win32PrioritySeparation，使 CPU 调度偏向交互式程序而非后台服务。",
         "Server 当桌面用时减少卡顿；适合开发、办公、远程桌面日常操作。",
         "推荐开启。若机器纯跑后台服务且不需本地交互，可保持关闭。",
-        "立即生效，无需重启。",
+        "立即生效，不必重启。",
         SettingScope.DesktopExperience);
 
     public static readonly SettingHelpInfo Dep = H(
         "为旧版程序启用数据执行保护，降低特定内存攻击风险。",
         "开启 DEP 对未标记为可执行的内存页进行保护（Server 常见为 OptOut 策略）。",
         "提高兼容性环境下的基础安全防护，对多数桌面软件无感。",
-        "一般建议开启；若极个别老软件崩溃，可关闭后排查。",
+        "一般可开；若极个别老软件崩溃，可关闭后排查。",
         "立即生效。");
 
     public static readonly SettingHelpInfo DisableUac = H(
@@ -45,7 +45,7 @@ internal static class SettingCatalog
         "关闭 Server 默认的 IE 增强安全模式。",
         "取消 IE/旧版 Web 控件的 Enhanced Security Configuration 限制。",
         "本地浏览器、内网管理页、旧 OA 系统可正常访问，不必逐站加白名单。",
-        "个人桌面推荐开启；面向公网的生产 Server 请谨慎。",
+        "个人桌面可开；公网生产 Server 请谨慎。",
         "新开 IE/Edge IE 模式窗口后生效。",
         SettingScope.ServerExclusive,
         uiPlace: "服务器管理器→本地服务器→IE 增强安全配置",
@@ -55,7 +55,7 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo HighPerfPower = H(
         "切换为「高性能」电源计划，避免 CPU 降频。",
         "激活 GUID 为高性能的 powercfg 计划，减少节能节流。",
-        "提升响应速度与 sustained 性能，适合常开远程桌面或跑负载。",
+        "响应更快，适合常开远程桌面或跑负载。",
         "笔记本/需省电时可关闭恢复「平衡」；台式 Server 桌面建议开启。",
         "立即生效。",
         recommend: RecommendLevel.Strong);
@@ -63,7 +63,7 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisableTelemetry = H(
         "关闭 Windows 遥测与 DiagTrack 诊断服务。",
         "将 AllowTelemetry 设为 0 并禁用 Connected User Experiences 相关采集。",
-        "减少后台上传与磁盘/网络占用，提升隐私。",
+        "减少后台上传与磁盘/网络占用。",
         "个人/内网 Server 桌面推荐开启；需参与 Windows 诊断计划则关闭。",
         "立即生效；DiagTrack 服务停止后生效。",
         S2016,
@@ -241,7 +241,7 @@ internal static class SettingCatalog
         "显示已知文件类型的扩展名。",
         "HideFileExt 设为 0，显示 .txt .exe 等后缀。",
         "识别伪装恶意文件（如 virus.txt.exe），运维更安全。",
-        "强烈建议开启；无特殊理由不应隐藏扩展名。",
+        "建议显示扩展名；隐藏后难辨真实文件类型。",
         "立即生效。",
         SettingScope.DesktopExperience,
         recommend: RecommendLevel.Must);
@@ -424,7 +424,7 @@ internal static class SettingCatalog
         "登录时不自动打开服务器管理器。",
         "HKLM/HKCU\\…\\ServerManager\\DoNotOpenServerManagerAtLogon=1；策略 DoNotOpenAtLogon。",
         "进桌面不再自动弹出服务器管理器，需要时仍可手动打开。",
-        "Server 当桌面强烈建议开启。",
+        "Server 当桌面建议开。",
         "下次登录生效。",
         new SettingScope(serverOnly: true, minServer: "2012 R2+"),
         uiPlace: "服务器管理器→管理→服务器管理器属性",
@@ -435,7 +435,7 @@ internal static class SettingCatalog
         "不再弹出「立即尝试 Windows Admin Center 并 Azure Arc」推广窗。",
         "HKLM\\SOFTWARE\\Microsoft\\ServerManager\\DoNotPopWACConsoleAtSMLaunch=1。",
         "去掉开机/打开服务器管理器时的 WAC·Azure Arc 推广，管理器本身仍可用。",
-        "Server 2019/2022 桌面强烈建议开启。",
+        "Server 2019/2022 桌面建议开。",
         "立即生效（下次打开服务器管理器）。",
         new SettingScope(serverOnly: true, minServer: "2019+"),
         uiPlace: "开机弹窗「立即尝试 WAC 并 Azure Arc」",
@@ -647,7 +647,7 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisableRecommendedItems = H(
         "开始菜单不显示推荐项目。", "Start_ShowRecentRecommendations=0。", "减少开始菜单干扰。", "个人桌面推荐。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo DisableAdTracking = H(
-        "关闭广告标识符跟踪。", "AdvertisingInfo\\Enabled=0。", "提升隐私。", "推荐开启。", "立即生效。", W10De);
+        "关闭广告标识符跟踪。", "AdvertisingInfo\\Enabled=0。", "本机不再向广告标识符上报。", "推荐开启。", "立即生效。", W10De);
     public static readonly SettingHelpInfo DisableSearchHistory = H(
         "关闭 Windows 搜索历史记录。", "HistoryViewEnabled=0。", "减少本地搜索痕迹。", "推荐开启。", "立即生效。", W10De);
     public static readonly SettingHelpInfo DisableStickyKeys = H(

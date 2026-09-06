@@ -66,12 +66,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         _caption.Text = "帮助 · 即时设置";
         _title.Text = pageTitle;
-        _summary.Text = "本页开关修改后立即写入系统，无需点击底部「应用到系统」。";
+        _summary.Text = "本页开关切换后直接写入系统。";
         BuildSections([
             ("与分组页的关系", "登录启动项、DNS 等即时页适合单项微调；左侧其它分类为分组列表，改完后点「应用到系统」。"),
-            ("同步状态", "在其他地方修改系统后，可点本页底部「刷新」，或菜单「工具 → 刷新当前状态」。"),
+            ("同步状态", "在其他地方改过系统后，可点本页底部「刷新」，或菜单「工具 → 刷新当前状态」。"),
         ]);
-        _footer.Text = "RDP 端口 / 预取 / Search 等请从「工具 → 电源服务高级工具」打开";
+        _footer.Text = "RDP 端口 / 预取 / Search 等请从「工具 → 高级设置」打开";
     }
 
     public void ShowPlaceholder(string? groupTitle = null)
@@ -92,14 +92,14 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         _caption.Text = "帮助 · 使用说明";
         _title.Text = $"{AppBrand.ProductName} 使用说明";
-        _summary.Text = "面向 Windows Server 桌面化场景的一键注册表/服务/DISM 优化工具。";
+        _summary.Text = "用于 Windows Server 桌面化：改注册表、服务与 DISM。";
         BuildSections([
             ("工作流程", "1. 选择左侧分类 → 2. 勾选开关或从「预设」菜单载入方案 → 3. 点击「应用到系统」。"),
             ("列含义", "说明=对应哪里·何时建议；推荐值=五星（★★★★★必优化 / ★★★★☆强烈 / ★★★☆☆建议 / ★☆☆☆☆可选）；设置操作=开关。"),
             ("预设方案", "顶部「预设」菜单提供 Server 桌面、安全加固、远程办公、最小改动四套方案；载入后仍可微调。"),
             ("配置备份", "「文件」菜单可导入/导出 JSON 配置，便于多台机器复用或回滚界面状态。"),
             ("管理员", "必须以管理员身份运行，否则注册表、服务、DISM 操作可能失败。"),
-            ("生效", "多数项立即生效；DISM、大系统缓存、自动登录等需重启。详见各项「生效方式」。"),
+            ("生效", "多数项写入后即可用；DISM、大系统缓存、自动登录等需重启。详见各项「生效方式」。"),
             ("操作日志", "一般事件（启动、打开工具等）：%LocalAppData%\\WinOpt\\apply.log"),
             ("变更日志", "优化改动专用。每条写明「原来从 xx 变成 yy」、注册表位置与值名：%LocalAppData%\\WinOpt\\变更日志.log"),
         ]);
@@ -110,7 +110,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         _caption.Text = "帮助 · 标识图例";
         _title.Text = "适用范围标识";
-        _summary.Text = "每项名称下方彩色标签表示该优化在不同系统上的有效性。";
+        _summary.Text = "每项名称下方的彩色标签，标明该项在不同系统上是否有效。";
         BuildSections([
             ("Server 专属", "仅在 Windows Server 安装类型下有意义；客户端 Windows 上可能无效或不存在对应策略。"),
             ("需桌面体验", "Server Core（无桌面体验）无法应用；GUI Server 或 Win10/11 桌面可用。"),

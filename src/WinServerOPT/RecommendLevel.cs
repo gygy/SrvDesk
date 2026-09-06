@@ -56,9 +56,9 @@ internal static class RecommendLevelUi
     public static string Tip(RecommendLevel level) =>
         $"{Icon(level)} {Title(level)}（{StarsOn(level)}/5） · " + level switch
         {
-            RecommendLevel.Must => "Server 当桌面几乎必做，否则基础体验明显受限。",
-            RecommendLevel.Strong => "个人/内网桌面强烈建议开启，收益高、风险可控。",
-            RecommendLevel.Suggested => "多数场景值得开启，可按习惯取舍。",
+            RecommendLevel.Must => "Server 当桌面几乎必做，否则基础体验会明显变差。",
+            RecommendLevel.Strong => "个人/内网桌面建议开，改动面小、收益明确。",
+            RecommendLevel.Suggested => "多数场景可开，按习惯取舍即可。",
             _ => "按需开启；有兼容性、安全或业务依赖时请谨慎。",
         };
 

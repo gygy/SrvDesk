@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>电源与服务高级工具：RDP 端口、预取文件数、Windows Search（开关项已并入主列表）。</summary>
+/// <summary>高级设置：RDP 端口、预取文件数、Windows Search（开关项已并入主列表）。</summary>
 internal sealed class OtherSettingsDialog : Form
 {
     private readonly NumericUpDown _port = new();
@@ -8,7 +8,7 @@ internal sealed class OtherSettingsDialog : Form
 
     public OtherSettingsDialog()
     {
-        Text = "电源服务高级工具";
+        Text = "高级设置";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -23,10 +23,10 @@ internal sealed class OtherSettingsDialog : Form
 
         ThemedSettingsChrome.MountModal(
             this,
-            "电源服务高级工具",
+            "高级设置",
             "RDP 端口 · 预取 · Windows Search",
             body,
-            "开关类项请在左侧「电源与服务」列表中勾选后点「应用到系统」。");
+            "开关类项请在左侧「电源与服务」勾选后，点「应用到系统」。");
 
         Load += (_, _) =>
         {

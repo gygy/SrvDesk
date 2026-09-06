@@ -28,21 +28,21 @@ internal static class OptPresets
         {
             Id = "security",
             Title = "安全加固",
-            Description = "保留 UAC/NLA/密码复杂性，强化 SMB1、Remote Registry、遥测与远程管理关闭。",
+            Description = "保留 UAC、NLA 与密码复杂性；关闭 SMB1、Remote Registry、遥测与远程管理。",
             Build = SecurityHardened,
         },
         new()
         {
             Id = "remote-work",
             Title = "远程办公",
-            Description = "RDP 高帧率+GPU、高性能电源、动画关闭，适合长期远程桌面办公。",
+            Description = "RDP 高帧率与 GPU、高性能电源、关闭动画，适合长期远程桌面。",
             Build = RemoteWork,
         },
         new()
         {
             Id = "minimal",
             Title = "最小改动",
-            Description = "仅 Server 专属与账户便利项，尽量少动系统默认。",
+            Description = "只改 Server 专属与账户便利项，少动系统默认。",
             Build = Minimal,
         },
     };

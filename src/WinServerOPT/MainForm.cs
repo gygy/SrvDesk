@@ -581,7 +581,7 @@ internal sealed class MainForm : Form
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
-            _status.Text = "提示：当前进程未提升权限时，部分系统级项可能写入失败（失败项会显示在状态栏）。";
+            _status.Text = "提示：当前进程未提升权限，部分系统级项可能写入失败（失败项会显示在状态栏）。";
             _headerSubtitle.Text = _systemFacts.Summary;
         }
         else if (!_systemFacts.IsServer)
@@ -1323,7 +1323,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _status.Text = "此页修改立即生效，无需点击「应用到系统」。可用底部「刷新」。";
+        _status.Text = "此页修改直接写入系统。可用底部「刷新」。";
     }
 
     private void UpdateBottomActionEnablement(string? embeddedTitle = null)
@@ -1535,7 +1535,7 @@ internal sealed class MainForm : Form
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开=采用优化建议。即时页立即生效；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
+            ? "开=采用优化建议。即时页直接写入；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
             : "当前系统可能不是 Windows Server。";
         _status.Text = _defaultStatusText;
 
@@ -2195,13 +2195,13 @@ internal sealed class MainForm : Form
     {
         MessageBox.Show(
             $"{AppBrand.ProductName} v{AppBrand.VersionText}\r\n" +
-            "针对 Windows Server 2022/2025 个人桌面场景。\r\n\r\n" +
+            "用于 Windows Server 2022/2025 个人桌面。\r\n\r\n" +
             "系统：" + _systemFacts.Summary + "\r\n" +
             "计算机：" + ComputerIdentityHelper.Read().Summary + "\r\n" +
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
             "操作日志：" + ApplyLog.LogFilePath + "\r\n" +
             "变更日志：" + ApplyLog.ChangeLogFilePath + "\r\n\r\n" +
-            "预设方案对标 WinUtil；配置 JSON 导入导出。\r\n" +
+            "预设方案对标 WinUtil；配置 JSON 可导入导出。\r\n" +
             $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
             AppBrand.AboutDialogTitle,
             MessageBoxButtons.OK,

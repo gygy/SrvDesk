@@ -70,7 +70,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolCommonSoftware = new ToolStripMenuItem("常用软件...");
         ToolCleanup = new ToolStripMenuItem("垃圾清理...");
         ToolDesktopMaintenance = new ToolStripMenuItem("桌面维护...");
-        ToolPowerExtras = new ToolStripMenuItem("电源服务高级工具...");
+        ToolPowerExtras = new ToolStripMenuItem("高级设置...");
         ToolWindowsFeatures = new ToolStripMenuItem("可选功能 / Capabilities...");
         ToolContextMenu = new ToolStripMenuItem("右键菜单...");
         ToolQuick = new ToolStripMenuItem("快速工具...");
