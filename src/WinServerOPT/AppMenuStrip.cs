@@ -41,6 +41,8 @@ internal sealed class AppMenuStrip : MenuStrip
         ForeColor = AppTheme.TextMain;
         Renderer = new ToolStripProfessionalRenderer(new AppMenuColorTable());
         Padding = new Padding(4, 2, 0, 2);
+        ImageScalingSize = new Size(16, 16);
+        ShowItemToolTips = true;
 
         var file = new ToolStripMenuItem("文件(&F)");
         FileImport = new ToolStripMenuItem("导入配置(&O)...", null, null, Keys.Control | Keys.O);
@@ -56,32 +58,38 @@ internal sealed class AppMenuStrip : MenuStrip
         }
 
         var tools = new ToolStripMenuItem("工具(&T)");
-        ToolAutologon = new ToolStripMenuItem("Autologon 配置...");
-        ToolIdentity = new ToolStripMenuItem("计算机名 / 工作组...");
-        ToolSystemInfo = new ToolStripMenuItem("系统信息...");
-        ToolHosts = new ToolStripMenuItem("编辑 hosts...");
-        ToolEventViewer = new ToolStripMenuItem("事件查看器");
-        ToolGroupPolicy = new ToolStripMenuItem("组策略...");
-        ToolCmd = new ToolStripMenuItem("命令提示符");
-        ToolPowerShell = new ToolStripMenuItem("Windows PowerShell");
-        ToolTaskScheduler = new ToolStripMenuItem("计划任务");
-        ToolComputerMgmt = new ToolStripMenuItem("计算机管理");
-        ToolFlushDns = new ToolStripMenuItem("刷新 DNS 缓存");
-        ToolCommonSoftware = new ToolStripMenuItem("常用软件...");
-        ToolCleanup = new ToolStripMenuItem("垃圾清理...");
-        ToolDesktopMaintenance = new ToolStripMenuItem("桌面维护...");
-        ToolPowerExtras = new ToolStripMenuItem("高级设置...");
-        ToolWindowsFeatures = new ToolStripMenuItem("可选功能 / Capabilities...");
-        ToolContextMenu = new ToolStripMenuItem("右键菜单...");
-        ToolQuick = new ToolStripMenuItem("快速工具...");
-        ToolRefresh = new ToolStripMenuItem("刷新当前状态", null, null, Keys.F5);
-        ToolRestoreDefaults = new ToolStripMenuItem("恢复出厂默认...");
+        ToolAutologon = Item("Autologon 配置...", MenuIcons.Autologon);
+        ToolIdentity = Item("计算机名 / 工作组...", MenuIcons.Identity);
+        ToolSystemInfo = Item("系统信息...", MenuIcons.SystemInfo);
+        ToolHosts = Item("编辑 hosts...", MenuIcons.Hosts);
+        ToolFlushDns = Item("刷新 DNS 缓存", MenuIcons.FlushDns);
+        ToolEventViewer = Item("事件查看器", MenuIcons.EventViewer);
+        ToolGroupPolicy = Item("组策略...", MenuIcons.GroupPolicy);
+        ToolCmd = Item("命令提示符", MenuIcons.Cmd);
+        ToolPowerShell = Item("Windows PowerShell", MenuIcons.PowerShell);
+        ToolTaskScheduler = Item("计划任务", MenuIcons.TaskScheduler);
+        ToolComputerMgmt = Item("计算机管理", MenuIcons.ComputerMgmt);
+        ToolCommonSoftware = Item("常用软件...", MenuIcons.CommonSoftware);
+        ToolCleanup = Item("垃圾清理...", MenuIcons.Cleanup);
+        ToolDesktopMaintenance = Item("桌面维护...", MenuIcons.DesktopMaintenance);
+        ToolPowerExtras = Item("高级设置...", MenuIcons.Advanced);
+        ToolWindowsFeatures = Item("可选功能 / Capabilities...", MenuIcons.WindowsFeatures);
+        ToolContextMenu = Item("右键菜单...", MenuIcons.ContextMenu);
+        ToolQuick = Item("快速工具...", MenuIcons.Quick);
+        ToolRefresh = Item("刷新当前状态", MenuIcons.Refresh, Keys.F5);
+        ToolRestoreDefaults = Item("恢复出厂默认...", MenuIcons.Restore);
+
+        // 分组：本机身份 → 网络 → 系统管理 → 维护优化 → 状态
         tools.DropDownItems.AddRange([
-            ToolAutologon, ToolIdentity, ToolSystemInfo, ToolHosts,
+            ToolAutologon, ToolIdentity, ToolSystemInfo,
+            new ToolStripSeparator(),
+            ToolHosts, ToolFlushDns,
+            new ToolStripSeparator(),
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
-            ToolFlushDns, ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance, ToolPowerExtras,
-            ToolWindowsFeatures, ToolContextMenu,
-            new ToolStripSeparator(), ToolQuick, ToolRefresh, ToolRestoreDefaults
+            new ToolStripSeparator(),
+            ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolContextMenu,
+            new ToolStripSeparator(),
+            ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);
 
         var view = new ToolStripMenuItem("视图(&V)");
@@ -106,6 +114,15 @@ internal sealed class AppMenuStrip : MenuStrip
         ]);
 
         Items.AddRange([file, preset, tools, view, help]);
+    }
+
+    private static ToolStripMenuItem Item(string text, Image image, Keys shortcut = Keys.None)
+    {
+        var item = shortcut == Keys.None
+            ? new ToolStripMenuItem(text, image)
+            : new ToolStripMenuItem(text, image, null, shortcut);
+        item.ImageScaling = ToolStripItemImageScaling.None;
+        return item;
     }
 
     private sealed class AppMenuColorTable : ProfessionalColorTable

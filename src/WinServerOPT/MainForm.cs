@@ -162,6 +162,7 @@ internal sealed class MainForm : Form
     private readonly Panel _commandBar = new();
     private readonly Panel _workArea = new();
     private readonly Label _headerSubtitle = new();
+    private HeaderResourceMeter? _headerMeter;
     private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
     private readonly Panel _contentHost = new BufferedPanel(composited: true);
     private readonly Label _status = new();
@@ -1014,7 +1015,13 @@ internal sealed class MainForm : Form
         var logoImg = LoadLogo();
         if (logoImg is not null) logo.Image = logoImg;
 
-        // 蓝色顶栏只保留系统信息；产品名与版本在窗口标题栏显示
+        _headerMeter = new HeaderResourceMeter
+        {
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(header.Width - 352, 0),
+        };
+
+        // 蓝色顶栏左侧系统信息，右侧资源占用
         _headerSubtitle.AutoSize = false;
         _headerSubtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         _headerSubtitle.Location = new Point(54, 0);
@@ -1026,11 +1033,16 @@ internal sealed class MainForm : Form
         _headerSubtitle.Text = "Windows Server 桌面优化 · 菜单栏访问文件/工具/帮助";
 
         header.Controls.Add(_headerSubtitle);
+        header.Controls.Add(_headerMeter);
         header.Controls.Add(logo);
-        header.Resize += (_, _) =>
+        void LayoutHeader()
         {
-            _headerSubtitle.Width = Math.Max(200, header.Width - 68);
-        };
+            if (_headerMeter is null) return;
+            _headerMeter.Left = Math.Max(200, header.Width - _headerMeter.Width - 12);
+            _headerSubtitle.Width = Math.Max(120, _headerMeter.Left - _headerSubtitle.Left - 12);
+        }
+        header.Resize += (_, _) => LayoutHeader();
+        LayoutHeader();
         return header;
     }
 
