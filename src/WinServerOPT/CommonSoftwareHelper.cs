@@ -300,6 +300,11 @@ internal static class CommonSoftwareHelper
         if (path != "winget.exe" && !File.Exists(path))
             return false;
 
+        // 缺 VC 运行库时直接判定失败，避免弹出「找不到 VCRUNTIME140.dll」
+        if (!IsVcRuntime140Present())
+            return false;
+
+        var previousErrorMode = SetErrorMode(SemFailCriticalErrors | SemNoOpenFileErrorBox);
         try
         {
             var psi = new ProcessStartInfo
@@ -333,6 +338,61 @@ internal static class CommonSoftwareHelper
         {
             return false;
         }
+        finally
+        {
+            SetErrorMode(previousErrorMode);
+        }
+    }
+
+    private static bool IsVcRuntime140Present()
+    {
+        var sys = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        return File.Exists(Path.Combine(sys, "VCRUNTIME140.dll"));
+    }
+
+    /// <summary>安装 VC++ 2015-2022 x64（winget / 便携 winget 依赖 VCRUNTIME140.dll）。</summary>
+    private static string EnsureVcRedistX64(Action<SoftwareInstallProgress>? onProgress = null)
+    {
+        if (IsVcRuntime140Present())
+            return "";
+
+        Report(onProgress, "安装 Visual C++ 运行库（winget 依赖）…", 6);
+        Directory.CreateDirectory(DownloadDir);
+        var dest = Path.Combine(DownloadDir, "vc_redist.x64.exe");
+        try
+        {
+            DownloadFromMirrors(
+                dest,
+                minBytes: 5_000_000,
+                onProgress,
+                percentBase: 6,
+                percentSpan: 10,
+                requireZipMagic: false,
+                "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+                "https://aka.ms/vs/16/release/vc_redist.x64.exe");
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("VC++ 运行库下载失败：" + ex.Message);
+            return "VC++ 运行库下载失败：" + ShortNetError(ex) +
+                   "。请先安装 https://aka.ms/vs/17/release/vc_redist.x64.exe 后再试。";
+        }
+
+        Report(onProgress, "正在静默安装 VC++ 运行库…", 16);
+        var code = Run(dest, "/install /quiet /norestart", timeoutMs: 300_000);
+        // 0=成功；1638=已安装更高版本；3010=成功需重启
+        if (code is 0 or 1638 or 3010 || IsVcRuntime140Present())
+        {
+            ApplyLog.Write("已安装 VC++ x64 Redistributable，退出码 " + code);
+            // 给加载器一点时间刷新
+            System.Threading.Thread.Sleep(500);
+            return IsVcRuntime140Present()
+                ? "已安装 Visual C++ 2015-2022 x64 运行库。"
+                : "已执行 VC++ 安装（退出码 " + code + "），若仍缺 DLL 请重启后再试。";
+        }
+
+        ApplyLog.Write("VC++ 运行库安装失败，退出码 " + code);
+        return "VC++ 运行库安装退出码 " + code + "。";
     }
 
     private static Dictionary<string, CommonSoftwareStatus>? _statusCache;
@@ -948,6 +1008,16 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         ResetWingetDiscovery();
         var notes = new List<string>();
 
+        // winget.exe 依赖 VCRUNTIME140.dll；缺失时会连弹系统错误框
+        var vcNote = EnsureVcRedistX64(onProgress);
+        if (vcNote.Length > 0) notes.Add(vcNote);
+        ResetWingetDiscovery();
+        if (IsWingetAvailable())
+        {
+            Report(onProgress, "winget 已就绪", 100);
+            return FormatWingetReady(notes);
+        }
+
         if (IsAppInstallerPackagePresent())
         {
             Report(onProgress, "注册 App Installer 别名…", 12);
@@ -1042,6 +1112,8 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         if (appxPresent || !string.IsNullOrWhiteSpace(appxPath))
         {
             notes.Add("已检测到 App Installer 包，但未能启动 winget.exe。");
+            if (!IsVcRuntime140Present())
+                notes.Add("本机缺少 VCRUNTIME140.dll，请安装 Visual C++ 2015-2022 x64：https://aka.ms/vs/17/release/vc_redist.x64.exe");
             if (isServer)
             {
                 notes.Add("Server 常见原因：管理员进程调用 WindowsApps 别名报「找不到适用的应用许可证」。");
@@ -1555,6 +1627,7 @@ Repair-WinGetPackageManager -AllUsers -Force
             }
 
             Report(onProgress, "Server：部署便携 winget 到 C:\\Tools\\winget…", 96);
+            EnsureVcRedistX64(onProgress);
 
             // 1) 从已安装 Appx 目录复制（与本机 C:\Tools\winget 来源一致）
             var appxExe = TryGetAppxWingetPath();
@@ -2311,63 +2384,71 @@ Add-AppxPackage -Path '{escaped}'
                 psi.WorkingDirectory = dir!;
         }
 
-        using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
-        var parser = new WingetProgressParser();
-        var lastReport = DateTime.MinValue;
-        var lastPercent = -1;
-        var lastMessage = "";
-        var lineBuf = new StringBuilder();
-        var sync = new object();
-
-        void HandleText(string text)
+        var previousErrorMode = SetErrorMode(SemFailCriticalErrors | SemNoOpenFileErrorBox);
+        try
         {
-            lock (sync)
+            using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
+            var parser = new WingetProgressParser();
+            var lastReport = DateTime.MinValue;
+            var lastPercent = -1;
+            var lastMessage = "";
+            var lineBuf = new StringBuilder();
+            var sync = new object();
+
+            void HandleText(string text)
             {
-                foreach (var ch in text)
+                lock (sync)
                 {
-                    if (ch is '\r' or '\n')
+                    foreach (var ch in text)
                     {
-                        if (lineBuf.Length == 0) continue;
-                        var line = lineBuf.ToString();
-                        lineBuf.Clear();
-                        Emit(line);
-                    }
-                    else
-                    {
-                        lineBuf.Append(ch);
+                        if (ch is '\r' or '\n')
+                        {
+                            if (lineBuf.Length == 0) continue;
+                            var line = lineBuf.ToString();
+                            lineBuf.Clear();
+                            Emit(line);
+                        }
+                        else
+                        {
+                            lineBuf.Append(ch);
+                        }
                     }
                 }
             }
-        }
 
-        void Emit(string line)
+            void Emit(string line)
+            {
+                var update = parser.Feed(line);
+                if (update is null) return;
+                var now = DateTime.UtcNow;
+                if (update.Percent == lastPercent &&
+                    update.Message == lastMessage &&
+                    (now - lastReport).TotalMilliseconds < 120)
+                    return;
+                if (update.Percent < lastPercent && update.Percent < 100)
+                    return;
+
+                lastPercent = update.Percent;
+                lastMessage = update.Message;
+                lastReport = now;
+                onProgress?.Invoke(update);
+            }
+
+            var stdout = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardOutput, HandleText));
+            var stderr = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardError, HandleText));
+            p.WaitForExit(600_000);
+            System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 15_000);
+            lock (sync)
+            {
+                if (lineBuf.Length > 0)
+                    Emit(lineBuf.ToString());
+            }
+            return p.ExitCode;
+        }
+        finally
         {
-            var update = parser.Feed(line);
-            if (update is null) return;
-            var now = DateTime.UtcNow;
-            if (update.Percent == lastPercent &&
-                update.Message == lastMessage &&
-                (now - lastReport).TotalMilliseconds < 120)
-                return;
-            if (update.Percent < lastPercent && update.Percent < 100)
-                return;
-
-            lastPercent = update.Percent;
-            lastMessage = update.Message;
-            lastReport = now;
-            onProgress?.Invoke(update);
+            SetErrorMode(previousErrorMode);
         }
-
-        var stdout = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardOutput, HandleText));
-        var stderr = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardError, HandleText));
-        p.WaitForExit(600_000);
-        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 15_000);
-        lock (sync)
-        {
-            if (lineBuf.Length > 0)
-                Emit(lineBuf.ToString());
-        }
-        return p.ExitCode;
     }
 
     private static void DrainStream(StreamReader reader, Action<string> onChunk)
@@ -2557,4 +2638,10 @@ Add-AppxPackage -Path '{escaped}'
         System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 10_000);
         return stdout.Result + stderr.Result;
     }
+
+    private const uint SemFailCriticalErrors = 0x0001;
+    private const uint SemNoOpenFileErrorBox = 0x8000;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern uint SetErrorMode(uint uMode);
 }

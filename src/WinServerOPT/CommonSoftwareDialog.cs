@@ -116,7 +116,7 @@ internal sealed class CommonSoftwareDialog : Form
             "常用软件",
             "官方源下载与安装 · 优先 winget",
             body,
-            "更多操作见顶部「操作 / 编辑」菜单；安装前请确认来源可信。",
+            "",
             () => ReloadStatusesAsync(),
             showHeader: false);
 

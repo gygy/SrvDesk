@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace WinOpt;
@@ -850,50 +851,122 @@ internal static class Optimizer
 
     private static void ApplyAccountPolicy(bool disableComplexity, bool neverExpire)
     {
+        // 密码最长使用期限：net accounts 比整份 secedit 回写可靠
+        Run("net.exe", neverExpire
+            ? "accounts /maxpwage:unlimited"
+            : "accounts /maxpwage:42");
+
+        // 复杂性：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
         var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
-        Run("secedit.exe", $"/export /cfg \"{cfg}\"");
-        if (!File.Exists(cfg)) throw new InvalidOperationException("secedit 导出失败");
-        var text = File.ReadAllText(cfg);
-        text = ReplaceSecpolLine(text, "PasswordComplexity", disableComplexity ? 0 : 1);
-        text = ReplaceSecpolLine(text, "MaximumPasswordAge", neverExpire ? 0 : 42);
-        File.WriteAllText(cfg, text);
-        Run("secedit.exe", $"/configure /db C:\\Windows\\security\\local.sdb /cfg \"{cfg}\" /areas SECURITYPOLICY");
+        var db = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.sdb");
+        var jfm = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.jfm");
         TryDelete(cfg);
-        ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
-    }
+        TryDelete(db);
+        TryDelete(jfm);
 
-    private static string ReplaceSecpolLine(string text, string key, int value)
-    {
-        var line = $"{key} = {value}";
-        if (text.Contains($"{key} = 0")) return text.Replace($"{key} = 0", line);
-        if (text.Contains($"{key} = 1")) return text.Replace($"{key} = 1", line);
-        if (text.Contains($"{key} = 42")) return text.Replace($"{key} = 42", line);
-        return text + Environment.NewLine + line;
-    }
+        var inf =
+            "[Unicode]" + Environment.NewLine +
+            "Unicode=yes" + Environment.NewLine +
+            "[System Access]" + Environment.NewLine +
+            "PasswordComplexity = " + (disableComplexity ? 0 : 1) + Environment.NewLine +
+            "MaximumPasswordAge = " + (neverExpire ? 0 : 42) + Environment.NewLine +
+            "[Version]" + Environment.NewLine +
+            "signature=\"$CHICAGO$\"" + Environment.NewLine +
+            "Revision=1" + Environment.NewLine;
+        File.WriteAllText(cfg, inf, Encoding.Unicode);
 
-    private static (bool ComplexityOff, bool NeverExpire) ReadAccountPolicyFlags()
-    {
-        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol-read.inf");
+        Exception? seceditError = null;
         try
         {
-            Run("secedit.exe", $"/export /cfg \"{cfg}\"");
-            if (!File.Exists(cfg))
-                return (ServerDesktopTweaks.IsSamPasswordComplexityOff(), false);
-
-            var lines = File.ReadAllLines(cfg);
-            var complexityOff = lines.Any(line => line.IndexOf("PasswordComplexity = 0", StringComparison.Ordinal) >= 0)
-                || ServerDesktopTweaks.IsSamPasswordComplexityOff();
-            var neverExpire = lines.Any(line => line.IndexOf("MaximumPasswordAge = 0", StringComparison.Ordinal) >= 0);
-            return (complexityOff, neverExpire);
+            RunSeceditConfigure(db, cfg);
         }
-        catch
+        catch (Exception ex)
         {
-            return (ServerDesktopTweaks.IsSamPasswordComplexityOff(), false);
+            seceditError = ex;
+            ApplyLog.Write("secedit 配置账户策略：" + ex.Message);
         }
         finally
         {
             TryDelete(cfg);
+            TryDelete(db);
+            TryDelete(jfm);
         }
+
+        // SAM 兜底：与 secedit 互补
+        ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
+
+        if (seceditError is not null && !AccountPolicyLooksApplied(disableComplexity, neverExpire))
+            throw seceditError;
+
+        if (seceditError is not null)
+            ApplyLog.Write("secedit 报错但账户策略已生效，继续。");
+    }
+
+    private static void RunSeceditConfigure(string db, string cfg)
+    {
+        using var p = Process.Start(new ProcessStartInfo
+        {
+            FileName = "secedit.exe",
+            Arguments = $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.Default,
+            StandardErrorEncoding = Encoding.Default,
+        }) ?? throw new InvalidOperationException("无法启动 secedit.exe");
+        var stdout = p.StandardOutput.ReadToEnd();
+        var stderr = p.StandardError.ReadToEnd();
+        p.WaitForExit(60_000);
+        if (p.ExitCode == 0) return;
+
+        var detail = (stderr + " " + stdout).Trim();
+        if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";
+        throw new InvalidOperationException(
+            "secedit.exe 退出码 " + p.ExitCode +
+            (detail.Length > 0 ? "：" + detail : ""));
+    }
+
+    private static bool AccountPolicyLooksApplied(bool disableComplexity, bool neverExpire)
+    {
+        var flags = ReadAccountPolicyFlags();
+        if (neverExpire != flags.NeverExpire) return false;
+        if (disableComplexity) return flags.ComplexityOff;
+        return !ServerDesktopTweaks.IsSamPasswordComplexityOff();
+    }
+
+    private static (bool ComplexityOff, bool NeverExpire) ReadAccountPolicyFlags()
+    {
+        var neverExpire = ReadPasswordNeverExpireFromNetAccounts()
+            ?? ReadSecpolFlag("MaximumPasswordAge = 0");
+        var complexityOff = ReadSecpolFlag("PasswordComplexity = 0")
+            || ServerDesktopTweaks.IsSamPasswordComplexityOff();
+        return (complexityOff, neverExpire);
+    }
+
+    private static bool? ReadPasswordNeverExpireFromNetAccounts()
+    {
+        try
+        {
+            var output = RunCapture("net.exe", "accounts");
+            foreach (var raw in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var line = raw.Trim();
+                if (!line.StartsWith("Maximum password age", StringComparison.OrdinalIgnoreCase) &&
+                    !line.StartsWith("密码最长使用期限", StringComparison.Ordinal))
+                    continue;
+
+                if (line.IndexOf("Unlimited", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    line.IndexOf("Never", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    line.IndexOf("无限制", StringComparison.Ordinal) >= 0 ||
+                    line.IndexOf("永不", StringComparison.Ordinal) >= 0)
+                    return true;
+                if (Regex.IsMatch(line, @"\d+"))
+                    return false;
+            }
+        }
+        catch { /* ignore */ }
+        return null;
     }
 
     private static bool ReadSecpolFlag(string needle)
@@ -903,7 +976,7 @@ internal static class Optimizer
         {
             Run("secedit.exe", $"/export /cfg \"{cfg}\"");
             if (!File.Exists(cfg)) return false;
-            return File.ReadAllLines(cfg).Any(line => line.IndexOf(needle, StringComparison.Ordinal) >= 0);
+            return ReadInfLines(cfg).Any(line => line.IndexOf(needle, StringComparison.Ordinal) >= 0);
         }
         catch
         {
@@ -912,6 +985,19 @@ internal static class Optimizer
         finally
         {
             TryDelete(cfg);
+        }
+    }
+
+    private static string[] ReadInfLines(string path)
+    {
+        try
+        {
+            // secedit 导出一般为 Unicode（UTF-16 LE）
+            return File.ReadAllLines(path, Encoding.Unicode);
+        }
+        catch
+        {
+            return File.ReadAllLines(path, Encoding.Default);
         }
     }
 
