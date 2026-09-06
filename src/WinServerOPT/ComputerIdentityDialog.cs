@@ -7,6 +7,7 @@ internal sealed class ComputerIdentityDialog : Form
     private readonly CheckBox _restart = new();
     private readonly ComputerIdentityInfo _info;
     private readonly string _suggestedName;
+    private readonly FlowLayoutPanel _stack = new();
 
     public bool RestartScheduled { get; private set; }
 
@@ -20,33 +21,35 @@ internal sealed class ComputerIdentityDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 460);
+        // 固定尺寸：头部 + 正文 + 按钮 + 底栏，内容一次看全、不出现滚动条
+        ClientSize = new Size(540, 470);
         CancelButton = null;
 
         var body = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(16, 10, 16, 8),
+            Padding = new Padding(16, 8, 16, 4),
             BackColor = AppTheme.Surface,
+            AutoScroll = false,
         };
 
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 44,
+            Height = 42,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Padding = new Padding(0, 6, 0, 0),
+            Padding = new Padding(0, 4, 0, 0),
             BackColor = AppTheme.Surface,
         };
 
         var apply = ThemedSettingsChrome.CreateButton("应用修改", true);
-        apply.Size = new Size(100, 34);
+        apply.Size = new Size(100, 32);
         apply.Margin = new Padding(6, 0, 0, 0);
         apply.Click += (_, _) => ApplyChanges();
 
         var skip = ThemedSettingsChrome.CreateButton(optional ? "跳过" : "取消", false);
-        skip.Size = new Size(88, 34);
+        skip.Size = new Size(88, 32);
         skip.Margin = new Padding(6, 0, 0, 0);
         skip.Click += (_, _) =>
         {
@@ -57,69 +60,77 @@ internal sealed class ComputerIdentityDialog : Form
         buttons.Controls.Add(apply);
         buttons.Controls.Add(skip);
 
-        var stack = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoScroll = true,
-            BackColor = AppTheme.Surface,
-            Padding = new Padding(0),
-        };
+        _stack.Dock = DockStyle.Fill;
+        _stack.FlowDirection = FlowDirection.TopDown;
+        _stack.WrapContents = false;
+        _stack.AutoScroll = false;
+        _stack.BackColor = AppTheme.Surface;
+        _stack.Padding = new Padding(0);
 
-        stack.Controls.Add(MakeTip(optional
-            ? "此步可选：不改可直接点「跳过」。改名/改工作组后需重启才会完全生效。"
-            : "通过 WMI 修改计算机名与工作组。NetBIOS 名称最长 15 字符，修改后需重启才能完全生效。"));
+        _stack.Controls.Add(MakeTip(optional
+            ? "此步可选：不改可直接点「跳过」。改名后需重启才会完全生效。"
+            : "通过 WMI 修改。NetBIOS 名称最长 15 字符，修改后需重启才会完全生效。"));
 
-        stack.Controls.Add(MakeInfoLine("当前计算机名", info.ComputerName));
-        stack.Controls.Add(MakeInfoLine(
+        _stack.Controls.Add(MakeInfoLine("当前计算机名", info.ComputerName));
+        _stack.Controls.Add(MakeInfoLine(
             info.PartOfDomain ? "当前域" : "当前工作组",
             info.PartOfDomain ? info.Domain : info.Workgroup,
             info.PartOfDomain ? AppTheme.ScopeServer : AppTheme.TextHeader));
 
         if (info.PartOfDomain)
-        {
-            stack.Controls.Add(MakeTip("已加入域，无法在此修改工作组；仅可改计算机名。", compact: true));
-        }
+            _stack.Controls.Add(MakeTip("已加入域，无法在此修改工作组；仅可改计算机名。", compact: true));
 
-        stack.Controls.Add(MakeSpacer(8));
-        stack.Controls.Add(MakeFieldLabel($"新计算机名（建议：{_suggestedName}）"));
-        _newName.Width = 470;
+        _stack.Controls.Add(MakeSpacer(6));
+        _stack.Controls.Add(MakeFieldLabel($"新计算机名（建议：{_suggestedName}）"));
         _newName.Height = 26;
-        _newName.Margin = new Padding(0, 2, 0, 4);
+        _newName.Margin = new Padding(0, 2, 0, 2);
         _newName.MaxLength = 15;
         _newName.Text = _suggestedName;
-        stack.Controls.Add(_newName);
-        stack.Controls.Add(MakeTip(
-            "根据系统「产品名称」自动生成（如 Windows Server 2022 → win2022）。与当前相同或清空 = 不改。",
+        _stack.Controls.Add(_newName);
+        _stack.Controls.Add(MakeTip(
+            "按产品名称生成（如 Windows Server 2022 → win2022）。与当前相同或清空 = 不改。",
             compact: true));
 
-        stack.Controls.Add(MakeSpacer(10));
-        stack.Controls.Add(MakeFieldLabel("新工作组名（与当前相同或留空 = 不改）"));
-        _newWorkgroup.Width = 470;
+        _stack.Controls.Add(MakeSpacer(8));
+        _stack.Controls.Add(MakeFieldLabel("新工作组名（与当前相同或留空 = 不改）"));
         _newWorkgroup.Height = 26;
-        _newWorkgroup.Margin = new Padding(0, 2, 0, 4);
+        _newWorkgroup.Margin = new Padding(0, 2, 0, 2);
         _newWorkgroup.MaxLength = 15;
         _newWorkgroup.Text = info.PartOfDomain ? "" : info.Workgroup;
         _newWorkgroup.Enabled = !info.PartOfDomain;
-        stack.Controls.Add(_newWorkgroup);
+        _stack.Controls.Add(_newWorkgroup);
 
-        stack.Controls.Add(MakeSpacer(12));
+        _stack.Controls.Add(MakeSpacer(10));
         _restart.Text = "应用成功后 60 秒自动重启（可执行 shutdown /a 取消）";
         _restart.AutoSize = true;
-        _restart.Margin = new Padding(0, 0, 0, 4);
+        _restart.Margin = new Padding(0, 0, 0, 2);
         _restart.Checked = false;
-        stack.Controls.Add(_restart);
+        _stack.Controls.Add(_restart);
 
-        body.Controls.Add(stack);
+        body.Controls.Add(_stack);
         body.Controls.Add(buttons);
+        body.Resize += (_, _) => SyncContentWidth();
 
         ThemedSettingsChrome.MountModal(
             this,
             "计算机名 / 工作组",
             optional ? "可选步骤 · 与系统属性相同" : "与「系统属性 → 计算机名」相同",
             body,
-            "不修改可关闭本窗口；改名后请自行安排重启。");
+            "");
+
+        Shown += (_, _) => SyncContentWidth();
+    }
+
+    private void SyncContentWidth()
+    {
+        var w = Math.Max(360, _stack.ClientSize.Width - 4);
+        foreach (Control c in _stack.Controls)
+        {
+            if (c is TextBox or Panel or Label { AutoSize: false })
+                c.Width = w;
+            else if (c is Label { AutoSize: true } lbl)
+                lbl.MaximumSize = new Size(w, 0);
+        }
     }
 
     private void ApplyChanges()
@@ -193,9 +204,9 @@ internal sealed class ComputerIdentityDialog : Form
     {
         Text = text,
         AutoSize = false,
-        Width = 470,
-        Height = compact ? 36 : 40,
-        Margin = new Padding(0, 0, 0, compact ? 4 : 8),
+        Width = 480,
+        Height = compact ? 32 : 36,
+        Margin = new Padding(0, 0, 0, compact ? 2 : 6),
         ForeColor = AppTheme.TextMute,
     };
 
@@ -203,23 +214,23 @@ internal sealed class ComputerIdentityDialog : Form
     {
         var row = new Panel
         {
-            Width = 470,
-            Height = 24,
-            Margin = new Padding(0, 0, 0, 4),
+            Width = 480,
+            Height = 22,
+            Margin = new Padding(0, 0, 0, 2),
             BackColor = Color.Transparent,
         };
         var left = new Label
         {
             Text = caption + "：",
             AutoSize = true,
-            Location = new Point(0, 3),
+            Location = new Point(0, 2),
             ForeColor = AppTheme.TextMute,
         };
         var right = new Label
         {
             Text = value,
             AutoSize = true,
-            Location = new Point(110, 3),
+            Location = new Point(110, 2),
             ForeColor = valueColor ?? AppTheme.TextHeader,
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
         };
@@ -232,7 +243,7 @@ internal sealed class ComputerIdentityDialog : Form
     {
         Text = text,
         AutoSize = true,
-        MaximumSize = new Size(470, 0),
+        MaximumSize = new Size(480, 0),
         Margin = new Padding(0, 0, 0, 0),
         ForeColor = AppTheme.TextHeader,
     };

@@ -72,6 +72,7 @@ internal sealed class HostsEditorDialog : Form
         };
         bar.Controls.Add(MkBtn("添加", AddRow, false));
         bar.Controls.Add(MkBtn("粘贴", PasteFromClipboard, false));
+        bar.Controls.Add(MkBtn("添加 GitHub", AddGitHubHosts, false));
         bar.Controls.Add(MkBtn("删除", DeleteSelected, false));
         bar.Controls.Add(MkBtn("重新加载", Reload, false));
         bar.Controls.Add(MkBtn("备份目录", OpenBackupDir, false));
@@ -86,9 +87,9 @@ internal sealed class HostsEditorDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "编辑 hosts",
-            "本机 DNS 覆盖 · 支持 Ctrl+V 批量粘贴",
+            "本机 DNS 覆盖 · 支持 Ctrl+V 批量粘贴 · 一键 GitHub hosts",
             body,
-            "取消勾选「启用」将以 # 注释该行。",
+            "「添加 GitHub」来源：github.com/maxiaof/github-hosts",
             Reload);
 
         Load += (_, _) => Reload();
@@ -151,6 +152,54 @@ internal sealed class HostsEditorDialog : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "粘贴失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    /// <summary>从 maxiaof/github-hosts 拉取最新列表并写入系统 hosts。</summary>
+    private void AddGitHubHosts()
+    {
+        if (MessageBox.Show(this,
+                "将从 maxiaof/github-hosts 获取最新 GitHub hosts，并写入本机 hosts 文件。\r\n" +
+                "已有的 GitHub Hosts 区块会被替换。\r\n\r\n" +
+                "项目：" + GitHubHostsHelper.ProjectUrl + "\r\n\r\n是否继续？",
+                "添加 GitHub hosts",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button1) != DialogResult.Yes)
+            return;
+
+        UseWaitCursor = true;
+        Cursor = Cursors.WaitCursor;
+        Enabled = false;
+        try
+        {
+            Application.DoEvents();
+            var fetch = GitHubHostsHelper.FetchLatest();
+            var count = GitHubHostsHelper.ApplyToHostsFile(fetch, _backup.Checked, _flush.Checked);
+            Reload();
+            MessageBox.Show(this,
+                $"已写入 {count} 条 GitHub hosts。\r\n" +
+                (_flush.Checked ? "已刷新 DNS 缓存。\r\n" : "") +
+                "来源：" + fetch.SourceUrl,
+                "添加 GitHub hosts",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, "无法写入 hosts。请以管理员身份运行本工具。", "权限不足",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "添加 GitHub hosts 失败",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            Enabled = true;
+            UseWaitCursor = false;
+            Cursor = Cursors.Default;
         }
     }
 
