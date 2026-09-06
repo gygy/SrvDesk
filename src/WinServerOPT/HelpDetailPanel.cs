@@ -59,8 +59,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         _sections.SetBounds(PadX, 128, 280, 10);
         _sections.BackColor = Color.Transparent;
-        _sections.AutoSize = true;
-        _sections.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        _sections.AutoSize = false;
 
         BuildRecipeHost();
 
@@ -246,26 +245,60 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         _caption.Text = "配置脚本 · 当前项";
         _title.Text = itemTitle;
+        // 摘要已含核心说明；下方只留 2～3 行精简信息，把空间留给脚本
         _summary.Text = help.Summary;
-        var sections = new List<(string Head, string Body)>();
-        if (help.Scope.HasBadge)
-            sections.Add(("适用范围", help.Scope.FormatHelpSection().Trim()));
-        sections.Add(("推荐强度", RecommendLevelUi.Tip(help.Recommend)));
-        if (help.UiPlace.Length > 0)
-            sections.Add(("对应哪里", help.UiPlace));
-        if (help.WhenHint.Length > 0)
-            sections.Add(("何时建议", help.WhenHint));
-        sections.Add(("作用", help.Purpose));
-        sections.Add(("好处", help.Benefit));
-        sections.Add(("指引", help.Guide));
-        sections.Add(("生效", help.Effect));
-        BuildSections(sections);
-        _footer.Text = help.Scope.HasBadge ? help.Scope.FormatBadges() : "";
+        BuildSections([("", FormatCompactBrief(help))]);
+        _footer.Text = "";
 
         _itemTitle = itemTitle;
         _recipe = SettingRecipeCatalog.Get(help);
         _showEnable = true;
         ShowRecipeUi();
+    }
+
+    /// <summary>把推荐/范围/作用/指引/生效压成最多约 2～3 行。</summary>
+    private static string FormatCompactBrief(SettingHelpInfo help)
+    {
+        var line1Parts = new List<string>
+        {
+            RecommendLevelUi.Icon(help.Recommend) + " " + RecommendLevelUi.Title(help.Recommend),
+        };
+        if (help.Scope.HasBadge)
+            line1Parts.Add(help.Scope.FormatBadges());
+        if (help.Effect.Length > 0)
+            line1Parts.Add(TrimOneLine(help.Effect, 18));
+
+        var line2Parts = new List<string>();
+        if (help.Purpose.Length > 0)
+            line2Parts.Add(TrimOneLine(help.Purpose, 36));
+        if (help.Guide.Length > 0)
+            line2Parts.Add(TrimOneLine(help.Guide, 28));
+        else if (help.Benefit.Length > 0)
+            line2Parts.Add(TrimOneLine(help.Benefit, 28));
+
+        var line3Parts = new List<string>();
+        if (help.UiPlace.Length > 0)
+            line3Parts.Add(TrimOneLine(help.UiPlace, 40));
+        else if (help.WhenHint.Length > 0)
+            line3Parts.Add(TrimOneLine(help.WhenHint, 40));
+
+        var lines = new List<string> { string.Join(" · ", line1Parts) };
+        if (line2Parts.Count > 0)
+            lines.Add(string.Join(" · ", line2Parts));
+        if (line3Parts.Count > 0 && lines.Count < 3)
+            lines.Add(string.Join(" · ", line3Parts));
+        return string.Join("\r\n", lines);
+    }
+
+    private static string TrimOneLine(string text, int max)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var t = text.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ').Trim();
+        while (t.Contains("  ")) t = t.Replace("  ", " ");
+        var cut = t.IndexOfAny(['。', '；', ';']);
+        if (cut > 0 && cut < max) t = t.Substring(0, cut);
+        if (t.Length > max) t = t.Substring(0, max - 1) + "…";
+        return t;
     }
 
     private void HideRecipe()
@@ -294,7 +327,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
             _recipeKind.Text = _recipe!.KindLabel;
             _recipeNote.Text = _recipe.Note.Length > 0
                 ? _recipe.Note
-                : "可直接修改下方内容，再复制或保存为文件。";
+                : "可编辑后复制或保存。";
             _recipeNote.Visible = true;
             SetRecipeSide(_showEnable);
         }
@@ -386,36 +419,31 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private void BuildSections(IReadOnlyList<(string Head, string Body)> items)
     {
         _sections.Controls.Clear();
-        _sections.SuspendLayout();
-        var y = 0;
+        _sections.AutoSize = false;
         foreach (var (head, body) in items)
         {
-            var headLbl = new Label
+            if (!string.IsNullOrEmpty(head))
             {
-                Text = head,
-                Location = new Point(0, y),
-                Size = new Size(280, 20),
-                ForeColor = AppTheme.PrimaryDeep,
-                Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold),
-                BackColor = Color.Transparent,
-            };
-            y += 22;
-            var bodyLbl = new Label
+                _sections.Controls.Add(new Label
+                {
+                    Text = head,
+                    AutoSize = false,
+                    ForeColor = AppTheme.PrimaryDeep,
+                    Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold),
+                    BackColor = Color.Transparent,
+                    Tag = "h",
+                });
+            }
+            _sections.Controls.Add(new Label
             {
                 Text = body,
-                Location = new Point(0, y),
-                MaximumSize = new Size(280, 0),
-                AutoSize = true,
+                AutoSize = false,
                 ForeColor = AppTheme.TextMain,
-                Font = new Font("Microsoft YaHei UI", 8.75F),
+                Font = new Font("Microsoft YaHei UI", 8.5F),
                 BackColor = Color.Transparent,
-            };
-            y += bodyLbl.Height + 14;
-            _sections.Controls.Add(headLbl);
-            _sections.Controls.Add(bodyLbl);
+                Tag = "b",
+            });
         }
-        _sections.Height = Math.Max(y, 20);
-        _sections.ResumeLayout(true);
         LayoutInner();
     }
 
@@ -454,17 +482,42 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
 
         _sections.Top = y;
-
-        foreach (Control c in _sections.Controls)
-        {
-            if (c is Label lbl && (lbl.Font.Style & FontStyle.Bold) != 0)
-                lbl.Width = w;
-            else if (c is Label body)
-                body.MaximumSize = new Size(w, 0);
-        }
+        RelayoutSectionLabels(w);
 
         _footer.Top = _sections.Bottom + 8;
+        var footerH = string.IsNullOrEmpty(_footer.Text)
+            ? 0
+            : TextRenderer.MeasureText(
+                _footer.Text, _footer.Font, new Size(w, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4;
+        _footer.Height = Math.Max(footerH, 8);
         AutoScrollMinSize = new Size(0, _footer.Bottom + 12);
+    }
+
+    /// <summary>按当前宽度重新测量并纵向排布说明块，避免换行高度变化后文字重叠。</summary>
+    private void RelayoutSectionLabels(int w)
+    {
+        _sections.SuspendLayout();
+        var y = 0;
+        foreach (Control c in _sections.Controls)
+        {
+            if (c is not Label lbl) continue;
+            lbl.Left = 0;
+            lbl.Width = w;
+            var isHead = Equals(lbl.Tag, "h");
+            var h = TextRenderer.MeasureText(
+                lbl.Text, lbl.Font, new Size(w, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 2;
+            if (isHead)
+                h = Math.Max(18, h);
+            else
+                h = Math.Max(16, h);
+            lbl.Top = y;
+            lbl.Height = h;
+            y += h + (isHead ? 4 : 12);
+        }
+        _sections.Height = Math.Max(y, 8);
+        _sections.ResumeLayout(true);
     }
 
     public void FocusRecipe()
