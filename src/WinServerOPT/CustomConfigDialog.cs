@@ -5,7 +5,6 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 {
     private readonly ListBox _packs = new();
     private readonly ListView _items = new();
-    private readonly Label _hint = new();
     private readonly Label _packTitle = new();
     private readonly ToolTip _tip = new();
 
@@ -58,14 +57,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         _items.DoubleClick += (_, _) => EditSelected();
         _items.KeyDown += OnItemsKeyDown;
 
-        _hint.Dock = DockStyle.Bottom;
-        _hint.Height = 40;
-        _hint.ForeColor = AppTheme.TextMute;
-        _hint.Padding = new Padding(0, 6, 0, 0);
-        _hint.Text = "粘贴 .reg / CMD / PowerShell 正文并保存到方案。双击编辑；勾选后可「全部运行」。Ctrl+V 可从剪贴板新建。";
-
         main.Controls.Add(_items);
-        main.Controls.Add(_hint);
         main.Controls.Add(tools);
         main.Controls.Add(_packTitle);
 
@@ -77,8 +69,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             "自定义配置",
             "粘贴脚本/注册表 · 保存到方案 · 界面直接运行",
             body,
-            "内容保存在本机 AppData，不引用外部文件路径。运行通常需要管理员权限。",
-            RefreshFromSystem);
+            "内容保存在本机 AppData，不引用外部文件路径。运行通常需要管理员权限。");
 
         KeyDown += OnFormKeyDown;
         Shown += (_, _) =>
@@ -158,12 +149,9 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         };
 
         tools.Controls.Add(ToolButton("粘贴新建…", "粘贴或手写 .reg / CMD / PowerShell，保存到当前方案", PasteOrNew));
-        tools.Controls.Add(ToolButton("从剪贴板", "用剪贴板正文新建一项（自动识别类型）", PasteFromClipboard));
         tools.Controls.Add(ToolButton("编辑", "修改名称、类型与正文", EditSelected));
         tools.Controls.Add(ToolButton("运行选中", "运行当前选中的项", RunSelected));
         tools.Controls.Add(ToolButton("全部运行", "按顺序运行已勾选的项", RunAll));
-        tools.Controls.Add(ToolButton("上移", "调整运行顺序", () => MoveSelected(-1)));
-        tools.Controls.Add(ToolButton("下移", "调整运行顺序", () => MoveSelected(1)));
         tools.Controls.Add(ToolButton("移除", "从方案中删除", RemoveSelected));
         return tools;
     }
@@ -331,10 +319,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         if (_current is null) return;
         var text = TryClipboardText();
         if (string.IsNullOrWhiteSpace(text))
-        {
-            MessageBox.Show(this, "剪贴板没有可用文本。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
-        }
         EditItem(null, seedContent: text);
     }
 
@@ -490,17 +475,6 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             Text,
             MessageBoxButtons.OK,
             MessageBoxIcon.Warning);
-    }
-
-    private void MoveSelected(int delta)
-    {
-        if (_current is null) return;
-        var item = SelectedItems().FirstOrDefault();
-        if (item is null) return;
-        CustomPackStore.MoveItem(_current, item.Id, delta);
-        _current = CustomPackStore.LoadPack(_current.Id);
-        ReloadItems();
-        SelectItemById(item.Id);
     }
 
     private void RemoveSelected()

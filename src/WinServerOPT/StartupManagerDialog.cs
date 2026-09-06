@@ -6,8 +6,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     private readonly TextBox _search = new();
     private readonly Label _detail = new();
     private readonly Label _count = new();
-    private readonly ListBox _filter = new();
-    private int _filterHover = -1;
+    private readonly ComboBox _filter = new();
     private List<StartupEntry> _items = [];
 
     private static readonly string[] Filters = ["全部", "当前用户", "所有用户", "已禁用"];
@@ -23,11 +22,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         MinimumSize = new Size(760, 480);
         ForeColor = AppTheme.TextMain;
 
-        var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface };
-        var sidebar = BuildSidebar();
-        sidebar.Dock = DockStyle.Left;
-
-        var main = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 10, 12, 8) };
+        var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(12, 10, 12, 8) };
         var tools = BuildToolStrip();
         tools.Dock = DockStyle.Top;
 
@@ -54,12 +49,9 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _detail.ForeColor = AppTheme.TextMute;
         _detail.Padding = new Padding(0, 6, 0, 0);
 
-        main.Controls.Add(_list);
-        main.Controls.Add(_detail);
-        main.Controls.Add(tools);
-
-        body.Controls.Add(main);
-        body.Controls.Add(sidebar);
+        body.Controls.Add(_list);
+        body.Controls.Add(_detail);
+        body.Controls.Add(tools);
 
         ThemedSettingsChrome.MountEmbedded(
             this,
@@ -99,69 +91,39 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     public bool SupportsApplyToSystem => false;
     public void ApplyToSystem() { }
 
-    private Panel BuildSidebar()
-    {
-        var sidebar = new Panel { Width = 150, BackColor = AppTheme.NavBg };
-        var cap = new Label
-        {
-            Text = "  筛选",
-            Dock = DockStyle.Top,
-            Height = 36,
-            ForeColor = AppTheme.TextMute,
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = AppTheme.NavBg,
-        };
-        _filter.Dock = DockStyle.Fill;
-        _filter.BorderStyle = BorderStyle.None;
-        _filter.BackColor = AppTheme.NavBg;
-        _filter.ForeColor = AppTheme.TextMain;
-        _filter.IntegralHeight = false;
-        _filter.DrawMode = DrawMode.OwnerDrawFixed;
-        _filter.ItemHeight = 40;
-        _filter.Items.AddRange(Filters);
-        _filter.DrawItem += (_, e) =>
-        {
-            if (e.Index < 0) return;
-            var selected = (e.State & DrawItemState.Selected) != 0;
-            var hover = e.Index == _filterHover;
-            using var bg = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
-            e.Graphics.FillRectangle(bg, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, Filters[e.Index],
-                selected ? new Font(Font, FontStyle.Bold) : Font,
-                new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - 20, e.Bounds.Height),
-                selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-        };
-        _filter.MouseMove += (_, e) =>
-        {
-            var i = _filter.IndexFromPoint(e.Location);
-            if (i != _filterHover) { _filterHover = i; _filter.Invalidate(); }
-        };
-        _filter.MouseLeave += (_, _) => { _filterHover = -1; _filter.Invalidate(); };
-        _filter.SelectedIndexChanged += (_, _) => ApplyFilter();
-        sidebar.Controls.Add(_filter);
-        sidebar.Controls.Add(cap);
-        return sidebar;
-    }
-
     private Panel BuildToolStrip()
     {
         var bar = new Panel { Height = 40, BackColor = AppTheme.Surface };
-        var searchLabel = new Label
+
+        var filterLabel = new Label
         {
-            Text = "搜索",
+            Text = "筛选",
             Location = new Point(0, 10),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
-        _search.SetBounds(40, 6, 220, 26);
+        _filter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _filter.SetBounds(40, 6, 110, 26);
+        _filter.Items.AddRange(Filters);
+        _filter.SelectedIndexChanged += (_, _) => ApplyFilter();
+
+        var searchLabel = new Label
+        {
+            Text = "搜索",
+            Location = new Point(164, 10),
+            AutoSize = true,
+            ForeColor = AppTheme.TextHeader,
+        };
+        _search.SetBounds(204, 6, 200, 26);
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.TextChanged += (_, _) => ApplyFilter();
 
-        _count.Location = new Point(270, 10);
+        _count.Location = new Point(416, 10);
         _count.AutoSize = true;
         _count.ForeColor = AppTheme.TextMute;
 
+        bar.Controls.Add(filterLabel);
+        bar.Controls.Add(_filter);
         bar.Controls.Add(searchLabel);
         bar.Controls.Add(_search);
         bar.Controls.Add(_count);
@@ -184,7 +146,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
             {
                 var b = buttons[i];
                 x -= b.Width;
-                b.Location = new Point(Math.Max(400, x), 4);
+                b.Location = new Point(Math.Max(520, x), 4);
                 x -= 8;
             }
         }
