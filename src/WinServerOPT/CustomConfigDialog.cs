@@ -1,8 +1,6 @@
-﻿using System.Diagnostics;
+﻿namespace WinOpt;
 
-namespace WinOpt;
-
-/// <summary>自定义配置：多方案，每方案可含多个 .reg / .cmd / .ps1，可保存并可在界面运行。</summary>
+/// <summary>自定义配置：多方案；项内容在界面粘贴/编辑并保存，不依赖外部文件路径。</summary>
 internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 {
     private readonly ListBox _packs = new();
@@ -25,7 +23,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ClientSize = new Size(960, 600);
         MinimumSize = new Size(780, 480);
         ForeColor = AppTheme.TextMain;
-        AllowDrop = true;
+        KeyPreview = true;
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface };
         var sidebar = BuildPackSidebar();
@@ -53,18 +51,18 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         _items.BackColor = AppTheme.SurfaceCard;
         _items.ForeColor = AppTheme.TextMain;
         UiBuffer.Enable(_items);
-        _items.Columns.Add("名称", 280);
-        _items.Columns.Add("类型", 100);
-        _items.Columns.Add("文件", 220);
+        _items.Columns.Add("名称", 320);
+        _items.Columns.Add("类型", 120);
+        _items.Columns.Add("说明", 200);
         _items.ItemChecked += OnItemChecked;
-        _items.DoubleClick += (_, _) => RunSelected();
+        _items.DoubleClick += (_, _) => EditSelected();
         _items.KeyDown += OnItemsKeyDown;
 
         _hint.Dock = DockStyle.Bottom;
         _hint.Height = 40;
         _hint.ForeColor = AppTheme.TextMute;
         _hint.Padding = new Padding(0, 6, 0, 0);
-        _hint.Text = "勾选参与「全部运行」的项。双击或点「运行选中」立即执行。文件已复制到本机，关闭软件后仍可打开。";
+        _hint.Text = "粘贴 .reg / CMD / PowerShell 正文并保存到方案。双击编辑；勾选后可「全部运行」。Ctrl+V 可从剪贴板新建。";
 
         main.Controls.Add(_items);
         main.Controls.Add(_hint);
@@ -77,13 +75,12 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "自定义配置",
-            "自建方案 · 导入注册表与脚本 · 保存后下次继续用",
+            "粘贴脚本/注册表 · 保存到方案 · 界面直接运行",
             body,
-            "方案保存在本机 AppData。运行 .reg（HKLM）或脚本通常需要管理员权限。",
+            "内容保存在本机 AppData，不引用外部文件路径。运行通常需要管理员权限。",
             RefreshFromSystem);
 
-        DragEnter += OnDragEnter;
-        DragDrop += OnDragDrop;
+        KeyDown += OnFormKeyDown;
         Shown += (_, _) =>
         {
             if (_index.Packs.Count == 0)
@@ -160,13 +157,14 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             Padding = new Padding(0, 0, 0, 6),
         };
 
-        tools.Controls.Add(ToolButton("添加文件…", "导入 .reg / .cmd / .bat / .ps1（可多选）", AddFiles));
+        tools.Controls.Add(ToolButton("粘贴新建…", "粘贴或手写 .reg / CMD / PowerShell，保存到当前方案", PasteOrNew));
+        tools.Controls.Add(ToolButton("从剪贴板", "用剪贴板正文新建一项（自动识别类型）", PasteFromClipboard));
+        tools.Controls.Add(ToolButton("编辑", "修改名称、类型与正文", EditSelected));
         tools.Controls.Add(ToolButton("运行选中", "运行当前选中的项", RunSelected));
         tools.Controls.Add(ToolButton("全部运行", "按顺序运行已勾选的项", RunAll));
-        tools.Controls.Add(ToolButton("编辑", "用记事本打开文件", EditSelected));
         tools.Controls.Add(ToolButton("上移", "调整运行顺序", () => MoveSelected(-1)));
         tools.Controls.Add(ToolButton("下移", "调整运行顺序", () => MoveSelected(1)));
-        tools.Controls.Add(ToolButton("移除", "从方案中删除（不删源文件，仅删方案副本）", RemoveSelected));
+        tools.Controls.Add(ToolButton("移除", "从方案中删除", RemoveSelected));
         return tools;
     }
 
@@ -257,7 +255,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             {
                 var row = new ListViewItem(item.Name) { Tag = item, Checked = item.Enabled };
                 row.SubItems.Add(item.KindLabel);
-                row.SubItems.Add(item.FileName);
+                row.SubItems.Add("已保存在方案内");
                 _items.Items.Add(row);
             }
         }
@@ -309,7 +307,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         }
         var answer = MessageBox.Show(
             this,
-            "确定删除方案「" + _current.Name + "」？\r\n方案内的脚本副本也会删除（不影响你当初导入的源文件）。",
+            "确定删除方案「" + _current.Name + "」？\r\n方案内已保存的脚本/注册表也会删除。",
             "删除方案",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
@@ -320,53 +318,81 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ReloadPackList(_index.LastPackId);
     }
 
-    private void AddFiles()
+    private void PasteOrNew()
     {
         EnsureCurrentPack();
         if (_current is null) return;
-
-        using var dlg = new OpenFileDialog
-        {
-            Title = "添加注册表或脚本",
-            Filter = "支持的文件|*.reg;*.cmd;*.bat;*.ps1|注册表 (*.reg)|*.reg|CMD (*.cmd;*.bat)|*.cmd;*.bat|PowerShell (*.ps1)|*.ps1|所有文件|*.*",
-            Multiselect = true,
-            CheckFileExists = true,
-        };
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
-        ImportPaths(dlg.FileNames);
+        EditItem(null, seedContent: TryClipboardText() ?? "");
     }
 
-    private void ImportPaths(IEnumerable<string> paths)
+    private void PasteFromClipboard()
     {
         EnsureCurrentPack();
         if (_current is null) return;
-
-        var ok = 0;
-        var errors = new List<string>();
-        foreach (var path in paths)
+        var text = TryClipboardText();
+        if (string.IsNullOrWhiteSpace(text))
         {
-            try
-            {
-                CustomPackStore.AddFile(_current, path);
-                ok++;
-            }
-            catch (Exception ex)
-            {
-                errors.Add(Path.GetFileName(path) + "：" + ex.Message);
-            }
+            MessageBox.Show(this, "剪贴板没有可用文本。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
         }
+        EditItem(null, seedContent: text);
+    }
 
-        _current = CustomPackStore.LoadPack(_current.Id);
-        _index = CustomPackStore.LoadIndex();
-        ReloadPackList(_current?.Id);
-        if (errors.Count > 0)
+    private void EditSelected()
+    {
+        if (_current is null) return;
+        var item = SelectedItems().FirstOrDefault();
+        if (item is null)
         {
-            MessageBox.Show(
-                this,
-                "成功 " + ok + " 个；失败：\r\n" + string.Join("\r\n", errors.Take(8)),
-                "添加文件",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
+            MessageBox.Show(this, "请先选中一项，或点「粘贴新建」。", Text,
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        EditItem(item, seedContent: null);
+    }
+
+    private void EditItem(CustomPackItem? existing, string? seedContent)
+    {
+        if (_current is null) return;
+
+        var name = existing?.Name ?? "";
+        var kind = existing?.Kind ?? CustomPackStore.DetectKind(seedContent ?? "");
+        var content = existing is null
+            ? (seedContent ?? "")
+            : CustomPackStore.ReadContent(_current.Id, existing);
+
+        if (existing is null && string.IsNullOrWhiteSpace(name))
+            name = kind switch
+            {
+                "ps1" => "未命名 PowerShell",
+                "cmd" => "未命名 CMD",
+                _ => "未命名注册表",
+            };
+
+        using var dlg = new CustomPackItemEditDialog(name, kind, content, isNew: existing is null);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            if (existing is null)
+            {
+                var created = CustomPackStore.AddContent(_current, dlg.ItemName, dlg.ItemKind, dlg.ItemContent);
+                _current = CustomPackStore.LoadPack(_current.Id);
+                ReloadItems();
+                if (created is not null) SelectItemById(created.Id);
+            }
+            else
+            {
+                CustomPackStore.UpdateContent(_current, existing.Id, dlg.ItemName, dlg.ItemKind, dlg.ItemContent);
+                _current = CustomPackStore.LoadPack(_current.Id);
+                ReloadItems();
+                SelectItemById(existing.Id);
+            }
+            _index = CustomPackStore.LoadIndex();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -466,36 +492,6 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             MessageBoxIcon.Warning);
     }
 
-    private void EditSelected()
-    {
-        if (_current is null) return;
-        var item = SelectedItems().FirstOrDefault();
-        if (item is null)
-        {
-            MessageBox.Show(this, "请先选中一项。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        var path = CustomPackStore.ItemPath(_current.Id, item);
-        if (!File.Exists(path))
-        {
-            MessageBox.Show(this, "文件不存在：" + path, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "notepad.exe",
-                Arguments = "\"" + path + "\"",
-                UseShellExecute = true,
-            });
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
-    }
-
     private void MoveSelected(int delta)
     {
         if (_current is null) return;
@@ -514,7 +510,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         if (selected.Count == 0) return;
         var answer = MessageBox.Show(
             this,
-            "从方案中移除 " + selected.Count + " 项？\r\n（仅删除方案内副本）",
+            "从方案中移除 " + selected.Count + " 项？",
             "移除",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question);
@@ -549,6 +545,16 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         }
     }
 
+    private void OnFormKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Control && e.KeyCode == Keys.V)
+        {
+            PasteFromClipboard();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+    }
+
     private void OnItemsKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Delete)
@@ -556,28 +562,20 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             RemoveSelected();
             e.Handled = true;
         }
-    }
-
-    private void OnDragEnter(object? sender, DragEventArgs e)
-    {
-        if (e.Data?.GetDataPresent(DataFormats.FileDrop) == true)
-            e.Effect = DragDropEffects.Copy;
-    }
-
-    private void OnDragDrop(object? sender, DragEventArgs e)
-    {
-        if (e.Data?.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0)
-            return;
-        ImportPaths(files);
+        else if (e.Control && e.KeyCode == Keys.V)
+        {
+            PasteFromClipboard();
+            e.Handled = true;
+        }
     }
 
     private void LayoutColumns()
     {
         if (_items.Columns.Count < 3) return;
         var w = Math.Max(400, _items.ClientSize.Width);
-        _items.Columns[0].Width = Math.Max(160, w - 340);
-        _items.Columns[1].Width = 100;
-        _items.Columns[2].Width = 220;
+        _items.Columns[0].Width = Math.Max(180, w - 340);
+        _items.Columns[1].Width = 120;
+        _items.Columns[2].Width = 200;
     }
 
     private void DrawPackItem(object? sender, DrawItemEventArgs e)
@@ -602,6 +600,20 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             new Rectangle(e.Bounds.X + 10, e.Bounds.Y, e.Bounds.Width - 14, e.Bounds.Height),
             AppTheme.TextMain,
             TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+    }
+
+    private static string? TryClipboardText()
+    {
+        try
+        {
+            if (!Clipboard.ContainsText()) return null;
+            var t = Clipboard.GetText();
+            return string.IsNullOrWhiteSpace(t) ? null : t;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string? PromptText(string title, string label, string initial)
@@ -645,5 +657,191 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         if (dlg.ShowDialog() != DialogResult.OK) return null;
         var text = box.Text.Trim();
         return text.Length == 0 ? null : text;
+    }
+}
+
+/// <summary>粘贴/编辑单项：名称 + 类型 + 正文，保存进方案。</summary>
+internal sealed class CustomPackItemEditDialog : Form
+{
+    private readonly TextBox _name = new();
+    private readonly ComboBox _kind = new();
+    private readonly ScriptSyntaxEditor _editor = new();
+    private readonly Button _btnPaste = ThemedSettingsChrome.CreateButton("粘贴剪贴板", false);
+    private readonly Button _btnDetect = ThemedSettingsChrome.CreateButton("自动识别类型", false);
+
+    public string ItemName => _name.Text.Trim();
+    public string ItemKind => _kind.SelectedIndex switch
+    {
+        1 => "cmd",
+        2 => "ps1",
+        _ => "reg",
+    };
+    public string ItemContent => _editor.Text;
+
+    public CustomPackItemEditDialog(string name, string kind, string content, bool isNew)
+    {
+        Text = isNew ? "粘贴新建" : "编辑项";
+        AppBrand.ApplyWindowIcon(this);
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterParent;
+        ClientSize = new Size(720, 520);
+        MinimumSize = new Size(560, 400);
+        Font = new Font("Microsoft YaHei UI", 9F);
+        BackColor = AppTheme.Surface;
+
+        var top = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 78,
+            Padding = new Padding(12, 10, 12, 4),
+            BackColor = AppTheme.Surface,
+        };
+
+        top.Controls.Add(new Label
+        {
+            Text = "名称",
+            Location = new Point(12, 14),
+            AutoSize = true,
+            ForeColor = AppTheme.TextHeader,
+        });
+        _name.Location = new Point(52, 10);
+        _name.Width = 280;
+        _name.Text = name;
+        top.Controls.Add(_name);
+
+        top.Controls.Add(new Label
+        {
+            Text = "类型",
+            Location = new Point(350, 14),
+            AutoSize = true,
+            ForeColor = AppTheme.TextHeader,
+        });
+        _kind.DropDownStyle = ComboBoxStyle.DropDownList;
+        _kind.Location = new Point(390, 10);
+        _kind.Width = 140;
+        _kind.Items.AddRange(["注册表 (.reg)", "CMD (.cmd)", "PowerShell (.ps1)"]);
+        _kind.SelectedIndex = kind switch
+        {
+            "cmd" => 1,
+            "ps1" => 2,
+            _ => 0,
+        };
+        _kind.SelectedIndexChanged += (_, _) => ApplyEditorKind();
+        top.Controls.Add(_kind);
+
+        _btnPaste.Location = new Point(12, 42);
+        _btnPaste.Size = new Size(112, 28);
+        _btnPaste.Click += (_, _) => PasteClipboard();
+        top.Controls.Add(_btnPaste);
+
+        _btnDetect.Location = new Point(132, 42);
+        _btnDetect.Size = new Size(120, 28);
+        _btnDetect.Click += (_, _) =>
+        {
+            var d = CustomPackStore.DetectKind(_editor.Text);
+            _kind.SelectedIndex = d switch
+            {
+                "cmd" => 1,
+                "ps1" => 2,
+                _ => 0,
+            };
+            ApplyEditorKind();
+        };
+        top.Controls.Add(_btnDetect);
+
+        _editor.Dock = DockStyle.Fill;
+        _editor.BorderStyle = BorderStyle.FixedSingle;
+        _editor.Margin = new Padding(12);
+        ApplyEditorKind();
+        _editor.SetScript(content ?? "", ToActionKind(ItemKind));
+
+        var footer = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 52,
+            Padding = new Padding(12, 8, 12, 8),
+            BackColor = AppTheme.SurfaceCard,
+        };
+        var ok = ThemedSettingsChrome.CreateButton("保存到方案", true);
+        ok.DialogResult = DialogResult.OK;
+        ok.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        var cancel = ThemedSettingsChrome.CreateButton("取消", false);
+        cancel.DialogResult = DialogResult.Cancel;
+        cancel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        footer.Controls.Add(ok);
+        footer.Controls.Add(cancel);
+        footer.Resize += (_, _) =>
+        {
+            cancel.Location = new Point(footer.ClientSize.Width - cancel.Width - 12, 10);
+            ok.Location = new Point(cancel.Left - ok.Width - 8, 10);
+        };
+
+        var host = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 4, 12, 4) };
+        host.Controls.Add(_editor);
+
+        Controls.Add(host);
+        Controls.Add(footer);
+        Controls.Add(top);
+        AcceptButton = ok;
+        CancelButton = cancel;
+        Shown += (_, _) =>
+        {
+            footer.PerformLayout();
+            cancel.Location = new Point(footer.ClientSize.Width - cancel.Width - 12, 10);
+            ok.Location = new Point(cancel.Left - ok.Width - 8, 10);
+            if (string.IsNullOrWhiteSpace(content))
+                _editor.Focus();
+            else
+                _name.Focus();
+        };
+    }
+
+    private void PasteClipboard()
+    {
+        try
+        {
+            if (!Clipboard.ContainsText()) return;
+            var t = Clipboard.GetText();
+            if (string.IsNullOrEmpty(t)) return;
+            _editor.SetScript(t, ToActionKind(CustomPackStore.DetectKind(t)));
+            var d = CustomPackStore.DetectKind(t);
+            _kind.SelectedIndex = d switch
+            {
+                "cmd" => 1,
+                "ps1" => 2,
+                _ => 0,
+            };
+        }
+        catch { /* ignore */ }
+    }
+
+    private void ApplyEditorKind() =>
+        _editor.SetScript(_editor.Text, ToActionKind(ItemKind));
+
+    private static SettingActionKind ToActionKind(string kind) => kind switch
+    {
+        "cmd" => SettingActionKind.Cmd,
+        "ps1" => SettingActionKind.PowerShell,
+        _ => SettingActionKind.Reg,
+    };
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (DialogResult == DialogResult.OK)
+        {
+            if (string.IsNullOrWhiteSpace(ItemName))
+            {
+                MessageBox.Show(this, "请填写名称。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(ItemContent))
+            {
+                MessageBox.Show(this, "内容不能为空。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+            }
+        }
+        base.OnFormClosing(e);
     }
 }

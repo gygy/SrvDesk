@@ -59,7 +59,7 @@ internal sealed class CustomPackItem
 }
 
 /// <summary>
-/// 自定义配置方案：每个方案含多个 .reg / .cmd / .ps1，文件复制到本地目录以便下次打开仍可用。
+/// 自定义配置方案：每个方案含多个 .reg / .cmd / .ps1（内容粘贴保存到本机 AppData，不依赖外部文件路径）。
 /// 目录：%LocalAppData%\WinOpt\custom-packs\
 /// </summary>
 internal static class CustomPackStore
@@ -194,31 +194,26 @@ internal static class CustomPackStore
         }
     }
 
-    public static CustomPackItem AddFile(CustomPackDetail pack, string sourcePath)
+    public static CustomPackItem AddContent(
+        CustomPackDetail pack, string name, string kind, string content)
     {
-        if (!File.Exists(sourcePath))
-            throw new FileNotFoundException("找不到文件：" + sourcePath, sourcePath);
-
-        var ext = Path.GetExtension(sourcePath).TrimStart('.').ToLowerInvariant();
-        var kind = ext switch
-        {
-            "reg" => "reg",
-            "cmd" or "bat" => "cmd",
-            "ps1" => "ps1",
-            _ => throw new InvalidOperationException("仅支持 .reg / .cmd / .bat / .ps1 文件。"),
-        };
+        kind = NormalizeKind(kind);
+        content = NormalizeContent(content);
+        if (string.IsNullOrWhiteSpace(content))
+            throw new InvalidOperationException("内容不能为空。");
 
         var itemId = Guid.NewGuid().ToString("N");
-        var fileName = itemId + "." + (ext == "bat" ? "cmd" : ext);
+        var ext = ExtForKind(kind);
+        var fileName = itemId + "." + ext;
         var destDir = FilesDir(pack.Id);
         Directory.CreateDirectory(destDir);
         var dest = Path.Combine(destDir, fileName);
-        File.Copy(sourcePath, dest, overwrite: true);
+        WriteItemFile(dest, kind, content);
 
         var item = new CustomPackItem
         {
             Id = itemId,
-            Name = Path.GetFileName(sourcePath),
+            Name = string.IsNullOrWhiteSpace(name) ? DefaultName(kind) : name.Trim(),
             FileName = fileName,
             Kind = kind,
             Enabled = true,
@@ -226,6 +221,96 @@ internal static class CustomPackStore
         pack.Items.Add(item);
         SavePack(pack);
         return item;
+    }
+
+    public static void UpdateContent(CustomPackDetail pack, string itemId, string name, string kind, string content)
+    {
+        var item = pack.Items.FirstOrDefault(i =>
+            string.Equals(i.Id, itemId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException("项不存在。");
+
+        kind = NormalizeKind(kind);
+        content = NormalizeContent(content);
+        if (string.IsNullOrWhiteSpace(content))
+            throw new InvalidOperationException("内容不能为空。");
+
+        var oldPath = ItemPath(pack.Id, item);
+        var newExt = ExtForKind(kind);
+        var newFileName = Path.GetFileNameWithoutExtension(item.FileName) + "." + newExt;
+        var newPath = Path.Combine(FilesDir(pack.Id), newFileName);
+        Directory.CreateDirectory(FilesDir(pack.Id));
+        WriteItemFile(newPath, kind, content);
+
+        if (!string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
+            && File.Exists(oldPath))
+        {
+            try { File.Delete(oldPath); } catch { /* ignore */ }
+        }
+
+        item.Name = string.IsNullOrWhiteSpace(name) ? item.Name : name.Trim();
+        item.Kind = kind;
+        item.FileName = newFileName;
+        SavePack(pack);
+    }
+
+    public static string ReadContent(string packId, CustomPackItem item)
+    {
+        var path = ItemPath(packId, item);
+        if (!File.Exists(path)) return "";
+        return File.ReadAllText(path, Encoding.UTF8);
+    }
+
+    /// <summary>根据正文猜测类型：.reg / .ps1 / .cmd。</summary>
+    public static string DetectKind(string content)
+    {
+        var t = (content ?? "").TrimStart();
+        if (t.Length == 0) return "cmd";
+        if (t.StartsWith("Windows Registry Editor", StringComparison.OrdinalIgnoreCase)
+            || t.StartsWith("REGEDIT", StringComparison.OrdinalIgnoreCase)
+            || t.IndexOf("[HKEY_", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "reg";
+        if (t.StartsWith("#", StringComparison.Ordinal)
+            || t.StartsWith("<#", StringComparison.Ordinal)
+            || t.IndexOf("param(", StringComparison.OrdinalIgnoreCase) >= 0
+            || t.IndexOf("$PSVersionTable", StringComparison.OrdinalIgnoreCase) >= 0
+            || t.IndexOf("Write-Host", StringComparison.OrdinalIgnoreCase) >= 0
+            || t.IndexOf("Get-", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "ps1";
+        return "cmd";
+    }
+
+    public static string NormalizeKind(string kind) =>
+        (kind ?? "").Trim().ToLowerInvariant() switch
+        {
+            "ps1" or "powershell" or "ps" => "ps1",
+            "cmd" or "bat" or "command" => "cmd",
+            _ => "reg",
+        };
+
+    private static string ExtForKind(string kind) => NormalizeKind(kind) switch
+    {
+        "ps1" => "ps1",
+        "cmd" => "cmd",
+        _ => "reg",
+    };
+
+    private static string DefaultName(string kind) => NormalizeKind(kind) switch
+    {
+        "ps1" => "未命名 PowerShell",
+        "cmd" => "未命名 CMD",
+        _ => "未命名注册表",
+    };
+
+    private static string NormalizeContent(string content) =>
+        (content ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", "\r\n").TrimEnd() + "\r\n";
+
+    private static void WriteItemFile(string path, string kind, string content)
+    {
+        // .reg 用 UTF-8 BOM，便于 regedit 识别；脚本用 UTF-8
+        var enc = NormalizeKind(kind) == "reg"
+            ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)
+            : Utf8;
+        File.WriteAllText(path, content, enc);
     }
 
     public static void RemoveItem(CustomPackDetail pack, string itemId)
