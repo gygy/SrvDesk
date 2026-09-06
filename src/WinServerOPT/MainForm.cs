@@ -715,8 +715,8 @@ internal sealed class MainForm : Form
                 var w = _mainSplit.Panel2.Width;
                 if (w >= 120)
                 {
-                    _scriptPaneSize = UiPrefs.ClampWidth(w);
-                    UiPrefs.SetHelpPanelWidth(_scriptPaneSize);
+                    _scriptPanelSize = UiPrefs.ClampWidth(w);
+                    UiPrefs.SetHelpPanelWidth(_scriptPanelSize);
                 }
             }
         }
