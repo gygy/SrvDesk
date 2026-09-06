@@ -15,9 +15,14 @@ internal enum RecommendLevel
 
 internal static class RecommendLevelUi
 {
-    /// <summary>统一金色实心星，靠「亮星数量」一眼区分（参考五星推荐）。</summary>
-    public static readonly Color StarOn = Color.FromArgb(242, 169, 0);
-    public static readonly Color StarOff = Color.FromArgb(210, 214, 220);
+    /// <summary>实心星：偏暖琥珀金，对比清晰。</summary>
+    public static readonly Color StarOn = Color.FromArgb(230, 145, 12);
+    /// <summary>未亮星：同字形灰色实心星（不用☆，避免字形宽窄不一）。</summary>
+    public static readonly Color StarOff = Color.FromArgb(168, 176, 188);
+
+    /// <summary>单星步进（像素），尽量紧凑仍可辨。</summary>
+    public const int StarStep = 11;
+    public const float StarFontSize = 10f;
 
     public static string Title(RecommendLevel level) => level switch
     {
@@ -36,7 +41,9 @@ internal static class RecommendLevelUi
         _ => 1,
     };
 
-    /// <summary>五星字符串（实心★ + 空心☆），列表用 OwnerDraw 着色更清晰。</summary>
+    public static int StarsBlockWidth => StarStep * 5;
+
+    /// <summary>五星纯文本（提示/日志）；列表用自绘着色。</summary>
     public static string Icon(RecommendLevel level)
     {
         var on = StarsOn(level);

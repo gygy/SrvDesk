@@ -1085,17 +1085,18 @@ internal sealed class MainForm : Form
         var y = header.Height;
         foreach (var (sectionTitle, rows) in group.Sections)
         {
-            var section = BuildGroupSection(sectionTitle, rows);
+            var ordered = OrderRowsByRecommend(rows);
+            var section = BuildGroupSection(sectionTitle, ordered);
             section.Location = new Point(0, y);
             wrap.Controls.Add(section);
             sections.Add(new ActiveSection
             {
                 Panel = section,
                 Body = (Panel)section.Tag!,
-                Rows = rows,
+                Rows = ordered,
                 Expanded = true,
             });
-            allRows.AddRange(rows);
+            allRows.AddRange(ordered);
             y = section.Bottom;
         }
 
@@ -1304,6 +1305,20 @@ internal sealed class MainForm : Form
         TextAlign = align,
         BackColor = Color.Transparent,
     };
+
+    /// <summary>分区内按推荐强度降序：必优化 → 强烈推荐 → 建议优化 → 可选；同级按标题。</summary>
+    private static SettingRow[] OrderRowsByRecommend(SettingRow[] rows)
+    {
+        var ordered = (SettingRow[])rows.Clone();
+        Array.Sort(ordered, (a, b) =>
+        {
+            var byLevel = b.Help.Recommend.CompareTo(a.Help.Recommend);
+            if (byLevel != 0)
+                return byLevel;
+            return string.Compare(a.ItemText, b.ItemText, StringComparison.CurrentCultureIgnoreCase);
+        });
+        return ordered;
+    }
 
     private Panel BuildGroupSection(string title, SettingRow[] rows)
     {
@@ -2169,12 +2184,14 @@ internal sealed class MainForm : Form
             {
                 Text = RecommendLevelUi.Icon(help.Recommend),
                 AutoSize = false,
-                ForeColor = RecommendLevelUi.ForeColorOf(help.Recommend),
-                Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
+                ForeColor = RecommendLevelUi.StarOn,
+                Font = new Font("Segoe UI Symbol", 11F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
             };
+            // 实心星金色、空心星灰色：自绘，保证五星对比一眼可读
+            _level.Paint += DrawRecommendStars;
             _note = new Label
             {
                 Text = help.ListNote,
@@ -2337,9 +2354,7 @@ internal sealed class MainForm : Form
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
             _level.SetBounds(levelX, 0, SettingListLayout.LevelW, h);
-            _level.Text = RecommendLevelUi.Icon(Help.Recommend);
-            _level.ForeColor = RecommendLevelUi.ForeColorOf(Help.Recommend);
-            // 说明列宽度不得超过行宽，否则父级裁切且 AutoEllipsis 不生效
+            _level.Text = ""; // 由 Paint 画五星，实心金 / 空心灰
             var noteW = SettingListLayout.NoteWidthFor(width);
             _note.SetBounds(noteX, 0, noteW, h);
             _note.Text = Help.ListNote;
@@ -2379,6 +2394,36 @@ internal sealed class MainForm : Form
                 Height = 1,
             });
             parent.Controls.Add(wrap);
+        }
+
+        private void DrawRecommendStars(object? sender, PaintEventArgs e)
+        {
+            if (sender is not Label label) return;
+            var g = e.Graphics;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            // 透明标签需铺底，避免残影；并保证五星完整落在列宽内
+            var bg = label.BackColor.A == 255
+                ? label.BackColor
+                : (label.Parent?.BackColor ?? AppTheme.SurfaceCard);
+            using (var brush = new SolidBrush(bg))
+                g.FillRectangle(brush, label.ClientRectangle);
+
+            var on = RecommendLevelUi.StarsOn(Help.Recommend);
+            var step = RecommendLevelUi.StarStep;
+            var totalW = RecommendLevelUi.StarsBlockWidth;
+            using var font = new Font("Segoe UI Symbol", RecommendLevelUi.StarFontSize, FontStyle.Regular);
+            var x0 = Math.Max(2, (label.ClientSize.Width - totalW) / 2);
+            var y0 = Math.Max(0, (label.ClientSize.Height - font.Height) / 2 - 1);
+
+            for (var i = 0; i < 5; i++)
+            {
+                var filled = i < on;
+                using var brush = new SolidBrush(filled ? RecommendLevelUi.StarOn : RecommendLevelUi.StarOff);
+                // 统一用 ★，靠颜色区分亮/暗，间隔固定且紧凑
+                g.DrawString("★", font, brush, x0 + i * step, y0);
+            }
         }
     }
 }

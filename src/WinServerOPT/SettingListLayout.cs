@@ -16,11 +16,11 @@ internal static class SettingListLayout
     /// <summary>系统当前值列。</summary>
     public const int CurrentX = 552;
     public const int CurrentW = 96;
-    /// <summary>推荐强度（五星）。</summary>
-    public const int LevelX = 648;
-    public const int LevelW = 88;
+    /// <summary>推荐强度（五星，紧凑绘制约 55px）。</summary>
+    public const int LevelX = 652;
+    public const int LevelW = 72;
     /// <summary>「说明」列放最后；起点需小于内容区最小宽度，否则会被裁切且无省略号。</summary>
-    public const int NoteX = 744;
+    public const int NoteX = 732;
     public const int NoteW = 200;
     /// <summary>项目文字右缘与开关左缘的间隙。</summary>
     public const int TextToggleGap = 12;
