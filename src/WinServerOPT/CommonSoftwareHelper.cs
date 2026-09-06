@@ -308,6 +308,8 @@ internal static class CommonSoftwareHelper
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Utf8NoBom,
+                StandardErrorEncoding = Utf8NoBom,
             };
             // WindowsApps 内的 winget 依赖同目录 DLL，必须指定工作目录
             if (path != "winget.exe")
@@ -2284,6 +2286,8 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Utf8NoBom,
+            StandardErrorEncoding = Utf8NoBom,
         };
         if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
         {
@@ -2388,7 +2392,8 @@ Add-AppxPackage -Path '{escaped}'
                 _phase = "已找到包";
                 _percent = Math.Max(_percent, 8);
             }
-            else if (lower.Contains("downloading") || lower.Contains("download"))
+            else if (lower.Contains("downloading") || lower.Contains("download") ||
+                     line.Contains("正在下载") || line.Contains("下载中"))
             {
                 _phase = "下载中";
                 _percent = Math.Max(_percent, 15);
@@ -2399,7 +2404,7 @@ Add-AppxPackage -Path '{escaped}'
                 _percent = Math.Max(_percent, 72);
             }
             else if (lower.Contains("starting package install") || lower.Contains("installing") ||
-                     lower.Contains("正在安装") || lower.Contains("extract"))
+                     lower.Contains("正在安装") || lower.Contains("extract") || lower.Contains("正在解压"))
             {
                 _phase = "安装中";
                 _percent = Math.Max(_percent, 78);
@@ -2446,10 +2451,7 @@ Add-AppxPackage -Path '{escaped}'
             var msg = _phase;
             if (pctMatch.Success)
                 msg = _phase + " " + pctMatch.Groups[1].Value + "%";
-            else if (line.Length is > 0 and < 80 &&
-                     !line.StartsWith("─", StringComparison.Ordinal) &&
-                     line.IndexOf("http", StringComparison.OrdinalIgnoreCase) < 0)
-                msg = _phase + " · " + line;
+            // 不拼接 winget 原始行：编码不对时会出现乱码（如「下载中 · 姝…」）
 
             return new SoftwareInstallProgress { Message = msg, Percent = _percent };
         }
@@ -2471,6 +2473,8 @@ Add-AppxPackage -Path '{escaped}'
         }
     }
 
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
     private static int Run(string file, string args, bool setWorkingDirForExe = false, int timeoutMs = 600_000)
     {
         var psi = new ProcessStartInfo
@@ -2481,6 +2485,8 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Utf8NoBom,
+            StandardErrorEncoding = Utf8NoBom,
         };
         if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
         {
@@ -2519,6 +2525,8 @@ Add-AppxPackage -Path '{escaped}'
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Utf8NoBom,
+            StandardErrorEncoding = Utf8NoBom,
         };
         if (setWorkingDirForExe && !string.Equals(file, "winget.exe", StringComparison.OrdinalIgnoreCase))
         {
