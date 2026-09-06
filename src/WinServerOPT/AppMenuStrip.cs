@@ -1,6 +1,6 @@
 namespace WinOpt;
 
-/// <summary>应用顶栏菜单：文件 / 预设 / 工具 / 视图 / 帮助。</summary>
+/// <summary>应用顶栏菜单：文件 / 工具 / 视图 / 帮助。</summary>
 internal sealed class AppMenuStrip : MenuStrip
 {
     public ToolStripMenuItem FileImport { get; }
@@ -35,7 +35,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem HelpLog { get; }
     public ToolStripMenuItem HelpAbout { get; }
 
-    public AppMenuStrip(IReadOnlyList<OptPresets.PresetInfo> presets)
+    public AppMenuStrip()
     {
         BackColor = AppTheme.SurfaceCard;
         ForeColor = AppTheme.TextMain;
@@ -45,17 +45,9 @@ internal sealed class AppMenuStrip : MenuStrip
         ShowItemToolTips = true;
 
         var file = new ToolStripMenuItem("文件(&F)");
-        FileImport = new ToolStripMenuItem("导入配置(&O)...", null, null, Keys.Control | Keys.O);
-        FileExport = new ToolStripMenuItem("导出配置(&S)...", null, null, Keys.Control | Keys.S);
+        FileImport = Item("导入配置(&O)...", MenuIcons.Import, Keys.Control | Keys.O);
+        FileExport = Item("导出配置(&S)...", MenuIcons.Export, Keys.Control | Keys.S);
         file.DropDownItems.AddRange([FileImport, FileExport]);
-
-        var preset = new ToolStripMenuItem("预设(&P)");
-        foreach (var p in presets)
-        {
-            var item = new ToolStripMenuItem(p.Title) { Tag = p };
-            item.ToolTipText = p.Description;
-            preset.DropDownItems.Add(item);
-        }
 
         var tools = new ToolStripMenuItem("工具(&T)");
         ToolAutologon = Item("Autologon 配置...", MenuIcons.Autologon);
@@ -79,7 +71,6 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRefresh = Item("刷新当前状态", MenuIcons.Refresh, Keys.F5);
         ToolRestoreDefaults = Item("恢复出厂默认...", MenuIcons.Restore);
 
-        // 分组：本机身份 → 网络 → 系统管理 → 维护优化 → 状态
         tools.DropDownItems.AddRange([
             ToolAutologon, ToolIdentity, ToolSystemInfo,
             new ToolStripSeparator(),
@@ -93,27 +84,30 @@ internal sealed class AppMenuStrip : MenuStrip
         ]);
 
         var view = new ToolStripMenuItem("视图(&V)");
-        ViewAllOn = new ToolStripMenuItem("全部开启当前页");
-        ViewAllOff = new ToolStripMenuItem("全部关闭当前页");
-        ViewHideIncompatible = new ToolStripMenuItem("隐藏不适用项") { CheckOnClick = true };
-        ViewHelpPanel = new ToolStripMenuItem("显示帮助面板") { CheckOnClick = true, Checked = false };
+        ViewAllOn = Item("全部开启当前页", MenuIcons.ViewAllOn);
+        ViewAllOff = Item("全部关闭当前页", MenuIcons.ViewAllOff);
+        ViewHideIncompatible = Item("隐藏不适用项", MenuIcons.ViewHide);
+        ViewHideIncompatible.CheckOnClick = true;
+        ViewHelpPanel = Item("显示帮助面板", MenuIcons.ViewHelpPanel);
+        ViewHelpPanel.CheckOnClick = true;
+        ViewHelpPanel.Checked = false;
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
             ViewHideIncompatible, ViewHelpPanel
         ]);
 
         var help = new ToolStripMenuItem("帮助(&H)");
-        HelpUsage = new ToolStripMenuItem("使用说明", null, null, Keys.F1);
-        HelpLegend = new ToolStripMenuItem("标识图例...");
-        HelpChangeLog = new ToolStripMenuItem("打开变更日志...");
-        HelpLog = new ToolStripMenuItem("打开操作日志...");
-        HelpAbout = new ToolStripMenuItem($"关于 {AppBrand.ProductName}...");
+        HelpUsage = Item("使用说明", MenuIcons.HelpUsage, Keys.F1);
+        HelpLegend = Item("标识图例...", MenuIcons.HelpLegend);
+        HelpChangeLog = Item("打开变更日志...", MenuIcons.HelpChangeLog);
+        HelpLog = Item("打开操作日志...", MenuIcons.HelpLog);
+        HelpAbout = Item($"关于 {AppBrand.ProductName}...", MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
             HelpUsage, HelpLegend, new ToolStripSeparator(),
             HelpChangeLog, HelpLog, HelpAbout
         ]);
 
-        Items.AddRange([file, preset, tools, view, help]);
+        Items.AddRange([file, tools, view, help]);
     }
 
     private static ToolStripMenuItem Item(string text, Image image, Keys shortcut = Keys.None)

@@ -158,7 +158,7 @@ internal sealed class MainForm : Form
     private AutologonSettings? _autologonSettings;
 
     private readonly HelpDetailPanel _helpDetail = new();
-    private readonly AppMenuStrip _appMenu = new(OptPresets.All);
+    private readonly AppMenuStrip _appMenu = new();
     private readonly Panel _commandBar = new();
     private readonly Panel _workArea = new();
     private readonly Label _headerSubtitle = new();
@@ -480,30 +480,6 @@ internal sealed class MainForm : Form
             LayoutContent();
         };
 
-        var presetMenu = _appMenu.Items[1] as ToolStripMenuItem;
-        if (presetMenu is not null)
-        {
-            foreach (ToolStripItem item in presetMenu.DropDownItems)
-            {
-                if (item.Tag is OptPresets.PresetInfo preset)
-                    item.Click += (_, _) => LoadPresetFromMenu(preset);
-            }
-        }
-    }
-
-    private void LoadPresetFromMenu(OptPresets.PresetInfo preset)
-    {
-        var answer = MessageBox.Show(
-            $"将载入预设「{preset.Title}」到界面开关（尚未写入系统）。\n\n{preset.Description}\n\n是否继续？",
-            "载入预设",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Question);
-        if (answer != DialogResult.Yes) return;
-
-        Bind(preset.Build());
-        _status.Text = $"已载入预设「{preset.Title}」，点击「应用到系统」即可生效。";
-        ApplyLog.Write("载入预设 " + preset.Title);
-        ApplySearchFilter();
     }
 
     private void OpenLogFile(string path, string title)
@@ -2211,7 +2187,7 @@ internal sealed class MainForm : Form
             "管理员：" + (AdminHelper.IsRunningAsAdministrator() ? "是" : "否") + "\r\n" +
             "操作日志：" + ApplyLog.LogFilePath + "\r\n" +
             "变更日志：" + ApplyLog.ChangeLogFilePath + "\r\n\r\n" +
-            "预设方案对标 WinUtil；配置 JSON 可导入导出。\r\n" +
+            "配置 JSON 可导入导出。\r\n" +
             $"CLI：{AppBrand.ExeFileName} --apply-preset server-desktop",
             AppBrand.AboutDialogTitle,
             MessageBoxButtons.OK,

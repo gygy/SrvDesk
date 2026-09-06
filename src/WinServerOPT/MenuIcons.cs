@@ -9,98 +9,161 @@ internal static class MenuIcons
     private const int Size = 16;
     private static readonly Dictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
 
+    // —— 文件 ——
+    public static Image Import => Get("import",
+        [FileCand(Sys("shell32.dll"), 4), FileCand(Sys("explorer.exe"))],
+        DrawImport);
+
+    public static Image Export => Get("export",
+        [FileCand(Sys("shell32.dll"), 259), FileCand(Sys("notepad.exe"))],
+        DrawExport);
+
+    // —— 工具（已有项） ——
     public static Image Autologon => Get("autologon",
-        [Sys("netplwiz.exe"), Sys("control.exe")],
-        g => DrawKey(g));
+        [FileCand(Sys("netplwiz.exe")), FileCand(Sys("control.exe"))],
+        DrawKey);
 
     public static Image Identity => Get("identity",
-        [Sys("SystemPropertiesComputerName.exe"), Sys("sysdm.cpl"), Sys("SystemPropertiesAdvanced.exe")],
-        g => DrawComputer(g));
+        [FileCand(Sys("SystemPropertiesComputerName.exe")), FileCand(Sys("sysdm.cpl")), FileCand(Sys("SystemPropertiesAdvanced.exe"))],
+        DrawComputer);
 
     public static Image SystemInfo => Get("sysinfo",
-        [Sys("msinfo32.exe")],
-        g => DrawInfo(g));
+        [FileCand(Sys("msinfo32.exe"))],
+        DrawInfo);
 
     public static Image Hosts => Get("hosts",
-        [Sys("notepad.exe")],
-        g => DrawDoc(g));
+        [FileCand(Sys("notepad.exe"))],
+        DrawDoc);
 
     public static Image EventViewer => Get("eventvwr",
-        [Sys("eventvwr.exe"), Sys("mmc.exe")],
-        g => DrawLog(g));
+        [FileCand(Sys("eventvwr.exe")), FileCand(Sys("mmc.exe"))],
+        DrawLog);
 
     public static Image GroupPolicy => Get("gpedit",
-        [Sys("gpedit.msc"), Sys("mmc.exe")],
-        g => DrawShield(g));
+        [FileCand(Sys("gpedit.msc")), FileCand(Sys("mmc.exe"))],
+        DrawShield);
 
     public static Image Cmd => Get("cmd",
-        [Sys("cmd.exe")],
+        [FileCand(Sys("cmd.exe"))],
         g => DrawPrompt(g));
 
     public static Image PowerShell => Get("powershell",
-        [Sys("WindowsPowerShell\\v1.0\\powershell.exe"), Sys("powershell.exe")],
+        [FileCand(Sys("WindowsPowerShell\\v1.0\\powershell.exe")), FileCand(Sys("powershell.exe"))],
         g => DrawPrompt(g, Color.FromArgb(0, 120, 215)));
 
     public static Image TaskScheduler => Get("taskschd",
-        [Sys("taskschd.msc"), Sys("mmc.exe")],
-        g => DrawClock(g));
+        [FileCand(Sys("taskschd.msc")), FileCand(Sys("mmc.exe"))],
+        DrawClock);
 
     public static Image ComputerMgmt => Get("compmgmt",
-        [Sys("compmgmt.msc"), Sys("mmc.exe")],
-        g => DrawComputer(g));
+        [FileCand(Sys("compmgmt.msc")), FileCand(Sys("mmc.exe"))],
+        DrawComputer);
 
     public static Image FlushDns => Get("flushdns",
-        [Sys("ncpa.cpl"), Sys("control.exe")],
-        g => DrawNetwork(g));
+        [FileCand(Sys("ncpa.cpl")), FileCand(Sys("control.exe"))],
+        DrawNetwork);
 
     public static Image CommonSoftware => Get("software",
-        [Sys("appwiz.cpl"), Sys("msiexec.exe")],
-        g => DrawBox(g));
+        [FileCand(Sys("appwiz.cpl")), FileCand(Sys("msiexec.exe"))],
+        DrawBox);
 
     public static Image Cleanup => Get("cleanup",
-        [Sys("cleanmgr.exe")],
-        g => DrawTrash(g));
+        [FileCand(Sys("cleanmgr.exe"))],
+        DrawTrash);
 
     public static Image DesktopMaintenance => Get("desktop",
-        [Sys("explorer.exe"), Sys("desk.cpl")],
-        g => DrawDesktop(g));
+        [FileCand(Sys("explorer.exe")), FileCand(Sys("desk.cpl"))],
+        DrawDesktop);
 
     public static Image Advanced => Get("advanced",
-        [Sys("SystemPropertiesAdvanced.exe"), Sys("control.exe")],
-        g => DrawGear(g));
+        [FileCand(Sys("SystemPropertiesAdvanced.exe")), FileCand(Sys("control.exe"))],
+        DrawGear);
 
     public static Image WindowsFeatures => Get("optionalfeatures",
-        [Sys("OptionalFeatures.exe"), Sys("optionalfeatures.exe")],
-        g => DrawWin(g));
+        [FileCand(Sys("OptionalFeatures.exe")), FileCand(Sys("optionalfeatures.exe"))],
+        DrawWin);
 
+    /// <summary>右键菜单：鼠标 + 弹出菜单（不用 shell32#0，避免与刷新撞图标）。</summary>
     public static Image ContextMenu => Get("contextmenu",
-        [Sys("shell32.dll"), Sys("explorer.exe")],
-        g => DrawMenu(g));
+        Array.Empty<Cand>(),
+        DrawContextMenu);
 
     public static Image Quick => Get("quick",
-        [Sys("control.exe")],
-        g => DrawWrench(g));
+        [FileCand(Sys("control.exe"))],
+        DrawWrench);
 
+    /// <summary>刷新：圆形箭头（不用 shell32#0）。</summary>
     public static Image Refresh => Get("refresh",
-        [Sys("shell32.dll")],
-        g => DrawRefresh(g));
+        Array.Empty<Cand>(),
+        DrawRefresh);
 
     public static Image Restore => Get("restore",
-        [Sys("rstrui.exe"), Sys("SystemPropertiesProtection.exe")],
-        g => DrawUndo(g));
+        [FileCand(Sys("rstrui.exe")), FileCand(Sys("SystemPropertiesProtection.exe"))],
+        DrawUndo);
+
+    // —— 视图 ——
+    public static Image ViewAllOn => Get("view-allon",
+        Array.Empty<Cand>(),
+        DrawToggleOn);
+
+    public static Image ViewAllOff => Get("view-alloff",
+        Array.Empty<Cand>(),
+        DrawToggleOff);
+
+    public static Image ViewHide => Get("view-hide",
+        [FileCand(Sys("shell32.dll"), 22)],
+        DrawEyeOff);
+
+    public static Image ViewHelpPanel => Get("view-helppanel",
+        [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
+        DrawPanel);
+
+    // —— 帮助 ——
+    public static Image HelpUsage => Get("help-usage",
+        [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
+        DrawHelp);
+
+    public static Image HelpLegend => Get("help-legend",
+        Array.Empty<Cand>(),
+        DrawLegend);
+
+    public static Image HelpChangeLog => Get("help-changelog",
+        [FileCand(Sys("notepad.exe")), FileCand(Sys("write.exe"))],
+        DrawDoc);
+
+    public static Image HelpLog => Get("help-log",
+        [FileCand(Sys("eventvwr.exe"))],
+        DrawLog);
+
+    public static Image HelpAbout => Get("help-about",
+        [FileCand(Sys("winver.exe")), FileCand(Sys("SystemPropertiesAbout.exe"))],
+        DrawInfo);
+
+    private struct Cand
+    {
+        public string Path;
+        public int Index;
+        public Cand(string path, int index = 0)
+        {
+            Path = path;
+            Index = index;
+        }
+    }
 
     private static string Sys(string relative) =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), relative);
 
-    private static Image Get(string key, string[] candidates, Action<Graphics> fallback)
+    private static Cand FileCand(string path, int index = 0) => new(path, index);
+
+    private static Image Get(string key, Cand[] candidates, Action<Graphics> fallback)
     {
         if (Cache.TryGetValue(key, out var cached))
             return cached;
 
         Image? img = null;
-        foreach (var path in candidates)
+        foreach (var c in candidates)
         {
-            img = FromFile(path);
+            img = FromFile(c.Path, c.Index);
             if (img is not null) break;
         }
 
@@ -109,14 +172,19 @@ internal static class MenuIcons
         return img;
     }
 
-    private static Image? FromFile(string path)
+    private static Image? FromFile(string path, int index = 0)
     {
         try
         {
             if (!File.Exists(path)) return null;
-            if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+
+            var ext = Path.GetExtension(path);
+            if (ext.Equals(".dll", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".cpl", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".msc", StringComparison.OrdinalIgnoreCase)
+                || index != 0)
             {
-                var h = ExtractIcon(IntPtr.Zero, path, 0);
+                var h = ExtractIcon(IntPtr.Zero, path, index);
                 if (h == IntPtr.Zero) return null;
                 using var ico = Icon.FromHandle(h);
                 var bmp = new Bitmap(ico.ToBitmap(), Size, Size);
@@ -142,6 +210,22 @@ internal static class MenuIcons
         g.Clear(Color.Transparent);
         paint(g);
         return bmp;
+    }
+
+    private static void DrawImport(Graphics g)
+    {
+        using var p = new Pen(Color.FromArgb(0, 120, 215), 1.8f);
+        g.DrawRectangle(p, 3, 2, 10, 12);
+        g.DrawLine(p, 8, 5, 8, 11);
+        g.FillPolygon(Brushes.DodgerBlue, new[] { new Point(8, 12), new Point(5, 8), new Point(11, 8) });
+    }
+
+    private static void DrawExport(Graphics g)
+    {
+        using var p = new Pen(Color.FromArgb(0, 120, 215), 1.8f);
+        g.DrawRectangle(p, 3, 2, 10, 12);
+        g.DrawLine(p, 8, 11, 8, 5);
+        g.FillPolygon(Brushes.DodgerBlue, new[] { new Point(8, 3), new Point(5, 7), new Point(11, 7) });
     }
 
     private static void DrawKey(Graphics g)
@@ -276,16 +360,26 @@ internal static class MenuIcons
         g.FillRectangle(b, 9, 9, 5, 5);
     }
 
-    private static void DrawMenu(Graphics g)
+    private static void DrawContextMenu(Graphics g)
     {
-        using var b = new SolidBrush(Color.FromArgb(240, 240, 240));
-        using var border = new Pen(Color.FromArgb(100, 100, 100));
-        g.FillRectangle(b, 2, 2, 12, 12);
-        g.DrawRectangle(border, 2, 2, 12, 12);
+        // 弹出菜单
+        using var panel = new SolidBrush(Color.FromArgb(250, 250, 250));
+        using var border = new Pen(Color.FromArgb(80, 80, 80));
+        g.FillRectangle(panel, 1, 1, 9, 11);
+        g.DrawRectangle(border, 1, 1, 9, 11);
         using var line = new Pen(Color.FromArgb(60, 60, 60));
-        g.DrawLine(line, 4, 5, 12, 5);
-        g.DrawLine(line, 4, 8, 12, 8);
-        g.DrawLine(line, 4, 11, 10, 11);
+        g.DrawLine(line, 3, 4, 8, 4);
+        g.DrawLine(line, 3, 7, 8, 7);
+        using var hi = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillRectangle(hi, 2, 9, 7, 2);
+
+        // 鼠标指针（右下）
+        using var mouse = new SolidBrush(Color.FromArgb(40, 40, 40));
+        g.FillPolygon(mouse, new[]
+        {
+            new Point(9, 7), new Point(9, 14), new Point(11, 12),
+            new Point(13, 15), new Point(14, 14), new Point(12, 11), new Point(15, 11),
+        });
     }
 
     private static void DrawWrench(Graphics g)
@@ -297,9 +391,10 @@ internal static class MenuIcons
 
     private static void DrawRefresh(Graphics g)
     {
-        using var p = new Pen(Color.FromArgb(0, 120, 215), 1.8f);
-        g.DrawArc(p, 2, 2, 12, 12, 40, 260);
-        g.FillPolygon(Brushes.DodgerBlue, new[] { new Point(12, 2), new Point(15, 6), new Point(10, 6) });
+        using var brush = new SolidBrush(Color.FromArgb(0, 150, 80));
+        using var p = new Pen(Color.FromArgb(0, 150, 80), 2f);
+        g.DrawArc(p, 2, 2, 12, 12, 35, 250);
+        g.FillPolygon(brush, new[] { new Point(13, 1), new Point(16, 6), new Point(10, 6) });
     }
 
     private static void DrawUndo(Graphics g)
@@ -308,6 +403,63 @@ internal static class MenuIcons
         g.DrawArc(p, 3, 3, 10, 10, 200, 220);
         g.FillPolygon(new SolidBrush(Color.FromArgb(180, 80, 40)),
             new[] { new Point(3, 3), new Point(8, 3), new Point(5, 8) });
+    }
+
+    private static void DrawToggleOn(Graphics g)
+    {
+        using var track = new SolidBrush(Color.FromArgb(0, 150, 80));
+        g.FillRectangle(track, 1, 5, 14, 6);
+        using var knob = new SolidBrush(Color.White);
+        g.FillEllipse(knob, 8, 4, 8, 8);
+    }
+
+    private static void DrawToggleOff(Graphics g)
+    {
+        using var track = new SolidBrush(Color.FromArgb(160, 160, 160));
+        g.FillRectangle(track, 1, 5, 14, 6);
+        using var knob = new SolidBrush(Color.White);
+        g.FillEllipse(knob, 0, 4, 8, 8);
+    }
+
+    private static void DrawEyeOff(Graphics g)
+    {
+        using var p = new Pen(Color.FromArgb(90, 90, 90), 1.5f);
+        g.DrawArc(p, 1, 4, 14, 10, 200, 140);
+        g.DrawArc(p, 1, 2, 14, 10, 20, 140);
+        g.DrawLine(p, 3, 13, 13, 3);
+    }
+
+    private static void DrawPanel(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(230, 240, 250));
+        using var border = new Pen(Color.FromArgb(0, 120, 215));
+        g.FillRectangle(b, 2, 2, 12, 12);
+        g.DrawRectangle(border, 2, 2, 12, 12);
+        using var side = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillRectangle(side, 10, 3, 3, 10);
+    }
+
+    private static void DrawHelp(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.FillEllipse(b, 2, 2, 12, 12);
+        using var f = new Font("Segoe UI", 8f, FontStyle.Bold);
+        using var w = new SolidBrush(Color.White);
+        g.DrawString("?", f, w, 4, 1);
+    }
+
+    private static void DrawLegend(Graphics g)
+    {
+        using var r = new SolidBrush(Color.FromArgb(220, 80, 80));
+        g.FillRectangle(r, 2, 2, 4, 4);
+        using var y = new SolidBrush(Color.FromArgb(230, 170, 40));
+        g.FillRectangle(y, 2, 7, 4, 4);
+        using var gr = new SolidBrush(Color.FromArgb(60, 170, 80));
+        g.FillRectangle(gr, 2, 12, 4, 3);
+        using var line = new Pen(Color.FromArgb(120, 120, 120));
+        g.DrawLine(line, 8, 4, 14, 4);
+        g.DrawLine(line, 8, 9, 14, 9);
+        g.DrawLine(line, 8, 13, 12, 13);
     }
 
     [DllImport("Shell32.dll", CharSet = CharSet.Unicode)]
