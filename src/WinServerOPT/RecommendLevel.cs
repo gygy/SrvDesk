@@ -15,6 +15,10 @@ internal enum RecommendLevel
 
 internal static class RecommendLevelUi
 {
+    /// <summary>统一金色实心星，靠「亮星数量」一眼区分（参考五星推荐）。</summary>
+    public static readonly Color StarOn = Color.FromArgb(242, 169, 0);
+    public static readonly Color StarOff = Color.FromArgb(210, 214, 220);
+
     public static string Title(RecommendLevel level) => level switch
     {
         RecommendLevel.Must => "必优化",
@@ -23,29 +27,34 @@ internal static class RecommendLevelUi
         _ => "可选",
     };
 
-    /// <summary>用实心/空心圆表示强度，兼容无彩色 emoji 的 Server 字体。</summary>
-    public static string Icon(RecommendLevel level) => level switch
+    /// <summary>亮星数量：5=必优化，4=强烈，3=建议，1=可选。</summary>
+    public static int StarsOn(RecommendLevel level) => level switch
     {
-        RecommendLevel.Must => "●●●",
-        RecommendLevel.Strong => "●●○",
-        RecommendLevel.Suggested => "●○○",
-        _ => "○○○",
+        RecommendLevel.Must => 5,
+        RecommendLevel.Strong => 4,
+        RecommendLevel.Suggested => 3,
+        _ => 1,
     };
 
-    public static Color Color(RecommendLevel level) => level switch
+    /// <summary>五星字符串（实心★ + 空心☆），列表用 OwnerDraw 着色更清晰。</summary>
+    public static string Icon(RecommendLevel level)
     {
-        RecommendLevel.Must => Color.FromArgb(198, 40, 40),
-        RecommendLevel.Strong => Color.FromArgb(230, 126, 34),
-        RecommendLevel.Suggested => Color.FromArgb(41, 98, 163),
-        _ => AppTheme.TextMute,
-    };
+        var on = StarsOn(level);
+        return new string('★', on) + new string('☆', 5 - on);
+    }
+
+    public static Color ForeColorOf(RecommendLevel level) =>
+        level == RecommendLevel.Optional ? StarOff : StarOn;
 
     public static string Tip(RecommendLevel level) =>
-        Title(level) + " · " + level switch
+        $"{Icon(level)} {Title(level)}（{StarsOn(level)}/5） · " + level switch
         {
             RecommendLevel.Must => "Server 当桌面几乎必做，否则基础体验明显受限。",
             RecommendLevel.Strong => "个人/内网桌面强烈建议开启，收益高、风险可控。",
             RecommendLevel.Suggested => "多数场景值得开启，可按习惯取舍。",
             _ => "按需开启；有兼容性、安全或业务依赖时请谨慎。",
         };
+
+    public static string LegendShort =>
+        "★★★★★ 必优化 · ★★★★☆ 强烈推荐 · ★★★☆☆ 建议优化 · ★☆☆☆☆ 可选";
 }

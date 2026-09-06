@@ -107,7 +107,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _summary.Text = "面向 Windows Server 桌面化场景的一键注册表/服务/DISM 优化工具。";
         BuildSections([
             ("工作流程", "1. 选择左侧分类 → 2. 勾选开关或从「预设」菜单载入方案 → 3. 点击「应用到系统」。"),
-            ("列含义", "说明=对应哪里·何时建议；设置操作=开关；系统默认值=出厂；系统当前值=本机实际。"),
+            ("列含义", "说明=对应哪里·何时建议；推荐值=●●●必优化 / ●●○强烈 / ●○○建议 / ○○○可选；设置操作=开关。"),
             ("预设方案", "顶部「预设」菜单提供 Server 桌面、安全加固、远程办公、最小改动四套方案；载入后仍可微调。"),
             ("配置备份", "「文件」菜单可导入/导出 JSON 配置，便于多台机器复用或回滚界面状态。"),
             ("管理员", "必须以管理员身份运行，否则注册表、服务、DISM 操作可能失败。"),
@@ -140,6 +140,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var sections = new List<(string Head, string Body)>();
         if (help.Scope.HasBadge)
             sections.Add(("适用范围", help.Scope.FormatHelpSection().Trim()));
+        sections.Add(("推荐强度", RecommendLevelUi.Tip(help.Recommend)));
         if (help.UiPlace.Length > 0)
             sections.Add(("对应哪里", help.UiPlace));
         if (help.WhenHint.Length > 0)

@@ -1286,7 +1286,7 @@ internal sealed class MainForm : Form
         header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
         var levelHeader = MakeHeaderLabel("推荐值", SettingListLayout.LevelX, SettingListLayout.LevelW, ContentAlignment.MiddleCenter);
         levelHeader.Tag = "level-header";
-        _toolTip.SetToolTip(levelHeader, "●●● 必优化 · ●●○ 强烈推荐 · ●○○ 建议优化 · ○○○ 可选");
+        _toolTip.SetToolTip(levelHeader, RecommendLevelUi.LegendShort);
         header.Controls.Add(levelHeader);
         var noteHeader = MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
         noteHeader.Tag = "note-header";
@@ -2165,6 +2165,16 @@ internal sealed class MainForm : Form
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
             };
+            _level = new Label
+            {
+                Text = RecommendLevelUi.Icon(help.Recommend),
+                AutoSize = false,
+                ForeColor = RecommendLevelUi.ForeColorOf(help.Recommend),
+                Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+            };
             _note = new Label
             {
                 Text = help.ListNote,
@@ -2238,6 +2248,7 @@ internal sealed class MainForm : Form
                 || Help.ListNote.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.UiPlace.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || RecommendLevelUi.Title(Help.Recommend).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _system.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _current.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
@@ -2272,6 +2283,8 @@ internal sealed class MainForm : Form
             var noteW = SettingListLayout.NoteWidthFor(width);
             if (_note.Width != noteW || _note.Left != SettingListLayout.NoteX)
                 _note.SetBounds(SettingListLayout.NoteX, 0, noteW, _wrap.Height);
+            if (_level.Left != SettingListLayout.LevelX || _level.Width != SettingListLayout.LevelW)
+                _level.SetBounds(SettingListLayout.LevelX, 0, SettingListLayout.LevelW, _wrap.Height);
         }
 
         public void SetSelected(bool selected)
@@ -2293,6 +2306,7 @@ internal sealed class MainForm : Form
             var toggleX = SettingListLayout.ToggleX;
             var systemX = SettingListLayout.SystemX;
             var currentX = SettingListLayout.CurrentX;
+            var levelX = SettingListLayout.LevelX;
             var noteX = SettingListLayout.NoteX;
             var itemX = SettingListLayout.ItemX;
 
@@ -2322,6 +2336,9 @@ internal sealed class MainForm : Form
             _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
+            _level.SetBounds(levelX, 0, SettingListLayout.LevelW, h);
+            _level.Text = RecommendLevelUi.Icon(Help.Recommend);
+            _level.ForeColor = RecommendLevelUi.ForeColorOf(Help.Recommend);
             // 说明列宽度不得超过行宽，否则父级裁切且 AutoEllipsis 不生效
             var noteW = SettingListLayout.NoteWidthFor(width);
             _note.SetBounds(noteX, 0, noteW, h);
@@ -2331,6 +2348,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, "点击查看详细说明\r\n" + tip);
+            toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
                 (Help.UiPlace.Length > 0 ? "对应：" + Help.UiPlace : Help.ListNote));
@@ -2341,11 +2359,13 @@ internal sealed class MainForm : Form
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
             _info.Click += Select;
+            _level.Click += Select;
             _note.Click += Select;
             if (hasScope) _scope.Click += Select;
 
             wrap.Controls.Add(_current);
             wrap.Controls.Add(_system);
+            wrap.Controls.Add(_level);
             wrap.Controls.Add(_note);
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
