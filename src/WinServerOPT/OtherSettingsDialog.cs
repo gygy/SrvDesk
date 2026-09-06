@@ -26,7 +26,7 @@ internal sealed class OtherSettingsDialog : Form
             "高级设置",
             "RDP 端口 · 预取 · Windows Search",
             body,
-            "开关类项请在左侧「电源与服务」勾选后，点「应用到系统」。");
+            "");
 
         Load += (_, _) =>
         {

@@ -608,7 +608,7 @@ internal sealed class MainForm : Form
                     BeginInvoke(() =>
                     {
                         var identity = t.Result;
-                        _status.Text = _systemFacts.Summary + " · " + identity + "。开=采用优化建议；关=恢复系统默认值。";
+                        _status.Text = _systemFacts.Summary + " · " + identity;
                         _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
                     });
                 });
@@ -1323,7 +1323,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _status.Text = "此页修改直接写入系统。可用底部「刷新」。";
+        _status.Text = _defaultStatusText;
     }
 
     private void UpdateBottomActionEnablement(string? embeddedTitle = null)
@@ -1534,9 +1534,7 @@ internal sealed class MainForm : Form
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
-        _defaultStatusText = Optimizer.IsWindowsServer()
-            ? "开=采用优化建议。即时页直接写入；分组页改完后点「应用到系统」。更多入口见顶部菜单。"
-            : "当前系统可能不是 Windows Server。";
+        _defaultStatusText = "";
         _status.Text = _defaultStatusText;
 
         var actions = new FlowLayoutPanel
