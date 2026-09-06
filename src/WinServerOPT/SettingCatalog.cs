@@ -718,7 +718,35 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisableSettingsSuggestions = H(
         "设置应用不显示建议内容。", "SystemPaneSuggestionsEnabled=0。", "设置页更干净。", "推荐关闭建议。", "立即生效。", W10De);
     public static readonly SettingHelpInfo DisableInkingPersonalization = H(
-        "关闭墨迹与键入个性化词典。", "RestrictImplicitInk/TextCollection。", "减少输入上传。", "手写识别可能变弱。", "立即生效。");
+        "关闭墨迹与键入个性化词典，并禁止语言数据收集。",
+        "HKLM/HKCU RestrictImplicitInk/TextCollection；AllowLinguisticDataCollection=0。",
+        "减少输入/手写上传与本地画像。",
+        "手写识别与云词库可能变弱。",
+        "立即生效。",
+        uiPlace: "设置 → 隐私和安全性 → 墨迹书写和键入个性化");
+    public static readonly SettingHelpInfo MsPinyinDefaultEnglish = H(
+        "微软拼音新建文档/窗口默认英文键盘，需手动 Shift 切中文。",
+        "HKCU …\\InputMethod\\Settings\\CHS「Default Mode」=1。",
+        "减少误输中文，适合开发与英文为主场景。",
+        "仅影响微软拼音；第三方输入法不受影响。",
+        "立即生效；新开输入窗口更明显。",
+        W10De,
+        uiPlace: "设置 → 时间和语言 → 输入 → 微软拼音 → 常规 → 默认输入模式");
+    public static readonly SettingHelpInfo DisableMsPinyinCloudAndInsights = H(
+        "关闭微软拼音云候选、输入见解、多语言与硬件键盘文本预测。",
+        "Enable Cloud Candidate / InsightsEnabled / EnableTypingInsights / MultilingualEnabled 等。",
+        "停止热词、网络流行语、表情预测与输入习惯上传。",
+        "候选词仅用本地词典，可能少一些流行语。",
+        "立即生效；部分项需切换输入法或重开窗口。",
+        W10De,
+        uiPlace: "设置 → 时间和语言 → 输入 / 键入见解");
+    public static readonly SettingHelpInfo DisableMsPinyinToolbar = H(
+        "关闭微软拼音候选窗工具条，并隐藏语言栏帮助按钮。",
+        "ToolBarEnabled=0；LangBar DemoteLevel=3。",
+        "去掉桌面左上角浮动条与多余帮助入口。",
+        "需要工具条快捷按钮时请关闭本项。",
+        "立即生效。",
+        W10De);
     public static readonly SettingHelpInfo ExcludeMsrtFromWu = H(
         "Windows 更新不含恶意软件删除工具。", "MRT DontOfferThroughWUAU=1。", "减少每月 MSRT 包。", "需自行维护杀软。", "下次更新扫描生效。");
     public static readonly SettingHelpInfo DisableMeltdownSpectre = H(

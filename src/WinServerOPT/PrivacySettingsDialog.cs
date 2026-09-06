@@ -10,6 +10,9 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _track = new("允许应用启动跟踪");
     private readonly InstantToggleRow _suggest = new("设置中显示建议内容");
     private readonly InstantToggleRow _ink = new("墨迹与键入个性化");
+    private readonly InstantToggleRow _msPinyinEn = new("微软拼音默认英文");
+    private readonly InstantToggleRow _msPinyinCloud = new("关闭云候选与输入见解");
+    private readonly InstantToggleRow _msPinyinBar = new("关闭拼音工具条与帮助");
     private readonly InstantToggleRow _delivery = new("禁止更新传递优化");
     private readonly InstantToggleRow _msrt = new("更新不含恶意软件删除工具");
     private readonly InstantToggleRow _major = new("暂停功能更新至 2035");
@@ -69,6 +72,9 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         leftBody.Controls.Add(_track);
         leftBody.Controls.Add(_suggest);
         leftBody.Controls.Add(_ink);
+        leftBody.Controls.Add(_msPinyinEn);
+        leftBody.Controls.Add(_msPinyinCloud);
+        leftBody.Controls.Add(_msPinyinBar);
 
         var (rightCard, rightBody) = ThemedSettingsChrome.CreateSectionShell("更新与其它");
         rightBody.Controls.Add(_delivery);
@@ -121,6 +127,9 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         _track.Bind(!s.DisableAppLaunchTracking, v => { s.DisableAppLaunchTracking = !v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _suggest.Bind(!s.DisableSettingsSuggestions, v => { s.DisableSettingsSuggestions = !v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _ink.Bind(!s.DisableInkingPersonalization, v => { s.DisableInkingPersonalization = !v; EasySettingsTweaks.ApplyPrivacyBits(s); });
+        _msPinyinEn.Bind(s.MsPinyinDefaultEnglish, v => { s.MsPinyinDefaultEnglish = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
+        _msPinyinCloud.Bind(s.DisableMsPinyinCloudAndInsights, v => { s.DisableMsPinyinCloudAndInsights = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
+        _msPinyinBar.Bind(s.DisableMsPinyinToolbar, v => { s.DisableMsPinyinToolbar = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _delivery.Bind(s.DisableDeliveryOpt, v => { s.DisableDeliveryOpt = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _msrt.Bind(s.ExcludeMsrtFromWu, v => { s.ExcludeMsrtFromWu = v; EasySettingsTweaks.ApplyPrivacyBits(s); });
         _major.Bind(s.PauseFeatureUpdatesUntil2035, v => { s.PauseFeatureUpdatesUntil2035 = v; EasySettingsTweaks.ApplyPrivacyBits(s); });

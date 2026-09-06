@@ -17,6 +17,15 @@ internal static class EasySettingsTweaks
     private const string SearchPol = @"SOFTWARE\Policies\Microsoft\Windows\Windows Search";
     private const string TermServices = @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services";
     private const string RdpTcp = @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp";
+    private const string ChsIme = @"Software\Microsoft\InputMethod\Settings\CHS";
+    private const string InputSettings = @"Software\Microsoft\Input\Settings";
+    private const string CpssCloudCandidate =
+        @"Software\Microsoft\Windows\CurrentVersion\CPSS\Store\IME\Pinyin\Enable Cloud Candidate";
+    private const string LangBarHelpItem =
+        @"Software\Microsoft\CTF\LangBar\ItemState\{ED9D5450-EBE6-4255-8289-F8A31E687228}";
+    private const string TextInputPolicy = @"Software\Microsoft\Windows\CurrentVersion\Policies\TextInput";
+    private const string InputPersonalizationCu = @"Software\Microsoft\Input\Personalization";
+    private const string InputPersonalizationPol = @"SOFTWARE\Policies\Microsoft\InputPersonalization";
 
     public static void ApplyExplorerBits(Optimizer.State s)
     {
@@ -45,8 +54,27 @@ internal static class EasySettingsTweaks
         SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", s.DisableAppLaunchTracking ? 0 : 1);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled", s.DisableSettingsSuggestions ? 0 : 1);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", s.DisableSettingsSuggestions ? 0 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
+        // 墨迹/键入个性化：机器策略 + 当前用户（与常见隐私 .reg 对齐）
+        SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
+        SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
+        SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
+        SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
+        SetDword(Hive.HkCu, TextInputPolicy, "AllowLinguisticDataCollection", s.DisableInkingPersonalization ? 0 : 1);
+
+        // 微软拼音：默认英文 / 云候选与见解 / 工具条
+        SetDword(Hive.HkCu, ChsIme, "Default Mode", s.MsPinyinDefaultEnglish ? 1 : 0);
+
+        SetDword(Hive.HkCu, ChsIme, "Enable Cloud Candidate", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        SetDword(Hive.HkCu, CpssCloudCandidate, "Value", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        SetDword(Hive.HkCu, InputSettings, "MultilingualEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        SetDword(Hive.HkCu, InputSettings, "EnableHwkbTextPrediction", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        SetDword(Hive.HkCu, InputSettings, "InsightsEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        SetDword(Hive.HkCu, InputSettings, "EnableTypingInsights", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+
+        SetDword(Hive.HkCu, ChsIme, "ToolBarEnabled", s.DisableMsPinyinToolbar ? 0 : 1);
+        SetDword(Hive.HkCu, LangBarHelpItem, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
+        SetDword(Hive.HkCu, InputSettings, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
+
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1);
         SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
@@ -111,7 +139,15 @@ internal static class EasySettingsTweaks
         s.DisableWebsiteLangList = DwordEquals(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", 1);
         s.DisableAppLaunchTracking = DwordEquals(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", 0);
         s.DisableSettingsSuggestions = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", 0);
-        s.DisableInkingPersonalization = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", 1);
+        s.DisableInkingPersonalization =
+            DwordEquals(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitInkCollection", 1)
+            || DwordEquals(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitInkCollection", 1)
+            || DwordEquals(Hive.HkCu, TextInputPolicy, "AllowLinguisticDataCollection", 0);
+        s.MsPinyinDefaultEnglish = DwordEquals(Hive.HkCu, ChsIme, "Default Mode", 1);
+        s.DisableMsPinyinCloudAndInsights =
+            DwordEquals(Hive.HkCu, ChsIme, "Enable Cloud Candidate", 0)
+            && DwordEquals(Hive.HkCu, InputSettings, "InsightsEnabled", 0);
+        s.DisableMsPinyinToolbar = DwordEquals(Hive.HkCu, ChsIme, "ToolBarEnabled", 0);
         s.DisableAdTracking = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0);
         s.DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100);
         s.ExcludeMsrtFromWu = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", 1);

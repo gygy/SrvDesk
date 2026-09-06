@@ -57,6 +57,9 @@ internal sealed class MainForm : Form
     private readonly SettingRow _trackApps = Row("关闭应用启动跟踪", "开启", SettingCatalog.DisableAppLaunchTracking);
     private readonly SettingRow _settingsSuggest = Row("关闭设置应用建议内容", "开启", SettingCatalog.DisableSettingsSuggestions);
     private readonly SettingRow _inking = Row("关闭墨迹与键入个性化", "开启", SettingCatalog.DisableInkingPersonalization);
+    private readonly SettingRow _msPinyinEn = Row("微软拼音默认英文", "默认中文", SettingCatalog.MsPinyinDefaultEnglish);
+    private readonly SettingRow _msPinyinCloud = Row("关闭微软拼音云候选与输入见解", "开启", SettingCatalog.DisableMsPinyinCloudAndInsights);
+    private readonly SettingRow _msPinyinBar = Row("关闭拼音工具条与帮助按钮", "显示", SettingCatalog.DisableMsPinyinToolbar);
     private readonly SettingRow _msrt = Row("更新不含恶意软件删除工具", "包含", SettingCatalog.ExcludeMsrtFromWu);
     private readonly SettingRow _ra = Row("禁用远程协助", "允许", SettingCatalog.DisableRemoteAssistance);
     private readonly SettingRow _memComp = Row("禁用内存压缩", "启用", SettingCatalog.DisableMemoryCompression);
@@ -258,7 +261,8 @@ internal sealed class MainForm : Form
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
-        _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking, _msrt,
+        _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
+        _msPinyinEn, _msPinyinCloud, _msPinyinBar, _msrt,
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
         _insider, _storeUpd,
         _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra,
@@ -363,7 +367,9 @@ internal sealed class MainForm : Form
                 _trackApps, _langList, _location, _activityHist, _clipCloud,
                 _animations, _transparency, _stickyKeys, _backgroundApps,
                 _storageSense, _autoplay,
-                _settingsSuggest, _inking, _consumer, _edgePre,
+                _settingsSuggest, _inking,
+                _msPinyinEn, _msPinyinCloud, _msPinyinBar,
+                _consumer, _edgePre,
                 _deliveryOpt, _msrt, _insider, _storeUpd,
                 _gameDvr, _officeTel, _teredo,
             ]),
@@ -2051,6 +2057,9 @@ internal sealed class MainForm : Form
         _trackApps.Checked = s.DisableAppLaunchTracking;
         _settingsSuggest.Checked = s.DisableSettingsSuggestions;
         _inking.Checked = s.DisableInkingPersonalization;
+        _msPinyinEn.Checked = s.MsPinyinDefaultEnglish;
+        _msPinyinCloud.Checked = s.DisableMsPinyinCloudAndInsights;
+        _msPinyinBar.Checked = s.DisableMsPinyinToolbar;
         _msrt.Checked = s.ExcludeMsrtFromWu;
         _ra.Checked = s.DisableRemoteAssistance;
         _memComp.Checked = s.DisableMemoryCompression;
@@ -2168,6 +2177,9 @@ internal sealed class MainForm : Form
         DisableAppLaunchTracking = _trackApps.Checked,
         DisableSettingsSuggestions = _settingsSuggest.Checked,
         DisableInkingPersonalization = _inking.Checked,
+        MsPinyinDefaultEnglish = _msPinyinEn.Checked,
+        DisableMsPinyinCloudAndInsights = _msPinyinCloud.Checked,
+        DisableMsPinyinToolbar = _msPinyinBar.Checked,
         ExcludeMsrtFromWu = _msrt.Checked,
         DisableRemoteAssistance = _ra.Checked,
         DisableMemoryCompression = _memComp.Checked,

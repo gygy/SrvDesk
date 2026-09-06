@@ -542,10 +542,54 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.DisableInkingPersonalization, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\InputPersonalization"),
                 ActionScript.Dword("RestrictImplicitInkCollection", 1),
-                ActionScript.Dword("RestrictImplicitTextCollection", 1)),
+                ActionScript.Dword("RestrictImplicitTextCollection", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Personalization"),
+                ActionScript.Dword("RestrictImplicitInkCollection", 1),
+                ActionScript.Dword("RestrictImplicitTextCollection", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\TextInput"),
+                ActionScript.Dword("AllowLinguisticDataCollection", 0)),
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\InputPersonalization"),
                 ActionScript.Dword("RestrictImplicitInkCollection", 0),
-                ActionScript.Dword("RestrictImplicitTextCollection", 0))));
+                ActionScript.Dword("RestrictImplicitTextCollection", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Personalization"),
+                ActionScript.Dword("RestrictImplicitInkCollection", 0),
+                ActionScript.Dword("RestrictImplicitTextCollection", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\TextInput"),
+                ActionScript.Dword("AllowLinguisticDataCollection", 1))));
+        Add(SettingCatalog.MsPinyinDefaultEnglish, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\InputMethod\Settings\CHS", "Default Mode", 1, 0));
+        Add(SettingCatalog.DisableMsPinyinCloudAndInsights, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\InputMethod\Settings\CHS"),
+                ActionScript.Dword("Enable Cloud Candidate", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\CPSS\Store\IME\Pinyin\Enable Cloud Candidate"),
+                ActionScript.Dword("Value", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Settings"),
+                ActionScript.Dword("MultilingualEnabled", 0),
+                ActionScript.Dword("EnableHwkbTextPrediction", 0),
+                ActionScript.Dword("InsightsEnabled", 0),
+                ActionScript.Dword("EnableTypingInsights", 0)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\InputMethod\Settings\CHS"),
+                ActionScript.Dword("Enable Cloud Candidate", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\CPSS\Store\IME\Pinyin\Enable Cloud Candidate"),
+                ActionScript.Dword("Value", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Settings"),
+                ActionScript.Dword("MultilingualEnabled", 1),
+                ActionScript.Dword("EnableHwkbTextPrediction", 1),
+                ActionScript.Dword("InsightsEnabled", 1),
+                ActionScript.Dword("EnableTypingInsights", 1))));
+        Add(SettingCatalog.DisableMsPinyinToolbar, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\InputMethod\Settings\CHS"),
+                ActionScript.Dword("ToolBarEnabled", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\CTF\LangBar\ItemState\{ED9D5450-EBE6-4255-8289-F8A31E687228}"),
+                ActionScript.Dword("DemoteLevel", 3)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Settings"),
+                ActionScript.Dword("DemoteLevel", 3)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\InputMethod\Settings\CHS"),
+                ActionScript.Dword("ToolBarEnabled", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\CTF\LangBar\ItemState\{ED9D5450-EBE6-4255-8289-F8A31E687228}"),
+                ActionScript.Dword("DemoteLevel", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Input\Settings"),
+                ActionScript.Dword("DemoteLevel", 0))));
         Add(SettingCatalog.ExcludeMsrtFromWu, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", 1, 0));
         Add(SettingCatalog.DisableMeltdownSpectre, ActionScript.Reg(

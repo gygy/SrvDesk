@@ -82,6 +82,8 @@ internal static class CommonSoftwareCatalog
 
         Item("geek", "Geek Uninstaller（深度卸载）", "工具", "GeekUninstaller.GeekUninstaller",
             ["Geek Uninstaller", "Geek"], "https://geekuninstaller.com/download", essential: false),
+        Item("virt-viewer", "Virt Viewer（SPICE/VNC 远程桌面）", "工具", "RedHat.VirtViewer",
+            ["Virt Viewer", "VirtViewer", "virt-viewer"], "https://virt-manager.org/", essential: false),
         Item("neatdm", "Neat Download Manager", "工具", "JavadMotallebi.NeatDownloadManager",
             ["Neat Download Manager", "NeatDM", "Neat DownloadManager"],
             "https://www.neatdownloadmanager.com/",

@@ -154,6 +154,12 @@ internal static class Optimizer
         public bool DisableAppLaunchTracking;
         public bool DisableSettingsSuggestions;
         public bool DisableInkingPersonalization;
+        /// <summary>微软拼音新建文档/窗口默认英文键盘（需 Shift 切中文）。</summary>
+        public bool MsPinyinDefaultEnglish;
+        /// <summary>关闭云候选、输入见解、多语言/硬件键盘预测。</summary>
+        public bool DisableMsPinyinCloudAndInsights;
+        /// <summary>关闭拼音候选窗工具条，并隐藏语言栏帮助按钮。</summary>
+        public bool DisableMsPinyinToolbar;
         public bool ExcludeMsrtFromWu;
 
         public bool DisableMeltdownSpectre;
@@ -576,6 +582,9 @@ internal static class Optimizer
             || b.DisableAppLaunchTracking != s.DisableAppLaunchTracking
             || b.DisableSettingsSuggestions != s.DisableSettingsSuggestions
             || b.DisableInkingPersonalization != s.DisableInkingPersonalization
+            || b.MsPinyinDefaultEnglish != s.MsPinyinDefaultEnglish
+            || b.DisableMsPinyinCloudAndInsights != s.DisableMsPinyinCloudAndInsights
+            || b.DisableMsPinyinToolbar != s.DisableMsPinyinToolbar
             || b.DisableAdTracking != s.DisableAdTracking
             || b.DisableDeliveryOpt != s.DisableDeliveryOpt
             || b.ExcludeMsrtFromWu != s.ExcludeMsrtFromWu
