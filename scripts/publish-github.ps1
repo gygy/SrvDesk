@@ -1,4 +1,4 @@
-# Push a minimal public tree to GitHub: README + LICENSE only.
+# Push a minimal public tree to GitHub: docs only (no source).
 # Binary is distributed via GitHub Releases (SrvDesk.exe). Full source stays on Gitea main.
 param(
     [string]$RepoRoot = (Join-Path $PSScriptRoot "..")
@@ -11,7 +11,9 @@ Set-Location $Root
 $PublicFiles = @(
     "README.md",
     "README_cn.md",
-    "LICENSE"
+    "LICENSE",
+    "DISCLAIMER.md",
+    "PRIVACY.md"
 )
 
 function Get-GitExe {
@@ -68,7 +70,7 @@ foreach ($file in $PublicFiles) {
 
 $status = & $git @GitConfig status --porcelain
 if ($status) {
-    Invoke-Git commit -m "chore: GitHub public tree — README and LICENSE only"
+    Invoke-Git commit -m "chore: GitHub public docs (README, LICENSE, disclaimer, privacy)"
 }
 
 $prevEa = $ErrorActionPreference
@@ -82,7 +84,7 @@ if (-not $githubUrl) {
 }
 
 Invoke-Git push --force github public:main
-Write-Host "Pushed public branch (README + LICENSE) to github/main"
+Write-Host "Pushed public docs to github/main (no source)"
 
 Invoke-Git checkout -f main
 Write-Host "Back on main (full source for Gitea)"

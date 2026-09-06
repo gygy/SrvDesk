@@ -1,23 +1,20 @@
-# SrvDesk v1.0.1 — Release notes
-
-## English
-
-v1.0.1
-
-- Initial release: Windows Server desktop optimization assistant **SrvDesk**
-- Instant pages: Explorer, power & services, startup, DNS
-- Four presets: Server Desktop / Security / Remote Work / Minimal
-- JSON profile import/export, CLI, operation log
-- Single-file `SrvDesk.exe` — run as Administrator
+# SrvDesk v1.0.13
 
 ## 中文
 
-v1.0.1
+- 帮助菜单：免责声明、隐私说明、许可证（纯文本阅读）
+- 首次启动简短使用说明（只提示一次）
+- 隐私与体验 / 性能及安全按场景分组
+- 常用软件增加 AI 分类（Codex CLI / Desktop、Pi Agent 等）
+- 顶栏显示本机 IPv4；多项稳定性修复
 
-- 首发：**Windows server优化助手 SrvDesk**
-- 即时页：资源管理器、电源与服务、登录启动项、DNS
-- 四套预设：Server 桌面 / 安全加固 / 远程办公 / 最小改动
-- JSON 配置导入导出、命令行、操作日志
-- 单文件 `SrvDesk.exe`，需**以管理员身份运行**
+下载：单文件 `SrvDesk.exe`，请以管理员身份运行。
 
-Download: https://github.com/gygy/SrvDesk/releases/tag/v1.0.1
+## English
+
+- Help menu: disclaimer, privacy note, license
+- One-time first-run notice
+- Regrouped privacy / performance settings
+- AI software category; header IPv4; assorted fixes
+
+Download `SrvDesk.exe` and run as Administrator.
