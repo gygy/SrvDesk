@@ -261,7 +261,7 @@ if ($Rounds -contains 1) {
 
     $scriptOnly = Join-Path $env:TEMP ("srvdesk-scripts-" + [guid]::NewGuid().ToString("n") + ".json")
     try {
-        Set-Content -LiteralPath $scriptOnly -Value '{"Version":2,"ScriptOverrides":{"x.on":"reg"}}' -Encoding UTF8
+        Set-Content -LiteralPath $scriptOnly -Value '{"Version":2,"ScriptOverrides":[{"Key":"x.on","Value":"reg"}]}' -Encoding UTF8
         $bundle = Load-ProfileBundle ([string]$scriptOnly)
         Assert "F-06.5" ($bundle.HasScriptOverrides -eq $true) "script-only profile loads"
     } catch {
@@ -459,7 +459,10 @@ if ($Rounds -contains 3) {
     foreach ($f in $catalogFields) {
         $h = $f.GetValue($null)
         $blob = "$($h.Summary)$($h.Purpose)$($h.Guide)"
-        if ($blob -match "TODO|FIXME|xxx") { $todo += $f.Name }
+        if ($blob.IndexOf("TODO", [StringComparison]::Ordinal) -ge 0 -or
+            $blob.IndexOf("FIXME", [StringComparison]::Ordinal) -ge 0 -or
+            $blob.IndexOf("待实现", [StringComparison]::Ordinal) -ge 0 -or
+            $blob.IndexOf("占位符", [StringComparison]::Ordinal) -ge 0) { $todo += $f.Name }
         [void]$titles.Add($h.Summary)
         [void]$dup.Add($f.Name)
     }

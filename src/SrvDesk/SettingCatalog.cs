@@ -918,10 +918,10 @@ internal static class SettingCatalog
 
     public static readonly SettingHelpInfo DisableRunDialogHistory = H(
         "「运行」对话框（Win+R）不再记录与展示历史命令。",
-        "Start_TrackProgs=0，并清空 Explorer\\RunMRU。",
+        "写入 HKCU\\Software\\SrvDesk\\Tweaks\\DisableRunDialogHistory=1，并清空 Explorer\\RunMRU。不改 Start_TrackProgs（那是「关闭应用启动跟踪」）。",
         "共用机器上别人看不到你跑过的命令。",
         "经常复用运行历史的可关闭。",
-        "立即清空；新开运行框后不再追加。",
+        "立即清空；本工具再次应用时会保持清空。关闭只恢复记录，不还原旧命令。",
         SettingScope.DesktopExperience);
 
     public static readonly SettingHelpInfo MergeSvchostProcesses = H(

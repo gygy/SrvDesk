@@ -16,6 +16,8 @@ internal sealed class OptProfileFile
     /// <summary>自定义配置方案（含脚本正文）。</summary>
     [DataMember] public List<CustomPackExport>? CustomPacks { get; set; }
     [DataMember] public string? CustomPacksLastId { get; set; }
+    /// <summary>int / string 开关（分组、排序、盘符、任务栏搜索、Autologon 用户名等）。不含密码。</summary>
+    [DataMember] public List<TypedSettingEntry>? Extra { get; set; }
 }
 
 [DataContract]
@@ -44,6 +46,15 @@ internal sealed class CustomPackItemExport
     [DataMember] public string Content { get; set; } = "";
 }
 
+/// <summary>bool 以外的状态（int / string）。旧配置没有本段时保持类型默认值。</summary>
+[DataContract]
+internal sealed class TypedSettingEntry
+{
+    [DataMember] public string? Key { get; set; }
+    [DataMember] public string? Kind { get; set; }
+    [DataMember] public string? Text { get; set; }
+}
+
 /// <summary>导入结果：开关状态 + 可选的脚本覆盖与自定义方案。</summary>
 internal sealed class OptProfileBundle
 {
@@ -70,6 +81,7 @@ internal static class ProfileStore
             ScriptOverrides = SettingScriptStore.ExportAll(),
             CustomPacks = CustomPackStore.ExportAll(out var lastId),
             CustomPacksLastId = lastId,
+            Extra = StateMapper.ToExtra(state),
         };
         File.WriteAllText(path, Serialize(profile), Encoding.UTF8);
     }
@@ -84,7 +96,8 @@ internal static class ProfileStore
         var hasSettings = profile.Settings is { Count: > 0 };
         var hasScripts = profile.ScriptOverrides is { Count: > 0 };
         var hasPacks = profile.CustomPacks is { Count: > 0 };
-        if (!hasSettings && !hasScripts && !hasPacks)
+        var hasExtra = profile.Extra is { Count: > 0 };
+        if (!hasSettings && !hasScripts && !hasPacks && !hasExtra)
             throw new InvalidOperationException("配置文件中没有可导入的内容。");
 
         var state = hasSettings
@@ -92,6 +105,7 @@ internal static class ProfileStore
                 .Where(e => !string.IsNullOrEmpty(e.Key))
                 .ToDictionary(e => e.Key!, e => e.Value, StringComparer.Ordinal))
             : Optimizer.Read();
+        StateMapper.ApplyExtra(state, profile.Extra);
 
         return new OptProfileBundle
         {

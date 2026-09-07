@@ -15,6 +15,7 @@ internal static class CommunityTweaks
     private const string DupDriveKey =
         @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}";
     private const string RunMru = @"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU";
+    private const string SrvDeskTweaks = @"Software\SrvDesk\Tweaks";
     private const string Winlogon = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon";
     private const string CrashControl = @"SYSTEM\CurrentControlSet\Control\CrashControl";
     private const string SessionEnv = @"SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
@@ -66,7 +67,7 @@ internal static class CommunityTweaks
         s.AutoRestartExplorer = DwordEquals(Hive.HkLm, Winlogon, "AutoRestartShell", 1);
         s.HideDesktopSpotlight = DwordEquals(Hive.HkCu, HideIcons, SpotlightClsid, 1);
         s.HideDuplicateRemovableDrives = !KeyExists(Hive.HkLm, DupDriveKey);
-        s.DisableRunDialogHistory = DwordEquals(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", 0);
+        s.DisableRunDialogHistory = DwordEquals(Hive.HkCu, SrvDeskTweaks, "DisableRunDialogHistory", 1);
         s.MergeSvchostProcesses = IsMaxDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB");
         s.DisableDistributedLinkTracking = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\TrkWks", "Start", 4);
         s.DisableLowDiskSpaceChecks = DwordEquals(Hive.HkCu, ExplorerPolCu, "NoLowDiskSpaceChecks", 1);
@@ -132,7 +133,8 @@ internal static class CommunityTweaks
 
     private static void SetRunDialogHistory(bool keep)
     {
-        SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", keep ? 1 : 0);
+        // 不写 Start_TrackProgs：那一项归「关闭应用启动跟踪」，两开关必须独立。
+        SetDword(Hive.HkCu, SrvDeskTweaks, "DisableRunDialogHistory", keep ? 0 : 1);
         if (keep) return;
         using var baseKey = OpenBase(Hive.HkCu);
         using var k = baseKey.OpenSubKey(RunMru, writable: true);

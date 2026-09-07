@@ -837,13 +837,13 @@ internal static class SettingRecipeCatalog
             "开启=删除重复盘符委托键；关闭=重建空键。导入后重启资源管理器。"));
         Add(SettingCatalog.DisableRunDialogHistory, ActionScript.Reg(
             ActionScript.Block(
-                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
-                ActionScript.Dword("Start_TrackProgs", 0)) +
+                ActionScript.HkCu(@"Software\SrvDesk\Tweaks"),
+                ActionScript.Dword("DisableRunDialogHistory", 1)) +
             ActionScript.HkCuDelete(@"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU") + "\r\n",
             ActionScript.Block(
-                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
-                ActionScript.Dword("Start_TrackProgs", 1)),
-            "开启时清空运行历史；关闭只恢复记录，不还原旧命令。"));
+                ActionScript.HkCu(@"Software\SrvDesk\Tweaks"),
+                ActionScript.Dword("DisableRunDialogHistory", 0)),
+            "开启时清空运行历史；不改 Start_TrackProgs。关闭只恢复记录，不还原旧命令。"));
         Add(SettingCatalog.MergeSvchostProcesses, ActionScript.DwordOnDeleteOff(false,
             @"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB", unchecked((int)0xFFFFFFFF),
             "开启=不再按内存拆分 svchost；关闭删除该值以恢复系统默认。重启后生效。"));
