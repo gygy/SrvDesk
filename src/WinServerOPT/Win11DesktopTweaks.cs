@@ -17,46 +17,110 @@ internal static class Win11DesktopTweaks
     {
         bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
         bool Di(Func<Optimizer.State, int> f) => baseline is null || f(baseline) != f(s);
+        void Field(string name, Func<Optimizer.State, bool> f)
+        {
+            if (!D(f)) return;
+            ApplyLog.DebugField(name, baseline is null ? null : f(baseline), f(s));
+        }
+
+        void FieldI(string name, Func<Optimizer.State, int> f)
+        {
+            if (!Di(f)) return;
+            ApplyLog.DebugField(name, baseline is null ? null : f(baseline), f(s));
+        }
 
         if (D(x => x.ShowItemCheckboxes))
+        {
+            Field("ShowItemCheckboxes", x => x.ShowItemCheckboxes);
             SetDword(Hive.HkCu, ExplorerAdvanced, "AutoCheckSelect", s.ShowItemCheckboxes ? 1 : 0);
+        }
         if (D(x => x.ShowCommonFolders))
+        {
+            Field("ShowCommonFolders", x => x.ShowCommonFolders);
             SetDword(Hive.HkCu, ExplorerAdvanced, "NavPaneShowAllFolders", s.ShowCommonFolders ? 1 : 0);
+        }
         if (D(x => x.RemoveAdminShield))
+        {
+            Field("RemoveAdminShield", x => x.RemoveAdminShield);
             SetShellIconBlank(77, s.RemoveAdminShield);
+        }
         if (D(x => x.NoShortcutSuffix))
+        {
+            Field("NoShortcutSuffix", x => x.NoShortcutSuffix);
             SetShortcutSuffixOff(s.NoShortcutSuffix);
+        }
         if (D(x => x.Win11ExplorerStyle))
+        {
+            Field("Win11ExplorerStyle", x => x.Win11ExplorerStyle);
             SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", s.Win11ExplorerStyle ? 0 : 1);
+        }
         if (D(x => x.Win10ClassicContextMenu))
+        {
+            Field("Win10ClassicContextMenu", x => x.Win10ClassicContextMenu);
             SetClassicContextMenu(s.Win10ClassicContextMenu);
+        }
         if (Di(x => x.TaskbarSearchMode) || D(x => x.TaskbarSearchBox))
         {
+            FieldI("TaskbarSearchMode", x => x.TaskbarSearchMode);
+            Field("TaskbarSearchBox", x => x.TaskbarSearchBox);
             SetTaskbarSearchMode(
                 s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
         }
         if (D(x => x.TaskbarAlignLeft))
+        {
+            Field("TaskbarAlignLeft", x => x.TaskbarAlignLeft);
             SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
+        }
         if (D(x => x.TaskbarCombineAlways))
+        {
+            Field("TaskbarCombineAlways", x => x.TaskbarCombineAlways);
             SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
+        }
         if (D(x => x.TaskbarAutoHide))
+        {
+            Field("TaskbarAutoHide", x => x.TaskbarAutoHide);
             SetTaskbarAutoHide(s.TaskbarAutoHide);
+        }
         if (D(x => x.ShowTaskViewButton))
+        {
+            Field("ShowTaskViewButton", x => x.ShowTaskViewButton);
             SetDword(Hive.HkCu, ExplorerAdvanced, "ShowTaskViewButton", s.ShowTaskViewButton ? 1 : 0);
+        }
         if (D(x => x.TaskbarEndTask))
+        {
+            Field("TaskbarEndTask", x => x.TaskbarEndTask);
             SetDword(Hive.HkCu, ExplorerAdvanced, "EndTask", s.TaskbarEndTask ? 1 : 0);
+        }
         if (D(x => x.DisableWidgets))
+        {
+            Field("DisableWidgets", x => x.DisableWidgets);
             SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarDa", s.DisableWidgets ? 0 : 1);
+        }
         if (D(x => x.DisableSearchHighlights))
+        {
+            Field("DisableSearchHighlights", x => x.DisableSearchHighlights);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", s.DisableSearchHighlights ? 0 : 1);
+        }
         if (D(x => x.DisableRecommendedItems))
+        {
+            Field("DisableRecommendedItems", x => x.DisableRecommendedItems);
             SetDword(Hive.HkCu, ExplorerAdvanced, "Start_ShowRecentRecommendations", s.DisableRecommendedItems ? 0 : 1);
+        }
         if (D(x => x.DisableAdTracking))
+        {
+            Field("DisableAdTracking", x => x.DisableAdTracking);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
+        }
         if (D(x => x.DisableSearchHistory))
+        {
+            Field("DisableSearchHistory", x => x.DisableSearchHistory);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
+        }
         if (D(x => x.DisableStickyKeys))
+        {
+            Field("DisableStickyKeys", x => x.DisableStickyKeys);
             SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
+        }
     }
 
     /// <summary>仅任务栏 / 资源管理器界面相关变更才需要重启 explorer；隐私类开关不必。</summary>

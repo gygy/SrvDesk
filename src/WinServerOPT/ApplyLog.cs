@@ -4,9 +4,10 @@ using System.Text;
 namespace WinOpt;
 
 /// <summary>
-/// 日志分两类：
+/// 日志分三类：
 /// - 操作日志 apply.log：启动、打开工具等一般事件
 /// - 变更日志 变更日志.log：仅记录真正改动的值（原来从 xx 变成 yy）
+/// - 调试日志 debug.log：优化项/设置项差分、写入与跳过细节（程序设置中开启）
 /// 目录：%LocalAppData%\WinOpt\
 /// </summary>
 internal static class ApplyLog
@@ -20,6 +21,9 @@ internal static class ApplyLog
     [ThreadStatic]
     private static int _batchRealChanges;
 
+    [ThreadStatic]
+    private static bool _debugThisBatch;
+
     private static string LogDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt");
 
@@ -32,9 +36,12 @@ internal static class ApplyLog
     public static string DebugLogFilePath => DebugLogPath;
     public static string LogDirectory => LogDir;
     public static string? CurrentContext => _context;
+    public static int CurrentBatchRealChanges => _batchRealChanges;
 
     /// <summary>当前批次中「真正发生变更」的条数（不含未变化跳过）。</summary>
     public static int LastBatchRealChangeCount { get; private set; }
+
+    public static bool IsDebugEnabled => _debugThisBatch || UiPrefs.EnableDebugLog;
 
     public static IDisposable PushContext(string itemName)
     {
@@ -51,23 +58,75 @@ internal static class ApplyLog
     /// <summary>调试日志（需在「程序设置」开启）；同时写入操作日志时请另调 Write。</summary>
     public static void Debug(string message)
     {
-        if (!UiPrefs.EnableDebugLog) return;
+        if (!IsDebugEnabled) return;
         var ctx = string.IsNullOrWhiteSpace(_context) ? "" : $"[{_context}] ";
         Append(DebugLogPath, FormatLine("DEBUG " + ctx + message));
+    }
+
+    /// <summary>优化项生命周期：跳过 / 开始 / 结束。</summary>
+    public static void DebugItem(string item, string phase, string? detail = null)
+    {
+        if (!IsDebugEnabled) return;
+        var extra = string.IsNullOrWhiteSpace(detail) ? "" : " · " + detail;
+        Debug($"优化项「{item}」{phase}{extra}");
+    }
+
+    /// <summary>设置/字段级差分（组内单项写入前）。</summary>
+    public static void DebugField(string field, object? from, object? to)
+    {
+        if (!IsDebugEnabled) return;
+        Debug($"  字段 {field}：{FmtDebug(from)} → {FmtDebug(to)}");
+    }
+
+    /// <summary>列出相对基线有差异的 State 字段（应用到系统前）。</summary>
+    public static void DebugStateDiff(string title, object? baseline, object target)
+    {
+        if (!IsDebugEnabled) return;
+        Debug("════ " + title + " ════");
+        if (baseline is null)
+        {
+            Debug("基线为空：将按「相对无基线」评估（可能写入较多项）");
+            return;
+        }
+
+        var type = target.GetType();
+        if (baseline.GetType() != type)
+        {
+            Debug("基线与目标类型不一致，跳过字段差分");
+            return;
+        }
+
+        var n = 0;
+        foreach (var f in type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+        {
+            var a = f.GetValue(baseline);
+            var b = f.GetValue(target);
+            if (Equals(a, b)) continue;
+            n++;
+            Debug($"  · {f.Name}: {FmtDebug(a)} → {FmtDebug(b)}");
+        }
+
+        Debug($"相对基线共 {n} 个字段有差异");
     }
 
     /// <summary>环境不支持 / 无害退出等：记操作日志「跳过」，调试日志留细节，不抛给上层。</summary>
     public static void SoftSkip(string item, string reason)
     {
         Write($"跳过：{item} — {reason}");
-        Debug("SoftSkip " + item + " | " + reason);
+        Debug("SoftSkip 「" + item + "」| " + reason);
     }
 
     public static void BeginBatch(string action)
     {
         _batchRealChanges = 0;
+        _debugThisBatch = UiPrefs.EnableDebugLog;
         Write("════ " + action + " 开始 ════");
         WriteChange("════ " + action + " 开始 ════");
+        if (_debugThisBatch)
+        {
+            Debug("════ 调试批次开始：" + action + " ════");
+            Debug("调试日志将记录：优化项跳过/写入、注册表与服务细节、字段差分");
+        }
     }
 
     public static void WriteApply(string action, IReadOnlyList<string> errors)
@@ -79,6 +138,20 @@ internal static class ApplyLog
         Write("──── " + summary + " ────");
         WriteChange("──── " + summary + " ────");
         Write($"变更明细见：{ChangeLogPath}");
+        if (_debugThisBatch)
+        {
+            Debug("──── " + summary + " ────");
+            if (errors.Count > 0)
+            {
+                foreach (var e in errors)
+                    Debug("失败项：" + e);
+            }
+
+            Debug("变更明细：" + ChangeLogPath);
+            Debug("════ 调试批次结束 ════");
+        }
+
+        _debugThisBatch = false;
     }
 
     public static void WriteChange(string message)
@@ -93,7 +166,7 @@ internal static class ApplyLog
         var newText = FormatValue(newValue);
         if (oldValue is not null && oldValue.Length == newValue.Length && oldValue.SequenceEqual(newValue))
         {
-            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
+            NoteSkip($"REG_BINARY {path}\\{valueName} = {oldText}");
             return;
         }
 
@@ -106,6 +179,7 @@ internal static class ApplyLog
             $"    值名称：{valueName}\r\n" +
             $"    值类型：REG_BINARY\r\n" +
             $"    变更：原来从 {oldText} 变成 {newText}{extra}");
+        NoteWrite($"REG_BINARY {path}\\{valueName}：{oldText} → {newText}");
     }
 
     public static void RegistryDword(string hive, string key, string valueName, object? oldValue, int newValue)
@@ -115,7 +189,7 @@ internal static class ApplyLog
         var newText = FormatDword(newValue);
         if (SameValue(oldValue, newValue))
         {
-            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
+            NoteSkip($"REG_DWORD {path}\\{valueName} = {oldText}");
             return;
         }
 
@@ -127,6 +201,7 @@ internal static class ApplyLog
             $"    值名称：{valueName}\r\n" +
             $"    值类型：REG_DWORD\r\n" +
             $"    变更：原来从 {oldText} 变成 {newText}");
+        NoteWrite($"REG_DWORD {path}\\{valueName}：{oldText} → {newText}");
     }
 
     public static void RegistryString(string hive, string key, string valueName, object? oldValue, string newValue, bool maskSecret = false)
@@ -136,7 +211,7 @@ internal static class ApplyLog
         var newText = maskSecret ? Mask(newValue) : Quote(newValue);
         if (!maskSecret && SameValue(oldValue, newValue))
         {
-            Write($"跳过未变：{ItemLabel()} {path}\\{valueName} = {oldText}");
+            NoteSkip($"REG_SZ {path}\\{valueName} = {oldText}");
             return;
         }
 
@@ -148,6 +223,7 @@ internal static class ApplyLog
             $"    值名称：{valueName}\r\n" +
             $"    值类型：REG_SZ\r\n" +
             $"    变更：原来从 {oldText} 变成 {newText}");
+        NoteWrite($"REG_SZ {path}\\{valueName}：{oldText} → {newText}");
     }
 
     public static void RegistryDelete(string hive, string key, string valueName, object? oldValue)
@@ -155,7 +231,7 @@ internal static class ApplyLog
         var path = FormatRegPath(hive, key);
         if (oldValue is null)
         {
-            Write($"跳过未变：{ItemLabel()} 删除 {path}\\{valueName}（本来就不存在）");
+            NoteSkip($"删除 {path}\\{valueName}（本来就不存在）");
             return;
         }
 
@@ -166,6 +242,7 @@ internal static class ApplyLog
             $"    注册表位置：{path}\r\n" +
             $"    值名称：{valueName}\r\n" +
             $"    变更：原来从 {FormatValue(oldValue)} 变成 （已删除）");
+        NoteWrite($"删除 {path}\\{valueName}：{FormatValue(oldValue)} → （已删除）");
     }
 
     public static void RegistryDeleteTree(string hive, string key, bool existed)
@@ -173,7 +250,7 @@ internal static class ApplyLog
         var path = FormatRegPath(hive, key);
         if (!existed)
         {
-            Write($"跳过未变：{ItemLabel()} 删除键 {path}（本来就不存在）");
+            NoteSkip($"删除键 {path}（本来就不存在）");
             return;
         }
 
@@ -183,6 +260,7 @@ internal static class ApplyLog
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{path}\r\n" +
             $"    变更：原来从 （键存在） 变成 （整键已删除）");
+        NoteWrite($"删除键 {path}");
     }
 
     public static void RegistryKeyWrite(string hive, string key, string detail)
@@ -193,6 +271,7 @@ internal static class ApplyLog
             $"    优化项：{ItemLabel()}\r\n" +
             $"    注册表位置：{FormatRegPath(hive, key)}\r\n" +
             $"    变更：写入键 — {detail}");
+        NoteWrite($"写入键 {FormatRegPath(hive, key)} — {detail}");
     }
 
     public static void ServiceChange(string serviceName, string detail, string? oldStart = null, string? newStart = null)
@@ -202,7 +281,7 @@ internal static class ApplyLog
         {
             if (string.Equals(oldStart, newStart, StringComparison.Ordinal))
             {
-                Write($"跳过未变：{ItemLabel()} 服务 {serviceName} = {oldStart}");
+                NoteSkip($"服务 {serviceName} = {oldStart}");
                 return;
             }
 
@@ -214,6 +293,7 @@ internal static class ApplyLog
                 $"    注册表位置：{reg}\r\n" +
                 $"    变更：原来从 {oldStart} 变成 {newStart}\r\n" +
                 $"    操作：{detail}");
+            NoteWrite($"服务 {serviceName}：{oldStart} → {newStart} · {detail}");
             return;
         }
 
@@ -224,6 +304,7 @@ internal static class ApplyLog
             $"    服务名：{serviceName}\r\n" +
             $"    注册表位置：HKLM\\SYSTEM\\CurrentControlSet\\Services\\{serviceName}\r\n" +
             $"    变更：{detail}");
+        NoteWrite($"服务 {serviceName} · {detail}");
     }
 
     public static void SystemChange(string target, string detail, string? oldValue = null, string? newValue = null)
@@ -234,7 +315,7 @@ internal static class ApplyLog
             var to = newValue ?? "（未知）";
             if (string.Equals(from, to, StringComparison.Ordinal))
             {
-                Write($"跳过未变：{ItemLabel()} {target} = {from}");
+                NoteSkip($"{target} = {from}");
                 return;
             }
 
@@ -245,6 +326,7 @@ internal static class ApplyLog
                 $"    修改位置：{target}\r\n" +
                 $"    变更：原来从 {from} 变成 {to}\r\n" +
                 $"    详情：{detail}");
+            NoteWrite($"{target}：{from} → {to} · {detail}");
             return;
         }
 
@@ -254,6 +336,27 @@ internal static class ApplyLog
             $"    优化项：{ItemLabel()}\r\n" +
             $"    修改位置：{target}\r\n" +
             $"    变更：{detail}");
+        NoteWrite($"{target} · {detail}");
+    }
+
+    private static void NoteSkip(string detail)
+    {
+        Write($"跳过未变：{ItemLabel()} {detail}");
+        Debug($"跳过未变 · {detail}");
+    }
+
+    private static void NoteWrite(string detail)
+    {
+        Debug($"写入 · {detail}");
+    }
+
+    private static string FmtDebug(object? value)
+    {
+        if (value is null) return "（null）";
+        if (value is bool b) return b ? "开/true" : "关/false";
+        if (value is int or long or uint) return Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.ToString() ?? "";
+        if (value is string s) return string.IsNullOrEmpty(s) ? "（空字符）" : Quote(s);
+        return value.ToString() ?? "";
     }
 
     public static string FormatRegPath(string hive, string key)

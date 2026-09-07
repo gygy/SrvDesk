@@ -376,15 +376,30 @@ internal static class Optimizer
     {
         var errors = new List<string>();
         LastApplyActionCount = 0;
+        ApplyLog.DebugStateDiff("应用到系统 · 相对基线的字段差分", baseline, s);
+
         bool Ch(Func<State, bool> f) => baseline is null || f(baseline) != f(s);
         bool ChS(Func<State, string> f) =>
             baseline is null || !string.Equals(f(baseline), f(s), StringComparison.Ordinal);
 
         void Do(bool need, string name, Action action)
         {
-            if (!need) return;
+            if (!need)
+            {
+                ApplyLog.DebugItem(name, "跳过", "相对基线无差异");
+                return;
+            }
+
+            ApplyLog.DebugItem(name, "开始写入",
+                baseline is null ? "无基线（全量评估中的一项）" : "相对基线有差异");
             LastApplyActionCount++;
+            var before = ApplyLog.CurrentBatchRealChanges;
             Try(errors, name, action);
+            var delta = ApplyLog.CurrentBatchRealChanges - before;
+            ApplyLog.DebugItem(name, "结束",
+                errors.Count > 0 && errors[errors.Count - 1].StartsWith(name + "：", StringComparison.Ordinal)
+                    ? "本项失败"
+                    : $"本项实际变更 {delta} 条");
         }
 
         Do(Ch(x => x.CpuProgramPriority), "CPU资源分配", () =>
@@ -558,6 +573,7 @@ internal static class Optimizer
         Do(Ch(x => x.DisablePca), "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
         Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s, baseline));
         Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s, baseline));
+        ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;
     }
 
@@ -1166,6 +1182,7 @@ internal static class Optimizer
             errors.Add($"{name}：{ex.Message}");
             ApplyLog.Write($"失败：{name} — {ex.Message}");
             ApplyLog.WriteChange($"【失败】{name}：{ex.Message}");
+            ApplyLog.DebugItem(name, "异常", ex.Message);
         }
     }
 
