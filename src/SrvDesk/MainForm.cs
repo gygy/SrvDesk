@@ -376,13 +376,13 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add(("远程与网络", [
             ("远程与网络", [
-                _rdpGpu, _rdpFps, _rdpNla,
+                _rdp, _rdpGpu, _rdpFps, _rdpNla,
                 _netDiscovery, _smRemoting,
             ]),
         ]));
         _groups.Add(("电源与服务", [
-            ("远程桌面", [
-                _rdp, _ra,
+            ("远程协助", [
+                _ra,
             ]),
             ("电源与休眠", [
                 _hibernate, _fastStartup,
@@ -2987,8 +2987,8 @@ internal sealed class MainForm : Form
         public void SetSystemDefault(string text) => _system.Text = text;
 
         /// <summary>
-        /// 「系统当前值」列与「设置操作」保持一致。
-        /// 启动/刷新时由 Optimizer.Read 写入开关后再调用；不是写死推荐值。
+        /// 「系统当前值」与「设置操作」同一含义：本机是否已按该项优化打开。
+        /// 下拉显示选中文案；开关显示开启/关闭。不再用系统默认值反推功能本身。
         /// </summary>
         public void SyncCurrentValueFromState()
         {
@@ -2998,24 +2998,13 @@ internal sealed class MainForm : Form
                 _current.Text = idx >= 0 && idx < _choice!.Items.Count
                     ? _choice.Items[idx]?.ToString() ?? "—"
                     : "—";
-                _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
-                return;
+            }
+            else
+            {
+                _current.Text = Checked ? "开启" : "关闭";
             }
 
-            _current.Text = FormatCurrentValue(Checked, _system.Text);
             _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
-        }
-
-        private static string FormatCurrentValue(bool matchesRecommended, string systemDefault)
-        {
-            if (!matchesRecommended)
-                return string.IsNullOrWhiteSpace(systemDefault) ? "系统默认值" : systemDefault;
-
-            if (string.Equals(systemDefault, "开启", StringComparison.Ordinal))
-                return "关闭";
-            if (string.Equals(systemDefault, "关闭", StringComparison.Ordinal))
-                return "开启";
-            return "已优化";
         }
 
         public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
@@ -3146,7 +3135,7 @@ internal sealed class MainForm : Form
                 (Help.UiPlace.Length > 0 ? "对应：" + Help.UiPlace : Help.ListNote));
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
             toolTip.SetToolTip(_system, "系统默认值（出厂）");
-            toolTip.SetToolTip(_current, "系统当前值（读取自本机）");
+            toolTip.SetToolTip(_current, "系统当前值：与左侧设置操作一致（读取自本机）");
             if (HasChoice)
                 toolTip.SetToolTip(_choice!, "下拉选择设置值");
 
