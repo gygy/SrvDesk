@@ -4,17 +4,23 @@ namespace WinOpt;
 
 internal sealed class MainForm : Form
 {
-    private readonly SettingRow _cpu = Row("CPU 资源分配（程序优先）", "后台服务优先", SettingCatalog.CpuProgramPriority);
+    private readonly SettingRow _cpu = Choice("CPU 资源分配", "后台服务优先", SettingCatalog.CpuProgramPriority,
+        ["后台服务优先", "程序优先"], optimizedIndex: 1);
     private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略", SettingCatalog.Dep);
-    private readonly SettingRow _uac = Row("UAC 设置为从不通知", "默认通知", SettingCatalog.DisableUac);
+    private readonly SettingRow _uac = Choice("UAC 设置", "默认通知", SettingCatalog.DisableUac,
+        ["默认通知", "从不通知"], optimizedIndex: 1);
     private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启", SettingCatalog.DisableIeEsc);
-    private readonly SettingRow _highPerf = Row("高性能电源计划", "平衡", SettingCatalog.HighPerfPower);
+    private readonly SettingRow _highPerf = Choice("电源计划", "平衡", SettingCatalog.HighPerfPower,
+        ["平衡", "高性能"], optimizedIndex: 1);
     private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启", SettingCatalog.DisableTelemetry);
-    private readonly SettingRow _noUpdateReboot = Row("更新时不自动重启", "允许重启", SettingCatalog.NoUpdateReboot);
+    private readonly SettingRow _noUpdateReboot = Choice("更新后重启策略", "允许重启", SettingCatalog.NoUpdateReboot,
+        ["允许重启", "不自动重启"], optimizedIndex: 1);
     private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启", SettingCatalog.DisableDeliveryOpt);
-    private readonly SettingRow _wuNotify = Row("Windows 更新仅通知下载", "自动安装", SettingCatalog.WuNotifyOnly);
+    private readonly SettingRow _wuNotify = Choice("Windows 更新下载方式", "自动安装", SettingCatalog.WuNotifyOnly,
+        ["自动安装", "仅通知下载"], optimizedIndex: 1);
     private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动", SettingCatalog.DisableSysMain);
-    private readonly SettingRow _visualPerf = Row("视觉效果调整为最佳性能", "系统自选", SettingCatalog.VisualBestPerf);
+    private readonly SettingRow _visualPerf = Choice("视觉效果", "系统自选", SettingCatalog.VisualBestPerf,
+        ["系统自选", "最佳性能"], optimizedIndex: 1);
     private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启", SettingCatalog.PowerThrottlingOff);
     private readonly SettingRow _boostMode = Row("显示处理器性能提升模式", "隐藏", SettingCatalog.ShowProcessorBoostMode);
     private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启", SettingCatalog.DisableHibernate);
@@ -121,10 +127,14 @@ internal sealed class MainForm : Form
     private readonly SettingRow _noSuffix = Row("快捷方式不加「快捷方式」后缀", "添加", SettingCatalog.NoShortcutSuffix);
     private readonly SettingRow _win11Explorer = Row("Win11 资源管理器布局", "紧凑", SettingCatalog.Win11ExplorerStyle);
     private readonly SettingRow _classicMenu = Row("Win10 经典右键菜单", "Win11 现代", SettingCatalog.Win10ClassicContextMenu);
-    private readonly SettingRow _tbSearch = Row("隐藏任务栏搜索栏", "显示", SettingCatalog.HideTaskbarSearch);
-    private readonly SettingRow _tbLeft = Row("任务栏靠左对齐", "居中", SettingCatalog.TaskbarAlignLeft);
-    private readonly SettingRow _tbCombine = Row("任务栏按钮始终合并", "从不", SettingCatalog.TaskbarCombineAlways);
-    private readonly SettingRow _tbAutohide = Row("自动隐藏任务栏", "不隐藏", SettingCatalog.TaskbarAutoHide);
+    private readonly SettingRow _tbSearch = Choice("任务栏搜索", "仅图标", SettingCatalog.HideTaskbarSearch,
+        ["隐藏", "仅图标", "搜索框"], optimizedIndex: 0);
+    private readonly SettingRow _tbLeft = Choice("任务栏对齐", "居中", SettingCatalog.TaskbarAlignLeft,
+        ["居中", "靠左"], optimizedIndex: 1);
+    private readonly SettingRow _tbCombine = Choice("任务栏按钮合并", "从不", SettingCatalog.TaskbarCombineAlways,
+        ["从不合并", "始终合并"], optimizedIndex: 1);
+    private readonly SettingRow _tbAutohide = Choice("任务栏显示方式", "一直显示", SettingCatalog.TaskbarAutoHide,
+        ["一直显示", "自动隐藏"], optimizedIndex: 1);
     private readonly SettingRow _taskView = Row("显示任务视图按钮", "不显示", SettingCatalog.ShowTaskViewButton);
     private readonly SettingRow _tbEndTask = Row("任务栏右键结束任务", "关闭", SettingCatalog.TaskbarEndTask);
     private readonly SettingRow _widgets = Row("关闭任务栏小组件", "开启", SettingCatalog.DisableWidgets);
@@ -328,7 +338,7 @@ internal sealed class MainForm : Form
                 _thisPc, _desktopIcons, _confirmDel,
             ]),
             ("任务栏", [
-                _taskbar, _allTrayIcons, _tbEndTask, _news,
+                _tbAutohide, _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
             ("桌面服务", [
                 _themes, _audio, _search, _notepadWrap, _notepadStatus,
@@ -355,7 +365,7 @@ internal sealed class MainForm : Form
             ]),
             ("任务栏", [
                 _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbCopilot,
-                _tbAutohide, _taskView, _taskbarClock,
+                _taskView, _taskbarClock,
             ]),
         ]));
         _groups.Add(("远程与网络", [
@@ -2177,7 +2187,7 @@ internal sealed class MainForm : Form
         _noSuffix.Checked = s.NoShortcutSuffix;
         _win11Explorer.Checked = s.Win11ExplorerStyle;
         _classicMenu.Checked = s.Win10ClassicContextMenu;
-        _tbSearch.Checked = s.TaskbarSearchMode == 0;
+        _tbSearch.ChoiceIndex = s.TaskbarSearchMode is >= 0 and <= 2 ? s.TaskbarSearchMode : 1;
         _tbLeft.Checked = s.TaskbarAlignLeft;
         _tbCombine.Checked = s.TaskbarCombineAlways;
         _tbAutohide.Checked = s.TaskbarAutoHide;
@@ -2384,7 +2394,7 @@ internal sealed class MainForm : Form
         DisableInsiderService = _insider.Checked,
         DisableStoreAutoUpdate = _storeUpd.Checked,
         DisableNewsInterests = _news.Checked,
-        TaskbarSearchMode = _tbSearch.Checked ? 0 : 1,
+        TaskbarSearchMode = _tbSearch.ChoiceIndex is >= 0 and <= 2 ? _tbSearch.ChoiceIndex : 1,
         TaskbarSearchBox = false,
         ShowThisPcIcon = _thisPc.Checked,
         LaunchExplorerThisPc = _launchThisPc.Checked,
@@ -2495,6 +2505,11 @@ internal sealed class MainForm : Form
             if (!vis.Contains(row)) row.Checked = value;
         }
 
+        void SyncChoice(SettingRow row, int index)
+        {
+            if (!vis.Contains(row)) row.ChoiceIndex = index;
+        }
+
         Sync(_sysMain, s.DisableSysMain);
         Sync(_hibernate, s.DisableHibernate);
         Sync(_fastStartup, s.DisableFastStartup);
@@ -2516,7 +2531,7 @@ internal sealed class MainForm : Form
         Sync(_noSuffix, s.NoShortcutSuffix);
         Sync(_win11Explorer, s.Win11ExplorerStyle);
         Sync(_classicMenu, s.Win10ClassicContextMenu);
-        Sync(_tbSearch, s.TaskbarSearchMode == 0);
+        SyncChoice(_tbSearch, s.TaskbarSearchMode is >= 0 and <= 2 ? s.TaskbarSearchMode : 1);
         Sync(_tbLeft, s.TaskbarAlignLeft);
         Sync(_tbCombine, s.TaskbarCombineAlways);
         Sync(_tbAutohide, s.TaskbarAutoHide);
@@ -2679,6 +2694,14 @@ internal sealed class MainForm : Form
 
     private static SettingRow Row(string item, string systemDefault, SettingHelpInfo help) =>
         new(item, systemDefault, help);
+
+    private static SettingRow Choice(
+        string item,
+        string systemDefault,
+        SettingHelpInfo help,
+        string[] options,
+        int optimizedIndex) =>
+        new(item, systemDefault, help, options, optimizedIndex);
 
     private static Button ToolButton(string text, Action click)
     {
