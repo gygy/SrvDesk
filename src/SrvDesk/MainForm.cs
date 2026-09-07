@@ -189,6 +189,8 @@ internal sealed class MainForm : Form
     private Optimizer.State? _baselineState;
     /// <summary>用户改过开关/载入预设等，尚未用系统读取覆盖界面。</summary>
     private bool _uiDirty;
+    /// <summary>正在把 Optimizer.Read 写回开关，此时不把界面标脏。</summary>
+    private bool _binding;
     /// <summary>异步 LoadState 代数，避免慢扫描覆盖更新的结果。</summary>
     private int _loadEpoch;
     private readonly Button _apply = new();
@@ -423,6 +425,7 @@ internal sealed class MainForm : Form
         {
             row.OnCheckedChanged = _ =>
             {
+                if (_binding) return;
                 _uiDirty = true;
                 var cat = CurrentCategoryFilter();
                 if (cat is RowCategoryFilter.Optimized or RowCategoryFilter.NotOptimized)
@@ -875,9 +878,9 @@ internal sealed class MainForm : Form
             try { CommonSoftwareHelper.PrefetchStatuses(CommonSoftwareCatalog.All); }
             catch { /* ignore */ }
         });
-        // 启动先快速读取；完整扫描在后台补 DISM 等慢项。
-        // 若用户已改开关，完整扫描不得再覆盖界面（否则会出现「开了又自己关」）。
-        LoadState(fullScan: false, forceUi: true);
+        // 「设置操作」必须等于本机当前值：首帧同步读注册表/服务，再绑到开关/下拉。
+        // 完整扫描（DISM 等慢项）仍后台补，且仅在用户未改开关时写回。
+        BindFromSystem(fullScan: false);
         BeginInvoke(new Action(StartWarmupInstantPages));
         BeginInvoke(new Action(() => LoadState(fullScan: true, forceUi: false)));
     }
@@ -2084,6 +2087,22 @@ internal sealed class MainForm : Form
     /// true：用系统状态覆盖界面开关（启动首读、用户点刷新、应用后回读）。
     /// false：若用户已改过开关则只丢弃本次后台读取，避免「开了又自己关」。
     /// </param>
+    /// <summary>从本机读取状态并立刻写到「设置操作」/「系统当前值」。</summary>
+    private bool BindFromSystem(bool fullScan)
+    {
+        try
+        {
+            Bind(Optimizer.Read(fullScan), updateCurrentValues: true);
+            _uiDirty = false;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "读取当前配置失败：" + ex.Message;
+            return false;
+        }
+    }
+
     private void LoadState(bool fullScan = false, bool forceUi = false)
     {
         if (fullScan && forceUi)
@@ -2159,6 +2178,19 @@ internal sealed class MainForm : Form
     }
 
     private void Bind(Optimizer.State s, bool updateCurrentValues = false)
+    {
+        _binding = true;
+        try
+        {
+            BindCore(s, updateCurrentValues);
+        }
+        finally
+        {
+            _binding = false;
+        }
+    }
+
+    private void BindCore(Optimizer.State s, bool updateCurrentValues)
     {
         _cpu.Checked = s.CpuProgramPriority;
         _dep.Checked = s.Dep;
