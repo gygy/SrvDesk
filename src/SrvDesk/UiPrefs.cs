@@ -28,6 +28,10 @@ internal sealed class UiPrefsData
     [DataMember] public bool EnableDebugLog { get; set; } = true;
     /// <summary>固件不支持休眠、防火墙规则组名不匹配等记为「跳过/提示」，不计入部分失败。默认开启。</summary>
     [DataMember] public bool SoftSkipUnsupported { get; set; } = true;
+    /// <summary>关闭启动时检查 GitHub Releases。缺省（旧配置无此字段）视为检查。</summary>
+    [DataMember] public bool DisableStartupUpdateCheck { get; set; }
+    /// <summary>用户选择稍后提醒的版本标签（如 v1.0.22），启动检查时跳过。</summary>
+    [DataMember] public string SkippedUpdateTag { get; set; } = "";
 }
 
 internal static class UiPrefs
@@ -131,5 +135,6 @@ internal static class UiPrefs
         HideIncompatibleByDefault = true,
         EnableDebugLog = true,
         SoftSkipUnsupported = true,
+        CheckUpdatesOnStartup = true,
     };
 }

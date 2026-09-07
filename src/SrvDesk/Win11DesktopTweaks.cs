@@ -803,17 +803,21 @@ internal static class DesktopQuickActions
         ApplyLog.Write("刷新图标缓存");
     }
 
-    public static void EmptyRecycleBin(IWin32Window? owner)
+    public static void EmptyRecycleBin(IWin32Window? owner, bool notify = true)
     {
         try
         {
             SHEmptyRecycleBin(IntPtr.Zero, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
             ApplyLog.Write("清空回收站");
-            MessageBox.Show(owner, "回收站已清空。", "清空回收站", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (notify)
+                MessageBox.Show(owner, "回收站已清空。", "清空回收站", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(owner, ex.Message, "清空回收站", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (notify)
+                MessageBox.Show(owner, ex.Message, "清空回收站", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+                throw;
         }
     }
 
