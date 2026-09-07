@@ -152,10 +152,14 @@ internal sealed class MainForm : Form
     private readonly SettingRow _searchHistory = Row("关闭搜索历史记录", "开启", SettingCatalog.DisableSearchHistory);
     private readonly SettingRow _stickyKeys = Row("禁用粘滞键提示", "开启", SettingCatalog.DisableStickyKeys);
 
-    private readonly SettingRow _rdp = Row("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp);
-    private readonly SettingRow _rdpGpu = Row("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel);
-    private readonly SettingRow _rdpFps = Row("RDP 提高远程帧率", "默认", SettingCatalog.RdpHighRefresh);
-    private readonly SettingRow _rdpNla = Row("RDP 关闭 NLA（内网/Linux 客户端）", "开启", SettingCatalog.RdpDisableNla);
+    private readonly SettingRow _rdp = Choice("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp,
+        ["禁用", "启用"], optimizedIndex: 1);
+    private readonly SettingRow _rdpGpu = Choice("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel,
+        ["关闭", "开启"], optimizedIndex: 1);
+    private readonly SettingRow _rdpFps = Choice("RDP 提高远程帧率", "默认", SettingCatalog.RdpHighRefresh,
+        ["默认", "提高"], optimizedIndex: 1);
+    private readonly SettingRow _rdpNla = Choice("RDP 网络级身份验证 NLA", "要求 NLA", SettingCatalog.RdpDisableNla,
+        ["要求 NLA", "关闭 NLA"], optimizedIndex: 1);
     private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭", SettingCatalog.EnableNetworkDiscovery);
     private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启", SettingCatalog.DisableSmRemoting);
 

@@ -11,7 +11,33 @@ internal static class Win11DesktopTweaks
     /// <summary>透明空图标（与常见「删除快捷方式箭头.reg」一致），避免自建 blank.ico 失效。</summary>
     private const string BlankOverlayIcon = @"%systemroot%\system32\imageres.dll,197";
     private const string ClassicMenuClsid = @"Software\Classes\CLSID\{86ca1aa0-3389-4ff8-b098-4136676466e2}\InprocServer32";
-    private const string StuckRects = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3";
+    private const string StuckRects3 = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3";
+    private const string StuckRects2 = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects2";
+    /// <summary>与 SHAppBarMessage / APPBARDATA 一致：bit0=自动隐藏，bit1=总在最前。</summary>
+    private const byte AbsAutoHide = 0x01;
+    private const byte AbsAlwaysOnTop = 0x02;
+    private const uint AbmGetState = 0x00000004;
+    private const uint AbmSetState = 0x0000000A;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll")]
+    private static extern IntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
 
     public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
@@ -386,26 +412,80 @@ internal static class Win11DesktopTweaks
 
     private static bool ReadTaskbarAutoHide()
     {
-        using var k = Registry.CurrentUser.OpenSubKey(StuckRects);
-        if (k?.GetValue("Settings") is not byte[] settings || settings.Length < 9)
-            return false;
-        return settings[8] == 2;
+        try
+        {
+            var abd = NewAppBarData();
+            var state = (int)SHAppBarMessage(AbmGetState, ref abd);
+            return (state & AbsAutoHide) != 0;
+        }
+        catch
+        {
+            /* 回退注册表 */
+        }
+
+        foreach (var key in new[] { StuckRects3, StuckRects2 })
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(key);
+            if (k?.GetValue("Settings") is byte[] settings && settings.Length >= 9)
+                return (settings[8] & AbsAutoHide) != 0;
+        }
+
+        return false;
     }
 
     private static void SetTaskbarAutoHide(bool hide)
     {
-        using var k = Registry.CurrentUser.OpenSubKey(StuckRects, writable: true);
+        WriteStuckRectsAutoHide(StuckRects3, hide);
+        WriteStuckRectsAutoHide(StuckRects2, hide);
+
+        try
+        {
+            var abd = NewAppBarData();
+            var current = (int)SHAppBarMessage(AbmGetState, ref abd);
+            var next = hide
+                ? (current | AbsAutoHide | AbsAlwaysOnTop)
+                : ((current | AbsAlwaysOnTop) & ~AbsAutoHide);
+            abd.lParam = (IntPtr)next;
+            SHAppBarMessage(AbmSetState, ref abd);
+            ApplyLog.SystemChange(
+                "SHAppBarMessage(ABM_SETSTATE)",
+                "任务栏自动隐藏（立即通知外壳）",
+                current.ToString(),
+                next.ToString());
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Debug("SHAppBarMessage 设置任务栏自动隐藏失败：" + ex.Message);
+        }
+    }
+
+    private static void WriteStuckRectsAutoHide(string keyPath, bool hide)
+    {
+        using var k = Registry.CurrentUser.OpenSubKey(keyPath, writable: true);
         if (k?.GetValue("Settings") is not byte[] settings || settings.Length < 9)
             return;
+
         var oldByte = settings[8];
-        var newByte = (byte)(hide ? 2 : 3);
+        var newByte = hide
+            ? (byte)(oldByte | AbsAutoHide | AbsAlwaysOnTop)
+            : (byte)((oldByte | AbsAlwaysOnTop) & ~AbsAutoHide);
+        if (oldByte == newByte)
+            return;
+
         ApplyLog.SystemChange(
-            $"HKCU\\{StuckRects}\\Settings[8]",
-            "任务栏自动隐藏（StuckRects3 二进制第 9 字节）",
-            oldByte.ToString(),
-            newByte.ToString());
+            $"HKCU\\{keyPath}\\Settings[8]",
+            "任务栏自动隐藏（StuckRects 第 9 字节 bit0）",
+            "0x" + oldByte.ToString("X2"),
+            "0x" + newByte.ToString("X2"));
         settings[8] = newByte;
         k.SetValue("Settings", settings, RegistryValueKind.Binary);
+    }
+
+    private static APPBARDATA NewAppBarData()
+    {
+        var abd = new APPBARDATA();
+        abd.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(APPBARDATA));
+        return abd;
     }
 
     public static void SetFeatureUpdatePause(bool pause) => SetFeatureUpdatePause2035(pause);

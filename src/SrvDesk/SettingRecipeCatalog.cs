@@ -463,9 +463,9 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.TaskbarCombineAlways, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarGlomLevel", 0, 2));
         Add(SettingCatalog.TaskbarAutoHide, ActionScript.Cmd(
-            "powershell -NoProfile -Command \"$p='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StuckRects3'; $b=(Get-ItemProperty $p).Settings; $b[8]=3; Set-ItemProperty $p Settings $b; Stop-Process -Name explorer -Force\"",
-            "powershell -NoProfile -Command \"$p='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StuckRects3'; $b=(Get-ItemProperty $p).Settings; $b[8]=2; Set-ItemProperty $p Settings $b; Stop-Process -Name explorer -Force\"",
-            "修改 StuckRects3 二进制第 9 字节（自动隐藏）。"));
+            "powershell -NoProfile -Command \"$p='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StuckRects3'; $b=(Get-ItemProperty $p).Settings; $b[8]=[byte](($b[8] -bor 3)); Set-ItemProperty $p Settings $b; Stop-Process -Name explorer -Force\"",
+            "powershell -NoProfile -Command \"$p='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StuckRects3'; $b=(Get-ItemProperty $p).Settings; $b[8]=[byte](($b[8] -bor 2) -band (-bnot 1 -band 255)); Set-ItemProperty $p Settings $b; Stop-Process -Name explorer -Force\"",
+            "StuckRects3 Settings[8] bit0=自动隐藏，bit1=总在最前；改完重启资源管理器。"));
         Add(SettingCatalog.ShowTaskViewButton, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowTaskViewButton", 1, 0));
         Add(SettingCatalog.TaskbarEndTask, ActionScript.DwordToggle(true,
