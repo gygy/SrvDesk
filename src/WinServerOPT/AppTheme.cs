@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 internal static class AppTheme
 {

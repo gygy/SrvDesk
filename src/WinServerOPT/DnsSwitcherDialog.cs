@@ -1,6 +1,6 @@
 using System.Management;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
 {

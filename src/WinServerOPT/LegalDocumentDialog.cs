@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>帮助菜单中的许可证 / 免责 / 隐私说明对话框。</summary>
 internal sealed class LegalDocumentDialog : Form

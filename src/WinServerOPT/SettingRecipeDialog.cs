@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>单独窗口展示某优化项的开启/关闭配置脚本（可编辑、自动记住、导出）。</summary>
 internal sealed class SettingRecipeDialog : Form

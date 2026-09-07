@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>社区 Server 桌面脚本中的注册表与 DISM 优化（原工具未覆盖部分）。</summary>
 internal static class ServerDesktopTweaks

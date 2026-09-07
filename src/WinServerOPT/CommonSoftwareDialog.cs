@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class CommonSoftwareDialog : Form
 {

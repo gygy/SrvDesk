@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>
 /// 程序品牌资源：窗口、任务栏与界面 logo 共用同一套 app.ico / app.png。
@@ -46,7 +46,7 @@ internal static class AppBrand
     public static Image? LoadLogoImage()
     {
         var asm = Assembly.GetExecutingAssembly();
-        using var stream = asm.GetManifestResourceStream("WinOpt.app.png");
+        using var stream = asm.GetManifestResourceStream("SrvDesk.app.png");
         if (stream is not null)
             return Image.FromStream(stream);
 
@@ -60,7 +60,7 @@ internal static class AppBrand
     private static Icon LoadApplicationIcon()
     {
         var asm = Assembly.GetExecutingAssembly();
-        using var stream = asm.GetManifestResourceStream("WinOpt.app.ico");
+        using var stream = asm.GetManifestResourceStream("SrvDesk.app.ico");
         if (stream is not null)
             return new Icon(stream);
 

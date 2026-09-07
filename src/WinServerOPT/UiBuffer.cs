@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>减少快速滚动时的残影/闪烁（WinForms 默认 Panel 不双缓冲）。</summary>
 internal class BufferedPanel : Panel

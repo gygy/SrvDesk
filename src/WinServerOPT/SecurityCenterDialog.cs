@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>安全中心管理：查看状态，禁用 / 启用。</summary>
 internal sealed class SecurityCenterDialog : Form

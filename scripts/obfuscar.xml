@@ -25,12 +25,12 @@
 
   <Module file="$(InPath)\SrvDesk.exe">
     <!-- 配置 JSON：DataContract 成员名 -->
-    <SkipType name="WinOpt.UiPrefsData" skipProperties="true" skipFields="true" skipMethods="true" />
-    <SkipType name="WinOpt.OptProfileFile" skipProperties="true" skipFields="true" skipMethods="true" />
-    <SkipType name="WinOpt.SettingEntry" skipProperties="true" skipFields="true" skipMethods="true" />
-    <SkipType name="WinOpt.SettingScriptStore/StoreFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UiPrefsData" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.OptProfileFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.SettingEntry" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.SettingScriptStore/StoreFile" skipProperties="true" skipFields="true" skipMethods="true" />
 
     <!-- 预设/导入导出：反射 Optimizer.State 公共字段名 -->
-    <SkipType name="WinOpt.Optimizer/State" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.Optimizer/State" skipProperties="true" skipFields="true" skipMethods="true" />
   </Module>
 </Obfuscator>

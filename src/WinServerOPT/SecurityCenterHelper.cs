@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.ServiceProcess;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class SecurityCenterStatus
 {

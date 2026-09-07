@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>资源管理器 / 隐私 / 其他设置（对齐轻松设置功能，注册表与服务实现）。</summary>
 internal static class EasySettingsTweaks
@@ -30,58 +30,70 @@ internal static class EasySettingsTweaks
     public static void ApplyExplorerBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
         bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool Take(string field, Func<Optimizer.State, bool> f)
+        {
+            if (!D(f)) return false;
+            ApplyLog.DebugField(field, baseline is null ? null : f(baseline), f(s));
+            return true;
+        }
 
-        if (D(x => x.HideProtectedOsFiles))
+        if (Take("HideProtectedOsFiles", x => x.HideProtectedOsFiles))
             SetDword(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", s.HideProtectedOsFiles ? 0 : 1);
-        if (D(x => x.AlwaysShowIconsNeverThumbnails))
+        if (Take("AlwaysShowIconsNeverThumbnails", x => x.AlwaysShowIconsNeverThumbnails))
             SetDword(Hive.HkCu, ExplorerAdv, "IconsOnly", s.AlwaysShowIconsNeverThumbnails ? 1 : 0);
-        if (D(x => x.ShowEmptyDrives))
+        if (Take("ShowEmptyDrives", x => x.ShowEmptyDrives))
             SetDword(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", s.ShowEmptyDrives ? 0 : 1);
-        if (D(x => x.ShowRecentFiles))
+        if (Take("ShowRecentFiles", x => x.ShowRecentFiles))
         {
             SetDword(Hive.HkCu, Explorer, "ShowRecent", s.ShowRecentFiles ? 1 : 0);
             // 与「开始屏幕不显示/恢复最近使用的文件」.reg 对齐：同步 Start_TrackDocs
             SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackDocs", s.ShowRecentFiles ? 1 : 0);
         }
-        if (D(x => x.ShowFrequentPlaces))
+        if (Take("ShowFrequentPlaces", x => x.ShowFrequentPlaces))
             SetDword(Hive.HkCu, Explorer, "ShowFrequent", s.ShowFrequentPlaces ? 1 : 0);
-        if (D(x => x.HideOfficeCloudFiles))
+        if (Take("HideOfficeCloudFiles", x => x.HideOfficeCloudFiles))
             SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
-        if (D(x => x.DisableOneDrive))
+        if (Take("DisableOneDrive", x => x.DisableOneDrive))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
-        if (D(x => x.HideTaskbarChat))
+        if (Take("HideTaskbarChat", x => x.HideTaskbarChat))
             SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
-        if (D(x => x.HideTaskbarCopilot))
+        if (Take("HideTaskbarCopilot", x => x.HideTaskbarCopilot))
             SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
-        if (D(x => x.NotepadWordWrap))
+        if (Take("NotepadWordWrap", x => x.NotepadWordWrap))
             SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
-        if (D(x => x.NotepadStatusBar))
+        if (Take("NotepadStatusBar", x => x.NotepadStatusBar))
             SetDword(Hive.HkCu, NotepadKey, "StatusBar", s.NotepadStatusBar ? 1 : 0);
     }
 
     public static void ApplyPrivacyBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
         bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool Take(string field, Func<Optimizer.State, bool> f)
+        {
+            if (!D(f)) return false;
+            ApplyLog.DebugField(field, baseline is null ? null : f(baseline), f(s));
+            return true;
+        }
 
-        if (D(x => x.DisableCloudSearch))
+        if (Take("DisableCloudSearch", x => x.DisableCloudSearch))
             SetDword(Hive.HkLm, SearchPol, "AllowCloudSearch", s.DisableCloudSearch ? 0 : 1);
-        if (D(x => x.DisableWebSearch))
+        if (Take("DisableWebSearch", x => x.DisableWebSearch))
         {
             SetDword(Hive.HkLm, SearchPol, "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", s.DisableWebSearch ? 0 : 1);
         }
-        if (D(x => x.DisableSearchHistory))
+        if (Take("DisableSearchHistory", x => x.DisableSearchHistory))
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
-        if (D(x => x.DisableWebsiteLangList))
+        if (Take("DisableWebsiteLangList", x => x.DisableWebsiteLangList))
             SetDword(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", s.DisableWebsiteLangList ? 1 : 0);
-        if (D(x => x.DisableAppLaunchTracking))
+        if (Take("DisableAppLaunchTracking", x => x.DisableAppLaunchTracking))
             SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", s.DisableAppLaunchTracking ? 0 : 1);
-        if (D(x => x.DisableSettingsSuggestions))
+        if (Take("DisableSettingsSuggestions", x => x.DisableSettingsSuggestions))
         {
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled", s.DisableSettingsSuggestions ? 0 : 1);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", s.DisableSettingsSuggestions ? 0 : 1);
         }
-        if (D(x => x.DisableInkingPersonalization))
+        if (Take("DisableInkingPersonalization", x => x.DisableInkingPersonalization))
         {
             // 墨迹/键入个性化：机器策略 + 当前用户（与常见隐私 .reg 对齐）
             SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
@@ -91,10 +103,10 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkCu, TextInputPolicy, "AllowLinguisticDataCollection", s.DisableInkingPersonalization ? 0 : 1);
         }
 
-        if (D(x => x.MsPinyinDefaultEnglish))
+        if (Take("MsPinyinDefaultEnglish", x => x.MsPinyinDefaultEnglish))
             SetDword(Hive.HkCu, ChsIme, "Default Mode", s.MsPinyinDefaultEnglish ? 1 : 0);
 
-        if (D(x => x.DisableMsPinyinCloudAndInsights))
+        if (Take("DisableMsPinyinCloudAndInsights", x => x.DisableMsPinyinCloudAndInsights))
         {
             SetDword(Hive.HkCu, ChsIme, "Enable Cloud Candidate", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
             SetDword(Hive.HkCu, CpssCloudCandidate, "Value", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
@@ -104,57 +116,63 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkCu, InputSettings, "EnableTypingInsights", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
         }
 
-        if (D(x => x.DisableMsPinyinToolbar))
+        if (Take("DisableMsPinyinToolbar", x => x.DisableMsPinyinToolbar))
         {
             SetDword(Hive.HkCu, ChsIme, "ToolBarEnabled", s.DisableMsPinyinToolbar ? 0 : 1);
             SetDword(Hive.HkCu, LangBarHelpItem, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
             SetDword(Hive.HkCu, InputSettings, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
         }
 
-        if (D(x => x.DisableAdTracking))
+        if (Take("DisableAdTracking", x => x.DisableAdTracking))
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
-        if (D(x => x.DisableDeliveryOpt))
+        if (Take("DisableDeliveryOpt", x => x.DisableDeliveryOpt))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1);
-        if (D(x => x.ExcludeMsrtFromWu))
+        if (Take("ExcludeMsrtFromWu", x => x.ExcludeMsrtFromWu))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
-        if (D(x => x.PauseFeatureUpdatesUntil2035))
+        if (Take("PauseFeatureUpdatesUntil2035", x => x.PauseFeatureUpdatesUntil2035))
             Win11DesktopTweaks.SetFeatureUpdatePause(s.PauseFeatureUpdatesUntil2035);
-        if (D(x => x.PauseWindowsUpdatesUx))
+        if (Take("PauseWindowsUpdatesUx", x => x.PauseWindowsUpdatesUx))
             Win11DesktopTweaks.SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
     }
 
     public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
         bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool Take(string field, Func<Optimizer.State, bool> f)
+        {
+            if (!D(f)) return false;
+            ApplyLog.DebugField(field, baseline is null ? null : f(baseline), f(s));
+            return true;
+        }
 
         ApplyExplorerBits(s, baseline);
         ApplyPrivacyBits(s, baseline);
-        if (D(x => x.DisableMeltdownSpectre))
+        if (Take("DisableMeltdownSpectre", x => x.DisableMeltdownSpectre))
             SetMeltdownSpectre(s.DisableMeltdownSpectre);
-        if (D(x => x.DisableMemoryIntegrity))
+        if (Take("DisableMemoryIntegrity", x => x.DisableMemoryIntegrity))
             SetHvci(!s.DisableMemoryIntegrity);
-        if (D(x => x.DisableWdac))
+        if (Take("DisableWdac", x => x.DisableWdac))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", s.DisableWdac ? 0 : 1);
-        if (D(x => x.DisableVbs))
+        if (Take("DisableVbs", x => x.DisableVbs))
             SetVbs(!s.DisableVbs);
-        if (D(x => x.EnableTcpBbr2))
+        if (Take("EnableTcpBbr2", x => x.EnableTcpBbr2))
             SetTcpBbr2(s.EnableTcpBbr2);
-        if (D(x => x.DisableSystemRestore))
+        if (Take("DisableSystemRestore", x => x.DisableSystemRestore))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", s.DisableSystemRestore ? 1 : 0);
-        if (D(x => x.DisableCeip))
+        if (Take("DisableCeip", x => x.DisableCeip))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\SQMClient\Windows", "CEIPEnable", s.DisableCeip ? 0 : 1);
-        if (D(x => x.DisableDiagnosticPolicy))
+        if (Take("DisableDiagnosticPolicy", x => x.DisableDiagnosticPolicy))
             SetService("DPS", !s.DisableDiagnosticPolicy);
 
-        if (D(x => x.DisableRemoteAssistance))
+        if (Take("DisableRemoteAssistance", x => x.DisableRemoteAssistance))
             SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", s.DisableRemoteAssistance ? 0 : 1);
-        if (D(x => x.DisableMemoryCompression))
+        if (Take("DisableMemoryCompression", x => x.DisableMemoryCompression))
             SetMmAgent("MemoryCompression", !s.DisableMemoryCompression);
-        if (D(x => x.DisableAppPrelaunch))
+        if (Take("DisableAppPrelaunch", x => x.DisableAppPrelaunch))
             SetMmAgent("ApplicationPreLaunch", !s.DisableAppPrelaunch);
-        if (D(x => x.DisablePageCombining))
+        if (Take("DisablePageCombining", x => x.DisablePageCombining))
             SetMmAgent("PageCombining", !s.DisablePageCombining);
-        if (D(x => x.DisableUcpdDriver))
+        if (Take("DisableUcpdDriver", x => x.DisableUcpdDriver))
             SetService("UCPD", !s.DisableUcpdDriver);
     }
 
@@ -419,9 +437,9 @@ internal static class EasySettingsTweaks
     private static IEnumerable<(string Name, string Program)> SearchFirewallTargets()
     {
         var windir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        yield return ("WinOpt-Block-SearchHost", Path.Combine(windir, @"SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe"));
-        yield return ("WinOpt-Block-SearchApp", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe"));
-        yield return ("WinOpt-Block-Cortana", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe"));
+        yield return ("SrvDesk-Block-SearchHost", Path.Combine(windir, @"SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe"));
+        yield return ("SrvDesk-Block-SearchApp", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe"));
+        yield return ("SrvDesk-Block-Cortana", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe"));
     }
 
     private static void SetMeltdownSpectre(bool disable)

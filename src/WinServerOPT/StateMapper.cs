@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal static class StateMapper
 {

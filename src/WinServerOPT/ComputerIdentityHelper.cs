@@ -1,7 +1,7 @@
 using System.Management;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class ComputerIdentityInfo
 {

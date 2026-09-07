@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>对齐 hellzerg Optimizer / SophiApp 的常用注册表与服务项（文档化策略为主）。</summary>
 internal static class CompetitorTweaks
@@ -9,32 +9,38 @@ internal static class CompetitorTweaks
     public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
         bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool Take(string field, Func<Optimizer.State, bool> f)
+        {
+            if (!D(f)) return false;
+            ApplyLog.DebugField(field, baseline is null ? null : f(baseline), f(s));
+            return true;
+        }
 
-        if (D(x => x.DisableCortana)) SetCortana(!s.DisableCortana);
-        if (D(x => x.DisableCopilotAi)) SetCopilotAi(!s.DisableCopilotAi);
-        if (D(x => x.DisableOfficeTelemetry)) SetOfficeTelemetry(!s.DisableOfficeTelemetry);
-        if (D(x => x.EnableUtcTime)) SetUtcTime(s.EnableUtcTime);
-        if (D(x => x.DisableHpet)) SetHpet(!s.DisableHpet);
-        if (D(x => x.EnableLoginVerbose)) SetLoginVerbose(s.EnableLoginVerbose);
-        if (D(x => x.DisableNetworkThrottling)) SetNetworkThrottling(!s.DisableNetworkThrottling);
-        if (D(x => x.DisableGameDvr)) SetGameDvr(!s.DisableGameDvr);
-        if (D(x => x.DisableLocationTracking)) SetLocation(!s.DisableLocationTracking);
-        if (D(x => x.DisableConsumerFeatures)) SetConsumerFeatures(!s.DisableConsumerFeatures);
-        if (D(x => x.DisableEdgePreload)) SetEdgePreload(!s.DisableEdgePreload);
-        if (D(x => x.DisableTeredo)) SetTeredo(!s.DisableTeredo);
-        if (D(x => x.DisableClipboardCloud)) SetClipboardCloud(!s.DisableClipboardCloud);
-        if (D(x => x.DisableNtfsLastAccess)) SetNtfsLastAccess(!s.DisableNtfsLastAccess);
-        if (D(x => x.DisableXboxServices)) SetXbox(!s.DisableXboxServices);
-        if (D(x => x.DisableFaxService)) SetFax(!s.DisableFaxService);
-        if (D(x => x.EnableF8BootMenu)) SetF8Menu(s.EnableF8BootMenu);
-        if (D(x => x.ContextMenuTakeOwnership)) ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
-        if (D(x => x.ContextMenuOpenCmd)) ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
-        if (D(x => x.ContextMenuCopyMoveTo)) ContextMenuTweaks.SetCopyMoveTo(s.ContextMenuCopyMoveTo);
-        if (D(x => x.ContextMenuQuickOps)) ContextMenuTweaks.SetQuickOpsMenu(s.ContextMenuQuickOps);
-        if (D(x => x.DisableMediaPlayerSharing)) SetMediaSharing(!s.DisableMediaPlayerSharing);
-        if (D(x => x.DisableInsiderService)) SetInsider(!s.DisableInsiderService);
-        if (D(x => x.DisableStoreAutoUpdate)) SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
-        if (D(x => x.DisableNewsInterests)) SetNewsInterests(!s.DisableNewsInterests);
+        if (Take("DisableCortana", x => x.DisableCortana)) SetCortana(!s.DisableCortana);
+        if (Take("DisableCopilotAi", x => x.DisableCopilotAi)) SetCopilotAi(!s.DisableCopilotAi);
+        if (Take("DisableOfficeTelemetry", x => x.DisableOfficeTelemetry)) SetOfficeTelemetry(!s.DisableOfficeTelemetry);
+        if (Take("EnableUtcTime", x => x.EnableUtcTime)) SetUtcTime(s.EnableUtcTime);
+        if (Take("DisableHpet", x => x.DisableHpet)) SetHpet(!s.DisableHpet);
+        if (Take("EnableLoginVerbose", x => x.EnableLoginVerbose)) SetLoginVerbose(s.EnableLoginVerbose);
+        if (Take("DisableNetworkThrottling", x => x.DisableNetworkThrottling)) SetNetworkThrottling(!s.DisableNetworkThrottling);
+        if (Take("DisableGameDvr", x => x.DisableGameDvr)) SetGameDvr(!s.DisableGameDvr);
+        if (Take("DisableLocationTracking", x => x.DisableLocationTracking)) SetLocation(!s.DisableLocationTracking);
+        if (Take("DisableConsumerFeatures", x => x.DisableConsumerFeatures)) SetConsumerFeatures(!s.DisableConsumerFeatures);
+        if (Take("DisableEdgePreload", x => x.DisableEdgePreload)) SetEdgePreload(!s.DisableEdgePreload);
+        if (Take("DisableTeredo", x => x.DisableTeredo)) SetTeredo(!s.DisableTeredo);
+        if (Take("DisableClipboardCloud", x => x.DisableClipboardCloud)) SetClipboardCloud(!s.DisableClipboardCloud);
+        if (Take("DisableNtfsLastAccess", x => x.DisableNtfsLastAccess)) SetNtfsLastAccess(!s.DisableNtfsLastAccess);
+        if (Take("DisableXboxServices", x => x.DisableXboxServices)) SetXbox(!s.DisableXboxServices);
+        if (Take("DisableFaxService", x => x.DisableFaxService)) SetFax(!s.DisableFaxService);
+        if (Take("EnableF8BootMenu", x => x.EnableF8BootMenu)) SetF8Menu(s.EnableF8BootMenu);
+        if (Take("ContextMenuTakeOwnership", x => x.ContextMenuTakeOwnership)) ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
+        if (Take("ContextMenuOpenCmd", x => x.ContextMenuOpenCmd)) ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
+        if (Take("ContextMenuCopyMoveTo", x => x.ContextMenuCopyMoveTo)) ContextMenuTweaks.SetCopyMoveTo(s.ContextMenuCopyMoveTo);
+        if (Take("ContextMenuQuickOps", x => x.ContextMenuQuickOps)) ContextMenuTweaks.SetQuickOpsMenu(s.ContextMenuQuickOps);
+        if (Take("DisableMediaPlayerSharing", x => x.DisableMediaPlayerSharing)) SetMediaSharing(!s.DisableMediaPlayerSharing);
+        if (Take("DisableInsiderService", x => x.DisableInsiderService)) SetInsider(!s.DisableInsiderService);
+        if (Take("DisableStoreAutoUpdate", x => x.DisableStoreAutoUpdate)) SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
+        if (Take("DisableNewsInterests", x => x.DisableNewsInterests)) SetNewsInterests(!s.DisableNewsInterests);
     }
 
     public static void ReadInto(Optimizer.State s)

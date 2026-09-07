@@ -1,6 +1,6 @@
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class SystemFacts
 {

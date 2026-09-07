@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal static class SystemToolLauncher
 {

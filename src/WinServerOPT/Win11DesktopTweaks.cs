@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>借鉴 Win11 桌面优化工具的资源管理器、任务栏与系统体验项（注册表实现）。</summary>
 internal static class Win11DesktopTweaks

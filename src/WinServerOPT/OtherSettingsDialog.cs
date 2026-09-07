@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>高级设置：RDP 端口、预取文件数、Windows Search（开关项已并入主列表）。</summary>
 internal sealed class OtherSettingsDialog : Form

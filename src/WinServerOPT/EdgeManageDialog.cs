@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>MSEdge 管理：状态、禁用/恢复更新、卸载与安装恢复 Edge / WebView2 / Edge Core。</summary>
 internal sealed class EdgeManageDialog : Form

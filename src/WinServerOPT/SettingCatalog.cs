@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>各优化项的帮助说明（作用、好处、指引、生效方式）。</summary>
 internal static class SettingCatalog

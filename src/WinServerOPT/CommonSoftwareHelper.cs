@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class CommonSoftwareStatus
 {
@@ -54,11 +54,11 @@ internal static class CommonSoftwareHelper
     private static string PortableWingetExe => Path.Combine(PortableWingetDir, "winget.exe");
 
     public static string DownloadDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "software-downloads");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SrvDesk", "software-downloads");
 
-    /// <summary>便携工具目录，如 Codex CLI：%LocalAppData%\WinOpt\tools\{id}\</summary>
+    /// <summary>便携工具目录，如 Codex CLI：%LocalAppData%\SrvDesk\tools\{id}\</summary>
     public static string ToolsDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "tools");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SrvDesk", "tools");
 
     public static bool IsWingetAvailable()
     {
@@ -663,7 +663,7 @@ internal static class CommonSoftwareHelper
             : InstallFromOfflinePackage(item, onProgress);
 
     /// <summary>
-    /// 下载便携 EXE 到 %LocalAppData%\WinOpt\tools\{id}\，并加入用户 PATH。
+    /// 下载便携 EXE 到 %LocalAppData%\SrvDesk\tools\{id}\，并加入用户 PATH。
     /// 用于 Server 上无 winget/商店时安装 Codex CLI 等工具。
     /// </summary>
     private static string? InstallPortableOffline(

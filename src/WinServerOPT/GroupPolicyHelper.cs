@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class GpUpdateResult
 {

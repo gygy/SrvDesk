@@ -3,7 +3,7 @@ using System.Net;
 using System.ServiceProcess;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal enum EdgeComponentKind
 {
@@ -287,7 +287,7 @@ internal static class EdgeManageHelper
 
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "edge-installers");
+            "SrvDesk", "edge-installers");
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, fileName);
 

@@ -1,7 +1,7 @@
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>菜单项图标：优先取系统程序关联图标，失败时画简易字形。</summary>
 internal static class MenuIcons

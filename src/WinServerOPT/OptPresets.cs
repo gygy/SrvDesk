@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>对标 WinUtil / m2nlight 的预设方案。</summary>
 internal static class OptPresets

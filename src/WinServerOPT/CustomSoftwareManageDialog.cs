@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>管理用户自定义常用软件（填写名称 + winget ID，用 winget 安装）。</summary>
 internal sealed class CustomSoftwareManageDialog : Form

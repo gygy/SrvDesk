@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>优化项对应的一键开启/关闭脚本（.reg / CMD / PowerShell）。</summary>
 internal enum SettingActionKind

@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>配置脚本面板：说明 + 可查看/编辑的开启与关闭脚本（复制、导出）。</summary>
 internal sealed class HelpDetailPanel : BufferedPanel

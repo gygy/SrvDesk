@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>
 /// 各优化项的一键开启/关闭脚本目录（与 Optimizer / Tweaks Apply 逻辑对齐）。
@@ -757,19 +757,19 @@ internal static class SettingRecipeCatalog
             "HKCR 组合项较多，建议软件应用。"));
         Add(SettingCatalog.ContextMenuOpenCmd, ActionScript.Reg(
             ActionScript.Block(
-                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\WinOptOpenCmd"),
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\SrvDeskOpenCmd"),
                 "@=\"在此处打开命令提示符\"") +
             ActionScript.Block(
-                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\WinOptOpenCmd\\command"),
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\shell\SrvDeskOpenCmd\\command"),
                 "@=\"cmd.exe /s /k pushd \\\"%V\\\"\"") +
             ActionScript.Block(
-                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\WinOptOpenCmd"),
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\SrvDeskOpenCmd"),
                 "@=\"在此处打开命令提示符\"") +
             ActionScript.Block(
-                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\WinOptOpenCmd\\command"),
+                ActionScript.HkLm(@"SOFTWARE\Classes\Directory\\Background\\shell\\SrvDeskOpenCmd\\command"),
                 "@=\"cmd.exe /s /k pushd \\\"%V\\\"\""),
-            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\shell\\WinOptOpenCmd]\r\n" +
-            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\Background\\shell\\WinOptOpenCmd]\r\n" +
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\shell\\SrvDeskOpenCmd]\r\n" +
+            "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Directory\\Background\\shell\\SrvDeskOpenCmd]\r\n" +
             "[-HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Folder\\shell\\OpenDOSBox]\r\n",
             "开启用 Directory+Background；关闭同时清除 OpenDOSBox 旧键。"));
         Add(SettingCatalog.ContextMenuCopyMoveTo, ActionScript.Reg(

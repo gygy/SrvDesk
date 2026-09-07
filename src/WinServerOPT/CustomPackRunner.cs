@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>在界面中运行自定义配置项（.reg / .cmd / .ps1）。</summary>
 internal static class CustomPackRunner

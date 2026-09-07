@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class AutologonSettings
 {

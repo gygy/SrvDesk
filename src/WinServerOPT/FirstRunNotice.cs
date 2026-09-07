@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>首次启动短提示（只弹一次）。</summary>
 internal static class FirstRunNotice
@@ -6,7 +6,7 @@ internal static class FirstRunNotice
     private static string MarkerPath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt",
+            "SrvDesk",
             "first-run.ok");
 
     public static bool NeedShow() => !File.Exists(MarkerPath);

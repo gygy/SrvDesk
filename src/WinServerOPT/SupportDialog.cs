@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>帮助 → 支持：作者与问题反馈入口（内容精简）。</summary>
 internal sealed class SupportDialog : Form

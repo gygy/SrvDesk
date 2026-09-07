@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 static class Program
 {
@@ -7,6 +7,7 @@ static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+        AppPaths.MigrateLegacyDataIfNeeded();
 
         if (TryRunCli(args, out var exitCode))
             return exitCode;

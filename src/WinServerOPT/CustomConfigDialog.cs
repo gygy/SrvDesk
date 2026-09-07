@@ -1,4 +1,4 @@
-﻿namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>自定义配置：多方案；项内容在界面粘贴/编辑并保存，不依赖外部文件路径。</summary>
 internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage

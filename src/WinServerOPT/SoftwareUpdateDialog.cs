@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>展示可更新软件列表，支持勾选后批量更新。</summary>
 internal sealed class SoftwareUpdateDialog : Form

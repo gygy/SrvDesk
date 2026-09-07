@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>配置脚本面板停靠位置。</summary>
 internal enum ConfigScriptDock
@@ -11,7 +11,7 @@ internal enum ConfigScriptDock
     Bottom = 1,
 }
 
-/// <summary>界面与调试偏好，保存在 %LocalAppData%\WinOpt\ui-prefs.json</summary>
+/// <summary>界面与调试偏好，保存在 %LocalAppData%\SrvDesk\ui-prefs.json</summary>
 [DataContract]
 internal sealed class UiPrefsData
 {
@@ -42,7 +42,7 @@ internal static class UiPrefs
     private static string FilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "ui-prefs.json");
+            "SrvDesk", "ui-prefs.json");
 
     public static UiPrefsData Load()
     {

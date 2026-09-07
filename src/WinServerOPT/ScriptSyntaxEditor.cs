@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>配置脚本编辑器：.reg / .cmd / .ps1 语法高亮，可读可编辑。</summary>
 internal sealed class ScriptSyntaxEditor : RichTextBox

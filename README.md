@@ -96,7 +96,7 @@
 
 ## 帮助菜单
 
-- 变更日志、操作日志（`%LocalAppData%\WinOpt\`）  
+- 变更日志、操作日志（`%LocalAppData%\SrvDesk\`）  
 - 免责声明、隐私说明、许可证  
 - 支持（作者与反馈地址）  
 

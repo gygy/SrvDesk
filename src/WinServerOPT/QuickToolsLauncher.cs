@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class QuickTool
 {
@@ -62,7 +62,7 @@ internal static class QuickToolsCatalog
         var win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
         return
         [
-            // Server 专属 — 与 WinOpt 优化项高度相关
+            // Server 专属 — 与 SrvDesk 优化项高度相关
             T("Server 专属", "服务器管理器 → 本地服务器",
                 "计算机名、域/工作组、IE ESC、Windows Update、远程管理、NIC 团队等（左侧点「本地服务器」）。",
                 Path.Combine(sys, "ServerManager.exe"), requiresServer: true),
@@ -186,7 +186,7 @@ internal static class QuickToolsCatalog
                 arguments: $"-NoExit -Command \"Write-Host '{AppBrand.ShortName} 快速工具' -ForegroundColor Cyan\""),
             T("账户与维护", "操作日志",
                 $"{AppBrand.ShortName} 变更日志、操作日志所在文件夹。",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SrvDesk"),
                 arguments: ""),
         ];
     }

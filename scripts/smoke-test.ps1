@@ -1,4 +1,4 @@
-﻿# Smoke checks for SrvDesk (reflection; works with internal types).
+# Smoke checks for SrvDesk (reflection; works with internal types).
 $ErrorActionPreference = "Stop"
 $dotnet = "$env:LOCALAPPDATA\dotnet\dotnet.exe"
 if (-not (Test-Path $dotnet)) { $dotnet = "dotnet" }
@@ -26,7 +26,7 @@ function Resolve-Type([string]$name) {
 }
 
 Write-Host "`n=== Round 1: catalog / AI category ==="
-$catType = Resolve-Type "WinOpt.CommonSoftwareCatalog"
+$catType = Resolve-Type "SrvDesk.CommonSoftwareCatalog"
 $all = $catType.GetMethod("GetAll").Invoke($null, @())
 Assert ($all.Count -gt 20) "catalog has items ($($all.Count))"
 $ai = @($all | Where-Object { $_.Category -eq "AI" })
@@ -47,20 +47,20 @@ Assert (($codex.DetectExeNames -join ",") -match "codex\.exe") "codex detect exe
 Assert (($pi.DetectExeNames -join ",") -match "pi\.exe") "pi detect exe"
 
 Write-Host "`n=== Round 2: helpers / exception paths ==="
-$facts = (Resolve-Type "WinOpt.SystemInfoHelper").GetMethod("Detect").Invoke($null, @())
+$facts = (Resolve-Type "SrvDesk.SystemInfoHelper").GetMethod("Detect").Invoke($null, @())
 Assert (-not [string]::IsNullOrWhiteSpace($facts.Summary)) "system facts: $($facts.Summary)"
-$auto = (Resolve-Type "WinOpt.AutologonHelper").GetMethod("Read").Invoke($null, @())
+$auto = (Resolve-Type "SrvDesk.AutologonHelper").GetMethod("Read").Invoke($null, @())
 Assert ($null -ne $auto) "autologon read (Enabled=$($auto.Enabled))"
-$uxOn = (Resolve-Type "WinOpt.Win11DesktopTweaks").GetMethod("IsPauseWindowsUpdatesUxOn").Invoke($null, @())
+$uxOn = (Resolve-Type "SrvDesk.Win11DesktopTweaks").GetMethod("IsPauseWindowsUpdatesUxOn").Invoke($null, @())
 Assert ($uxOn -is [bool]) "pause ux detect ($uxOn)"
-$featOn = (Resolve-Type "WinOpt.Win11DesktopTweaks").GetMethod("IsPauseFeatureUpdatesUntil2035On").Invoke($null, @())
+$featOn = (Resolve-Type "SrvDesk.Win11DesktopTweaks").GetMethod("IsPauseFeatureUpdatesUntil2035On").Invoke($null, @())
 Assert ($featOn -is [bool]) "pause feature detect ($featOn)"
-$optType = Resolve-Type "WinOpt.Optimizer"
+$optType = Resolve-Type "SrvDesk.Optimizer"
 $boostKey = $optType.GetField("ProcessorBoostModeKey", [Reflection.BindingFlags]"Public,Static,NonPublic").GetValue($null)
 Assert ("$boostKey" -match "be337238") "boost mode key"
 
 # BuildWingetInstallArgs via private method
-$helper = Resolve-Type "WinOpt.CommonSoftwareHelper"
+$helper = Resolve-Type "SrvDesk.CommonSoftwareHelper"
 $flags = [Reflection.BindingFlags]"NonPublic,Static"
 $buildArgs = $helper.GetMethod("BuildWingetInstallArgs", $flags)
 $a1 = [string]$buildArgs.Invoke($null, @("9PLM9XGG6VKS", $true))
@@ -72,7 +72,7 @@ $a3 = [string]$buildArgs.Invoke($null, @("My Custom App", $true))
 Assert ($a3 -match "--name") "name install for spaced title: $a3"
 
 Write-Host "`n=== Round 3: display / header meter + IP ==="
-$meterType = Resolve-Type "WinOpt.HeaderResourceMeter"
+$meterType = Resolve-Type "SrvDesk.HeaderResourceMeter"
 $meter = [Activator]::CreateInstance($meterType)
 Assert ($meter.Width -ge 420) "header meter width $($meter.Width)"
 $meter.Dispose()
@@ -100,8 +100,8 @@ Assert ($null -ne $stateType.GetField("MsPinyinDefaultEnglish")) "State.MsPinyin
 Assert ($null -ne $stateType.GetField("EnableAutologon")) "State.EnableAutologon"
 
 # Setting recipes exist for new help infos
-$catalog = Resolve-Type "WinOpt.SettingCatalog"
-$recipeCat = Resolve-Type "WinOpt.SettingRecipeCatalog"
+$catalog = Resolve-Type "SrvDesk.SettingCatalog"
+$recipeCat = Resolve-Type "SrvDesk.SettingRecipeCatalog"
 $get = $recipeCat.GetMethod("Get")
 foreach ($name in @("ShowProcessorBoostMode","PauseWindowsUpdatesUx","MsPinyinDefaultEnglish","DisableMsPinyinCloudAndInsights","DisableMsPinyinToolbar")) {
     $help = $catalog.GetField($name, [Reflection.BindingFlags]"Public,Static").GetValue($null)

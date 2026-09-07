@@ -14,7 +14,7 @@ All notable changes to SrvDesk are documented here.
 - Four presets: Server Desktop, Security, Remote Work, Minimal
 - JSON profile import/export and CLI (`--apply-preset`, `--load-profile`, `--export-profile`)
 - Tools: hosts editor, group policy, Windows features, context menu tweaks, cleanup, quick tools
-- Operation log at `%LocalAppData%\WinOpt\apply.log`
+- Operation log at `%LocalAppData%\SrvDesk\apply.log`
 
 ### Fixed
 

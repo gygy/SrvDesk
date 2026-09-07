@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>批量设置列表的列坐标（表头与行必须一致，避免开关被文字盖住）。</summary>
 internal static class SettingListLayout

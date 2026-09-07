@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>
 /// 一键写入 GitHub hosts，数据源参考 maxiaof/github-hosts（每日更新）。
@@ -138,7 +138,7 @@ internal static class GitHubHostsHelper
         }
         catch { /* 后续写入抛出 */ }
 
-        var temp = path + ".winopt.tmp";
+        var temp = path + ".SrvDesk.tmp";
         File.WriteAllText(temp, output, encoding);
         File.Copy(temp, path, overwrite: true);
         try { File.Delete(temp); } catch { /* ignore */ }
@@ -213,7 +213,7 @@ internal static class GitHubHostsHelper
     private static string DownloadText(string url)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("SrvDesk-WinOpt/1.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("SrvDesk/1.0");
         using var response = client.GetAsync(url).GetAwaiter().GetResult();
         response.EnsureSuccessStatusCode();
         return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();

@@ -2,11 +2,11 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>
 /// 用户在配置脚本编辑器中的修改持久化。
-/// 存于 %LocalAppData%\WinOpt\script-overrides.json，下次打开同一项仍显示改过的内容。
+/// 存于 %LocalAppData%\SrvDesk\script-overrides.json，下次打开同一项仍显示改过的内容。
 /// </summary>
 internal static class SettingScriptStore
 {
@@ -22,7 +22,7 @@ internal static class SettingScriptStore
     private static string FilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "script-overrides.json");
+            "SrvDesk", "script-overrides.json");
 
     public static string MakeKey(string itemTitle, bool enable) =>
         (itemTitle ?? "").Trim() + "\u001f" + (enable ? "on" : "off");

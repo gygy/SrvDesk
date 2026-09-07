@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal static class Optimizer
 {
@@ -1003,9 +1003,9 @@ internal static class Optimizer
             : "accounts /maxpwage:42");
 
         // 复杂性：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
-        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.inf");
-        var db = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.sdb");
-        var jfm = Path.Combine(Path.GetTempPath(), "WinOpt-secpol.jfm");
+        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.inf");
+        var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.sdb");
+        var jfm = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.jfm");
         TryDelete(cfg);
         TryDelete(db);
         TryDelete(jfm);
@@ -1117,7 +1117,7 @@ internal static class Optimizer
 
     private static bool ReadSecpolFlag(string needle)
     {
-        var cfg = Path.Combine(Path.GetTempPath(), "WinOpt-secpol-read.inf");
+        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-read.inf");
         try
         {
             Run("secedit.exe", $"/export /cfg \"{cfg}\"");

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal enum WinFeatureKind
 {

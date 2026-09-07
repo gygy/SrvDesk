@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>按实际文字宽度计算控件尺寸，避免中文被裁成半个字。</summary>
 internal static class UiFit

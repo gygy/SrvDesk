@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>优化推荐强度（列表「推荐值」列）。</summary>
 internal enum RecommendLevel

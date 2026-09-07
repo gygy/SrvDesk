@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class InstantToggleRow : Panel
 {

@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>顶栏右侧：本机 IP · CPU / 内存 / 系统盘占用（纯文字）。</summary>
 internal sealed class HeaderResourceMeter : Panel

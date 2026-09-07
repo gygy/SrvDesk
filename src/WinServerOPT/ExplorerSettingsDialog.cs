@@ -1,6 +1,6 @@
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>资源管理器即时页：单列分区布局（与「系统服务」等页一致），避免多列 TableLayout 切换重排。</summary>
 internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage

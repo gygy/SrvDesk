@@ -3,7 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal sealed class HostsEntry
 {
@@ -36,7 +36,7 @@ internal static class HostsFileHelper
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts");
 
     public static string BackupDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinOpt", "hosts-backup");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SrvDesk", "hosts-backup");
 
     public static HostsDocument Read()
     {
@@ -114,7 +114,7 @@ internal static class HostsFileHelper
         }
         catch { /* 无权限时由后续写入抛出 */ }
 
-        var temp = path + ".winopt.tmp";
+        var temp = path + ".SrvDesk.tmp";
         File.WriteAllText(temp, sb.ToString(), encoding);
         File.Copy(temp, path, overwrite: true);
         TryDelete(temp);

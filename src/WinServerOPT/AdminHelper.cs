@@ -1,6 +1,6 @@
 using System.Security.Principal;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal static class AdminHelper
 {

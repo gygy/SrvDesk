@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>设置项的平台与版本适用范围。</summary>
 internal sealed class SettingScope

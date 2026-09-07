@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 internal enum CustomPackItemKind
 {
@@ -63,7 +63,7 @@ internal sealed class CustomPackItem
 
 /// <summary>
 /// 自定义配置方案：每个方案含多个 .reg / .cmd / .ps1（内容粘贴保存到本机 AppData，不依赖外部文件路径）。
-/// 目录：%LocalAppData%\WinOpt\custom-packs\
+/// 目录：%LocalAppData%\SrvDesk\custom-packs\
 /// </summary>
 internal static class CustomPackStore
 {
@@ -73,7 +73,7 @@ internal static class CustomPackStore
     public static string RootDir =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "custom-packs");
+            "SrvDesk", "custom-packs");
 
     private static string IndexPath => Path.Combine(RootDir, "index.json");
 

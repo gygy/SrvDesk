@@ -1,27 +1,27 @@
 using Microsoft.Win32;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>资源管理器右键菜单扩展（对齐 Sophia / Optimizer 常见项）。</summary>
 internal static class ContextMenuTweaks
 {
-    public static bool IsTakeOwnershipOn() => KeyExists(@"*\shell\WinOptTakeOwnership");
+    public static bool IsTakeOwnershipOn() => KeyExists(@"*\shell\SrvDeskTakeOwnership");
     public static bool IsOpenCmdOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenCmd")
-        || KeyExists(@"Directory\Background\shell\WinOptOpenCmd")
+        KeyExists(@"Directory\shell\SrvDeskOpenCmd")
+        || KeyExists(@"Directory\Background\shell\SrvDeskOpenCmd")
         || KeyExists(@"Folder\shell\OpenDOSBox");
 
     public static bool IsOpenPowerShellOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenPS") || KeyExists(@"Directory\Background\shell\WinOptOpenPS");
+        KeyExists(@"Directory\shell\SrvDeskOpenPS") || KeyExists(@"Directory\Background\shell\SrvDeskOpenPS");
     public static bool IsOpenPowerShellAdminOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenPSAdmin") || KeyExists(@"Directory\Background\shell\WinOptOpenPSAdmin");
+        KeyExists(@"Directory\shell\SrvDeskOpenPSAdmin") || KeyExists(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
     public static bool IsOpenTerminalOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenWT") || KeyExists(@"Directory\Background\shell\WinOptOpenWT");
+        KeyExists(@"Directory\shell\SrvDeskOpenWT") || KeyExists(@"Directory\Background\shell\SrvDeskOpenWT");
     public static bool IsOpenTerminalAdminOn() =>
-        KeyExists(@"Directory\shell\WinOptOpenWTAdmin") || KeyExists(@"Directory\Background\shell\WinOptOpenWTAdmin");
-    public static bool IsCopyPathOn() => KeyExists(@"AllFilesystemObjects\shell\WinOptCopyPath");
-    public static bool IsEditWithPaintOn() => KeyExists(@"SystemFileAssociations\image\shell\WinOptEditPaint");
-    public static bool IsEditWithNotepadOn() => KeyExists(@"*\shell\WinOptEditNotepad");
+        KeyExists(@"Directory\shell\SrvDeskOpenWTAdmin") || KeyExists(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
+    public static bool IsCopyPathOn() => KeyExists(@"AllFilesystemObjects\shell\SrvDeskCopyPath");
+    public static bool IsEditWithPaintOn() => KeyExists(@"SystemFileAssociations\image\shell\SrvDeskEditPaint");
+    public static bool IsEditWithNotepadOn() => KeyExists(@"*\shell\SrvDeskEditNotepad");
     public static bool IsBlockAccessMenuOn() =>
         GetDword(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked",
             "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}") == 1;
@@ -52,23 +52,23 @@ internal static class ContextMenuTweaks
 
     public static void SetTakeOwnership(bool enable)
     {
-        if (!enable) { DeleteTree(@"*\shell\WinOptTakeOwnership"); return; }
-        SetShell(@"*\shell\WinOptTakeOwnership", "取得所有权",
+        if (!enable) { DeleteTree(@"*\shell\SrvDeskTakeOwnership"); return; }
+        SetShell(@"*\shell\SrvDeskTakeOwnership", "取得所有权",
             "cmd.exe /c takeown /f \"%1\" /r /d y & icacls \"%1\" /grant administrators:F /t");
     }
 
     public static void SetOpenCmd(bool enable)
     {
-        // 关闭时同时清掉 WinOpt 键与常见优化包 OpenDOSBox 旧键，避免关不干净 / 重复菜单
-        DeleteTree(@"Directory\shell\WinOptOpenCmd");
-        DeleteTree(@"Directory\Background\shell\WinOptOpenCmd");
+        // 关闭时同时清掉 SrvDesk/旧 SrvDesk 键与常见优化包 OpenDOSBox 旧键，避免关不干净 / 重复菜单
+        DeleteTree(@"Directory\shell\SrvDeskOpenCmd");
+        DeleteTree(@"Directory\Background\shell\SrvDeskOpenCmd");
         DeleteTree(LegacyOpenCmdKey);
         if (!enable) return;
 
         // Directory + Background：文件夹本身与空白处均可；pushd "%V" 比 CD %1 更稳
-        SetShell(@"Directory\shell\WinOptOpenCmd", "在此处打开命令提示符",
+        SetShell(@"Directory\shell\SrvDeskOpenCmd", "在此处打开命令提示符",
             "cmd.exe /s /k pushd \"%V\"");
-        SetShell(@"Directory\Background\shell\WinOptOpenCmd", "在此处打开命令提示符",
+        SetShell(@"Directory\Background\shell\SrvDeskOpenCmd", "在此处打开命令提示符",
             "cmd.exe /s /k pushd \"%V\"");
     }
 
@@ -76,13 +76,13 @@ internal static class ContextMenuTweaks
     {
         if (!enable)
         {
-            DeleteTree(@"Directory\shell\WinOptOpenPS");
-            DeleteTree(@"Directory\Background\shell\WinOptOpenPS");
+            DeleteTree(@"Directory\shell\SrvDeskOpenPS");
+            DeleteTree(@"Directory\Background\shell\SrvDeskOpenPS");
             return;
         }
-        SetShell(@"Directory\shell\WinOptOpenPS", "在此处打开 PowerShell",
+        SetShell(@"Directory\shell\SrvDeskOpenPS", "在此处打开 PowerShell",
             "powershell.exe -NoExit -Command \"Set-Location -LiteralPath '%V'\"");
-        SetShell(@"Directory\Background\shell\WinOptOpenPS", "在此处打开 PowerShell",
+        SetShell(@"Directory\Background\shell\SrvDeskOpenPS", "在此处打开 PowerShell",
             "powershell.exe -NoExit -Command \"Set-Location -LiteralPath '%V'\"");
     }
 
@@ -90,29 +90,29 @@ internal static class ContextMenuTweaks
     {
         if (!enable)
         {
-            DeleteTree(@"Directory\shell\WinOptOpenPSAdmin");
-            DeleteTree(@"Directory\Background\shell\WinOptOpenPSAdmin");
+            DeleteTree(@"Directory\shell\SrvDeskOpenPSAdmin");
+            DeleteTree(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
             return;
         }
         const string cmd =
             "powershell.exe -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit -Command Set-Location -LiteralPath ''%V'''\"";
-        SetShell(@"Directory\shell\WinOptOpenPSAdmin", "在此处打开 PowerShell（管理员）", cmd, luaShield: true);
-        SetShell(@"Directory\Background\shell\WinOptOpenPSAdmin", "在此处打开 PowerShell（管理员）", cmd, luaShield: true);
+        SetShell(@"Directory\shell\SrvDeskOpenPSAdmin", "在此处打开 PowerShell（管理员）", cmd, luaShield: true);
+        SetShell(@"Directory\Background\shell\SrvDeskOpenPSAdmin", "在此处打开 PowerShell（管理员）", cmd, luaShield: true);
     }
 
     public static void SetOpenTerminal(bool enable)
     {
         if (!enable)
         {
-            DeleteTree(@"Directory\shell\WinOptOpenWT");
-            DeleteTree(@"Directory\Background\shell\WinOptOpenWT");
+            DeleteTree(@"Directory\shell\SrvDeskOpenWT");
+            DeleteTree(@"Directory\Background\shell\SrvDeskOpenWT");
             return;
         }
         if (!TerminalAvailable())
             throw new InvalidOperationException("未找到 Windows Terminal（wt.exe）。请先安装「Windows 终端」。");
-        SetShell(@"Directory\shell\WinOptOpenWT", "在此处打开 Windows Terminal",
+        SetShell(@"Directory\shell\SrvDeskOpenWT", "在此处打开 Windows Terminal",
             "wt.exe -d \"%V\"");
-        SetShell(@"Directory\Background\shell\WinOptOpenWT", "在此处打开 Windows Terminal",
+        SetShell(@"Directory\Background\shell\SrvDeskOpenWT", "在此处打开 Windows Terminal",
             "wt.exe -d \"%V\"");
     }
 
@@ -120,22 +120,22 @@ internal static class ContextMenuTweaks
     {
         if (!enable)
         {
-            DeleteTree(@"Directory\shell\WinOptOpenWTAdmin");
-            DeleteTree(@"Directory\Background\shell\WinOptOpenWTAdmin");
+            DeleteTree(@"Directory\shell\SrvDeskOpenWTAdmin");
+            DeleteTree(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
             return;
         }
         if (!TerminalAvailable())
             throw new InvalidOperationException("未找到 Windows Terminal（wt.exe）。请先安装「Windows 终端」。");
         const string cmd =
             "powershell.exe -NoProfile -Command \"Start-Process wt.exe -ArgumentList '-d','%V' -Verb RunAs\"";
-        SetShell(@"Directory\shell\WinOptOpenWTAdmin", "在此处打开 Windows Terminal（管理员）", cmd, luaShield: true);
-        SetShell(@"Directory\Background\shell\WinOptOpenWTAdmin", "在此处打开 Windows Terminal（管理员）", cmd, luaShield: true);
+        SetShell(@"Directory\shell\SrvDeskOpenWTAdmin", "在此处打开 Windows Terminal（管理员）", cmd, luaShield: true);
+        SetShell(@"Directory\Background\shell\SrvDeskOpenWTAdmin", "在此处打开 Windows Terminal（管理员）", cmd, luaShield: true);
     }
 
     public static void SetCopyPath(bool enable)
     {
-        if (!enable) { DeleteTree(@"AllFilesystemObjects\shell\WinOptCopyPath"); return; }
-        SetShell(@"AllFilesystemObjects\shell\WinOptCopyPath", "复制完整路径",
+        if (!enable) { DeleteTree(@"AllFilesystemObjects\shell\SrvDeskCopyPath"); return; }
+        SetShell(@"AllFilesystemObjects\shell\SrvDeskCopyPath", "复制完整路径",
             "powershell.exe -NoProfile -Command \"Set-Clipboard -Value '%1'\"");
     }
 
@@ -170,15 +170,15 @@ internal static class ContextMenuTweaks
 
     public static void SetEditWithPaint(bool enable)
     {
-        if (!enable) { DeleteTree(@"SystemFileAssociations\image\shell\WinOptEditPaint"); return; }
-        SetShell(@"SystemFileAssociations\image\shell\WinOptEditPaint", "用画图编辑",
+        if (!enable) { DeleteTree(@"SystemFileAssociations\image\shell\SrvDeskEditPaint"); return; }
+        SetShell(@"SystemFileAssociations\image\shell\SrvDeskEditPaint", "用画图编辑",
             "mspaint.exe \"%1\"");
     }
 
     public static void SetEditWithNotepad(bool enable)
     {
-        if (!enable) { DeleteTree(@"*\shell\WinOptEditNotepad"); return; }
-        SetShell(@"*\shell\WinOptEditNotepad", "用记事本编辑",
+        if (!enable) { DeleteTree(@"*\shell\SrvDeskEditNotepad"); return; }
+        SetShell(@"*\shell\SrvDeskEditNotepad", "用记事本编辑",
             "notepad.exe \"%1\"");
     }
 

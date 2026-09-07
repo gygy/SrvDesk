@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 [DataContract]
 internal sealed class OptProfileFile
@@ -119,7 +119,7 @@ internal static class ProfileStore
     {
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "profiles");
+            "SrvDesk", "profiles");
         Directory.CreateDirectory(dir);
         return dir;
     }

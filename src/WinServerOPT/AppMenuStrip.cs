@@ -1,4 +1,4 @@
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>应用顶栏菜单：文件 / 工具 / 视图 / 帮助。</summary>
 internal sealed class AppMenuStrip : MenuStrip

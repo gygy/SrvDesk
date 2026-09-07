@@ -2,11 +2,11 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>
 /// 用户自定义常用软件（winget 安装）。
-/// 存于 %LocalAppData%\WinOpt\custom-software.json
+/// 存于 %LocalAppData%\SrvDesk\custom-software.json
 /// </summary>
 internal static class CustomSoftwareStore
 {
@@ -30,7 +30,7 @@ internal static class CustomSoftwareStore
     private static string FilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinOpt", "custom-software.json");
+            "SrvDesk", "custom-software.json");
 
     public static List<CustomSoftwareEntry> Load()
     {

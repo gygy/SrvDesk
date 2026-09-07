@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinOpt;
+namespace SrvDesk;
 
 /// <summary>程序设置：界面偏好与调试日志（固定对话框，无滚动条）。</summary>
 internal sealed class AppSettingsDialog : Form
@@ -20,8 +20,8 @@ internal sealed class AppSettingsDialog : Form
         AutoSize = true,
         MaximumSize = new Size(480, 0),
         ForeColor = AppTheme.TextMute,
-        Text = "含休眠不可用、防火墙规则组名不匹配、受保护服务等。" +
-               "调试日志记录命令与跳过原因，目录：%LocalAppData%\\WinOpt\\",
+        Text = "开启后记录：字段差分、每个优化项跳过/写入、注册表与服务细节。" +
+               "日志目录：%LocalAppData%\\SrvDesk\\debug.log",
     };
 
     public AppSettingsDialog()
