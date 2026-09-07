@@ -5,23 +5,28 @@ namespace SrvDesk;
 /// <summary>资源管理器右键菜单扩展（对齐 Sophia / Optimizer 常见项）。</summary>
 internal static class ContextMenuTweaks
 {
-    public static bool IsTakeOwnershipOn() => KeyExists(@"*\shell\SrvDeskTakeOwnership");
+    public static bool IsTakeOwnershipOn() => KeyExistsNewOrLegacy(@"*\shell\SrvDeskTakeOwnership");
     public static bool IsOpenCmdOn() =>
-        KeyExists(@"Directory\shell\SrvDeskOpenCmd")
-        || KeyExists(@"Directory\Background\shell\SrvDeskOpenCmd")
+        KeyExistsNewOrLegacy(@"Directory\shell\SrvDeskOpenCmd")
+        || KeyExistsNewOrLegacy(@"Directory\Background\shell\SrvDeskOpenCmd")
         || KeyExists(@"Folder\shell\OpenDOSBox");
 
     public static bool IsOpenPowerShellOn() =>
-        KeyExists(@"Directory\shell\SrvDeskOpenPS") || KeyExists(@"Directory\Background\shell\SrvDeskOpenPS");
+        KeyExistsNewOrLegacy(@"Directory\shell\SrvDeskOpenPS")
+        || KeyExistsNewOrLegacy(@"Directory\Background\shell\SrvDeskOpenPS");
     public static bool IsOpenPowerShellAdminOn() =>
-        KeyExists(@"Directory\shell\SrvDeskOpenPSAdmin") || KeyExists(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
+        KeyExistsNewOrLegacy(@"Directory\shell\SrvDeskOpenPSAdmin")
+        || KeyExistsNewOrLegacy(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
     public static bool IsOpenTerminalOn() =>
-        KeyExists(@"Directory\shell\SrvDeskOpenWT") || KeyExists(@"Directory\Background\shell\SrvDeskOpenWT");
+        KeyExistsNewOrLegacy(@"Directory\shell\SrvDeskOpenWT")
+        || KeyExistsNewOrLegacy(@"Directory\Background\shell\SrvDeskOpenWT");
     public static bool IsOpenTerminalAdminOn() =>
-        KeyExists(@"Directory\shell\SrvDeskOpenWTAdmin") || KeyExists(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
-    public static bool IsCopyPathOn() => KeyExists(@"AllFilesystemObjects\shell\SrvDeskCopyPath");
-    public static bool IsEditWithPaintOn() => KeyExists(@"SystemFileAssociations\image\shell\SrvDeskEditPaint");
-    public static bool IsEditWithNotepadOn() => KeyExists(@"*\shell\SrvDeskEditNotepad");
+        KeyExistsNewOrLegacy(@"Directory\shell\SrvDeskOpenWTAdmin")
+        || KeyExistsNewOrLegacy(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
+    public static bool IsCopyPathOn() => KeyExistsNewOrLegacy(@"AllFilesystemObjects\shell\SrvDeskCopyPath");
+    public static bool IsEditWithPaintOn() =>
+        KeyExistsNewOrLegacy(@"SystemFileAssociations\image\shell\SrvDeskEditPaint");
+    public static bool IsEditWithNotepadOn() => KeyExistsNewOrLegacy(@"*\shell\SrvDeskEditNotepad");
     public static bool IsBlockAccessMenuOn() =>
         GetDword(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked",
             "{f81e9010-6ea4-11ce-a7ff-00aa003ca9f6}") == 1;
@@ -52,16 +57,17 @@ internal static class ContextMenuTweaks
 
     public static void SetTakeOwnership(bool enable)
     {
-        if (!enable) { DeleteTree(@"*\shell\SrvDeskTakeOwnership"); return; }
+        DeleteNewAndLegacy(@"*\shell\SrvDeskTakeOwnership");
+        if (!enable) return;
         SetShell(@"*\shell\SrvDeskTakeOwnership", "取得所有权",
             "cmd.exe /c takeown /f \"%1\" /r /d y & icacls \"%1\" /grant administrators:F /t");
     }
 
     public static void SetOpenCmd(bool enable)
     {
-        // 关闭时同时清掉 SrvDesk/旧 SrvDesk 键与常见优化包 OpenDOSBox 旧键，避免关不干净 / 重复菜单
-        DeleteTree(@"Directory\shell\SrvDeskOpenCmd");
-        DeleteTree(@"Directory\Background\shell\SrvDeskOpenCmd");
+        // 关闭时同时清掉 SrvDesk / 旧 WinOpt 键与常见优化包 OpenDOSBox 旧键，避免关不干净 / 重复菜单
+        DeleteNewAndLegacy(@"Directory\shell\SrvDeskOpenCmd");
+        DeleteNewAndLegacy(@"Directory\Background\shell\SrvDeskOpenCmd");
         DeleteTree(LegacyOpenCmdKey);
         if (!enable) return;
 
@@ -74,12 +80,9 @@ internal static class ContextMenuTweaks
 
     public static void SetOpenPowerShell(bool enable)
     {
-        if (!enable)
-        {
-            DeleteTree(@"Directory\shell\SrvDeskOpenPS");
-            DeleteTree(@"Directory\Background\shell\SrvDeskOpenPS");
-            return;
-        }
+        DeleteNewAndLegacy(@"Directory\shell\SrvDeskOpenPS");
+        DeleteNewAndLegacy(@"Directory\Background\shell\SrvDeskOpenPS");
+        if (!enable) return;
         SetShell(@"Directory\shell\SrvDeskOpenPS", "在此处打开 PowerShell",
             "powershell.exe -NoExit -Command \"Set-Location -LiteralPath '%V'\"");
         SetShell(@"Directory\Background\shell\SrvDeskOpenPS", "在此处打开 PowerShell",
@@ -88,12 +91,9 @@ internal static class ContextMenuTweaks
 
     public static void SetOpenPowerShellAdmin(bool enable)
     {
-        if (!enable)
-        {
-            DeleteTree(@"Directory\shell\SrvDeskOpenPSAdmin");
-            DeleteTree(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
-            return;
-        }
+        DeleteNewAndLegacy(@"Directory\shell\SrvDeskOpenPSAdmin");
+        DeleteNewAndLegacy(@"Directory\Background\shell\SrvDeskOpenPSAdmin");
+        if (!enable) return;
         const string cmd =
             "powershell.exe -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit -Command Set-Location -LiteralPath ''%V'''\"";
         SetShell(@"Directory\shell\SrvDeskOpenPSAdmin", "在此处打开 PowerShell（管理员）", cmd, luaShield: true);
@@ -102,12 +102,9 @@ internal static class ContextMenuTweaks
 
     public static void SetOpenTerminal(bool enable)
     {
-        if (!enable)
-        {
-            DeleteTree(@"Directory\shell\SrvDeskOpenWT");
-            DeleteTree(@"Directory\Background\shell\SrvDeskOpenWT");
-            return;
-        }
+        DeleteNewAndLegacy(@"Directory\shell\SrvDeskOpenWT");
+        DeleteNewAndLegacy(@"Directory\Background\shell\SrvDeskOpenWT");
+        if (!enable) return;
         if (!TerminalAvailable())
             throw new InvalidOperationException("未找到 Windows Terminal（wt.exe）。请先安装「Windows 终端」。");
         SetShell(@"Directory\shell\SrvDeskOpenWT", "在此处打开 Windows Terminal",
@@ -118,12 +115,9 @@ internal static class ContextMenuTweaks
 
     public static void SetOpenTerminalAdmin(bool enable)
     {
-        if (!enable)
-        {
-            DeleteTree(@"Directory\shell\SrvDeskOpenWTAdmin");
-            DeleteTree(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
-            return;
-        }
+        DeleteNewAndLegacy(@"Directory\shell\SrvDeskOpenWTAdmin");
+        DeleteNewAndLegacy(@"Directory\Background\shell\SrvDeskOpenWTAdmin");
+        if (!enable) return;
         if (!TerminalAvailable())
             throw new InvalidOperationException("未找到 Windows Terminal（wt.exe）。请先安装「Windows 终端」。");
         const string cmd =
@@ -134,7 +128,8 @@ internal static class ContextMenuTweaks
 
     public static void SetCopyPath(bool enable)
     {
-        if (!enable) { DeleteTree(@"AllFilesystemObjects\shell\SrvDeskCopyPath"); return; }
+        DeleteNewAndLegacy(@"AllFilesystemObjects\shell\SrvDeskCopyPath");
+        if (!enable) return;
         SetShell(@"AllFilesystemObjects\shell\SrvDeskCopyPath", "复制完整路径",
             "powershell.exe -NoProfile -Command \"Set-Clipboard -Value '%1'\"");
     }
@@ -170,14 +165,16 @@ internal static class ContextMenuTweaks
 
     public static void SetEditWithPaint(bool enable)
     {
-        if (!enable) { DeleteTree(@"SystemFileAssociations\image\shell\SrvDeskEditPaint"); return; }
+        DeleteNewAndLegacy(@"SystemFileAssociations\image\shell\SrvDeskEditPaint");
+        if (!enable) return;
         SetShell(@"SystemFileAssociations\image\shell\SrvDeskEditPaint", "用画图编辑",
             "mspaint.exe \"%1\"");
     }
 
     public static void SetEditWithNotepad(bool enable)
     {
-        if (!enable) { DeleteTree(@"*\shell\SrvDeskEditNotepad"); return; }
+        DeleteNewAndLegacy(@"*\shell\SrvDeskEditNotepad");
+        if (!enable) return;
         SetShell(@"*\shell\SrvDeskEditNotepad", "用记事本编辑",
             "notepad.exe \"%1\"");
     }
@@ -300,6 +297,18 @@ internal static class ContextMenuTweaks
         using var cmd = baseKey.CreateSubKey(path + @"\command", true);
         cmd?.SetValue("", command,
             commandExpand ? RegistryValueKind.ExpandString : RegistryValueKind.String);
+    }
+
+    private static string LegacyShellPath(string srvDeskRelative) =>
+        srvDeskRelative.Replace("SrvDesk", "WinOpt");
+
+    private static bool KeyExistsNewOrLegacy(string relative) =>
+        KeyExists(relative) || KeyExists(LegacyShellPath(relative));
+
+    private static void DeleteNewAndLegacy(string relative)
+    {
+        DeleteTree(relative);
+        DeleteTree(LegacyShellPath(relative));
     }
 
     private static bool KeyExists(string relative)

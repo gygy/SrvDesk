@@ -24,9 +24,9 @@ internal sealed class UiPrefsData
     [DataMember] public int HelpPanelDock { get; set; } = (int)ConfigScriptDock.Right;
     /// <summary>启动时默认勾选「隐藏不适用项」。</summary>
     [DataMember] public bool HideIncompatibleByDefault { get; set; } = true;
-    /// <summary>写入 debug.log（命令行、分支、软跳过原因等）。</summary>
-    [DataMember] public bool EnableDebugLog { get; set; }
-    /// <summary>固件不支持休眠、防火墙规则组名不匹配等记为「跳过/提示」，不计入部分失败。</summary>
+    /// <summary>写入 debug.log（命令行、分支、软跳过原因等）。默认开启。</summary>
+    [DataMember] public bool EnableDebugLog { get; set; } = true;
+    /// <summary>固件不支持休眠、防火墙规则组名不匹配等记为「跳过/提示」，不计入部分失败。默认开启。</summary>
     [DataMember] public bool SoftSkipUnsupported { get; set; } = true;
 }
 
@@ -132,7 +132,7 @@ internal static class UiPrefs
         HelpPanelHeight = DefaultHelpPanelHeight,
         HelpPanelDock = (int)ConfigScriptDock.Right,
         HideIncompatibleByDefault = true,
-        EnableDebugLog = false,
+        EnableDebugLog = true,
         SoftSkipUnsupported = true,
     };
 }

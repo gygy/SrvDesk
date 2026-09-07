@@ -369,6 +369,9 @@ internal static class EasySettingsTweaks
             Run("netsh",
                 $"advfirewall firewall add rule name=\"{name}\" dir=out action=block program=\"{program}\" enable=yes");
         }
+        // 清理旧版 WinOpt 规则名，避免重复拦截
+        foreach (var legacy in LegacySearchFirewallNames())
+            Run("netsh", $"advfirewall firewall delete rule name=\"{legacy}\"");
         using (ApplyLog.PushContext("搜索防火墙"))
             ApplyLog.SystemChange("Windows 防火墙出站规则", "添加 SearchHost/SearchApp/Cortana 拦截", "无/旧规则", "已添加拦截规则");
     }
@@ -377,6 +380,8 @@ internal static class EasySettingsTweaks
     {
         foreach (var (name, _) in SearchFirewallTargets())
             Run("netsh", $"advfirewall firewall delete rule name=\"{name}\"");
+        foreach (var legacy in LegacySearchFirewallNames())
+            Run("netsh", $"advfirewall firewall delete rule name=\"{legacy}\"");
         using (ApplyLog.PushContext("搜索防火墙"))
             ApplyLog.SystemChange("Windows 防火墙出站规则", "移除搜索相关拦截规则", "拦截规则存在", "已删除");
     }
@@ -440,6 +445,13 @@ internal static class EasySettingsTweaks
         yield return ("SrvDesk-Block-SearchHost", Path.Combine(windir, @"SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe"));
         yield return ("SrvDesk-Block-SearchApp", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe"));
         yield return ("SrvDesk-Block-Cortana", Path.Combine(windir, @"SystemApps\Microsoft.Windows.Cortana_cw5n1h2txyewy\SearchUI.exe"));
+    }
+
+    private static IEnumerable<string> LegacySearchFirewallNames()
+    {
+        yield return "WinOpt-Block-SearchHost";
+        yield return "WinOpt-Block-SearchApp";
+        yield return "WinOpt-Block-Cortana";
     }
 
     private static void SetMeltdownSpectre(bool disable)
