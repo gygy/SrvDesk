@@ -4,6 +4,18 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.23] - 2026-09-07
+
+### Added
+
+- Apply-time System Restore prompt; Zyper / Sophia / WinUtil-aligned tweaks; Folder Options (group/sort/drive letter)
+- Automated four-round test suite (`docs/test-cases.md`, `scripts/full-test.ps1`)
+
+### Fixed
+
+- Profile export/import dropped int/string fields (folder view, taskbar search, autologon user)
+- Run-dialog history no longer overwrites `Start_TrackProgs` (app-launch tracking)
+
 ## [1.0.1] - 2026-08-28
 
 ### Added
