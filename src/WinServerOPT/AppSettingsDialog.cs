@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace WinOpt;
 
-/// <summary>程序设置：界面偏好与调试日志。</summary>
+/// <summary>程序设置：界面偏好与调试日志（固定对话框，无滚动条）。</summary>
 internal sealed class AppSettingsDialog : Form
 {
     private readonly CheckBox _showScript = new() { AutoSize = true, Text = "启动时显示配置脚本面板" };
@@ -12,15 +12,16 @@ internal sealed class AppSettingsDialog : Form
     private readonly CheckBox _softSkip = new()
     {
         AutoSize = true,
-        Text = "环境不支持时记为「跳过」而非「失败」（休眠/防火墙组名/受保护服务等）",
+        MaximumSize = new Size(480, 0),
+        Text = "环境不支持时记为「跳过」而非「失败」",
     };
     private readonly Label _hint = new()
     {
         AutoSize = true,
-        MaximumSize = new Size(520, 0),
+        MaximumSize = new Size(480, 0),
         ForeColor = AppTheme.TextMute,
-        Text = "调试日志会记录执行的命令与软跳过原因，便于对照操作日志排查。" +
-               "日志目录：%LocalAppData%\\WinOpt\\",
+        Text = "含休眠不可用、防火墙规则组名不匹配、受保护服务等。" +
+               "调试日志记录命令与跳过原因，目录：%LocalAppData%\\WinOpt\\",
     };
 
     public AppSettingsDialog()
@@ -31,28 +32,34 @@ internal sealed class AppSettingsDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(560, 420);
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
 
         var root = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
-            RowCount = 3,
-            Padding = new Padding(16),
+            RowCount = 2,
+            Padding = new Padding(16, 12, 16, 12),
+            GrowStyle = TableLayoutPanelGrowStyle.AddRows,
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 500));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var body = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            AutoScroll = true,
+            AutoScroll = false,
+            Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
+            Margin = new Padding(0),
         };
 
         body.Controls.Add(Section("界面"));
@@ -63,26 +70,18 @@ internal sealed class AppSettingsDialog : Form
         body.Controls.Add(Pad(_debugLog));
         body.Controls.Add(Pad(_softSkip));
         body.Controls.Add(Pad(_hint));
-
-        var logBtns = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            WrapContents = false,
-            Margin = new Padding(0, 12, 0, 0),
-        };
-        logBtns.Controls.Add(LinkBtn("打开日志目录", () => OpenPath(ApplyLog.LogDirectory)));
-        logBtns.Controls.Add(LinkBtn("操作日志", () => OpenPath(ApplyLog.LogFilePath)));
-        logBtns.Controls.Add(LinkBtn("变更日志", () => OpenPath(ApplyLog.ChangeLogFilePath)));
-        logBtns.Controls.Add(LinkBtn("调试日志", () => OpenPath(ApplyLog.DebugLogFilePath)));
-        body.Controls.Add(Pad(logBtns));
+        body.Controls.Add(Pad(LogButtons()));
 
         var bottom = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            AutoSize = true,
-            Padding = new Padding(0, 8, 0, 0),
+            AutoScroll = false,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 8, 0, 0),
+            Padding = new Padding(0, 4, 0, 0),
         };
         var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Width = 88, Height = 32 };
         var ok = new Button
@@ -90,6 +89,7 @@ internal sealed class AppSettingsDialog : Form
             Text = "保存",
             Width = 88,
             Height = 32,
+            Margin = new Padding(0, 0, 8, 0),
             BackColor = AppTheme.Primary,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
@@ -105,7 +105,7 @@ internal sealed class AppSettingsDialog : Form
         bottom.Controls.Add(ok);
 
         root.Controls.Add(body, 0, 0);
-        root.Controls.Add(bottom, 0, 2);
+        root.Controls.Add(bottom, 0, 1);
         Controls.Add(root);
         AcceptButton = ok;
         CancelButton = cancel;
@@ -118,7 +118,9 @@ internal sealed class AppSettingsDialog : Form
         var row = new FlowLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = false,
+            AutoScroll = false,
             Margin = new Padding(0),
         };
         row.Controls.Add(new Label
@@ -131,6 +133,24 @@ internal sealed class AppSettingsDialog : Form
         _dock.Width = 120;
         row.Controls.Add(_dock);
         return row;
+    }
+
+    private Control LogButtons()
+    {
+        var logBtns = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = true,
+            AutoScroll = false,
+            MaximumSize = new Size(480, 0),
+            Margin = new Padding(0, 4, 0, 0),
+        };
+        logBtns.Controls.Add(LinkBtn("打开日志目录", () => OpenPath(ApplyLog.LogDirectory)));
+        logBtns.Controls.Add(LinkBtn("操作日志", () => OpenPath(ApplyLog.LogFilePath)));
+        logBtns.Controls.Add(LinkBtn("变更日志", () => OpenPath(ApplyLog.ChangeLogFilePath)));
+        logBtns.Controls.Add(LinkBtn("调试日志", () => OpenPath(ApplyLog.DebugLogFilePath)));
+        return logBtns;
     }
 
     private void LoadPrefs()
@@ -185,7 +205,7 @@ internal sealed class AppSettingsDialog : Form
             Cursor = Cursors.Hand,
             ForeColor = AppTheme.Primary,
             BackColor = AppTheme.SurfaceCard,
-            Margin = new Padding(0, 0, 8, 0),
+            Margin = new Padding(0, 0, 8, 4),
             Height = 28,
         };
         b.FlatAppearance.BorderColor = AppTheme.Border;
