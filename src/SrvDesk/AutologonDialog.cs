@@ -36,9 +36,11 @@ internal sealed class AutologonDialog : Form
             Height = 42,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 4, 0, 0),
             BackColor = AppTheme.Surface,
         };
+        UiBuffer.ConfigureNoScrollRow(buttons);
 
         var ok = ThemedSettingsChrome.CreateButton("确定", true);
         ok.Height = 32;

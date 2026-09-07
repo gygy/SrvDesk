@@ -92,6 +92,7 @@ internal sealed class AppSettingsDialog : Form
             Margin = new Padding(0, 8, 0, 0),
             Padding = new Padding(0, 4, 0, 0),
         };
+        UiBuffer.ConfigureNoScrollRow(bottom);
         var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Width = 88, Height = 32 };
         var ok = new Button
         {
@@ -132,6 +133,7 @@ internal sealed class AppSettingsDialog : Form
             AutoScroll = false,
             Margin = new Padding(0),
         };
+        UiBuffer.ConfigureNoScrollRow(row);
         row.Controls.Add(new Label
         {
             Text = "配置脚本默认停靠",

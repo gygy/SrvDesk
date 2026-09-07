@@ -246,7 +246,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox _hideIncompatible = new();
     private readonly ComboBox _categoryFilter = new();
     private readonly ComboBox _presetCombo = new();
-    private readonly FlowLayoutPanel _commandFlow = new();
+    private readonly NoScrollFlowLayoutPanel _commandFlow = new();
     private SettingRow[] _activeRows = [];
     private ActiveSection[] _activeSections = [];
     private Panel? _activeWrap;
@@ -1039,9 +1039,9 @@ internal sealed class MainForm : Form
 
     private void BuildCommandBar()
     {
-        _commandBar.Height = 44;
+        _commandBar.Height = 48;
         _commandBar.BackColor = AppTheme.SurfaceCard;
-        _commandBar.Padding = new Padding(12, 6, 12, 6);
+        _commandBar.Padding = new Padding(12, 8, 12, 8);
         _commandBar.Paint += (_, e) =>
         {
             using var pen = new Pen(AppTheme.BorderLight);
@@ -1051,9 +1051,10 @@ internal sealed class MainForm : Form
         _commandFlow.Dock = DockStyle.Fill;
         _commandFlow.FlowDirection = FlowDirection.LeftToRight;
         _commandFlow.WrapContents = false;
-        _commandFlow.AutoScroll = true;
+        _commandFlow.AutoScroll = false;
         _commandFlow.BackColor = AppTheme.SurfaceCard;
         _commandFlow.Padding = new Padding(0);
+        UiBuffer.ConfigureNoScrollRow(_commandFlow);
 
         _commandFlow.Controls.Add(BarLabel("搜索"));
         _searchBox.Width = 200;
@@ -1066,16 +1067,16 @@ internal sealed class MainForm : Form
 
         _hideIncompatible.Text = "隐藏不适用项";
         _hideIncompatible.AutoSize = true;
-        _hideIncompatible.Margin = new Padding(0, 6, 20, 0);
+        _hideIncompatible.Margin = new Padding(0, 4, 16, 0);
         _hideIncompatible.ForeColor = AppTheme.TextMute;
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
         _commandFlow.Controls.Add(_hideIncompatible);
 
         _commandFlow.Controls.Add(BarLabel("分类"));
-        _categoryFilter.Width = 130;
+        _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _categoryFilter.IntegralHeight = false;
         _categoryFilter.Height = 26;
         _categoryFilter.Margin = new Padding(0, 2, 0, 0);
-        _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
         _categoryFilter.Items.AddRange([
             "全部",
             "Server 推荐",
@@ -1085,12 +1086,12 @@ internal sealed class MainForm : Form
         ]);
         _categoryFilter.SelectedIndex = 0;
         _categoryFilter.SelectedIndexChanged += (_, _) => ApplySearchFilter();
+        FitComboToItems(_categoryFilter, minWidth: 120, extra: 48);
         _toolTip.SetToolTip(_categoryFilter,
             "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
         _commandFlow.Controls.Add(_categoryFilter);
 
         _commandFlow.Controls.Add(BarLabel("预设"));
-        _presetCombo.Width = 168;
         _presetCombo.Height = 26;
         _presetCombo.Margin = new Padding(0, 2, 8, 0);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -1099,13 +1100,7 @@ internal sealed class MainForm : Form
             _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0)
             _presetCombo.SelectedIndex = 0;
-        var dropW = 168;
-        foreach (var p in OptPresets.All)
-        {
-            var tw = TextRenderer.MeasureText(p.Title, _presetCombo.Font).Width + 24;
-            if (tw > dropW) dropW = tw;
-        }
-        _presetCombo.DropDownWidth = Math.Max(_presetCombo.Width, dropW);
+        FitComboToItems(_presetCombo, minWidth: 220, extra: 48);
         _toolTip.SetToolTip(_presetCombo, "选择预设方案后点「载入」，再检查开关并应用到系统");
         _commandFlow.Controls.Add(_presetCombo);
         _commandFlow.Controls.Add(BarQuickButton("载入", "把所选预设勾选到界面（不会立刻写入系统）", () =>
@@ -1217,10 +1212,25 @@ internal sealed class MainForm : Form
     {
         Text = text,
         AutoSize = true,
-        Margin = new Padding(0, 8, 6, 0),
+        Margin = new Padding(0, 6, 6, 0),
         ForeColor = AppTheme.TextMute,
         BackColor = Color.Transparent,
     };
+
+    private static void FitComboToItems(ComboBox box, int minWidth, int extra)
+    {
+        var w = minWidth;
+        foreach (var item in box.Items)
+        {
+            var s = item?.ToString() ?? "";
+            var tw = TextRenderer.MeasureText(s, box.Font, Size.Empty,
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width + extra;
+            if (tw > w) w = tw;
+        }
+
+        box.Width = Math.Min(Math.Max(w, minWidth), 360);
+        box.DropDownWidth = Math.Max(box.Width, w);
+    }
 
     private RowCategoryFilter CurrentCategoryFilter() =>
         _categoryFilter.SelectedIndex switch
@@ -1467,7 +1477,7 @@ internal sealed class MainForm : Form
     {
         if (_activeSections.Length == 0 || _activeWrap is null) return;
         const int headerH = 34;
-        const int rowH = 44;
+        var rowH = SettingListLayout.RowHeight;
         var query = _searchBox.Text;
         var hideDe = _hideIncompatible.Checked;
         var category = CurrentCategoryFilter();
@@ -1590,23 +1600,12 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 196, BackColor = AppTheme.NavBg };
-        _menu.Dock = DockStyle.Fill;
-        _menu.BorderStyle = BorderStyle.None;
-        _menu.BackColor = AppTheme.NavBg;
-        _menu.ForeColor = AppTheme.TextMain;
-        _menu.IntegralHeight = false;
-        _menu.DrawMode = DrawMode.OwnerDrawFixed;
-        _menu.ItemHeight = 44;
+        var sidebar = NavMenuStyle.CreateSidebar();
+        NavMenuStyle.Apply(_menu);
         _menu.Items.AddRange(MenuItems);
         _menu.DrawItem += DrawMenuItem;
         _menu.SelectedIndexChanged += (_, _) => ShowGroup(_menu.SelectedIndex);
-        _menu.MouseMove += (_, e) =>
-        {
-            var i = _menu.IndexFromPoint(e.Location);
-            if (i != _menuHover) { _menuHover = i; _menu.Invalidate(); }
-        };
-        _menu.MouseLeave += (_, _) => { _menuHover = -1; _menu.Invalidate(); };
+        NavMenuStyle.BindHover(_menu, () => _menuHover, v => _menuHover = v);
         sidebar.Controls.Add(_menu);
         return sidebar;
     }
@@ -1872,7 +1871,7 @@ internal sealed class MainForm : Form
         _inBatchMode = batch;
         // 命令栏高度始终保留，避免即时页/批量页切换时内容区上下跳动
         _commandBar.Visible = true;
-        _commandBar.Height = 44;
+        _commandBar.Height = 48;
         _commandFlow.Visible = batch;
 
         UpdateBottomActionEnablement(embeddedTitle);
@@ -1955,16 +1954,17 @@ internal sealed class MainForm : Form
         return header;
     }
 
-    private static Label MakeHeaderLabel(string text, int x, int w, ContentAlignment align = ContentAlignment.MiddleLeft) => new()
-    {
-        Text = text,
-        Location = new Point(x, 0),
-        Size = new Size(w, 36),
-        ForeColor = AppTheme.TextHeader,
-        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-        TextAlign = align,
-        BackColor = Color.Transparent,
-    };
+    private static Label MakeHeaderLabel(string text, int x, int w, ContentAlignment align = ContentAlignment.MiddleLeft) =>
+        new SingleLineLabel
+        {
+            Text = text,
+            Location = new Point(x, 0),
+            Size = new Size(w, 36),
+            ForeColor = AppTheme.TextHeader,
+            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            TextAlign = align,
+            BackColor = Color.Transparent,
+        };
 
     /// <summary>分区内按推荐强度降序：必优化 → 强烈推荐 → 建议优化 → 可选；同级按标题。</summary>
     private static SettingRow[] OrderRowsByRecommend(SettingRow[] rows)
@@ -1983,7 +1983,7 @@ internal sealed class MainForm : Form
     private Panel BuildGroupSection(string title, SettingRow[] rows)
     {
         const int headerH = 34;
-        const int rowH = 44;
+        var rowH = SettingListLayout.RowHeight;
         var expanded = true;
         var section = new BufferedPanel
         {
@@ -2104,16 +2104,18 @@ internal sealed class MainForm : Form
         _defaultStatusText = "";
         _status.Text = _defaultStatusText;
 
-        var actions = new FlowLayoutPanel
+        var actions = new NoScrollFlowLayoutPanel
         {
             Dock = DockStyle.Right,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 10, 14, 0),
             BackColor = AppTheme.SurfaceCard,
         };
+        UiBuffer.ConfigureNoScrollRow(actions);
         _bottomActions = actions;
 
         // 底部三键始终占位：刷新 / 恢复默认 / 应用到系统（按页启用）
@@ -2162,30 +2164,12 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
-        var selected = (e.State & DrawItemState.Selected) != 0;
-        var hover = e.Index == _menuHover && !selected;
-        using var back = new SolidBrush(selected ? AppTheme.Primary : hover ? AppTheme.NavHover : AppTheme.NavBg);
-        e.Graphics.FillRectangle(back, e.Bounds);
-
-        if (MenuItems[e.Index] == "性能及安全")
-        {
-            using var sep = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawLine(sep, e.Bounds.X + 12, e.Bounds.Y + 1, e.Bounds.Right - 12, e.Bounds.Y + 1);
-        }
-
-        if (selected)
-        {
-            using var accent = new SolidBrush(AppTheme.PrimarySoft);
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
-        }
-
-        TextRenderer.DrawText(
-            e.Graphics,
+        NavMenuStyle.DrawItem(
+            e,
             MenuItems[e.Index],
-            selected ? new Font(Font, FontStyle.Bold) : Font,
-            new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
-            selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+            Font,
+            e.Index == _menuHover,
+            separator: MenuItems[e.Index] == "性能及安全");
     }
 
     /// <param name="forceUi">
@@ -3002,14 +2986,14 @@ internal sealed class MainForm : Form
         private readonly ComboBox? _choice;
         private readonly int _optimizedIndex;
         private readonly int _offIndex;
-        private readonly Label _item;
-        private readonly Label _scope;
+        private readonly SingleLineLabel _item;
+        private readonly SingleLineLabel _scope;
         private readonly Label _info;
         private readonly PictureBox _script;
         private readonly Label _level;
-        private readonly Label _note;
-        private readonly Label _system;
-        private readonly Label _current;
+        private readonly SingleLineLabel _note;
+        private readonly SingleLineLabel _system;
+        private readonly SingleLineLabel _current;
         private Panel? _wrap;
         private Color _normalBg;
 
@@ -3034,22 +3018,20 @@ internal sealed class MainForm : Form
             Help = help;
             _optimizedIndex = optimizedIndex;
             _offIndex = optimizedIndex == 0 ? 1 : 0;
-            _item = new Label
+            _item = new SingleLineLabel
             {
                 Text = item,
-                AutoSize = false,
+                Font = SettingListLayout.ItemFont,
                 ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
-                AutoEllipsis = true,
             };
-            _scope = new Label
+            _scope = new SingleLineLabel
             {
                 Text = help.Scope.FormatBadges(),
-                AutoSize = false,
                 ForeColor = help.Scope.ServerOnly ? AppTheme.ScopeServer : AppTheme.ScopeTag,
-                Font = new Font("Microsoft YaHei UI", 7.5F),
+                Font = SettingListLayout.ScopeFont,
                 TextAlign = ContentAlignment.TopLeft,
                 BackColor = Color.Transparent,
                 Visible = help.Scope.HasBadge,
@@ -3058,7 +3040,9 @@ internal sealed class MainForm : Form
             _info = new Label
             {
                 Text = "ⓘ",
-                AutoSize = true,
+                AutoSize = false,
+                Size = new Size(18, 18),
+                TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = AppTheme.Primary,
                 Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
                 BackColor = Color.Transparent,
@@ -3084,15 +3068,13 @@ internal sealed class MainForm : Form
             };
             // 实心星金色、空心星灰色：自绘，保证五星对比一眼可读
             _level.Paint += DrawRecommendStars;
-            _note = new Label
+            _note = new SingleLineLabel
             {
                 Text = help.ListNote,
-                AutoSize = false,
                 ForeColor = AppTheme.TextMute,
-                Font = new Font("Microsoft YaHei UI", 8.25F),
+                Font = SettingListLayout.NoteFont,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
-                AutoEllipsis = true,
                 Cursor = Cursors.Hand,
             };
             _toggle = new ToggleSwitch();
@@ -3119,20 +3101,19 @@ internal sealed class MainForm : Form
                     OnCheckedChanged?.Invoke(this);
                 };
             }
-            _system = new Label
+            _system = new SingleLineLabel
             {
                 Text = systemDefault,
-                AutoSize = false,
+                Font = SettingListLayout.ItemFont,
                 ForeColor = AppTheme.TextMute,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
             };
-            _current = new Label
+            _current = new SingleLineLabel
             {
                 Text = "—",
-                AutoSize = false,
+                Font = SettingListLayout.ItemFont,
                 ForeColor = AppTheme.TextMain,
-                Font = new Font("Microsoft YaHei UI", 9F),
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
             };
@@ -3249,11 +3230,7 @@ internal sealed class MainForm : Form
             width = Math.Max(SettingListLayout.NoteX + 80, width);
             if (_wrap.Width != width)
                 _wrap.Width = width;
-            var noteW = SettingListLayout.NoteWidthFor(width);
-            if (_note.Width != noteW || _note.Left != SettingListLayout.NoteX)
-                _note.SetBounds(SettingListLayout.NoteX, 0, noteW, _wrap.Height);
-            if (_level.Left != SettingListLayout.LevelX || _level.Width != SettingListLayout.LevelW)
-                _level.SetBounds(SettingListLayout.LevelX, 0, SettingListLayout.LevelW, _wrap.Height);
+            LayoutRow(_wrap.Height, width);
         }
 
         public void SetSelected(bool selected)
@@ -3261,6 +3238,7 @@ internal sealed class MainForm : Form
             if (_wrap is null) return;
             _wrap.BackColor = selected ? AppTheme.PrimaryPale : _normalBg;
             _item.ForeColor = selected ? AppTheme.PrimaryDeep : AppTheme.TextMain;
+            _wrap.Invalidate(true);
         }
 
         public void Mount(
@@ -3273,14 +3251,6 @@ internal sealed class MainForm : Form
             Action<SettingRow> onSelectHelp,
             Action<SettingRow> onShowRecipe)
         {
-            var toggleX = SettingListLayout.ToggleX;
-            var systemX = SettingListLayout.SystemX;
-            var currentX = SettingListLayout.CurrentX;
-            var levelX = SettingListLayout.LevelX;
-            var noteX = SettingListLayout.NoteX;
-            var itemX = SettingListLayout.ItemX;
-            var scriptX = SettingListLayout.ScriptX;
-
             _normalBg = bg;
             var wrap = new BufferedPanel
             {
@@ -3289,40 +3259,11 @@ internal sealed class MainForm : Form
                 BackColor = bg,
             };
             _wrap = wrap;
-            _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
-
-            var textW = Math.Max(120, scriptX - itemX - 4);
-            var hasScope = Help.Scope.HasBadge;
-            if (hasScope)
-            {
-                _item.SetBounds(itemX, 4, textW, 20);
-                _scope.SetBounds(itemX, 24, textW, 16);
-            }
-            else
-            {
-                _item.SetBounds(itemX, 0, textW, h);
-            }
-
-            _script.SetBounds(scriptX, (h - 20) / 2, SettingListLayout.ScriptW, 20);
-            if (HasChoice)
-            {
-                _choice!.Size = new Size(SettingListLayout.ChoiceW, 24);
-                _choice.Location = new Point(SettingListLayout.ChoiceX, (h - _choice.Height) / 2);
-            }
-            else
-            {
-                _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
-                _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
-            }
-
-            _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
-            _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
-            _level.SetBounds(levelX, 0, SettingListLayout.LevelW, h);
+            LayoutRow(h, width);
             _level.Text = ""; // 由 Paint 画五星，实心金 / 空心灰
-            var noteW = SettingListLayout.NoteWidthFor(width);
-            _note.SetBounds(noteX, 0, noteW, h);
             _note.Text = Help.ListNote;
 
+            var hasScope = Help.Scope.HasBadge;
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
@@ -3372,6 +3313,59 @@ internal sealed class MainForm : Form
                 Height = 1,
             });
             parent.Controls.Add(wrap);
+        }
+
+        /// <summary>标题与适用范围分两行实测高度排布，避免叠字。</summary>
+        private void LayoutRow(int h, int width)
+        {
+            width = Math.Max(SettingListLayout.NoteX + 80, width);
+            var itemX = SettingListLayout.ItemX;
+            var scriptX = SettingListLayout.ScriptX;
+            var textW = Math.Max(120, scriptX - itemX - 4);
+            var hasScope = Help.Scope.HasBadge;
+
+            _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
+            if (hasScope)
+            {
+                var titleH = UiFit.LineHeight(_item.Font);
+                var scopeH = UiFit.LineHeight(_scope.Font);
+                var gap = SettingListLayout.TitleScopeGap;
+                var block = titleH + gap + scopeH;
+                var inner = Math.Max(titleH + gap + 12, h - 4);
+                if (block > inner)
+                {
+                    var scale = (float)inner / block;
+                    titleH = Math.Max(14, (int)Math.Floor(titleH * scale));
+                    scopeH = Math.Max(12, inner - gap - titleH);
+                    block = titleH + gap + scopeH;
+                }
+
+                var top = Math.Max(2, (h - block) / 2);
+                _item.SetBounds(itemX, top, textW, titleH);
+                _scope.SetBounds(itemX, top + titleH + gap, textW, scopeH);
+            }
+            else
+            {
+                _item.SetBounds(itemX, 0, textW, h);
+            }
+
+            _script.SetBounds(scriptX, (h - 20) / 2, SettingListLayout.ScriptW, 20);
+            if (HasChoice)
+            {
+                _choice!.Size = new Size(SettingListLayout.ChoiceW, 24);
+                _choice.Location = new Point(SettingListLayout.ChoiceX, (h - _choice.Height) / 2);
+            }
+            else
+            {
+                _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
+                _toggle.Location = new Point(SettingListLayout.ToggleX, (h - _toggle.Height) / 2);
+            }
+
+            _system.SetBounds(SettingListLayout.SystemX, 0, SettingListLayout.SystemW, h);
+            _current.SetBounds(SettingListLayout.CurrentX, 0, SettingListLayout.CurrentW, h);
+            _level.SetBounds(SettingListLayout.LevelX, 0, SettingListLayout.LevelW, h);
+            var noteW = SettingListLayout.NoteWidthFor(width);
+            _note.SetBounds(SettingListLayout.NoteX, 0, noteW, h);
         }
 
         private void DrawRecommendStars(object? sender, PaintEventArgs e)

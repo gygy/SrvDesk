@@ -68,7 +68,7 @@ internal sealed class CommonSoftwareDialog : Form
         menu.Items.AddRange([op, edit]);
         menu.Dock = DockStyle.Top;
 
-        var actions = new FlowLayoutPanel
+        var actions = new NoScrollFlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
             Height = 48,
@@ -78,6 +78,7 @@ internal sealed class CommonSoftwareDialog : Form
             Padding = new Padding(12, 6, 12, 6),
             BackColor = AppTheme.Surface,
         };
+        UiBuffer.ConfigureNoScrollRow(actions);
         // 底部只留最常用：安装所选；其余进菜单
         actions.Controls.Add(TrackAction(MkBtn("安装所选", InstallSelected, true)));
 
@@ -195,89 +196,48 @@ internal sealed class CommonSoftwareDialog : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel { Width = 176, BackColor = AppTheme.NavBg };
-
-        var cap = new Label
-        {
-            Text = "  软件分类",
-            Dock = DockStyle.Top,
-            Height = 36,
-            ForeColor = AppTheme.TextMute,
-            Font = new Font("Microsoft YaHei UI", 8.5F),
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = AppTheme.NavBg,
-        };
-
-        _categoryMenu.Dock = DockStyle.Fill;
-        _categoryMenu.BorderStyle = BorderStyle.None;
-        _categoryMenu.BackColor = AppTheme.NavBg;
-        _categoryMenu.ForeColor = AppTheme.TextMain;
-        _categoryMenu.IntegralHeight = false;
-        _categoryMenu.DrawMode = DrawMode.OwnerDrawFixed;
-        _categoryMenu.ItemHeight = 48;
+        var sidebar = NavMenuStyle.CreateSidebar();
+        NavMenuStyle.Apply(_categoryMenu);
         _categoryMenu.Items.AddRange(Categories);
         _categoryMenu.DrawItem += DrawCategoryItem;
-        _categoryMenu.MouseMove += (_, e) =>
-        {
-            var i = _categoryMenu.IndexFromPoint(e.Location);
-            if (i != _categoryHover) { _categoryHover = i; _categoryMenu.Invalidate(); }
-        };
-        _categoryMenu.MouseLeave += (_, _) => { _categoryHover = -1; _categoryMenu.Invalidate(); };
-
+        NavMenuStyle.BindHover(_categoryMenu, () => _categoryHover, v => _categoryHover = v);
         sidebar.Controls.Add(_categoryMenu);
-        sidebar.Controls.Add(cap);
-        sidebar.Paint += (_, e) =>
-        {
-            using var pen = new Pen(AppTheme.BorderLight);
-            e.Graphics.DrawLine(pen, sidebar.Width - 1, 0, sidebar.Width - 1, sidebar.Height);
-        };
         return sidebar;
     }
 
     private void DrawCategoryItem(object? sender, DrawItemEventArgs e)
     {
         if (e.Index < 0 || sender is not ListBox box) return;
-        var selected = (e.State & DrawItemState.Selected) != 0;
-        var hover = e.Index == _categoryHover;
-        var back = selected ? AppTheme.PrimaryPale : hover ? AppTheme.NavHover : AppTheme.NavBg;
-        using var backBrush = new SolidBrush(back);
-        e.Graphics.FillRectangle(backBrush, e.Bounds);
-        if (selected)
-        {
-            using var accent = new SolidBrush(AppTheme.PrimarySoft);
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
-        }
-        TextRenderer.DrawText(
-            e.Graphics,
+        NavMenuStyle.DrawItem(
+            e,
             box.Items[e.Index]?.ToString() ?? "",
-            selected ? new Font(Font, FontStyle.Bold) : Font,
-            new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
-            selected ? AppTheme.PrimaryDeep : AppTheme.TextMain,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+            Font,
+            e.Index == _categoryHover);
     }
 
     private Panel BuildToolStrip()
     {
         var strip = new Panel
         {
-            Height = 40,
+            Height = 44,
             BackColor = AppTheme.Surface,
-            Padding = new Padding(0, 0, 0, 8),
+            Padding = new Padding(0, 4, 0, 4),
         };
 
-        var flow = new FlowLayoutPanel
+        var flow = new NoScrollFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoScroll = true,
+            AutoScroll = false,
             BackColor = AppTheme.Surface,
             Padding = new Padding(0),
         };
+        UiBuffer.ConfigureNoScrollRow(flow);
 
         _wingetHint.AutoSize = false;
         _wingetHint.Size = new Size(280, 24);
-        _wingetHint.Margin = new Padding(0, 8, 12, 0);
+        _wingetHint.Margin = new Padding(0, 4, 12, 0);
         _wingetHint.ForeColor = AppTheme.TextMute;
 
         _installWingetBtn.Text = "一键安装 winget";
@@ -295,7 +255,7 @@ internal sealed class CommonSoftwareDialog : Form
         _askBeforeInstall.Text = "安装前确认";
         _askBeforeInstall.Checked = false;
         _askBeforeInstall.AutoSize = true;
-        _askBeforeInstall.Margin = new Padding(8, 8, 4, 0);
+        _askBeforeInstall.Margin = new Padding(8, 6, 4, 0);
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
         _toolTip.SetToolTip(_askBeforeInstall, "勾选后，安装前会弹出确认对话框");
 
@@ -1048,9 +1008,10 @@ internal sealed class CommonSoftwareDialog : Form
             _select.Size = new Size(18, 18);
             _select.BackColor = Color.Transparent;
 
-            var name = new Label
+            var name = new SingleLineLabel
             {
                 Text = item.Title,
+                Font = UiFit.UiFont,
                 Location = new Point(44, 0),
                 Size = new Size(300, height),
                 ForeColor = AppTheme.TextMain,
@@ -1069,14 +1030,13 @@ internal sealed class CommonSoftwareDialog : Form
                 _uninstall.ForeColor = AppTheme.TextMute;
             }
 
-            _status = new Label
+            _status = new SingleLineLabel
             {
                 Location = new Point(_uninstall.Right + 12, 10),
                 Size = new Size(Math.Max(160, 280), 24),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Microsoft YaHei UI", 8.75F),
                 Padding = new Padding(8, 0, 8, 0),
-                AutoEllipsis = true,
             };
 
             Controls.AddRange([_select, name, _install, _uninstall, _status]);

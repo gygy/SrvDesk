@@ -109,8 +109,10 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             Height = 48,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 8, 0, 0),
         };
+        UiBuffer.ConfigureNoScrollRow(actions);
         var apply = ThemedSettingsChrome.CreateButton("应用到勾选网卡", true);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);

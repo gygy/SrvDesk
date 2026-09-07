@@ -4,6 +4,14 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.25] - 2026-09-07
+
+### Fixed
+
+- Setting list title no longer overlaps the scope subtitle
+- Single-row toolbars no longer show a leftover vertical scrollbar; preset combo shows full titles such as「Server 桌面（推荐）」
+- Common software left nav matches the main window sidebar (width, row height, selected/hover)
+
 ## [1.0.24] - 2026-09-07
 
 ### Added

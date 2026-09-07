@@ -75,8 +75,10 @@ internal sealed class AppUpdateDialog : Form
             AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Margin = new Padding(0),
         };
+        UiBuffer.ConfigureNoScrollRow(buttons);
         _check = ThemedSettingsChrome.CreateButton("检查更新", true);
         _check.Click += async (_, _) => await CheckAsync(autoApply: false);
         _apply = ThemedSettingsChrome.CreateButton("下载并更新", false);

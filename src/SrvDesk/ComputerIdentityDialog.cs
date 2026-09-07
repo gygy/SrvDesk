@@ -39,9 +39,11 @@ internal sealed class ComputerIdentityDialog : Form
             Height = 42,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 4, 0, 0),
             BackColor = AppTheme.Surface,
         };
+        UiBuffer.ConfigureNoScrollRow(buttons);
 
         var apply = ThemedSettingsChrome.CreateButton("应用修改", true);
         apply.Height = 32;

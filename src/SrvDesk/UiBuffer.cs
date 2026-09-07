@@ -53,6 +53,50 @@ internal sealed class BufferedFlowLayoutPanel : FlowLayoutPanel
     }
 }
 
+/// <summary>横向单行工具栏：不换行、不出现滚动条（避免 1px 溢出挤出上下箭头）。</summary>
+internal sealed class NoScrollFlowLayoutPanel : FlowLayoutPanel
+{
+    private const int WsHScroll = 0x00100000;
+    private const int WsVScroll = 0x00200000;
+
+    public NoScrollFlowLayoutPanel()
+    {
+        WrapContents = false;
+        AutoScroll = false;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.OptimizedDoubleBuffer
+            | ControlStyles.ResizeRedraw,
+            true);
+        DoubleBuffered = true;
+    }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.Style &= ~(WsHScroll | WsVScroll);
+            return cp;
+        }
+    }
+
+    protected override Point ScrollToControl(Control activeControl) =>
+        DisplayRectangle.Location;
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        UiBuffer.HideNativeScrollBars(this);
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+        UiBuffer.HideNativeScrollBars(this);
+    }
+}
+
 internal static class UiBuffer
 {
     private static readonly PropertyInfo? DoubleBufferedProp =
@@ -68,6 +112,7 @@ internal static class UiBuffer
     private static extern bool ShowScrollBar(IntPtr hWnd, int wBar, bool bShow);
 
     private const int SbHorz = 0;
+    private const int SbVert = 1;
 
     /// <summary>
     /// 指定列铺满剩余宽度，并预留竖向滚动条。
@@ -87,6 +132,26 @@ internal static class UiBuffer
         var avail = list.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - used - 4;
         list.Columns[fillColumnIndex].Width = Math.Max(minWidth, avail);
         ShowScrollBar(list.Handle, SbHorz, false);
+    }
+
+    /// <summary>单行工具栏禁止出现滚动条（AutoScroll 在略溢出时会同时挤出竖条）。</summary>
+    public static void ConfigureNoScrollRow(FlowLayoutPanel flow)
+    {
+        flow.WrapContents = false;
+        flow.AutoScroll = false;
+        void Hide(object? s, EventArgs e) => HideNativeScrollBars(flow);
+        flow.HandleCreated += Hide;
+        flow.Layout += Hide;
+        flow.SizeChanged += Hide;
+        if (flow.IsHandleCreated)
+            HideNativeScrollBars(flow);
+    }
+
+    public static void HideNativeScrollBars(Control control)
+    {
+        if (control is null || !control.IsHandleCreated) return;
+        ShowScrollBar(control.Handle, SbHorz, false);
+        ShowScrollBar(control.Handle, SbVert, false);
     }
 
     public static void BindListViewColumnFit(ListView list, int fillColumnIndex, int minWidth = 80)

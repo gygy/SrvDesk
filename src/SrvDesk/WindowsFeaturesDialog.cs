@@ -71,7 +71,9 @@ internal sealed class WindowsFeaturesDialog : Form
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(0, 8, 0, 0),
             WrapContents = false,
+            AutoScroll = false,
         };
+        UiBuffer.ConfigureNoScrollRow(actions);
         _btnDisable.Size = new Size(140, 34);
         _btnDisable.Click += (_, _) => RunBatch(disable: true);
         _btnEnable.Size = new Size(140, 34);

@@ -61,8 +61,10 @@ internal sealed class SoftwareUpdateDialog : Form
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             Padding = new Padding(0, 6, 0, 0),
+            AutoScroll = false,
             BackColor = AppTheme.Surface,
         };
+        UiBuffer.ConfigureNoScrollRow(buttons);
 
         var upgrade = ThemedSettingsChrome.CreateButton("更新所选", true);
         upgrade.Margin = new Padding(6, 0, 0, 0);

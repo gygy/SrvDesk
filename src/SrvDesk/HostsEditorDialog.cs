@@ -46,10 +46,12 @@ internal sealed class HostsEditorDialog : Form
         var options = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 32,
+            Height = 36,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
         };
+        UiBuffer.ConfigureNoScrollRow(options);
         _backup.Text = "保存前备份";
         _backup.Checked = true;
         _backup.AutoSize = true;
@@ -68,8 +70,10 @@ internal sealed class HostsEditorDialog : Form
             Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 4, 0, 0),
         };
+        UiBuffer.ConfigureNoScrollRow(bar);
         bar.Controls.Add(MkBtn("添加", AddRow, false));
         bar.Controls.Add(MkBtn("粘贴", PasteFromClipboard, false));
         bar.Controls.Add(MkBtn("添加 GitHub", AddGitHubHosts, false));

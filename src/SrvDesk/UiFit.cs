@@ -5,9 +5,27 @@ internal static class UiFit
 {
     public static readonly Font UiFont = new("Microsoft YaHei UI", 9F);
     public static readonly Font UiFontSmall = new("Microsoft YaHei UI", 8.5F);
+    public static readonly Font UiFontScope = new("Microsoft YaHei UI", 8F);
+
+    public static readonly TextFormatFlags SingleLineFlags =
+        TextFormatFlags.SingleLine
+        | TextFormatFlags.EndEllipsis
+        | TextFormatFlags.NoPrefix
+        | TextFormatFlags.NoPadding
+        | TextFormatFlags.PreserveGraphicsClipping;
+
+    public static int LineHeight(Font? font = null)
+    {
+        var f = font ?? UiFont;
+        var h = TextRenderer.MeasureText("国Ag", f, new Size(1024, 256),
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Height;
+        return Math.Max(f.Height, Math.Max(14, h));
+    }
 
     public static int TextWidth(string text, Font? font = null) =>
-        TextRenderer.MeasureText(text ?? "", font ?? UiFont).Width;
+        TextRenderer.MeasureText(text ?? "", font ?? UiFont,
+            new Size(int.MaxValue, 256),
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
 
     /// <summary>按钮宽度：文字宽 + 内边距，且不小于 minWidth。</summary>
     public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 24) =>
@@ -21,5 +39,58 @@ internal static class UiFit
     {
         var h = height ?? (b.Height > 0 ? b.Height : 34);
         b.Size = ButtonSize(b.Text, h, b.Font, minWidth, padding);
+    }
+}
+
+/// <summary>
+/// 单行省略号标签。WinForms 默认 Label 在 AutoSize=false 时仍会换行，
+/// 行高不够时第二行会叠在标题或相邻标签上。
+/// </summary>
+internal sealed class SingleLineLabel : Label
+{
+    public SingleLineLabel()
+    {
+        AutoSize = false;
+        UseMnemonic = false;
+        AutoEllipsis = true;
+        SetStyle(
+            ControlStyles.UserPaint
+            | ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.OptimizedDoubleBuffer
+            | ControlStyles.ResizeRedraw,
+            true);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        var bg = BackColor.A == 255
+            ? BackColor
+            : (Parent?.BackColor ?? SystemColors.Control);
+        using (var brush = new SolidBrush(bg))
+            g.FillRectangle(brush, ClientRectangle);
+
+        if (string.IsNullOrEmpty(Text)) return;
+
+        var flags = UiFit.SingleLineFlags;
+        var align = TextAlign;
+        if (align == ContentAlignment.MiddleCenter || align == ContentAlignment.TopCenter || align == ContentAlignment.BottomCenter)
+            flags |= TextFormatFlags.HorizontalCenter;
+        else if (align == ContentAlignment.MiddleRight || align == ContentAlignment.TopRight || align == ContentAlignment.BottomRight)
+            flags |= TextFormatFlags.Right;
+        else
+            flags |= TextFormatFlags.Left;
+
+        if (align == ContentAlignment.TopLeft || align == ContentAlignment.TopCenter || align == ContentAlignment.TopRight)
+            flags |= TextFormatFlags.Top;
+        else if (align == ContentAlignment.BottomLeft || align == ContentAlignment.BottomCenter || align == ContentAlignment.BottomRight)
+            flags |= TextFormatFlags.Bottom;
+        else
+            flags |= TextFormatFlags.VerticalCenter;
+
+        var rect = ClientRectangle;
+        if (rect.Width > 4)
+            rect = new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, rect.Height);
+        TextRenderer.DrawText(g, Text, Font, rect, ForeColor, flags);
     }
 }

@@ -128,9 +128,11 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             BackColor = Color.Transparent,
             Padding = new Padding(0, 0, 0, 6),
         };
+        UiBuffer.ConfigureNoScrollRow(tools);
 
         tools.Controls.Add(ToolButton("粘贴新建…", "粘贴或手写 .reg / CMD / PowerShell，保存到当前方案", PasteOrNew));
         tools.Controls.Add(ToolButton("编辑", "修改名称、类型与正文", EditSelected));

@@ -61,9 +61,11 @@ internal sealed class OtherSettingsDialog : Form
             AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(4, 4, 0, 0),
             Margin = new Padding(0, 0, 0, 4),
         };
+        UiBuffer.ConfigureNoScrollRow(portRow);
         portRow.Controls.Add(new Label
         {
             Text = "RDP 端口",
@@ -98,9 +100,11 @@ internal sealed class OtherSettingsDialog : Form
             AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(4, 4, 0, 0),
             Margin = new Padding(0, 0, 0, 4),
         };
+        UiBuffer.ConfigureNoScrollRow(pfRow);
         pfRow.Controls.Add(new Label
         {
             Text = "最大预取文件数",

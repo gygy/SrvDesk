@@ -33,7 +33,8 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         var (searchCard, searchHost) = ThemedSettingsChrome.CreateSectionShell("搜索与云内容");
         searchHost.Controls.Add(_cloud);
         searchHost.Controls.Add(_web);
-        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        var fw = new FlowLayoutPanel { AutoSize = true, WrapContents = false, AutoScroll = false };
+        UiBuffer.ConfigureNoScrollRow(fw);
         fw.Controls.Add(Btn("添加防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         fw.Controls.Add(Btn("移除防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
         searchHost.Controls.Add(fw);

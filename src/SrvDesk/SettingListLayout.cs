@@ -31,6 +31,24 @@ internal static class SettingListLayout
     /// <summary>项目文字右缘与开关左缘的间隙。</summary>
     public const int TextToggleGap = 12;
 
+    /// <summary>标题与适用范围两行之间的空隙。</summary>
+    public const int TitleScopeGap = 2;
+
+    public static Font ItemFont => UiFit.UiFont;
+    public static Font ScopeFont => UiFit.UiFontScope;
+    public static Font NoteFont => UiFit.UiFontSmall;
+
+    /// <summary>含适用范围副标题时的行高（随 DPI / 字体实测）。</summary>
+    public static int RowHeight
+    {
+        get
+        {
+            var title = UiFit.LineHeight(ItemFont);
+            var scope = UiFit.LineHeight(ScopeFont);
+            return Math.Max(48, 6 + title + TitleScopeGap + scope + 6);
+        }
+    }
+
     public static int NoteWidthFor(int rowWidth) =>
         Math.Max(72, rowWidth - NoteX - 10);
 }

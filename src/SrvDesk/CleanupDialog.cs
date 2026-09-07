@@ -43,8 +43,10 @@ internal sealed class CleanupDialog : Form
             Height = 44,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 8, 0, 0),
         };
+        UiBuffer.ConfigureNoScrollRow(actions);
         _run = ThemedSettingsChrome.CreateButton("开始清理", true);
         _run.Click += (_, _) => StartCleanup();
         _cancelRun = ThemedSettingsChrome.CreateButton("停止", false);
