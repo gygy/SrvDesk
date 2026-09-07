@@ -33,7 +33,9 @@ Privacy and performance groups are split into foldable sections by scenario.
 
 ## Tools (highlights)
 
-Common software (includes **AI**: Codex CLI/Desktop, Pi Agent) · hosts · cleanup · Windows features · Edge · context menu · security center · restore defaults
+Common software (includes **AI**: Codex CLI/Desktop, Pi Agent) · hosts · junk cleanup (grouped, with progress) · Windows features · Edge · context menu · security center · restore defaults
+
+**Help → Check for updates** reads GitHub Releases, downloads `SrvDesk.exe`, replaces the running file and restarts. Startup check can be turned off in **File → Settings**.
 
 ## CLI (admin)
 

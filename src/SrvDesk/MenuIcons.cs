@@ -150,6 +150,10 @@ internal static class MenuIcons
         Array.Empty<Cand>(),
         DrawLegend);
 
+    public static Image HelpCheckUpdate => Get("help-update",
+        Array.Empty<Cand>(),
+        DrawRefresh);
+
     public static Image HelpChangeLog => Get("help-changelog",
         [FileCand(Sys("notepad.exe")), FileCand(Sys("write.exe"))],
         DrawDoc);

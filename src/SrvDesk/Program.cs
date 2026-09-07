@@ -8,6 +8,7 @@ static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         AppPaths.MigrateLegacyDataIfNeeded();
+        AppUpdate.TryDeleteBackup();
 
         if (TryRunCli(args, out var exitCode))
             return exitCode;

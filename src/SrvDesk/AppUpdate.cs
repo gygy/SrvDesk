@@ -82,7 +82,7 @@ internal static class AppUpdate
         }
 
         var urls = new List<string> { release.DownloadUrl };
-        if (!release.DownloadUrl.Contains("ghproxy", StringComparison.OrdinalIgnoreCase))
+        if (release.DownloadUrl.IndexOf("ghproxy", StringComparison.OrdinalIgnoreCase) < 0)
         {
             urls.Add("https://ghproxy.net/" + release.DownloadUrl);
             urls.Add("https://mirror.ghproxy.com/" + release.DownloadUrl);
@@ -201,9 +201,10 @@ internal static class AppUpdate
         {
             using var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
             var dto = new DataContractJsonSerializer(typeof(GhRelease)).ReadObject(ms) as GhRelease;
-            if (dto is null || string.IsNullOrWhiteSpace(dto.TagName))
+            var tag = dto?.TagName?.Trim() ?? "";
+            if (tag.Length == 0)
                 return FallbackParse(json);
-            var asset = dto.Assets?.FirstOrDefault(a =>
+            var asset = dto!.Assets?.FirstOrDefault(a =>
                 a.Name != null &&
                 a.Name.Equals("SrvDesk.exe", StringComparison.OrdinalIgnoreCase));
             asset ??= dto.Assets?.FirstOrDefault(a =>
@@ -211,9 +212,9 @@ internal static class AppUpdate
                 a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
             return new AppReleaseInfo
             {
-                Tag = dto.TagName,
-                Version = Normalize(dto.TagName),
-                HtmlUrl = string.IsNullOrWhiteSpace(dto.HtmlUrl) ? ReleasesPage : dto.HtmlUrl,
+                Tag = tag,
+                Version = Normalize(tag),
+                HtmlUrl = string.IsNullOrWhiteSpace(dto.HtmlUrl) ? ReleasesPage : dto.HtmlUrl!,
                 Notes = StripMd(dto.Body ?? ""),
                 AssetName = asset?.Name ?? "",
                 DownloadUrl = asset?.BrowserDownloadUrl ?? "",

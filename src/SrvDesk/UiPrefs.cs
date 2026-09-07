@@ -135,6 +135,5 @@ internal static class UiPrefs
         HideIncompatibleByDefault = true,
         EnableDebugLog = true,
         SoftSkipUnsupported = true,
-        CheckUpdatesOnStartup = true,
     };
 }

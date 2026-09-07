@@ -4,12 +4,12 @@ namespace SrvDesk;
 
 internal sealed class CleanupItem
 {
-    public string Id { get; init; } = "";
-    public string Title { get; init; } = "";
-    public string Group { get; init; } = "";
-    public string Hint { get; init; } = "";
-    public bool DefaultOn { get; init; } = true;
-    public bool Heavy { get; init; }
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Group { get; set; } = "";
+    public string Hint { get; set; } = "";
+    public bool DefaultOn { get; set; } = true;
+    public bool Heavy { get; set; }
 }
 
 internal sealed class CleanupProgress

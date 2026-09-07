@@ -39,6 +39,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem HelpDisclaimer { get; }
     public ToolStripMenuItem HelpPrivacy { get; }
     public ToolStripMenuItem HelpLicense { get; }
+    public ToolStripMenuItem HelpCheckUpdate { get; }
     public ToolStripMenuItem HelpSupport { get; }
 
     public AppMenuStrip()
@@ -109,6 +110,7 @@ internal sealed class AppMenuStrip : MenuStrip
         PresetRoot = new ToolStripMenuItem("预设(&P)");
 
         var help = new ToolStripMenuItem("帮助(&H)");
+        HelpCheckUpdate = Item("检查更新...", MenuIcons.HelpCheckUpdate);
         HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
         HelpLog = Item("操作日志...", MenuIcons.HelpLog);
         HelpDebugLog = Item("调试日志...", MenuIcons.HelpLog);
@@ -117,7 +119,7 @@ internal sealed class AppMenuStrip : MenuStrip
         HelpLicense = Item("许可证...", MenuIcons.HelpChangeLog);
         HelpSupport = Item("支持", MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
-            HelpChangeLog, HelpLog, HelpDebugLog,
+            HelpCheckUpdate, HelpChangeLog, HelpLog, HelpDebugLog,
             new ToolStripSeparator(),
             HelpDisclaimer, HelpPrivacy, HelpLicense,
             new ToolStripSeparator(),

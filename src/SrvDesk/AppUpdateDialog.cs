@@ -12,11 +12,10 @@ internal sealed class AppUpdateDialog : Form
     private readonly Button _check;
     private readonly Button _apply;
     private AppReleaseInfo? _release;
-    private string? _downloaded;
     private CancellationTokenSource? _cts;
     private bool _busy;
 
-    public AppUpdateDialog()
+    public AppUpdateDialog(AppReleaseInfo? known = null)
     {
         Text = "检查更新";
         AppBrand.ApplyWindowIcon(this);
@@ -27,6 +26,7 @@ internal sealed class AppUpdateDialog : Form
         ClientSize = new Size(520, 420);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.AutoScroll = false;
         var stack = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -82,7 +82,7 @@ internal sealed class AppUpdateDialog : Form
         _apply = ThemedSettingsChrome.CreateButton("下载并更新", false);
         _apply.Enabled = false;
         _apply.Margin = new Padding(8, 0, 0, 0);
-        _apply.Click += async (_, _) => await DownloadAndApplyAsync();
+        _apply.Click += async (_, _) => await DownloadAndApplyAsync(confirm: true);
         var open = ThemedSettingsChrome.CreateButton("打开发布页", false);
         open.Margin = new Padding(8, 0, 0, 0);
         open.Click += (_, _) =>
@@ -116,6 +116,8 @@ internal sealed class AppUpdateDialog : Form
             "从 GitHub Releases 获取最新 SrvDesk.exe，下载后自动替换并重启",
             body,
             "更新需要能访问 GitHub。替换时会退出当前进程。");
+        if (known is not null)
+            Bind(known);
         FormClosing += (_, e) =>
         {
             if (!_busy) return;
@@ -123,6 +125,8 @@ internal sealed class AppUpdateDialog : Form
             _cts?.Cancel();
         };
     }
+
+    public Task StartDownloadAsync(bool confirm) => DownloadAndApplyAsync(confirm);
 
     public async Task CheckAsync(bool autoApply)
     {
@@ -140,7 +144,7 @@ internal sealed class AppUpdateDialog : Form
             }
 
             if (autoApply)
-                await DownloadAndApplyAsync();
+                await DownloadAndApplyAsync(confirm: false);
         }
         catch (Exception ex)
         {
@@ -166,7 +170,7 @@ internal sealed class AppUpdateDialog : Form
             : "无需更新。";
     }
 
-    private async Task DownloadAndApplyAsync()
+    private async Task DownloadAndApplyAsync(bool confirm)
     {
         if (_release is null || !_release.IsNewer) return;
         if (string.IsNullOrWhiteSpace(_release.DownloadUrl))
@@ -175,7 +179,7 @@ internal sealed class AppUpdateDialog : Form
             return;
         }
 
-        if (MessageBox.Show(this,
+        if (confirm && MessageBox.Show(this,
                 $"下载 v{_release.Version} 并替换当前程序？\r\n完成后会自动重启。",
                 Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
@@ -193,7 +197,6 @@ internal sealed class AppUpdateDialog : Form
                     _status.Text = msg;
                 }));
             }, _cts.Token));
-            _downloaded = dest;
             _status.Text = "正在替换并重启…";
             AppUpdate.ReplaceAndRestart(dest);
         }

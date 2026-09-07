@@ -473,18 +473,61 @@ internal sealed class MainForm : Form
 
     private void TryShowFirstRunNotice()
     {
-        if (!FirstRunNotice.NeedShow())
-            return;
-
-        // 等主窗体先画出来，避免抢焦点造成卡顿感
         BeginInvoke(new Action(() =>
         {
-            if (IsDisposed || !FirstRunNotice.NeedShow())
-                return;
-            using (var dlg = new FirstRunNoticeDialog())
-                dlg.ShowDialog(this);
-            FirstRunNotice.MarkDone();
+            if (IsDisposed) return;
+            if (FirstRunNotice.NeedShow())
+            {
+                using (var dlg = new FirstRunNoticeDialog())
+                    dlg.ShowDialog(this);
+                FirstRunNotice.MarkDone();
+            }
+            ScheduleSilentUpdateCheck();
         }));
+    }
+
+    private void ScheduleSilentUpdateCheck()
+    {
+        var prefs = UiPrefs.Load();
+        if (prefs.DisableStartupUpdateCheck) return;
+
+        Task.Run(() =>
+        {
+            try
+            {
+                var info = AppUpdate.CheckLatest();
+                if (!info.IsNewer || IsDisposed) return;
+                if (!string.IsNullOrWhiteSpace(prefs.SkippedUpdateTag) &&
+                    string.Equals(prefs.SkippedUpdateTag, info.Tag, StringComparison.OrdinalIgnoreCase))
+                    return;
+                BeginInvoke(new Action(() => PromptSilentUpdate(info)));
+            }
+            catch
+            {
+                // 启动检查失败不打扰
+            }
+        });
+    }
+
+    private void PromptSilentUpdate(AppReleaseInfo info)
+    {
+        if (IsDisposed) return;
+        var r = MessageBox.Show(this,
+            $"发现新版本 v{info.Version}（当前 v{AppBrand.VersionText}）。\r\n\r\n立即下载并更新？选「否」则本版本不再提醒。",
+            "检查更新",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Information);
+        if (r != DialogResult.Yes)
+        {
+            var p = UiPrefs.Load();
+            p.SkippedUpdateTag = info.Tag;
+            UiPrefs.Save(p);
+            return;
+        }
+
+        using var dlg = new AppUpdateDialog(info);
+        dlg.Shown += async (_, _) => await dlg.StartDownloadAsync(confirm: false);
+        dlg.ShowDialog(this);
     }
 
     private void WireAppMenu()
@@ -538,6 +581,12 @@ internal sealed class MainForm : Form
         _appMenu.ToolRestoreDefaults.Click += (_, _) => RestoreDefaults();
         _appMenu.ViewAllOn.Click += (_, _) => SetVisibleAll(true);
         _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
+        _appMenu.HelpCheckUpdate.Click += (_, _) =>
+        {
+            using var d = new AppUpdateDialog();
+            d.Shown += async (_, _) => await d.CheckAsync(autoApply: false);
+            d.ShowDialog(this);
+        };
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
         _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
         _appMenu.HelpDebugLog.Click += (_, _) => OpenLogFile(ApplyLog.DebugLogFilePath, "调试日志");

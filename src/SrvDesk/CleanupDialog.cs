@@ -21,6 +21,7 @@ internal sealed class CleanupDialog : Form
         MinimumSize = new Size(640, 480);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.AutoScroll = false;
 
         _list.View = View.Details;
         _list.FullRowSelect = true;
@@ -84,9 +85,12 @@ internal sealed class CleanupDialog : Form
         progress.Controls.Add(_status);
         progress.Controls.Add(_bar);
 
-        body.Controls.Add(actions);
-        body.Controls.Add(progress);
         body.Controls.Add(_list);
+        body.Controls.Add(progress);
+        body.Controls.Add(actions);
+        actions.BringToFront();
+        progress.BringToFront();
+        _list.SendToBack();
 
         ThemedSettingsChrome.MountModal(
             this,
@@ -94,6 +98,11 @@ internal sealed class CleanupDialog : Form
             "缓存 · 系统残留 · 临时文件 · 对照 ZyperWin++ 项，占用中的文件会跳过",
             body,
             "清理不可恢复。WinSxS / .NET 镜像较重，请按需勾选。");
+        Resize += (_, _) =>
+        {
+            if (_list.Columns.Count >= 2)
+                _list.Columns[1].Width = Math.Max(180, _list.ClientSize.Width - _list.Columns[0].Width - 24);
+        };
         FormClosing += (_, e) =>
         {
             if (!_busy) return;
