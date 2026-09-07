@@ -221,6 +221,17 @@ internal static class Optimizer
         public bool UsbFullPowerOff;
         public bool AutoRebootOnCrash;
         public bool DisableDotNetPowerShellTelemetry;
+        public bool DiagnosticDataMinimal;
+        public bool DisableSigninReopen;
+        public bool DisableSilentAppInstall;
+        public bool HideExplorerHomeGallery;
+        public bool DisableSnapAssist;
+        public bool EnableDarkMode;
+        public bool DisableBitLockerAutoEncrypt;
+        public bool PreventDeviceCompanionApps;
+        public bool DisableUpdateAsap;
+        public bool HideSettingsHomeAds;
+        public bool DisableWin11ExtraAi;
     }
 
     public static bool IsWindowsServer()
@@ -357,6 +368,7 @@ internal static class Optimizer
         EasySettingsTweaks.ReadInto(state);
         CompetitorTweaks.ReadInto(state);
         CommunityTweaks.ReadInto(state);
+        SophiaGapTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
         state.EnableAutologon = auto.Enabled;
         if (auto.Enabled)
@@ -587,6 +599,7 @@ internal static class Optimizer
         Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s, baseline));
         Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s, baseline));
         Do(CommunityTweaks.AnyChanged(baseline, s), "社区对齐项", () => CommunityTweaks.Apply(s, baseline));
+        Do(SophiaGapTweaks.AnyChanged(baseline, s), "Sophia对齐项", () => SophiaGapTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;
     }

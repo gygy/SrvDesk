@@ -30,6 +30,8 @@ internal sealed class UiPrefsData
     [DataMember] public bool SoftSkipUnsupported { get; set; } = true;
     /// <summary>关闭启动时检查 GitHub Releases。缺省（旧配置无此字段）视为检查。</summary>
     [DataMember] public bool DisableStartupUpdateCheck { get; set; }
+    /// <summary>应用到系统前不询问还原点。缺省（旧配置无此字段）视为询问。</summary>
+    [DataMember] public bool DisableRestorePointPrompt { get; set; }
     /// <summary>用户选择稍后提醒的版本标签（如 v1.0.22），启动检查时跳过。</summary>
     [DataMember] public string SkippedUpdateTag { get; set; } = "";
 }

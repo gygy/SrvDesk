@@ -967,6 +967,90 @@ internal static class SettingCatalog
         "开发机与 Server 桌面都推荐开启。",
         "新开的终端立即生效；已打开的会话需重开。");
 
+    public static readonly SettingHelpInfo DiagnosticDataMinimal = H(
+        "把诊断数据调到系统允许的最低官方级别（不是只停 DiagTrack）。",
+        "MaxTelemetryAllowed=1；Server 上 AllowTelemetry=0，客户端 Pro 为 1。与「关闭遥测」并存时保持 0。",
+        "设置里显示「必需/基本」，少传可选诊断。",
+        "推荐开启；要比官方级别更狠请同时开「关闭遥测与 DiagTrack」。",
+        "立即写入。");
+
+    public static readonly SettingHelpInfo DisableSigninReopen = H(
+        "更新或重启后不使用登录信息自动完成设置、也不自动重开应用。",
+        "DisableAutomaticRestartSignOn=1，当前用户 UserARSO OptOut=1。",
+        "少一次「正在完成更新」卡住，会话也不会被自动拉起的应用占住。",
+        "推荐开启。",
+        "下次更新/重启后生效。");
+
+    public static readonly SettingHelpInfo DisableSilentAppInstall = H(
+        "禁止 Windows 在后台静默安装建议应用。",
+        "ContentDeliveryManager SilentInstalledAppsEnabled=0。",
+        "不会自己多出 Candy Crush、试用商店应用。",
+        "推荐开启。",
+        "立即生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo HideExplorerHomeGallery = H(
+        "从资源管理器导航窗格去掉「主页」和「图库」。",
+        "CLSID Home / Gallery 的 System.IsPinnedToNameSpaceTree=0。",
+        "导航栏更短，直接看此电脑与磁盘。",
+        "Win11 桌面推荐开启；没有这两项时开着也无害。",
+        "重启资源管理器后生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo DisableSnapAssist = H(
+        "关闭窗口贴靠时的应用建议与最大化贴靠飞出。",
+        "Explorer\\Advanced SnapAssist=0、EnableSnapAssistFlyout=0。",
+        "拖窗口贴边时不再弹一排推荐应用。",
+        "仍可用 Win+方向键贴靠；推荐开启。",
+        "重启资源管理器后完全生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo EnableDarkMode = H(
+        "系统外壳和应用使用深色主题。",
+        "Personalize AppsUseLightTheme=0、SystemUsesLightTheme=0。",
+        "夜间或 OLED 更省眼；未适配的 Win32 窗口仍可能是浅色。",
+        "喜欢浅色桌面时关闭。",
+        "立即刷新主题。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo DisableBitLockerAutoEncrypt = H(
+        "禁止系统在后台自动做设备加密（BitLocker）。",
+        "BitLocker PreventDeviceEncryption=1。不关闭你已经手动打开的加密。",
+        "新装机不会悄悄加密系统盘，少一次恢复密钥麻烦。",
+        "需要自动设备加密的笔记本请关闭本项。",
+        "立即写入；已加密的盘不会自动解密。");
+
+    public static readonly SettingHelpInfo PreventDeviceCompanionApps = H(
+        "插入显示器等设备时，不从网络拉配套应用。",
+        "Device Metadata PreventDeviceMetadataFromNetwork=1。",
+        "插 HDMI/扩展坞时少被塞厂商商店应用。",
+        "推荐开启。",
+        "立即生效。");
+
+    public static readonly SettingHelpInfo DisableUpdateAsap = H(
+        "关闭「尽快获取最新更新」（连续创新/预览功能更新）。",
+        "WindowsUpdate UX IsContinuousInnovationOptedIn=0、IsExpedited=0。",
+        "功能更新按正常通道来，不被拉进实验开关。",
+        "安全补丁不受影响；推荐开启。",
+        "立即写入。",
+        W10);
+
+    public static readonly SettingHelpInfo HideSettingsHomeAds = H(
+        "隐藏设置应用首页，并关掉首页上的 Microsoft 365 广告。",
+        "SettingsPageVisibility=hide:home；CloudContent DisableConsumerAccountStateContent=1。",
+        "打开设置直接进系统页，少一块推广。",
+        "Win11 推荐开启。",
+        "重新打开设置后生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo DisableWin11ExtraAi = H(
+        "关闭 Recall、Click to Do，以及记事本/画图的生成式 AI。",
+        "WindowsAI DisableAIDataAnalysis / DisableClickToDo / AllowRecallEnablement；Notepad DisableAIFeatures；Paint 生成式策略。",
+        "本工具「关闭 Copilot」管不到的 Win11 24H2+ AI 入口一并关掉。",
+        "没有这些功能的系统开着也无害。",
+        "立即写入；Recall 可选功能需重启后完全消失。",
+        W10);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,

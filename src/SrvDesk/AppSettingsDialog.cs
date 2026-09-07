@@ -9,6 +9,12 @@ internal sealed class AppSettingsDialog : Form
     private readonly ComboBox _dock = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly CheckBox _hideIncompatible = new() { AutoSize = true, Text = "启动时默认「隐藏不适用项」" };
     private readonly CheckBox _checkUpdate = new() { AutoSize = true, Text = "启动时检查程序更新" };
+    private readonly CheckBox _restorePoint = new()
+    {
+        AutoSize = true,
+        MaximumSize = new Size(480, 0),
+        Text = "应用到系统前询问是否创建还原点",
+    };
     private readonly CheckBox _debugLog = new() { AutoSize = true, Text = "开启调试日志（debug.log）" };
     private readonly CheckBox _softSkip = new()
     {
@@ -68,6 +74,7 @@ internal sealed class AppSettingsDialog : Form
         body.Controls.Add(Pad(DockRow()));
         body.Controls.Add(Pad(_hideIncompatible));
         body.Controls.Add(Pad(_checkUpdate));
+        body.Controls.Add(Pad(_restorePoint));
         body.Controls.Add(Section("诊断"));
         body.Controls.Add(Pad(_debugLog));
         body.Controls.Add(Pad(_softSkip));
@@ -162,6 +169,7 @@ internal sealed class AppSettingsDialog : Form
         _dock.SelectedIndex = UiPrefs.GetDock(p) == ConfigScriptDock.Bottom ? 1 : 0;
         _hideIncompatible.Checked = p.HideIncompatibleByDefault;
         _checkUpdate.Checked = !p.DisableStartupUpdateCheck;
+        _restorePoint.Checked = !p.DisableRestorePointPrompt;
         _debugLog.Checked = p.EnableDebugLog;
         _softSkip.Checked = p.SoftSkipUnsupported;
     }
@@ -175,6 +183,7 @@ internal sealed class AppSettingsDialog : Form
             : (int)ConfigScriptDock.Right;
         p.HideIncompatibleByDefault = _hideIncompatible.Checked;
         p.DisableStartupUpdateCheck = !_checkUpdate.Checked;
+        p.DisableRestorePointPrompt = !_restorePoint.Checked;
         p.EnableDebugLog = _debugLog.Checked;
         p.SoftSkipUnsupported = _softSkip.Checked;
         UiPrefs.Save(p);

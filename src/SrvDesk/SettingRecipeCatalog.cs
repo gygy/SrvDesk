@@ -888,6 +888,99 @@ internal static class SettingRecipeCatalog
                 ActionScript.DeleteValue("DOTNET_CLI_TELEMETRY_OPTOUT"),
                 ActionScript.DeleteValue("POWERSHELL_TELEMETRY_OPTOUT")),
             "导入后新开终端生效；也可在系统环境变量里核对。"));
+        Add(SettingCatalog.DiagnosticDataMinimal, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"),
+                ActionScript.Dword("MaxTelemetryAllowed", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack"),
+                ActionScript.Dword("ShowedToastAtLevel", 1)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"),
+                ActionScript.Dword("MaxTelemetryAllowed", 3)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack"),
+                ActionScript.Dword("ShowedToastAtLevel", 3)),
+            "AllowTelemetry 由软件按 Server/客户端与「关闭遥测」开关一并写入。"));
+        Add(SettingCatalog.DisableSigninReopen, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+            "DisableAutomaticRestartSignOn", 1, 0,
+            "当前用户 UserARSO OptOut 由软件一并写入。"));
+        Add(SettingCatalog.DisableSilentAppInstall, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager",
+            "SilentInstalledAppsEnabled", 0, 1));
+        Add(SettingCatalog.HideExplorerHomeGallery, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Classes\CLSID\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}"),
+                ActionScript.Dword("System.IsPinnedToNameSpaceTree", 0)) +
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Classes\CLSID\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}"),
+                ActionScript.Dword("System.IsPinnedToNameSpaceTree", 0)),
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Classes\CLSID\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}"),
+                ActionScript.Dword("System.IsPinnedToNameSpaceTree", 1)) +
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Classes\CLSID\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}"),
+                ActionScript.Dword("System.IsPinnedToNameSpaceTree", 1)),
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.DisableSnapAssist, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("SnapAssist", 0),
+                ActionScript.Dword("EnableSnapAssistFlyout", 0)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("SnapAssist", 1),
+                ActionScript.Dword("EnableSnapAssistFlyout", 1)),
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.EnableDarkMode, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"),
+                ActionScript.Dword("AppsUseLightTheme", 0),
+                ActionScript.Dword("SystemUsesLightTheme", 0)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"),
+                ActionScript.Dword("AppsUseLightTheme", 1),
+                ActionScript.Dword("SystemUsesLightTheme", 1))));
+        Add(SettingCatalog.DisableBitLockerAutoEncrypt, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Control\BitLocker", "PreventDeviceEncryption", 1, 0));
+        Add(SettingCatalog.PreventDeviceCompanionApps, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Policies\Microsoft\Windows\Device Metadata",
+            "PreventDeviceMetadataFromNetwork", 1, 0));
+        Add(SettingCatalog.DisableUpdateAsap, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+                ActionScript.Dword("IsContinuousInnovationOptedIn", 0),
+                ActionScript.Dword("IsExpedited", 0)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"),
+                ActionScript.Dword("IsContinuousInnovationOptedIn", 1),
+                ActionScript.Dword("IsExpedited", 1))));
+        Add(SettingCatalog.HideSettingsHomeAds, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Sz("SettingsPageVisibility", "hide:home")) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\CloudContent"),
+                ActionScript.Dword("DisableConsumerAccountStateContent", 1)),
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Sz("SettingsPageVisibility", "show:home")) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\CloudContent"),
+                ActionScript.Dword("DisableConsumerAccountStateContent", 0)),
+            "重新打开设置后生效。"));
+        Add(SettingCatalog.DisableWin11ExtraAi, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI"),
+                ActionScript.Dword("DisableAIDataAnalysis", 1),
+                ActionScript.Dword("DisableClickToDo", 1),
+                ActionScript.Dword("TurnOffSavingSnapshots", 1),
+                ActionScript.Dword("AllowRecallEnablement", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Policies\Microsoft\Windows\WindowsAI"),
+                ActionScript.Dword("DisableAIDataAnalysis", 1),
+                ActionScript.Dword("DisableClickToDo", 1)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\WindowsNotepad"),
+                ActionScript.Dword("DisableAIFeatures", 1)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint"),
+                ActionScript.Dword("DisableCocreator", 1),
+                ActionScript.Dword("DisableGenerativeFill", 1),
+                ActionScript.Dword("DisableImageCreator", 1)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI"),
+                ActionScript.Dword("DisableAIDataAnalysis", 0),
+                ActionScript.Dword("DisableClickToDo", 0),
+                ActionScript.Dword("TurnOffSavingSnapshots", 0),
+                ActionScript.Dword("AllowRecallEnablement", 1)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\WindowsNotepad"),
+                ActionScript.Dword("DisableAIFeatures", 0)),
+            "WSAIFabricSvc 由软件按需禁用。"));
 
         return m;
     }

@@ -111,6 +111,17 @@ internal sealed class MainForm : Form
     private readonly SettingRow _usbPowerOff = Row("弹出 USB 后彻底断电", "保持供电", SettingCatalog.UsbFullPowerOff);
     private readonly SettingRow _autoReboot = Row("蓝屏时自动重启", "停留蓝屏", SettingCatalog.AutoRebootOnCrash);
     private readonly SettingRow _cliTelemetry = Row("关闭 .NET / PowerShell 遥测", "允许", SettingCatalog.DisableDotNetPowerShellTelemetry);
+    private readonly SettingRow _diagMinimal = Row("诊断数据设为最小（官方级别）", "完整", SettingCatalog.DiagnosticDataMinimal);
+    private readonly SettingRow _noSigninReopen = Row("更新后不自动重开应用", "允许重开", SettingCatalog.DisableSigninReopen);
+    private readonly SettingRow _noSilentApps = Row("禁止静默安装建议应用", "允许", SettingCatalog.DisableSilentAppInstall);
+    private readonly SettingRow _hideHomeGallery = Row("隐藏资源管理器主页与图库", "显示", SettingCatalog.HideExplorerHomeGallery);
+    private readonly SettingRow _noSnapAssist = Row("关闭窗口贴靠建议", "开启", SettingCatalog.DisableSnapAssist);
+    private readonly SettingRow _darkMode = Row("使用深色模式", "浅色", SettingCatalog.EnableDarkMode);
+    private readonly SettingRow _noBitlockerAuto = Row("禁止 BitLocker 自动加密", "允许", SettingCatalog.DisableBitLockerAutoEncrypt);
+    private readonly SettingRow _noCompanionApps = Row("禁止外设配套应用自动安装", "允许", SettingCatalog.PreventDeviceCompanionApps);
+    private readonly SettingRow _noUpdateAsap = Row("关闭「尽快获取最新更新」", "开启", SettingCatalog.DisableUpdateAsap);
+    private readonly SettingRow _hideSettingsHome = Row("隐藏设置首页与 365 广告", "显示", SettingCatalog.HideSettingsHomeAds);
+    private readonly SettingRow _extraAi = Row("关闭 Recall / Click to Do / 记事本画图 AI", "允许", SettingCatalog.DisableWin11ExtraAi);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -296,6 +307,8 @@ internal sealed class MainForm : Form
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
         _noBrokenLnk, _sepProcess, _autoRestartShell, _hideSpotlight, _noDupDrives, _noRunMru,
         _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
+        _diagMinimal, _noSigninReopen, _noSilentApps, _hideHomeGallery, _noSnapAssist, _darkMode,
+        _noBitlockerAuto, _noCompanionApps, _noUpdateAsap, _hideSettingsHome, _extraAi,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
@@ -329,19 +342,19 @@ internal sealed class MainForm : Form
                 _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu,
             ]),
             ("Windows 更新", [
-                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt,
+                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt, _noUpdateAsap,
             ]),
             ("网络优化", [
                 _tcp, _qosSpeed, _bbr2, _netThrottle,
             ]),
             ("遥测与诊断", [
-                _telemetry, _dps, _ceip, _errorReport,
+                _telemetry, _diagMinimal, _dps, _ceip, _errorReport,
             ]),
             ("安全服务", [
                 _smb1, _remoteReg, _spooler, _dep,
             ]),
             ("进阶安全", [
-                _meltdown, _hvci, _wdac, _vbs, _sysRestore,
+                _meltdown, _hvci, _wdac, _vbs, _sysRestore, _noBitlockerAuto,
             ]),
             ("磁盘与文件", [
                 _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
@@ -361,7 +374,7 @@ internal sealed class MainForm : Form
                 _tbAutohide, _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
             ("桌面服务", [
-                _themes, _audio, _search, _notepadWrap, _notepadStatus,
+                _themes, _audio, _search, _darkMode, _notepadWrap, _notepadStatus,
             ]),
             ("安全与锁屏", [
                 _smartScreen, _noLockScreen, _feedback,
@@ -376,7 +389,7 @@ internal sealed class MainForm : Form
         _groups.Add(("资源管理器", [
             ("常用显示", [
                 _fileExt, _hiddenFiles, _fullPath, _hideOs, _launchThisPc,
-                _hideSpotlight, _noDupDrives, _noLowDisk,
+                _hideSpotlight, _noDupDrives, _noLowDisk, _hideHomeGallery, _noSnapAssist,
             ]),
             ("快速访问", [
                 _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly, _noRunMru,
@@ -410,12 +423,14 @@ internal sealed class MainForm : Form
         _groups.Add(("隐私与体验", [
             ("广告与推荐", [
                 _tips, _recommended, _searchHighlights, _adTracking, _settingsSuggest, _consumer,
+                _noSilentApps, _hideSettingsHome,
             ]),
             ("搜索与助手", [
-                _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi,
+                _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi, _extraAi,
             ]),
             ("隐私数据", [
                 _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel, _cliTelemetry,
+                _noSigninReopen, _noCompanionApps,
             ]),
             ("输入法与键盘", [
                 _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys,
@@ -2407,6 +2422,17 @@ internal sealed class MainForm : Form
         _usbPowerOff.Checked = s.UsbFullPowerOff;
         _autoReboot.Checked = s.AutoRebootOnCrash;
         _cliTelemetry.Checked = s.DisableDotNetPowerShellTelemetry;
+        _diagMinimal.Checked = s.DiagnosticDataMinimal;
+        _noSigninReopen.Checked = s.DisableSigninReopen;
+        _noSilentApps.Checked = s.DisableSilentAppInstall;
+        _hideHomeGallery.Checked = s.HideExplorerHomeGallery;
+        _noSnapAssist.Checked = s.DisableSnapAssist;
+        _darkMode.Checked = s.EnableDarkMode;
+        _noBitlockerAuto.Checked = s.DisableBitLockerAutoEncrypt;
+        _noCompanionApps.Checked = s.PreventDeviceCompanionApps;
+        _noUpdateAsap.Checked = s.DisableUpdateAsap;
+        _hideSettingsHome.Checked = s.HideSettingsHomeAds;
+        _extraAi.Checked = s.DisableWin11ExtraAi;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -2546,6 +2572,17 @@ internal sealed class MainForm : Form
         UsbFullPowerOff = _usbPowerOff.Checked,
         AutoRebootOnCrash = _autoReboot.Checked,
         DisableDotNetPowerShellTelemetry = _cliTelemetry.Checked,
+        DiagnosticDataMinimal = _diagMinimal.Checked,
+        DisableSigninReopen = _noSigninReopen.Checked,
+        DisableSilentAppInstall = _noSilentApps.Checked,
+        HideExplorerHomeGallery = _hideHomeGallery.Checked,
+        DisableSnapAssist = _noSnapAssist.Checked,
+        EnableDarkMode = _darkMode.Checked,
+        DisableBitLockerAutoEncrypt = _noBitlockerAuto.Checked,
+        PreventDeviceCompanionApps = _noCompanionApps.Checked,
+        DisableUpdateAsap = _noUpdateAsap.Checked,
+        HideSettingsHomeAds = _hideSettingsHome.Checked,
+        DisableWin11ExtraAi = _extraAi.Checked,
         TaskbarSearchMode = _tbSearch.ChoiceIndex is >= 0 and <= 2 ? _tbSearch.ChoiceIndex : 1,
         TaskbarSearchBox = false,
         ShowThisPcIcon = _thisPc.Checked,
@@ -2779,6 +2816,30 @@ internal sealed class MainForm : Form
         }
     }
 
+    /// <summary>询问并尝试创建还原点。Cancel=中止应用；跳过/失败不挡写入。</summary>
+    private bool TryCreateRestorePointBeforeApply()
+    {
+        if (UiPrefs.Load().DisableRestorePointPrompt)
+            return true;
+
+        var ask = MessageBox.Show(this,
+            "建议先创建系统还原点，出问题可以回退。\r\n\r\n是 = 创建后继续写入\r\n否 = 跳过还原点直接写入\r\n取消 = 不应用",
+            "应用到系统",
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Question);
+        if (ask == DialogResult.Cancel)
+            return false;
+        if (ask != DialogResult.Yes)
+            return true;
+
+        _status.Text = "正在创建系统还原点…";
+        Application.DoEvents();
+        SystemRestoreHelper.TryCreate("SrvDesk 应用前", out var msg);
+        if (!string.IsNullOrEmpty(msg))
+            _status.Text = msg;
+        return true;
+    }
+
     private bool RunApply(string working, string success)
     {
         _apply.Enabled = false;
@@ -2794,6 +2855,12 @@ internal sealed class MainForm : Form
             if (!EnsureAutologonReady())
             {
                 _status.Text = "已取消：启用自动登录需先配置账户。";
+                return false;
+            }
+
+            if (!TryCreateRestorePointBeforeApply())
+            {
+                _status.Text = "已取消应用。";
                 return false;
             }
 
