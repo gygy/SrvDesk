@@ -1,17 +1,19 @@
-﻿# SrvDesk v1.0.19
+﻿# SrvDesk v1.0.21
 
 ## 中文
 
-- 品牌统一为 **SrvDesk**（数据目录、右键菜单键名、命名空间等；旧 WinOpt 数据可自动迁移）
-- 程序设置：调试日志、环境不支持记为跳过 — **默认开启**
-- 仅应用本次改动、操作日志软跳过、资源管理器防抖等稳定性改进
+- 启动时「设置操作」同步读取本机实际状态，不再先显示推荐值
+- 「系统当前值」与「设置操作」一致（开关：开启/关闭；下拉：当前选项）
+- 修复任务栏自动隐藏开关无效（按系统标志位写入并立即通知外壳）
+- RDP 改为下拉；「启用远程桌面」归入「远程与网络」
 
 下载：单文件 `SrvDesk.exe`，请以管理员身份运行。
 
 ## English
 
-- Branding unified to **SrvDesk** (AppData, shell keys; legacy WinOpt folder migrated when possible)
-- Debug log & soft-skip unsupported defaults **on**
-- Apply-delta, soft-skip logging, Explorer debounce improvements
+- Setting controls now load live system state on startup (not recommended defaults)
+- Current-value column matches the control (on/off or selected option)
+- Fix taskbar auto-hide not applying (APPBARDATA + StuckRects bits)
+- RDP items are dropdowns; Enable RDP lives under Remote & Network
 
 Download `SrvDesk.exe` and run as Administrator.
