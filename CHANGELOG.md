@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.26] - 2026-09-08
+
+### Fixed
+
+- Winget install on Server 2019/2022 follows asheroto/winget-install: provision with License1.xml, fix PATH/ACL, then portable fallback
+- Desktop / Server 2025 prefer Repair-WinGetPackageManager; clearer install errors and longer dialog text
+
 ## [1.0.25] - 2026-09-07
 
 ### Fixed

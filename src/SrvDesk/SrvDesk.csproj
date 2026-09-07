@@ -17,9 +17,9 @@
     <Authors>SrvDesk</Authors>
     <Copyright>Copyright (c) 2026 gygy</Copyright>
     <Description>Windows Server 与桌面系统设置优化工具</Description>
-    <Version>1.0.25</Version>
-    <FileVersion>1.0.25.0</FileVersion>
-    <InformationalVersion>1.0.25</InformationalVersion>
+    <Version>1.0.26</Version>
+    <FileVersion>1.0.26.0</FileVersion>
+    <InformationalVersion>1.0.26</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <NeutralLanguage>zh-CN</NeutralLanguage>
     <DebugType Condition="'$(Configuration)'=='Release'">pdbonly</DebugType>

@@ -2,7 +2,7 @@
 
 Local optimizer for **Windows Server as a daily desktop**: registry / services / policy / DISM. Instant pages + batch toggles.
 
-**Version:** 1.0.25 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
+**Version:** 1.0.26 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
 
 Full guide (中文, default): [README.md](README.md)
 

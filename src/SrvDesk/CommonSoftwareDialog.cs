@@ -521,10 +521,10 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                "将下载并安装「应用安装程序」(winget) 及其依赖。\r\n\r\n" +
+                "将按 asheroto/winget-install 的路径安装「应用安装程序」(winget)。\r\n\r\n" +
                 (Optimizer.IsWindowsServer()
-                    ? "Server：离线包安装 + 部署便携目录 C:\\Tools\\winget（绕过 WindowsApps 别名许可证问题）。\r\n"
-                    : "") +
+                    ? "Server 2019/2022：依赖包 + 许可证预配安装，并修正 PATH/目录权限。\r\n桌面或 Server 2025：先 Repair-WinGetPackageManager，失败再走离线预配。\r\n"
+                    : "先 Repair-WinGetPackageManager（微软官方修复），失败再下载离线包预配。\r\n") +
                 "安装期间可继续使用主窗口。是否继续？",
                 "安装 winget", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
@@ -548,15 +548,54 @@ internal sealed class CommonSoftwareDialog : Form
                 SetInstallBusy(false);
                 ReloadStatusesAsync();
                 if (error is not null)
-                    MessageBox.Show(this, error.Message, "安装 winget 失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ShowNotice("安装 winget 失败", error.Message, MessageBoxIcon.Error);
                 else
-                    MessageBox.Show(this,
-                        string.IsNullOrWhiteSpace(msg) ? "winget 安装完成。" : msg,
+                    ShowNotice(
                         "安装 winget",
-                        MessageBoxButtons.OK,
+                        string.IsNullOrWhiteSpace(msg) ? "winget 安装完成。" : msg,
                         CommonSoftwareHelper.IsWingetAvailable() ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             });
         });
+    }
+
+    private void ShowNotice(string title, string text, MessageBoxIcon icon)
+    {
+        var wrapWidth = 520;
+        var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix;
+        var measured = TextRenderer.MeasureText(text, Font, new Size(wrapWidth, int.MaxValue), flags);
+        var work = Screen.FromControl(this).WorkingArea;
+        var textH = Math.Min(Math.Max(measured.Height + 8, 48), Math.Max(120, work.Height - 180));
+        using var f = new Form
+        {
+            Text = title,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterParent,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ShowInTaskbar = false,
+            AutoScaleMode = AutoScaleMode.Font,
+            Font = Font,
+            BackColor = AppTheme.Surface,
+            ForeColor = AppTheme.TextMain,
+            ClientSize = new Size(wrapWidth + 40, textH + 72),
+        };
+        var label = new Label
+        {
+            AutoSize = false,
+            Location = new Point(16, 16),
+            Size = new Size(wrapWidth, textH),
+            Text = text,
+        };
+        var ok = ThemedSettingsChrome.CreateButton("确定", true);
+        ok.DialogResult = DialogResult.OK;
+        ok.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        ok.Location = new Point(f.ClientSize.Width - 16 - ok.Width, f.ClientSize.Height - 16 - ok.Height);
+        f.Controls.Add(label);
+        f.Controls.Add(ok);
+        f.AcceptButton = ok;
+        f.CancelButton = ok;
+        _ = icon;
+        f.ShowDialog(this);
     }
 
     private void OnInstall(CommonSoftwareItem item)
