@@ -209,6 +209,18 @@ internal static class Optimizer
         public bool DisableInsiderService;
         public bool DisableStoreAutoUpdate;
         public bool DisableNewsInterests;
+        public bool DisableBrokenShortcutTracking;
+        public bool ExplorerSeparateProcess;
+        public bool AutoRestartExplorer;
+        public bool HideDesktopSpotlight;
+        public bool HideDuplicateRemovableDrives;
+        public bool DisableRunDialogHistory;
+        public bool MergeSvchostProcesses;
+        public bool DisableDistributedLinkTracking;
+        public bool DisableLowDiskSpaceChecks;
+        public bool UsbFullPowerOff;
+        public bool AutoRebootOnCrash;
+        public bool DisableDotNetPowerShellTelemetry;
     }
 
     public static bool IsWindowsServer()
@@ -344,6 +356,7 @@ internal static class Optimizer
         };
         EasySettingsTweaks.ReadInto(state);
         CompetitorTweaks.ReadInto(state);
+        CommunityTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
         state.EnableAutologon = auto.Enabled;
         if (auto.Enabled)
@@ -573,6 +586,7 @@ internal static class Optimizer
         Do(Ch(x => x.DisablePca), "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
         Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s, baseline));
         Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s, baseline));
+        Do(CommunityTweaks.AnyChanged(baseline, s), "社区对齐项", () => CommunityTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;
     }

@@ -99,6 +99,18 @@ internal sealed class MainForm : Form
     private readonly SettingRow _insider = Row("禁用 Windows Insider 服务", "手动", SettingCatalog.DisableInsiderService);
     private readonly SettingRow _storeUpd = Row("禁止商店自动更新应用", "自动", SettingCatalog.DisableStoreAutoUpdate);
     private readonly SettingRow _news = Row("关闭资讯与兴趣", "开启", SettingCatalog.DisableNewsInterests);
+    private readonly SettingRow _noBrokenLnk = Row("禁止跟踪损坏快捷方式", "跟踪", SettingCatalog.DisableBrokenShortcutTracking);
+    private readonly SettingRow _sepProcess = Row("单独进程打开文件夹", "同一进程", SettingCatalog.ExplorerSeparateProcess);
+    private readonly SettingRow _autoRestartShell = Row("资源管理器崩溃自动重启", "不重启", SettingCatalog.AutoRestartExplorer);
+    private readonly SettingRow _hideSpotlight = Row("隐藏桌面「了解此图片」", "显示", SettingCatalog.HideDesktopSpotlight);
+    private readonly SettingRow _noDupDrives = Row("去除本地磁盘重复显示", "保留", SettingCatalog.HideDuplicateRemovableDrives);
+    private readonly SettingRow _noRunMru = Row("「运行」对话框不显示历史", "保留", SettingCatalog.DisableRunDialogHistory);
+    private readonly SettingRow _mergeSvchost = Row("合并 svchost 进程", "默认拆分", SettingCatalog.MergeSvchostProcesses);
+    private readonly SettingRow _trkWks = Row("禁用 NTFS 分布式链接跟踪", "启用", SettingCatalog.DisableDistributedLinkTracking);
+    private readonly SettingRow _noLowDisk = Row("禁用磁盘空间不足警告", "提示", SettingCatalog.DisableLowDiskSpaceChecks);
+    private readonly SettingRow _usbPowerOff = Row("弹出 USB 后彻底断电", "保持供电", SettingCatalog.UsbFullPowerOff);
+    private readonly SettingRow _autoReboot = Row("蓝屏时自动重启", "停留蓝屏", SettingCatalog.AutoRebootOnCrash);
+    private readonly SettingRow _cliTelemetry = Row("关闭 .NET / PowerShell 遥测", "允许", SettingCatalog.DisableDotNetPowerShellTelemetry);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -282,6 +294,8 @@ internal sealed class MainForm : Form
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
+        _noBrokenLnk, _sepProcess, _autoRestartShell, _hideSpotlight, _noDupDrives, _noRunMru,
+        _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
@@ -330,13 +344,13 @@ internal sealed class MainForm : Form
                 _meltdown, _hvci, _wdac, _vbs, _sysRestore,
             ]),
             ("磁盘与文件", [
-                _longPaths, _ntfsStamp, _reservedStorage, _srvSplit,
+                _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
             ]),
             ("启动与维护", [
-                _autoMaint, _utc, _hpet, _loginVerbose, _f8,
+                _autoMaint, _utc, _hpet, _loginVerbose, _f8, _autoReboot,
             ]),
             ("少用服务", [
-                _xbox, _fax, _wmpShare,
+                _xbox, _fax, _wmpShare, _trkWks,
             ]),
         ]));
         _groups.Add(("桌面外观", [
@@ -362,12 +376,14 @@ internal sealed class MainForm : Form
         _groups.Add(("资源管理器", [
             ("常用显示", [
                 _fileExt, _hiddenFiles, _fullPath, _hideOs, _launchThisPc,
+                _hideSpotlight, _noDupDrives, _noLowDisk,
             ]),
             ("快速访问", [
-                _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly,
+                _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly, _noRunMru,
             ]),
             ("快捷方式与布局", [
-                _noArrow, _noSuffix, _noShield, _win11Explorer, _classicMenu, _onedrive,
+                _noArrow, _noSuffix, _noShield, _noBrokenLnk, _sepProcess,
+                _autoRestartShell, _win11Explorer, _classicMenu, _onedrive,
             ]),
             ("任务栏", [
                 _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbCopilot,
@@ -385,7 +401,7 @@ internal sealed class MainForm : Form
                 _ra,
             ]),
             ("电源与休眠", [
-                _hibernate, _fastStartup,
+                _hibernate, _fastStartup, _usbPowerOff,
             ]),
             ("后台服务与内存", [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
@@ -399,7 +415,7 @@ internal sealed class MainForm : Form
                 _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi,
             ]),
             ("隐私数据", [
-                _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel,
+                _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel, _cliTelemetry,
             ]),
             ("输入法与键盘", [
                 _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys,
@@ -2379,6 +2395,18 @@ internal sealed class MainForm : Form
         _insider.Checked = s.DisableInsiderService;
         _storeUpd.Checked = s.DisableStoreAutoUpdate;
         _news.Checked = s.DisableNewsInterests;
+        _noBrokenLnk.Checked = s.DisableBrokenShortcutTracking;
+        _sepProcess.Checked = s.ExplorerSeparateProcess;
+        _autoRestartShell.Checked = s.AutoRestartExplorer;
+        _hideSpotlight.Checked = s.HideDesktopSpotlight;
+        _noDupDrives.Checked = s.HideDuplicateRemovableDrives;
+        _noRunMru.Checked = s.DisableRunDialogHistory;
+        _mergeSvchost.Checked = s.MergeSvchostProcesses;
+        _trkWks.Checked = s.DisableDistributedLinkTracking;
+        _noLowDisk.Checked = s.DisableLowDiskSpaceChecks;
+        _usbPowerOff.Checked = s.UsbFullPowerOff;
+        _autoReboot.Checked = s.AutoRebootOnCrash;
+        _cliTelemetry.Checked = s.DisableDotNetPowerShellTelemetry;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -2506,6 +2534,18 @@ internal sealed class MainForm : Form
         DisableInsiderService = _insider.Checked,
         DisableStoreAutoUpdate = _storeUpd.Checked,
         DisableNewsInterests = _news.Checked,
+        DisableBrokenShortcutTracking = _noBrokenLnk.Checked,
+        ExplorerSeparateProcess = _sepProcess.Checked,
+        AutoRestartExplorer = _autoRestartShell.Checked,
+        HideDesktopSpotlight = _hideSpotlight.Checked,
+        HideDuplicateRemovableDrives = _noDupDrives.Checked,
+        DisableRunDialogHistory = _noRunMru.Checked,
+        MergeSvchostProcesses = _mergeSvchost.Checked,
+        DisableDistributedLinkTracking = _trkWks.Checked,
+        DisableLowDiskSpaceChecks = _noLowDisk.Checked,
+        UsbFullPowerOff = _usbPowerOff.Checked,
+        AutoRebootOnCrash = _autoReboot.Checked,
+        DisableDotNetPowerShellTelemetry = _cliTelemetry.Checked,
         TaskbarSearchMode = _tbSearch.ChoiceIndex is >= 0 and <= 2 ? _tbSearch.ChoiceIndex : 1,
         TaskbarSearchBox = false,
         ShowThisPcIcon = _thisPc.Checked,

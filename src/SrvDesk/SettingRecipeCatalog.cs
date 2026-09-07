@@ -792,6 +792,102 @@ internal static class SettingRecipeCatalog
             @"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload", 2, 4));
         Add(SettingCatalog.DisableNewsInterests, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests", 0, 1));
+        Add(SettingCatalog.DisableBrokenShortcutTracking, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoResolveTrack", 1),
+                ActionScript.Dword("NoResolveSearch", 1),
+                ActionScript.Dword("LinkResolveIgnoreLinkInfo", 1)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoResolveTrack", 1),
+                ActionScript.Dword("NoResolveSearch", 1),
+                ActionScript.Dword("LinkResolveIgnoreLinkInfo", 1)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoResolveTrack", 0),
+                ActionScript.Dword("NoResolveSearch", 0),
+                ActionScript.Dword("LinkResolveIgnoreLinkInfo", 0)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoResolveTrack", 0),
+                ActionScript.Dword("NoResolveSearch", 0),
+                ActionScript.Dword("LinkResolveIgnoreLinkInfo", 0)),
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.ExplorerSeparateProcess, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "SeparateProcess", 1, 0,
+            "新开的资源管理器窗口生效。"));
+        Add(SettingCatalog.AutoRestartExplorer, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon", "AutoRestartShell", 1, 0));
+        Add(SettingCatalog.HideDesktopSpotlight, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"),
+                ActionScript.Dword("{2cc5ca98-6485-489a-920e-b3e88a6ccce3}", 1)) +
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"),
+                ActionScript.Dword("{2cc5ca98-6485-489a-920e-b3e88a6ccce3}", 1)),
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"),
+                ActionScript.Dword("{2cc5ca98-6485-489a-920e-b3e88a6ccce3}", 0)) +
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu"),
+                ActionScript.Dword("{2cc5ca98-6485-489a-920e-b3e88a6ccce3}", 0)),
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.HideDuplicateRemovableDrives, ActionScript.Reg(
+            ActionScript.HkLmDelete(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}") + "\r\n",
+            ActionScript.HkLm(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\DelegateFolders\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}") + "\r\n",
+            "开启=删除重复盘符委托键；关闭=重建空键。导入后重启资源管理器。"));
+        Add(SettingCatalog.DisableRunDialogHistory, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("Start_TrackProgs", 0)) +
+            ActionScript.HkCuDelete(@"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU") + "\r\n",
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                ActionScript.Dword("Start_TrackProgs", 1)),
+            "开启时清空运行历史；关闭只恢复记录，不还原旧命令。"));
+        Add(SettingCatalog.MergeSvchostProcesses, ActionScript.DwordOnDeleteOff(false,
+            @"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB", unchecked((int)0xFFFFFFFF),
+            "开启=不再按内存拆分 svchost；关闭删除该值以恢复系统默认。重启后生效。"));
+        Add(SettingCatalog.DisableDistributedLinkTracking, ActionScript.Service("TrkWks", enableMeansStart: false));
+        Add(SettingCatalog.DisableLowDiskSpaceChecks, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoLowDiskSpaceChecks", 1)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoLowDiskSpaceChecks", 1)),
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoLowDiskSpaceChecks", 0)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"),
+                ActionScript.Dword("NoLowDiskSpaceChecks", 0)),
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.UsbFullPowerOff, ActionScript.Mixed(
+            ActionScript.WrapReg(ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Services\USB"),
+                ActionScript.Dword("DisableSelectiveSuspend", 1))) +
+            "\r\n" +
+            ActionScript.WrapCmd(
+                "powercfg /SETACVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0\r\n" +
+                "powercfg /SETDCVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0\r\n" +
+                "powercfg /SETACTIVE SCHEME_CURRENT"),
+            ActionScript.WrapReg(ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Services\USB"),
+                ActionScript.Dword("DisableSelectiveSuspend", 0))) +
+            "\r\n" +
+            ActionScript.WrapCmd(
+                "powercfg /SETACVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1\r\n" +
+                "powercfg /SETDCVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1\r\n" +
+                "powercfg /SETACTIVE SCHEME_CURRENT"),
+            "先导注册表再跑电源命令；已插入的 USB 建议重新插拔。"));
+        Add(SettingCatalog.AutoRebootOnCrash, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Control\CrashControl", "AutoReboot", 1, 0));
+        Add(SettingCatalog.DisableDotNetPowerShellTelemetry, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+                ActionScript.Sz("DOTNET_CLI_TELEMETRY_OPTOUT", "1"),
+                ActionScript.Sz("POWERSHELL_TELEMETRY_OPTOUT", "1")),
+            ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+                ActionScript.DeleteValue("DOTNET_CLI_TELEMETRY_OPTOUT"),
+                ActionScript.DeleteValue("POWERSHELL_TELEMETRY_OPTOUT")),
+            "导入后新开终端生效；也可在系统环境变量里核对。"));
 
         return m;
     }

@@ -877,6 +877,96 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo DisableNewsInterests = H(
         "关闭资讯与兴趣/天气动态。", "AllowNewsAndInterests=0。", "任务栏更干净。", "对齐 Optimizer DisableNewsInterests。", "重启资源管理器后生效。", W10De);
 
+    public static readonly SettingHelpInfo DisableBrokenShortcutTracking = H(
+        "禁止资源管理器跟踪或搜索损坏的快捷方式。",
+        "Policies\\Explorer：NoResolveTrack / NoResolveSearch / LinkResolveIgnoreLinkInfo=1。",
+        "打开死链时不再联网解析或全盘搜索，少卡顿、少多余网络请求。",
+        "桌面快捷方式多、网络一般的环境推荐开启。",
+        "重启资源管理器后完全生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo ExplorerSeparateProcess = H(
+        "每个文件夹窗口使用独立的 explorer 进程。",
+        "Explorer\\Advanced SeparateProcess=1。",
+        "单个窗口崩溃不会拖垮整个桌面与任务栏。",
+        "窗口很多时会多占内存；日常桌面推荐开启。",
+        "新开的资源管理器窗口生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo AutoRestartExplorer = H(
+        "资源管理器崩溃后由 Winlogon 自动拉起。",
+        "Winlogon AutoRestartShell=1（多数系统默认已是 1）。",
+        "explorer 异常退出后桌面/任务栏会自己回来，少一次手工重启。",
+        "推荐保持开启。",
+        "立即写入，下次崩溃时生效。");
+
+    public static readonly SettingHelpInfo HideDesktopSpotlight = H(
+        "隐藏桌面「了解此图片」/ Windows 聚焦图标。",
+        "HideDesktopIcons CLSID {2cc5ca98-6485-489a-920e-b3e88a6ccce3}=1。",
+        "桌面少一个推广入口，图标列表更干净。",
+        "Win11 桌面常见；没有该图标时开着也无害。",
+        "重启资源管理器后生效。",
+        W10De);
+
+    public static readonly SettingHelpInfo HideDuplicateRemovableDrives = H(
+        "去掉可移动磁盘在「此电脑」里重复出现的一项。",
+        "删除 DelegateFolders\\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}（键不存在=已优化）。",
+        "插 U 盘时不再看到两个相同盘符。",
+        "出现重复盘符时推荐开启。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo DisableRunDialogHistory = H(
+        "「运行」对话框（Win+R）不再记录与展示历史命令。",
+        "Start_TrackProgs=0，并清空 Explorer\\RunMRU。",
+        "共用机器上别人看不到你跑过的命令。",
+        "经常复用运行历史的可关闭。",
+        "立即清空；新开运行框后不再追加。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo MergeSvchostProcesses = H(
+        "提高 svchost 拆分阈值，减少服务宿主进程数量。",
+        "HKLM\\SYSTEM\\CurrentControlSet\\Control SvcHostSplitThresholdInKB=0xFFFFFFFF（不是 LanmanServer 的 SrvSplit）。",
+        "任务管理器里 svchost 更少，内存碎片略降。",
+        "推荐开启；个别环境需重启后观察服务分组。",
+        "重启后完全生效。");
+
+    public static readonly SettingHelpInfo DisableDistributedLinkTracking = H(
+        "禁用 NTFS 分布式链接跟踪客户端（TrkWks）。",
+        "服务 TrkWks 启动类型=disabled。与「关闭最后访问时间戳」不是同一项。",
+        "少一个常驻服务；快捷方式跨卷移动后不再自动重定向。",
+        "不依赖「移动后快捷方式仍可用」时推荐开启。",
+        "服务停止后生效。");
+
+    public static readonly SettingHelpInfo DisableLowDiskSpaceChecks = H(
+        "不再弹出磁盘空间不足气泡警告。",
+        "Policies\\Explorer NoLowDiskSpaceChecks=1。",
+        "系统盘偏满的桌面少被托盘打断。",
+        "磁盘紧张又希望被提醒时保持关闭。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+
+    public static readonly SettingHelpInfo UsbFullPowerOff = H(
+        "安全弹出 USB 后尽量让端口掉电（指示灯灭）。",
+        "Services\\USB DisableSelectiveSuspend=1，并关闭当前电源方案的 USB 选择性挂起。",
+        "U 盘/移动硬盘弹出后少处于假掉线、灯还亮的状态。",
+        "个别 Hub 仍由硬件供电；推荐在常用 U 盘环境开启。",
+        "立即写入；已插入设备可能需重新插拔。");
+
+    public static readonly SettingHelpInfo AutoRebootOnCrash = H(
+        "发生蓝屏后自动重启，而不是停在蓝屏画面。",
+        "CrashControl AutoReboot=1（多数系统默认已是 1）。",
+        "无人值守或远程桌面机器蓝屏后能自己回来。",
+        "正在抓蓝屏现场、需要看 stop 码时保持关闭。",
+        "立即写入，下次崩溃时生效。");
+
+    public static readonly SettingHelpInfo DisableDotNetPowerShellTelemetry = H(
+        "关闭 .NET CLI 与 PowerShell 遥测。",
+        "机器环境变量 DOTNET_CLI_TELEMETRY_OPTOUT=1、POWERSHELL_TELEMETRY_OPTOUT=1。",
+        "本机跑 dotnet / pwsh 时不再向微软回传使用数据。",
+        "开发机与 Server 桌面都推荐开启。",
+        "新开的终端立即生效；已打开的会话需重开。");
+
     static SettingHelpInfo H(
         string summary,
         string purpose,
