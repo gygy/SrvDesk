@@ -1,4 +1,4 @@
-# git-sync for G:\gitea\win一键优化 (included in Gitea-Git-AutoSync scheduled task)
+# git-sync for G:\gitea\SrvDesk (included in Gitea-Git-AutoSync scheduled task)
 param(
     [string]$Message = "chore: sync workspace changes",
     [string]$RepoRoot = (Join-Path $PSScriptRoot "..")
@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $RepoRoot).Path
 Set-Location $Root
 
-$GiteaRemoteUrl = "ssh://git@192.168.80.3:8022/sheng/win-yijian-youhua.git"
+$GiteaRemoteUrl = "ssh://git@192.168.80.3:8022/sheng/SrvDesk.git"
 $GithubRemoteUrl = "https://github.com/gygy/SrvDesk.git"
 $RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { $GiteaRemoteUrl }
 $Branch = if ($env:GIT_BRANCH) { $env:GIT_BRANCH } else { "main" }

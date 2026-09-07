@@ -1,5 +1,5 @@
 param(
-    [string]$OutDir = (Join-Path $PSScriptRoot "..\src\WinServerOPT")
+    [string]$OutDir = (Join-Path $PSScriptRoot "..\src\SrvDesk")
 )
 
 $dotnet = "$env:LOCALAPPDATA\dotnet\dotnet.exe"

@@ -11,6 +11,6 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\WinServerOPT\BrandPalette.cs" Link="BrandPalette.cs" />
+    <Compile Include="..\..\src\SrvDesk\BrandPalette.cs" Link="BrandPalette.cs" />
   </ItemGroup>
 </Project>

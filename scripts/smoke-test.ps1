@@ -1,10 +1,10 @@
-# Smoke checks for SrvDesk (reflection; works with internal types).
+﻿# Smoke checks for SrvDesk (reflection; works with internal types).
 $ErrorActionPreference = "Stop"
 $dotnet = "$env:LOCALAPPDATA\dotnet\dotnet.exe"
 if (-not (Test-Path $dotnet)) { $dotnet = "dotnet" }
 $repo = Split-Path $PSScriptRoot -Parent
-$proj = Join-Path $repo "src\WinServerOPT\WinServerOPT.csproj"
-$dll = Join-Path $repo "src\WinServerOPT\bin\Release\net48\SrvDesk.exe"
+$proj = Join-Path $repo "src\SrvDesk\SrvDesk.csproj"
+$dll = Join-Path $repo "src\SrvDesk\bin\Release\net48\SrvDesk.exe"
 
 Write-Host "=== Round build ==="
 & $dotnet build $proj -c Release --nologo

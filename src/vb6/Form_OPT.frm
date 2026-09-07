@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin VB.Form Form_OPT
    BorderStyle     =   1  'Fixed Single
-   Caption         =   "Win一键优化"
+   Caption         =   "SrvDesk"
    ClientHeight    =   8385
    ClientWidth     =   9720
    LinkTopic       =   "Form1"
@@ -222,7 +222,7 @@ Begin VB.Form Form_OPT
          Width           =   615
       End
       Begin VB.Label lblVer
-         Caption         =   "Win一键优化"
+         Caption         =   "SrvDesk"
          Height          =   255
          Left            =   6840
          TabIndex        =   26
@@ -375,7 +375,7 @@ Private Sub Form_Load()
     Combo2.AddItem "HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}\IsInstalled"
 
     If Not IsWindowsServer() Then
-        MsgBox "本软件面向 Windows Server。当前系统可能不是 Server 版本。", vbExclamation, "Win一键优化"
+        MsgBox "本软件面向 Windows Server。当前系统可能不是 Server 版本。", vbExclamation, "SrvDesk"
     End If
     Timer1.Enabled = True
 End Sub
