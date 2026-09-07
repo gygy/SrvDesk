@@ -73,6 +73,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             body,
             "内容保存在本机 AppData，不引用外部文件路径。运行通常需要管理员权限。");
 
+        UiBuffer.BindListViewColumnFit(_items, 0, 180);
         KeyDown += OnFormKeyDown;
         Shown += (_, _) =>
         {
@@ -531,10 +532,9 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
     private void LayoutColumns()
     {
         if (_items.Columns.Count < 3) return;
-        var w = Math.Max(400, _items.ClientSize.Width);
-        _items.Columns[0].Width = Math.Max(180, w - 340);
         _items.Columns[1].Width = 120;
         _items.Columns[2].Width = 200;
+        UiBuffer.FitListViewColumn(_items, 0, 180);
     }
 
     private static string? TryClipboardText()

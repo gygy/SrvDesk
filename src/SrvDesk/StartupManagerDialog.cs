@@ -61,11 +61,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         {
             if (_items.Count == 0) RefreshList();
         };
-        Resize += (_, _) =>
-        {
-            if (_list.Columns.Count >= 5)
-                _list.Columns[4].Width = Math.Max(180, _list.ClientSize.Width - 480);
-        };
+        UiBuffer.BindListViewColumnFit(_list, 4, 180);
     }
 
     public void RefreshFromSystem()

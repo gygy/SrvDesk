@@ -64,10 +64,10 @@ internal sealed class SystemInfoDialog : Form
             msinfo.Location = new Point(body.ClientSize.Width - msinfo.Width, body.ClientSize.Height - msinfo.Height);
             copy.Location = new Point(msinfo.Left - copy.Width - 8, msinfo.Top);
             refresh.Location = new Point(copy.Left - refresh.Width - 8, msinfo.Top);
-            if (_list.Columns.Count >= 2)
-                _list.Columns[1].Width = Math.Max(200, _list.ClientSize.Width - _list.Columns[0].Width - 24);
+            UiBuffer.FitListViewColumn(_list, 1, 200);
         }
 
+        UiBuffer.BindListViewColumnFit(_list, 1, 200);
         body.Resize += (_, _) => LayoutButtons();
         Load += (_, _) => LoadInfo();
         Shown += (_, _) => LayoutButtons();

@@ -102,6 +102,7 @@ internal sealed class SoftwareUpdateDialog : Form
             "显示当前版本与新版本 · 可批量更新",
             body,
             "仅列出「常用软件」目录内、且 winget 报告有更新的已安装软件。");
+        UiBuffer.BindListViewColumnFit(_list, 3, 120);
     }
 
     private void SetAll(bool on)

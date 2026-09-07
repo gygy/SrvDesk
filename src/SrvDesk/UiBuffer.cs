@@ -64,6 +64,40 @@ internal static class UiBuffer
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
+    [DllImport("user32.dll")]
+    private static extern bool ShowScrollBar(IntPtr hWnd, int wBar, bool bShow);
+
+    private const int SbHorz = 0;
+
+    /// <summary>
+    /// 指定列铺满剩余宽度，并预留竖向滚动条。
+    /// 否则列按满宽算，竖条一出现就挤出横条，最后一行会被挡住一半。
+    /// </summary>
+    public static void FitListViewColumn(ListView list, int fillColumnIndex, int minWidth = 80)
+    {
+        if (list.Columns.Count <= fillColumnIndex || !list.IsHandleCreated)
+            return;
+        var used = 0;
+        for (var i = 0; i < list.Columns.Count; i++)
+        {
+            if (i == fillColumnIndex) continue;
+            used += list.Columns[i].Width;
+        }
+
+        var avail = list.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - used - 4;
+        list.Columns[fillColumnIndex].Width = Math.Max(minWidth, avail);
+        ShowScrollBar(list.Handle, SbHorz, false);
+    }
+
+    public static void BindListViewColumnFit(ListView list, int fillColumnIndex, int minWidth = 80)
+    {
+        void Fit(object? sender, EventArgs e) => FitListViewColumn(list, fillColumnIndex, minWidth);
+        list.HandleCreated += Fit;
+        list.SizeChanged += Fit;
+        if (list.IsHandleCreated)
+            FitListViewColumn(list, fillColumnIndex, minWidth);
+    }
+
     /// <summary>对已有控件开启双缓冲（无法改类型时用）。</summary>
     public static void Enable(Control control)
     {

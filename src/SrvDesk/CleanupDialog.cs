@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace SrvDesk;
 
 internal sealed class CleanupDialog : Form
@@ -100,8 +98,7 @@ internal sealed class CleanupDialog : Form
             "缓存 · 系统残留 · 临时文件 · 对照 ZyperWin++ 项，占用中的文件会跳过",
             body,
             "清理不可恢复。WinSxS / .NET 镜像较重，请按需勾选。");
-        Shown += (_, _) => FitColumns();
-        Resize += (_, _) => FitColumns();
+        UiBuffer.BindListViewColumnFit(_list, 1, 160);
         FormClosing += (_, e) =>
         {
             if (!_busy) return;
@@ -245,21 +242,6 @@ internal sealed class CleanupDialog : Form
             _cts = null;
         }
     }
-
-    private void FitColumns()
-    {
-        if (_list.Columns.Count < 2 || !_list.IsHandleCreated) return;
-        var avail = _list.ClientSize.Width - SystemInformation.VerticalScrollBarWidth;
-        if (avail <= 0) return;
-        _list.Columns[0].Width = 200;
-        _list.Columns[1].Width = Math.Max(160, avail - _list.Columns[0].Width - 4);
-        ShowScrollBar(_list.Handle, SbHorz, false);
-    }
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowScrollBar(IntPtr hWnd, int wBar, bool bShow);
-
-    private const int SbHorz = 0;
 
     private static string FormatSize(long bytes)
     {

@@ -63,6 +63,7 @@ internal sealed class CustomSoftwareManageDialog : Form
         CancelButton = close;
 
         Controls.AddRange([hint, _list, add, edit, remove, close]);
+        UiBuffer.BindListViewColumnFit(_list, 1, 160);
         ReloadList();
     }
 

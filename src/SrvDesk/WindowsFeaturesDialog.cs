@@ -109,11 +109,7 @@ internal sealed class WindowsFeaturesDialog : Form
             () => BeginLoad());
 
         Shown += (_, _) => BeginLoad();
-        Resize += (_, _) =>
-        {
-            if (_list.Columns.Count > 0)
-                _list.Columns[0].Width = Math.Max(200, _list.ClientSize.Width - 370);
-        };
+        UiBuffer.BindListViewColumnFit(_list, 0, 200);
     }
 
     private void BeginLoad()

@@ -69,6 +69,7 @@ internal sealed class QuickToolsDialog : Form
             body,
             "");
 
+        UiBuffer.BindListViewColumnFit(_list, 2, 120);
         Load += (_, _) =>
         {
             openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
@@ -78,8 +79,7 @@ internal sealed class QuickToolsDialog : Form
         body.Resize += (_, _) =>
         {
             openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
-            if (_list.Columns.Count >= 3)
-                _list.Columns[2].Width = Math.Max(120, _list.ClientSize.Width - _list.Columns[0].Width - _list.Columns[1].Width - 4);
+            UiBuffer.FitListViewColumn(_list, 2, 120);
         };
     }
 
