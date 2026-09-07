@@ -48,6 +48,21 @@ internal static class ApplyLog
         Append(OpsLogPath, FormatLine(message));
     }
 
+    /// <summary>调试日志（需在「程序设置」开启）；同时写入操作日志时请另调 Write。</summary>
+    public static void Debug(string message)
+    {
+        if (!UiPrefs.EnableDebugLog) return;
+        var ctx = string.IsNullOrWhiteSpace(_context) ? "" : $"[{_context}] ";
+        Append(DebugLogPath, FormatLine("DEBUG " + ctx + message));
+    }
+
+    /// <summary>环境不支持 / 无害退出等：记操作日志「跳过」，调试日志留细节，不抛给上层。</summary>
+    public static void SoftSkip(string item, string reason)
+    {
+        Write($"跳过：{item} — {reason}");
+        Debug("SoftSkip " + item + " | " + reason);
+    }
+
     public static void BeginBatch(string action)
     {
         _batchRealChanges = 0;
@@ -319,7 +334,9 @@ internal static class ApplyLog
             {
                 var header = path.IndexOf("变更日志", StringComparison.OrdinalIgnoreCase) >= 0
                     ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n\r\n"
-                    : "# 操作日志\r\n\r\n";
+                    : path.IndexOf("debug.log", StringComparison.OrdinalIgnoreCase) >= 0
+                        ? "# 调试日志 — 命令细节、分支与软跳过原因（程序设置中开启）\r\n\r\n"
+                        : "# 操作日志\r\n\r\n";
                 File.WriteAllText(path, header, Utf8Bom);
             }
             // 追加时不用 BOM，避免中间插入 BOM

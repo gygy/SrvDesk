@@ -217,12 +217,47 @@ internal static class EasySettingsTweaks
         if (port is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
         var old = GetRdpPort();
         SetDword(Hive.HkLm, RdpTcp, "PortNumber", port);
-        Run("netsh", $"advfirewall firewall set rule name=\"Remote Desktop\" new localport={port}");
+        TryUpdateRdpFirewallPort(port);
         ApplyLog.SystemChange(
             $@"HKLM\{RdpTcp}\PortNumber + 防火墙 Remote Desktop 规则",
             "修改 RDP 监听端口",
             old.ToString(),
             port.ToString());
+    }
+
+    private static void TryUpdateRdpFirewallPort(int port)
+    {
+        string[] names =
+        [
+            "Remote Desktop",
+            "远程桌面",
+            "Remote Desktop - User Mode (TCP-In)",
+            "远程桌面 - 用户模式(TCP-In)",
+        ];
+        Exception? last = null;
+        foreach (var name in names)
+        {
+            try
+            {
+                Run("netsh", $"advfirewall firewall set rule name=\"{name}\" new localport={port}");
+                ApplyLog.Debug("RDP 防火墙规则端口已更新：" + name + " → " + port);
+                return;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                ApplyLog.Debug("RDP 防火墙规则失败：" + name + " — " + ex.Message);
+            }
+        }
+
+        if (last is not null && UiPrefs.SoftSkipUnsupported)
+        {
+            ApplyLog.SoftSkip("RDP 端口",
+                "注册表端口已改，防火墙规则名未匹配（可在高级安全防火墙中手动改端口）：" + last.Message);
+            return;
+        }
+
+        if (last is not null) throw last;
     }
 
     public static int GetMaxPrefetchFiles()
@@ -442,6 +477,13 @@ internal static class EasySettingsTweaks
             enable ? "sc config start= auto + start" : "sc config start= disabled + stop",
             ApplyLog.StartTypeLabel(oldStart < 0 ? null : oldStart),
             ApplyLog.StartTypeLabel(newStart));
+        if (oldStart == newStart)
+        {
+            if (enable)
+                Run("sc.exe", $"start {name}");
+            return;
+        }
+
         Run("sc.exe", enable ? $"config {name} start= auto" : $"config {name} start= disabled");
         Run("sc.exe", enable ? $"start {name}" : $"stop {name}");
     }
@@ -501,6 +543,7 @@ internal static class EasySettingsTweaks
 
     private static void Run(string file, string args)
     {
+        ApplyLog.Debug("Run " + file + " " + args);
         using var p = Process.Start(new ProcessStartInfo
         {
             FileName = file,
@@ -514,6 +557,15 @@ internal static class EasySettingsTweaks
         var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit(30_000);
         if (p.ExitCode == 0) return;
+
+        var isSc = file.EndsWith("sc.exe", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(file, "sc", StringComparison.OrdinalIgnoreCase);
+        if (isSc && p.ExitCode is 1056 or 1051 or 1060 or 1062 or 1072)
+        {
+            ApplyLog.Debug($"sc 无害退出码 {p.ExitCode}：{args}");
+            return;
+        }
+
         var detail = (stderr + " " + stdout).Trim();
         if (detail.Length > 200) detail = detail.Substring(0, 200) + "…";
         throw new InvalidOperationException(

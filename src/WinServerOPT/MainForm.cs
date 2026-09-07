@@ -484,6 +484,7 @@ internal sealed class MainForm : Form
     {
         _appMenu.FileImport.Click += (_, _) => ImportProfile();
         _appMenu.FileExport.Click += (_, _) => ExportProfile();
+        _appMenu.FileSettings.Click += (_, _) => ShowAppSettings();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
         _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
@@ -532,6 +533,7 @@ internal sealed class MainForm : Form
         _appMenu.ViewAllOff.Click += (_, _) => SetVisibleAll(false);
         _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
         _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
+        _appMenu.HelpDebugLog.Click += (_, _) => OpenLogFile(ApplyLog.DebugLogFilePath, "调试日志");
         _appMenu.HelpDisclaimer.Click += (_, _) =>
             LegalDocumentDialog.Show(this, "免责声明", "WinOpt.DISCLAIMER.md");
         _appMenu.HelpPrivacy.Click += (_, _) =>
@@ -562,6 +564,25 @@ internal sealed class MainForm : Form
             if (_appMenu.ViewHelpPanel.Checked)
                 _appMenu.ViewHelpPanel.Checked = false;
         };
+    }
+
+    private void ShowAppSettings()
+    {
+        using var d = new AppSettingsDialog();
+        if (d.ShowDialog(this) != DialogResult.OK) return;
+
+        var prefs = UiPrefs.Load();
+        _hideIncompatible.Checked = prefs.HideIncompatibleByDefault;
+        _appMenu.ViewHideIncompatible.Checked = prefs.HideIncompatibleByDefault;
+        ApplyConfigScriptDock(UiPrefs.GetDock(prefs), fromUser: true);
+        if (_appMenu.ViewHelpPanel.Checked != prefs.ShowHelpPanel)
+            _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
+        else
+            SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+
+        _status.Text = prefs.EnableDebugLog
+            ? "程序设置已保存 · 调试日志已开启（帮助 → 调试日志）"
+            : "程序设置已保存";
     }
 
     private void OpenLogFile(string path, string title)
@@ -838,7 +859,13 @@ internal sealed class MainForm : Form
                 });
         }
 
+        // 程序设置：默认隐藏不适用项（Server Core 上面已强制勾选）
+        if (_systemFacts.HasDesktopExperience && UiPrefs.Load().HideIncompatibleByDefault)
+            _hideIncompatible.Checked = true;
+
         ApplyLog.Write("启动 " + _systemFacts.Summary);
+        if (UiPrefs.EnableDebugLog)
+            ApplyLog.Debug("启动调试会话 · " + _systemFacts.Summary);
         UseWaitCursor = false;
         Cursor = Cursors.Default;
         // 后台预热常用软件状态，点击打开时尽量秒开

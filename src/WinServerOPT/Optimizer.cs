@@ -405,7 +405,7 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
         Do(Ch(x => x.ShowProcessorBoostMode), "处理器提升模式可见", () =>
             SetDword(Hive.HkLm, ProcessorBoostModeKey, "Attributes", s.ShowProcessorBoostMode ? 2 : 1));
-        Do(Ch(x => x.DisableHibernate), "休眠", () => Run("powercfg.exe", s.DisableHibernate ? "-h off" : "-h on"));
+        Do(Ch(x => x.DisableHibernate), "休眠", () => SetHibernate(!s.DisableHibernate));
         Do(Ch(x => x.TcpOptimized), "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
         Do(Ch(x => x.QosSpeedOptimize), "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));
         Do(Ch(x => x.DisableErrorReport), "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
@@ -866,25 +866,96 @@ internal static class Optimizer
         }
     }
 
+    private static void SetHibernate(bool enable)
+    {
+        try
+        {
+            Run("powercfg.exe", enable ? "-h on" : "-h off");
+        }
+        catch (Exception ex) when (IsHibernateUnsupported(ex) && UiPrefs.SoftSkipUnsupported)
+        {
+            ApplyLog.SoftSkip("休眠",
+                enable
+                    ? "本机不支持开启休眠（固件/虚拟机）：" + TrimOneLine(ex.Message)
+                    : "本机无法关闭休眠文件（固件/虚拟机不支持）：" + TrimOneLine(ex.Message));
+        }
+    }
+
+    private static bool IsHibernateUnsupported(Exception ex)
+    {
+        var m = ex.Message ?? "";
+        return m.IndexOf("不支持该请求", StringComparison.Ordinal) >= 0
+            || m.IndexOf("不支持休眠", StringComparison.Ordinal) >= 0
+            || m.IndexOf("虚拟机", StringComparison.Ordinal) >= 0
+            || m.IndexOf("hypervisor", StringComparison.OrdinalIgnoreCase) >= 0
+            || m.IndexOf("firmware", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static string TrimOneLine(string text)
+    {
+        var t = text.Replace("\r", " ").Replace("\n", " ").Trim();
+        while (t.IndexOf("  ", StringComparison.Ordinal) >= 0)
+            t = t.Replace("  ", " ");
+        return t.Length > 160 ? t.Substring(0, 160) + "…" : t;
+    }
+
     private static void SetRdp(bool enable)
     {
         SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", enable ? 0 : 1);
-        Run("netsh.exe", enable
-            ? "advfirewall firewall set rule group=\"remote desktop\" new enable=Yes"
-            : "advfirewall firewall set rule group=\"remote desktop\" new enable=No");
+        // 中英文系统防火墙规则组名不同；注册表已写入，规则组匹配失败时软跳过
+        SetFirewallGroup(enable,
+            "remote desktop",
+            "远程桌面",
+            "Remote Desktop");
     }
 
     private static void SetNetworkDiscovery(bool enable)
     {
         SetService("fdPHost", enable, disableWhenOff: false);
         SetService("FDResPub", enable, disableWhenOff: false);
-        Run("netsh.exe", enable
-            ? "advfirewall firewall set rule group=\"network discovery\" new enable=Yes"
-            : "advfirewall firewall set rule group=\"network discovery\" new enable=No");
-        Run("netsh.exe", enable
-            ? "advfirewall firewall set rule group=\"file and printer sharing\" new enable=Yes"
-            : "advfirewall firewall set rule group=\"file and printer sharing\" new enable=No");
+        SetFirewallGroup(enable,
+            "network discovery",
+            "网络发现",
+            "Network Discovery");
+        SetFirewallGroup(enable,
+            "file and printer sharing",
+            "文件和打印机共享",
+            "File and Printer Sharing");
     }
+
+    private static void SetFirewallGroup(bool enable, params string[] groupNames)
+    {
+        Exception? last = null;
+        foreach (var g in groupNames)
+        {
+            try
+            {
+                Run("netsh.exe",
+                    "advfirewall firewall set rule group=\"" + g + "\" new enable=" + (enable ? "Yes" : "No"));
+                ApplyLog.Debug("防火墙组 OK：" + g + " → " + (enable ? "Yes" : "No"));
+                return;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                ApplyLog.Debug("防火墙组失败：" + g + " — " + ex.Message);
+            }
+        }
+
+        if (last is null) return;
+        if (UiPrefs.SoftSkipUnsupported)
+        {
+            ApplyLog.SoftSkip(ItemOr("防火墙"),
+                "未找到匹配的规则组（已尝试：" + string.Join(" / ", groupNames) + "）。注册表项如已写入可忽略。" +
+                TrimOneLine(last.Message));
+            return;
+        }
+
+        throw last;
+    }
+
+    private static string ItemOr(string fallback) =>
+        string.IsNullOrWhiteSpace(ApplyLog.CurrentContext) ? fallback : ApplyLog.CurrentContext!;
 
     private static void SetTelemetry(bool enable)
     {
@@ -1153,15 +1224,27 @@ internal static class Optimizer
             ? "sc config start= auto + start"
             : $"sc stop + config start= {(disableWhenOff ? "disabled" : "demand")}";
         ApplyLog.ServiceChange(name, detail, ApplyLog.StartTypeLabel(oldStart), ApplyLog.StartTypeLabel(newStart));
+
+        // 启动类型已一致：不必再 sc config；启用时尝试 start（已在运行则忽略）
+        if (oldStart == newStart)
+        {
+            if (enable)
+            {
+                ApplyLog.Debug($"服务 {name} 启动类型已是目标，仅尝试 start");
+                RunScAllowBenign($"start {name}");
+            }
+            return;
+        }
+
         if (enable)
         {
-            Run("sc.exe", $"config {name} start= auto");
-            Run("sc.exe", $"start {name}");
+            RunScAllowBenign($"config {name} start= auto");
+            RunScAllowBenign($"start {name}");
         }
         else
         {
-            Run("sc.exe", $"stop {name}");
-            Run("sc.exe", $"config {name} start= {(disableWhenOff ? "disabled" : "demand")}");
+            RunScAllowBenign($"stop {name}");
+            RunScAllowBenign($"config {name} start= {(disableWhenOff ? "disabled" : "demand")}");
         }
     }
 
@@ -1171,21 +1254,65 @@ internal static class Optimizer
             enable ? "启用音频服务" : "禁用音频服务");
         if (enable)
         {
-            Run("sc.exe", "config AudioSrv start= auto");
-            Run("sc.exe", "config AudioEndpointBuilder start= auto");
-            Run("sc.exe", "start AudioSrv");
+            RunScAllowBenign("config AudioSrv start= auto");
+            RunScAllowBenign("config AudioEndpointBuilder start= auto");
+            RunScAllowBenign("start AudioSrv");
         }
         else
         {
-            Run("sc.exe", "stop AudioSrv");
-            Run("sc.exe", "stop AudioEndpointBuilder");
-            Run("sc.exe", "config AudioSrv start= disabled");
-            Run("sc.exe", "config AudioEndpointBuilder start= disabled");
+            RunScAllowBenign("stop AudioSrv");
+            RunScAllowBenign("stop AudioEndpointBuilder");
+            RunScAllowBenign("config AudioSrv start= disabled");
+            RunScAllowBenign("config AudioEndpointBuilder start= disabled");
         }
+    }
+
+    private static void RunScAllowBenign(string arguments)
+    {
+        try
+        {
+            Run("sc.exe", arguments);
+        }
+        catch (Exception ex) when (IsScAccessDenied(ex) && UiPrefs.SoftSkipUnsupported)
+        {
+            // msiserver 等受保护服务：改注册表 Start 作兜底
+            ApplyLog.Debug("sc 拒绝访问，尝试注册表兜底：" + arguments + " | " + ex.Message);
+            if (!TryApplyServiceStartFromScArgs(arguments))
+                throw;
+            ApplyLog.SoftSkip("服务", "sc 拒绝访问，已用注册表写入 Start：" + arguments);
+        }
+    }
+
+    private static bool IsScAccessDenied(Exception ex)
+    {
+        var m = ex.Message ?? "";
+        return m.IndexOf("退出码 5", StringComparison.Ordinal) >= 0
+            || m.IndexOf("拒绝访问", StringComparison.Ordinal) >= 0
+            || m.IndexOf("Access is denied", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static bool TryApplyServiceStartFromScArgs(string arguments)
+    {
+        // 例：config msiserver start= auto | demand | disabled
+        var parts = arguments.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 4 || !parts[0].Equals("config", StringComparison.OrdinalIgnoreCase))
+            return false;
+        var svc = parts[1];
+        var startIdx = Array.FindIndex(parts, p => p.Equals("start=", StringComparison.OrdinalIgnoreCase));
+        if (startIdx < 0 || startIdx + 1 >= parts.Length) return false;
+        var mode = parts[startIdx + 1];
+        var dword = mode.Equals("auto", StringComparison.OrdinalIgnoreCase) ? 2
+            : mode.Equals("demand", StringComparison.OrdinalIgnoreCase) ? 3
+            : mode.Equals("disabled", StringComparison.OrdinalIgnoreCase) ? 4
+            : -1;
+        if (dword < 0) return false;
+        SetDword(Hive.HkLm, $@"SYSTEM\CurrentControlSet\Services\{svc}", "Start", dword);
+        return true;
     }
 
     private static void Run(string fileName, string arguments)
     {
+        ApplyLog.Debug("Run " + fileName + " " + arguments);
         using var p = Process.Start(new ProcessStartInfo
         {
             FileName = fileName,
@@ -1200,10 +1327,14 @@ internal static class Optimizer
         p.WaitForExit(60_000);
         if (p.ExitCode == 0) return;
 
-        // sc：已停止/已启动等常见无害退出码
+        // sc：已启动/已停止/依赖占用停止/服务不存在 等常见无害码
         var isSc = fileName.EndsWith("sc.exe", StringComparison.OrdinalIgnoreCase)
             || string.Equals(fileName, "sc", StringComparison.OrdinalIgnoreCase);
-        if (isSc && p.ExitCode is 1056 or 1060 or 1062) return;
+        if (isSc && p.ExitCode is 1056 or 1051 or 1060 or 1062 or 1072)
+        {
+            ApplyLog.Debug($"sc 无害退出码 {p.ExitCode}：{arguments}");
+            return;
+        }
 
         var detail = (stderr + " " + stdout).Trim();
         if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";

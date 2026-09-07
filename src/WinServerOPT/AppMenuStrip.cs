@@ -5,6 +5,7 @@ internal sealed class AppMenuStrip : MenuStrip
 {
     public ToolStripMenuItem FileImport { get; }
     public ToolStripMenuItem FileExport { get; }
+    public ToolStripMenuItem FileSettings { get; }
     public ToolStripMenuItem ToolAutologon { get; }
     public ToolStripMenuItem ToolIdentity { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
@@ -34,6 +35,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem PresetRoot { get; }
     public ToolStripMenuItem HelpChangeLog { get; }
     public ToolStripMenuItem HelpLog { get; }
+    public ToolStripMenuItem HelpDebugLog { get; }
     public ToolStripMenuItem HelpDisclaimer { get; }
     public ToolStripMenuItem HelpPrivacy { get; }
     public ToolStripMenuItem HelpLicense { get; }
@@ -51,7 +53,8 @@ internal sealed class AppMenuStrip : MenuStrip
         var file = new ToolStripMenuItem("文件(&F)");
         FileImport = Item("导入配置(&O)...", MenuIcons.Import, Keys.Control | Keys.O);
         FileExport = Item("导出配置(&S)...", MenuIcons.Export, Keys.Control | Keys.S);
-        file.DropDownItems.AddRange([FileImport, FileExport]);
+        FileSettings = Item("程序设置(&P)...", MenuIcons.Advanced);
+        file.DropDownItems.AddRange([FileImport, FileExport, new ToolStripSeparator(), FileSettings]);
 
         var tools = new ToolStripMenuItem("工具(&T)");
         ToolAutologon = Item("Autologon 配置...", MenuIcons.Autologon);
@@ -108,12 +111,13 @@ internal sealed class AppMenuStrip : MenuStrip
         var help = new ToolStripMenuItem("帮助(&H)");
         HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
         HelpLog = Item("操作日志...", MenuIcons.HelpLog);
+        HelpDebugLog = Item("调试日志...", MenuIcons.HelpLog);
         HelpDisclaimer = Item("免责声明...", MenuIcons.HelpUsage);
         HelpPrivacy = Item("隐私说明...", MenuIcons.HelpLegend);
         HelpLicense = Item("许可证...", MenuIcons.HelpChangeLog);
         HelpSupport = Item("支持", MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
-            HelpChangeLog, HelpLog,
+            HelpChangeLog, HelpLog, HelpDebugLog,
             new ToolStripSeparator(),
             HelpDisclaimer, HelpPrivacy, HelpLicense,
             new ToolStripSeparator(),
