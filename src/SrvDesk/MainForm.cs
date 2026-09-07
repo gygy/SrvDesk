@@ -2906,7 +2906,9 @@ internal sealed class MainForm : Form
                 };
                 foreach (var opt in options)
                     _choice.Items.Add(opt);
-                var init = optimizedIndex < 0 ? 0 : (optimizedIndex >= options.Length ? options.Length - 1 : optimizedIndex);
+                // 先落在系统默认档，等 Bind(Optimizer.Read) 再改成实际当前值。
+                // 切勿初始化为 optimizedIndex，否则打开瞬间会显示「已优化」。
+                var init = _offIndex < 0 ? 0 : (_offIndex >= options.Length ? options.Length - 1 : _offIndex);
                 _choice.SelectedIndex = init;
                 _choice.SelectedIndexChanged += (_, _) =>
                 {
@@ -2981,8 +2983,8 @@ internal sealed class MainForm : Form
         public void SetSystemDefault(string text) => _system.Text = text;
 
         /// <summary>
-        /// 根据开关是否已是优化建议，刷新「系统当前值」列。
-        /// Checked=true 表示系统当前已是优化建议状态。
+        /// 「系统当前值」列与「设置操作」保持一致。
+        /// 启动/刷新时由 Optimizer.Read 写入开关后再调用；不是写死推荐值。
         /// </summary>
         public void SyncCurrentValueFromState()
         {
