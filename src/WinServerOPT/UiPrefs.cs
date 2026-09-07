@@ -11,7 +11,7 @@ internal enum ConfigScriptDock
     Bottom = 1,
 }
 
-/// <summary>界面偏好（配置脚本面板显隐/宽度/位置等），保存在 %LocalAppData%\WinOpt\ui-prefs.json</summary>
+/// <summary>界面与调试偏好，保存在 %LocalAppData%\WinOpt\ui-prefs.json</summary>
 [DataContract]
 internal sealed class UiPrefsData
 {
@@ -22,6 +22,12 @@ internal sealed class UiPrefsData
     [DataMember] public int HelpPanelHeight { get; set; } = 280;
     /// <summary>0=右侧 1=底部。</summary>
     [DataMember] public int HelpPanelDock { get; set; } = (int)ConfigScriptDock.Right;
+    /// <summary>启动时默认勾选「隐藏不适用项」。</summary>
+    [DataMember] public bool HideIncompatibleByDefault { get; set; } = true;
+    /// <summary>写入 debug.log（命令行、分支、软跳过原因等）。</summary>
+    [DataMember] public bool EnableDebugLog { get; set; }
+    /// <summary>固件不支持休眠、防火墙规则组名不匹配等记为「跳过/提示」，不计入部分失败。</summary>
+    [DataMember] public bool SoftSkipUnsupported { get; set; } = true;
 }
 
 internal static class UiPrefs
@@ -97,6 +103,9 @@ internal static class UiPrefs
         Save(data);
     }
 
+    public static bool EnableDebugLog => Load().EnableDebugLog;
+    public static bool SoftSkipUnsupported => Load().SoftSkipUnsupported;
+
     public static ConfigScriptDock GetDock(UiPrefsData data) =>
         data.HelpPanelDock == (int)ConfigScriptDock.Bottom
             ? ConfigScriptDock.Bottom
@@ -122,5 +131,8 @@ internal static class UiPrefs
         HelpPanelWidth = DefaultHelpPanelWidth,
         HelpPanelHeight = DefaultHelpPanelHeight,
         HelpPanelDock = (int)ConfigScriptDock.Right,
+        HideIncompatibleByDefault = true,
+        EnableDebugLog = false,
+        SoftSkipUnsupported = true,
     };
 }

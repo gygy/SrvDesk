@@ -25,9 +25,12 @@ internal static class ApplyLog
 
     private static string OpsLogPath => Path.Combine(LogDir, "apply.log");
     private static string ChangeLogPath => Path.Combine(LogDir, "变更日志.log");
+    private static string DebugLogPath => Path.Combine(LogDir, "debug.log");
 
     public static string LogFilePath => OpsLogPath;
     public static string ChangeLogFilePath => ChangeLogPath;
+    public static string DebugLogFilePath => DebugLogPath;
+    public static string LogDirectory => LogDir;
     public static string? CurrentContext => _context;
 
     /// <summary>当前批次中「真正发生变更」的条数（不含未变化跳过）。</summary>
