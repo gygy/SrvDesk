@@ -8,7 +8,7 @@ namespace SrvDesk;
 /// - 操作日志 apply.log：启动、打开工具等一般事件
 /// - 变更日志 变更日志.log：仅记录真正改动的值（原来从 xx 变成 yy）
 /// - 调试日志 debug.log：优化项/设置项差分、写入与跳过细节（程序设置中开启）
-/// 目录：%LocalAppData%\SrvDesk\
+/// 目录：与 SrvDesk.exe 同目录（不可写时回退 %LocalAppData%\SrvDesk\）
 /// </summary>
 internal static class ApplyLog
 {
@@ -24,8 +24,7 @@ internal static class ApplyLog
     [ThreadStatic]
     private static bool _debugThisBatch;
 
-    private static string LogDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SrvDesk");
+    private static string LogDir => AppPaths.DataRoot;
 
     private static string OpsLogPath => Path.Combine(LogDir, "apply.log");
     private static string ChangeLogPath => Path.Combine(LogDir, "变更日志.log");

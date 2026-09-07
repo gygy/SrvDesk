@@ -11,7 +11,7 @@ internal enum ConfigScriptDock
     Bottom = 1,
 }
 
-/// <summary>界面与调试偏好，保存在 %LocalAppData%\SrvDesk\ui-prefs.json</summary>
+/// <summary>界面与调试偏好，保存在 exe 同目录 ui-prefs.json（不可写时回退 LocalAppData）。</summary>
 [DataContract]
 internal sealed class UiPrefsData
 {
@@ -39,10 +39,7 @@ internal static class UiPrefs
     public const int MinHelpPanelHeight = 160;
     public const int MaxHelpPanelHeight = 520;
 
-    private static string FilePath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SrvDesk", "ui-prefs.json");
+    private static string FilePath => AppPaths.Combine("ui-prefs.json");
 
     public static UiPrefsData Load()
     {
