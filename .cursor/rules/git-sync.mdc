@@ -1,0 +1,29 @@
+---
+description: SrvDesk 双远程同步：Gitea 完整源码，GitHub 仅公开文档
+alwaysApply: true
+---
+
+# SrvDesk Git 远程与同步
+
+本仓库同时对接 **Gitea（私有，完整源码）** 和 **GitHub（公开，仅文档 + Release exe）**。
+
+## 远程
+
+| 远程 | URL | 推送内容 |
+|------|-----|----------|
+| `origin` | `ssh://git@192.168.80.3:8022/sheng/SrvDesk.git` | `main` 完整源码 |
+| `github` | `https://github.com/gygy/SrvDesk.git` | 仅公开文档（无 `src/`） |
+
+## 同步方式
+
+- 定时任务 `Gitea-Git-AutoSync` 会跑 `scripts/git-sync.ps1`
+- `git-sync.ps1`：先推 Gitea `origin/main`，再调用 `publish-github.ps1`
+- `publish-github.ps1`：从 `main` 生成 `public` 分支，白名单推到 `github/main`
+
+GitHub 白名单：`README.md`、`README_en.md`、`README_cn.md`、`LICENSE`、`DISCLAIMER.md`、`PRIVACY.md`。二进制只走 GitHub Releases（`SrvDesk.exe`）。
+
+## 禁止
+
+- 不要把 `src/`、`scripts/`、完整源码推到 GitHub
+- 不要把 `github` 设为 `origin`，也不要 `git push github main` 直接推当前工作区
+- 手动同步请用 `.\scripts\git-sync.ps1`，不要自己拼双远程 push 命令
