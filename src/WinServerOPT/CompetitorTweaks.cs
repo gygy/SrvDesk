@@ -6,33 +6,35 @@ namespace WinOpt;
 /// <summary>对齐 hellzerg Optimizer / SophiApp 的常用注册表与服务项（文档化策略为主）。</summary>
 internal static class CompetitorTweaks
 {
-    public static void Apply(Optimizer.State s)
+    public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
-        SetCortana(!s.DisableCortana);
-        SetCopilotAi(!s.DisableCopilotAi);
-        SetOfficeTelemetry(!s.DisableOfficeTelemetry);
-        SetUtcTime(s.EnableUtcTime);
-        SetHpet(!s.DisableHpet);
-        SetLoginVerbose(s.EnableLoginVerbose);
-        SetNetworkThrottling(!s.DisableNetworkThrottling);
-        SetGameDvr(!s.DisableGameDvr);
-        SetLocation(!s.DisableLocationTracking);
-        SetConsumerFeatures(!s.DisableConsumerFeatures);
-        SetEdgePreload(!s.DisableEdgePreload);
-        SetTeredo(!s.DisableTeredo);
-        SetClipboardCloud(!s.DisableClipboardCloud);
-        SetNtfsLastAccess(!s.DisableNtfsLastAccess);
-        SetXbox(!s.DisableXboxServices);
-        SetFax(!s.DisableFaxService);
-        SetF8Menu(s.EnableF8BootMenu);
-        ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
-        ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
-        ContextMenuTweaks.SetCopyMoveTo(s.ContextMenuCopyMoveTo);
-        ContextMenuTweaks.SetQuickOpsMenu(s.ContextMenuQuickOps);
-        SetMediaSharing(!s.DisableMediaPlayerSharing);
-        SetInsider(!s.DisableInsiderService);
-        SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
-        SetNewsInterests(!s.DisableNewsInterests);
+        bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+
+        if (D(x => x.DisableCortana)) SetCortana(!s.DisableCortana);
+        if (D(x => x.DisableCopilotAi)) SetCopilotAi(!s.DisableCopilotAi);
+        if (D(x => x.DisableOfficeTelemetry)) SetOfficeTelemetry(!s.DisableOfficeTelemetry);
+        if (D(x => x.EnableUtcTime)) SetUtcTime(s.EnableUtcTime);
+        if (D(x => x.DisableHpet)) SetHpet(!s.DisableHpet);
+        if (D(x => x.EnableLoginVerbose)) SetLoginVerbose(s.EnableLoginVerbose);
+        if (D(x => x.DisableNetworkThrottling)) SetNetworkThrottling(!s.DisableNetworkThrottling);
+        if (D(x => x.DisableGameDvr)) SetGameDvr(!s.DisableGameDvr);
+        if (D(x => x.DisableLocationTracking)) SetLocation(!s.DisableLocationTracking);
+        if (D(x => x.DisableConsumerFeatures)) SetConsumerFeatures(!s.DisableConsumerFeatures);
+        if (D(x => x.DisableEdgePreload)) SetEdgePreload(!s.DisableEdgePreload);
+        if (D(x => x.DisableTeredo)) SetTeredo(!s.DisableTeredo);
+        if (D(x => x.DisableClipboardCloud)) SetClipboardCloud(!s.DisableClipboardCloud);
+        if (D(x => x.DisableNtfsLastAccess)) SetNtfsLastAccess(!s.DisableNtfsLastAccess);
+        if (D(x => x.DisableXboxServices)) SetXbox(!s.DisableXboxServices);
+        if (D(x => x.DisableFaxService)) SetFax(!s.DisableFaxService);
+        if (D(x => x.EnableF8BootMenu)) SetF8Menu(s.EnableF8BootMenu);
+        if (D(x => x.ContextMenuTakeOwnership)) ContextMenuTweaks.SetTakeOwnership(s.ContextMenuTakeOwnership);
+        if (D(x => x.ContextMenuOpenCmd)) ContextMenuTweaks.SetOpenCmd(s.ContextMenuOpenCmd);
+        if (D(x => x.ContextMenuCopyMoveTo)) ContextMenuTweaks.SetCopyMoveTo(s.ContextMenuCopyMoveTo);
+        if (D(x => x.ContextMenuQuickOps)) ContextMenuTweaks.SetQuickOpsMenu(s.ContextMenuQuickOps);
+        if (D(x => x.DisableMediaPlayerSharing)) SetMediaSharing(!s.DisableMediaPlayerSharing);
+        if (D(x => x.DisableInsiderService)) SetInsider(!s.DisableInsiderService);
+        if (D(x => x.DisableStoreAutoUpdate)) SetStoreAutoUpdate(!s.DisableStoreAutoUpdate);
+        if (D(x => x.DisableNewsInterests)) SetNewsInterests(!s.DisableNewsInterests);
     }
 
     public static void ReadInto(Optimizer.State s)

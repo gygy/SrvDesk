@@ -367,6 +367,13 @@ internal static class Optimizer
     /// <param name="baseline">为 null 时写入全部；否则只写入与 baseline 不同的项（本次改过的开关）。</param>
     public static List<string> Apply(State s, State? baseline = null)
     {
+        // 整次应用合并资源管理器重启：只闪一次任务栏，避免「不断抖动」
+        using (DesktopQuickActions.DeferRestarts())
+            return ApplyCore(s, baseline);
+    }
+
+    private static List<string> ApplyCore(State s, State? baseline)
+    {
         var errors = new List<string>();
         LastApplyActionCount = 0;
         bool Ch(Func<State, bool> f) => baseline is null || f(baseline) != f(s);
@@ -544,12 +551,13 @@ internal static class Optimizer
         Do(Ch(x => x.DisableServerBloatFeatures), "Server冗余组件", () => ServerDesktopTweaks.ApplyServerBloatFeatures(s.DisableServerBloatFeatures));
         Do(AnyWin11DesktopChanged(baseline, s), "Win11桌面体验", () =>
         {
-            Win11DesktopTweaks.Apply(s);
-            DesktopQuickActions.RestartExplorer();
+            Win11DesktopTweaks.Apply(s, baseline);
+            if (Win11DesktopTweaks.NeedsExplorerRestart(baseline, s))
+                DesktopQuickActions.RestartExplorer();
         });
         Do(Ch(x => x.DisablePca), "程序兼容性助手", () => SetService("PcaSvc", !s.DisablePca, disableWhenOff: true));
-        Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s));
-        Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s));
+        Do(AnyEasySettingsChanged(baseline, s), "轻松设置扩展项", () => EasySettingsTweaks.Apply(s, baseline));
+        Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s, baseline));
         return errors;
     }
 

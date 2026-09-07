@@ -27,79 +27,135 @@ internal static class EasySettingsTweaks
     private const string InputPersonalizationCu = @"Software\Microsoft\Input\Personalization";
     private const string InputPersonalizationPol = @"SOFTWARE\Policies\Microsoft\InputPersonalization";
 
-    public static void ApplyExplorerBits(Optimizer.State s)
+    public static void ApplyExplorerBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
-        SetDword(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", s.HideProtectedOsFiles ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdv, "IconsOnly", s.AlwaysShowIconsNeverThumbnails ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", s.ShowEmptyDrives ? 0 : 1);
-        SetDword(Hive.HkCu, Explorer, "ShowRecent", s.ShowRecentFiles ? 1 : 0);
-        // 与「开始屏幕不显示/恢复最近使用的文件」.reg 对齐：同步 Start_TrackDocs
-        SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackDocs", s.ShowRecentFiles ? 1 : 0);
-        SetDword(Hive.HkCu, Explorer, "ShowFrequent", s.ShowFrequentPlaces ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
-        SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
-        SetDword(Hive.HkCu, NotepadKey, "StatusBar", s.NotepadStatusBar ? 1 : 0);
+        bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+
+        if (D(x => x.HideProtectedOsFiles))
+            SetDword(Hive.HkCu, ExplorerAdv, "ShowSuperHidden", s.HideProtectedOsFiles ? 0 : 1);
+        if (D(x => x.AlwaysShowIconsNeverThumbnails))
+            SetDword(Hive.HkCu, ExplorerAdv, "IconsOnly", s.AlwaysShowIconsNeverThumbnails ? 1 : 0);
+        if (D(x => x.ShowEmptyDrives))
+            SetDword(Hive.HkCu, ExplorerAdv, "HideDrivesWithNoMedia", s.ShowEmptyDrives ? 0 : 1);
+        if (D(x => x.ShowRecentFiles))
+        {
+            SetDword(Hive.HkCu, Explorer, "ShowRecent", s.ShowRecentFiles ? 1 : 0);
+            // 与「开始屏幕不显示/恢复最近使用的文件」.reg 对齐：同步 Start_TrackDocs
+            SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackDocs", s.ShowRecentFiles ? 1 : 0);
+        }
+        if (D(x => x.ShowFrequentPlaces))
+            SetDword(Hive.HkCu, Explorer, "ShowFrequent", s.ShowFrequentPlaces ? 1 : 0);
+        if (D(x => x.HideOfficeCloudFiles))
+            SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
+        if (D(x => x.DisableOneDrive))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
+        if (D(x => x.HideTaskbarChat))
+            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
+        if (D(x => x.HideTaskbarCopilot))
+            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
+        if (D(x => x.NotepadWordWrap))
+            SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
+        if (D(x => x.NotepadStatusBar))
+            SetDword(Hive.HkCu, NotepadKey, "StatusBar", s.NotepadStatusBar ? 1 : 0);
     }
 
-    public static void ApplyPrivacyBits(Optimizer.State s)
+    public static void ApplyPrivacyBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
-        SetDword(Hive.HkLm, SearchPol, "AllowCloudSearch", s.DisableCloudSearch ? 0 : 1);
-        SetDword(Hive.HkLm, SearchPol, "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", s.DisableWebSearch ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
-        SetDword(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", s.DisableWebsiteLangList ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", s.DisableAppLaunchTracking ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled", s.DisableSettingsSuggestions ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", s.DisableSettingsSuggestions ? 0 : 1);
-        // 墨迹/键入个性化：机器策略 + 当前用户（与常见隐私 .reg 对齐）
-        SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
-        SetDword(Hive.HkCu, TextInputPolicy, "AllowLinguisticDataCollection", s.DisableInkingPersonalization ? 0 : 1);
+        bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
 
-        // 微软拼音：默认英文 / 云候选与见解 / 工具条
-        SetDword(Hive.HkCu, ChsIme, "Default Mode", s.MsPinyinDefaultEnglish ? 1 : 0);
+        if (D(x => x.DisableCloudSearch))
+            SetDword(Hive.HkLm, SearchPol, "AllowCloudSearch", s.DisableCloudSearch ? 0 : 1);
+        if (D(x => x.DisableWebSearch))
+        {
+            SetDword(Hive.HkLm, SearchPol, "DisableWebSearch", s.DisableWebSearch ? 1 : 0);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BingSearchEnabled", s.DisableWebSearch ? 0 : 1);
+        }
+        if (D(x => x.DisableSearchHistory))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
+        if (D(x => x.DisableWebsiteLangList))
+            SetDword(Hive.HkCu, @"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", s.DisableWebsiteLangList ? 1 : 0);
+        if (D(x => x.DisableAppLaunchTracking))
+            SetDword(Hive.HkCu, ExplorerAdv, "Start_TrackProgs", s.DisableAppLaunchTracking ? 0 : 1);
+        if (D(x => x.DisableSettingsSuggestions))
+        {
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled", s.DisableSettingsSuggestions ? 0 : 1);
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SystemPaneSuggestionsEnabled", s.DisableSettingsSuggestions ? 0 : 1);
+        }
+        if (D(x => x.DisableInkingPersonalization))
+        {
+            // 墨迹/键入个性化：机器策略 + 当前用户（与常见隐私 .reg 对齐）
+            SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
+            SetDword(Hive.HkLm, InputPersonalizationPol, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
+            SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitInkCollection", s.DisableInkingPersonalization ? 1 : 0);
+            SetDword(Hive.HkCu, InputPersonalizationCu, "RestrictImplicitTextCollection", s.DisableInkingPersonalization ? 1 : 0);
+            SetDword(Hive.HkCu, TextInputPolicy, "AllowLinguisticDataCollection", s.DisableInkingPersonalization ? 0 : 1);
+        }
 
-        SetDword(Hive.HkCu, ChsIme, "Enable Cloud Candidate", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
-        SetDword(Hive.HkCu, CpssCloudCandidate, "Value", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
-        SetDword(Hive.HkCu, InputSettings, "MultilingualEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
-        SetDword(Hive.HkCu, InputSettings, "EnableHwkbTextPrediction", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
-        SetDword(Hive.HkCu, InputSettings, "InsightsEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
-        SetDword(Hive.HkCu, InputSettings, "EnableTypingInsights", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        if (D(x => x.MsPinyinDefaultEnglish))
+            SetDword(Hive.HkCu, ChsIme, "Default Mode", s.MsPinyinDefaultEnglish ? 1 : 0);
 
-        SetDword(Hive.HkCu, ChsIme, "ToolBarEnabled", s.DisableMsPinyinToolbar ? 0 : 1);
-        SetDword(Hive.HkCu, LangBarHelpItem, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
-        SetDword(Hive.HkCu, InputSettings, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
+        if (D(x => x.DisableMsPinyinCloudAndInsights))
+        {
+            SetDword(Hive.HkCu, ChsIme, "Enable Cloud Candidate", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+            SetDword(Hive.HkCu, CpssCloudCandidate, "Value", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+            SetDword(Hive.HkCu, InputSettings, "MultilingualEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+            SetDword(Hive.HkCu, InputSettings, "EnableHwkbTextPrediction", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+            SetDword(Hive.HkCu, InputSettings, "InsightsEnabled", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+            SetDword(Hive.HkCu, InputSettings, "EnableTypingInsights", s.DisableMsPinyinCloudAndInsights ? 0 : 1);
+        }
 
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
-        Win11DesktopTweaks.SetFeatureUpdatePause(s.PauseFeatureUpdatesUntil2035);
-        Win11DesktopTweaks.SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
+        if (D(x => x.DisableMsPinyinToolbar))
+        {
+            SetDword(Hive.HkCu, ChsIme, "ToolBarEnabled", s.DisableMsPinyinToolbar ? 0 : 1);
+            SetDword(Hive.HkCu, LangBarHelpItem, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
+            SetDword(Hive.HkCu, InputSettings, "DemoteLevel", s.DisableMsPinyinToolbar ? 3 : 0);
+        }
+
+        if (D(x => x.DisableAdTracking))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
+        if (D(x => x.DisableDeliveryOpt))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", s.DisableDeliveryOpt ? 100 : 1);
+        if (D(x => x.ExcludeMsrtFromWu))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU", s.ExcludeMsrtFromWu ? 1 : 0);
+        if (D(x => x.PauseFeatureUpdatesUntil2035))
+            Win11DesktopTweaks.SetFeatureUpdatePause(s.PauseFeatureUpdatesUntil2035);
+        if (D(x => x.PauseWindowsUpdatesUx))
+            Win11DesktopTweaks.SetWindowsUpdateUxPause(s.PauseWindowsUpdatesUx);
     }
 
-    public static void Apply(Optimizer.State s)
+    public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
-        ApplyExplorerBits(s);
-        ApplyPrivacyBits(s);
-        SetMeltdownSpectre(s.DisableMeltdownSpectre);
-        SetHvci(!s.DisableMemoryIntegrity);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", s.DisableWdac ? 0 : 1);
-        SetVbs(!s.DisableVbs);
-        SetTcpBbr2(s.EnableTcpBbr2);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", s.DisableSystemRestore ? 1 : 0);
-        SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\SQMClient\Windows", "CEIPEnable", s.DisableCeip ? 0 : 1);
-        SetService("DPS", !s.DisableDiagnosticPolicy);
+        bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
 
-        SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", s.DisableRemoteAssistance ? 0 : 1);
-        SetMmAgent("MemoryCompression", !s.DisableMemoryCompression);
-        SetMmAgent("ApplicationPreLaunch", !s.DisableAppPrelaunch);
-        SetMmAgent("PageCombining", !s.DisablePageCombining);
-        SetService("UCPD", !s.DisableUcpdDriver);
+        ApplyExplorerBits(s, baseline);
+        ApplyPrivacyBits(s, baseline);
+        if (D(x => x.DisableMeltdownSpectre))
+            SetMeltdownSpectre(s.DisableMeltdownSpectre);
+        if (D(x => x.DisableMemoryIntegrity))
+            SetHvci(!s.DisableMemoryIntegrity);
+        if (D(x => x.DisableWdac))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", s.DisableWdac ? 0 : 1);
+        if (D(x => x.DisableVbs))
+            SetVbs(!s.DisableVbs);
+        if (D(x => x.EnableTcpBbr2))
+            SetTcpBbr2(s.EnableTcpBbr2);
+        if (D(x => x.DisableSystemRestore))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", s.DisableSystemRestore ? 1 : 0);
+        if (D(x => x.DisableCeip))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\SQMClient\Windows", "CEIPEnable", s.DisableCeip ? 0 : 1);
+        if (D(x => x.DisableDiagnosticPolicy))
+            SetService("DPS", !s.DisableDiagnosticPolicy);
+
+        if (D(x => x.DisableRemoteAssistance))
+            SetDword(Hive.HkLm, TermServices, "fAllowToGetHelp", s.DisableRemoteAssistance ? 0 : 1);
+        if (D(x => x.DisableMemoryCompression))
+            SetMmAgent("MemoryCompression", !s.DisableMemoryCompression);
+        if (D(x => x.DisableAppPrelaunch))
+            SetMmAgent("ApplicationPreLaunch", !s.DisableAppPrelaunch);
+        if (D(x => x.DisablePageCombining))
+            SetMmAgent("PageCombining", !s.DisablePageCombining);
+        if (D(x => x.DisableUcpdDriver))
+            SetService("UCPD", !s.DisableUcpdDriver);
     }
 
     /// <summary>仅读资源管理器页开关（纯注册表，无 PowerShell/netsh）。</summary>

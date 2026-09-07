@@ -2675,12 +2675,20 @@ internal sealed class MainForm : Form
             SyncInvisibleRowsFromSystem();
             ApplyLog.BeginBatch(working);
             var target = CaptureState();
-            var errors = Optimizer.Apply(target, _baselineState);
+            // 基线 = 上次从系统同步后的界面快照；只写相对基线有差异的项
+            var baseline = _baselineState;
+            if (baseline is null)
+            {
+                try { baseline = Optimizer.Read(fullScan: false); }
+                catch { /* 保持 null：将写入全部（少见） */ }
+            }
+
+            var errors = Optimizer.Apply(target, baseline);
             ApplyLog.WriteApply(working, errors);
 
             if (Optimizer.LastApplyActionCount == 0 && errors.Count == 0)
             {
-                _status.Text = "没有需要写入的更改（开关相对当前系统未改动）。";
+                _status.Text = "没有需要写入的更改（相对上次同步未改动）。";
                 ok = true;
                 return true;
             }
@@ -2692,9 +2700,9 @@ internal sealed class MainForm : Form
             var changed = ApplyLog.LastBatchRealChangeCount;
             var attempted = Optimizer.LastApplyActionCount;
             _status.Text = errors.Count == 0
-                ? $"{success} 本次写入 {attempted} 项（实际变更 {changed} 条）→ 帮助「打开变更日志」。部分项需注销/重启。"
+                ? $"{success} 仅同步本次改动 {attempted} 项（实际变更 {changed} 条）→ 帮助「变更日志」。"
                 : "部分失败：\r\n" + string.Join("\r\n", errors) +
-                  $"\r\n（本次尝试 {attempted} 项，已写入变更 {changed} 条，见帮助 → 打开变更日志）";
+                  $"\r\n（本次仅改动项 {attempted}，已写入变更 {changed} 条，见帮助 → 变更日志）";
             ok = true;
         }
         catch (Exception ex)

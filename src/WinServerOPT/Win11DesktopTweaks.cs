@@ -13,29 +13,72 @@ internal static class Win11DesktopTweaks
     private const string ClassicMenuClsid = @"Software\Classes\CLSID\{86ca1aa0-3389-4ff8-b098-4136676466e2}\InprocServer32";
     private const string StuckRects = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3";
 
-    public static void Apply(Optimizer.State s)
+    public static void Apply(Optimizer.State s, Optimizer.State? baseline = null)
     {
-        SetDword(Hive.HkCu, ExplorerAdvanced, "AutoCheckSelect", s.ShowItemCheckboxes ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "NavPaneShowAllFolders", s.ShowCommonFolders ? 1 : 0);
-        SetShellIconBlank(77, s.RemoveAdminShield);
-        SetShortcutSuffixOff(s.NoShortcutSuffix);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", s.Win11ExplorerStyle ? 0 : 1);
-        SetClassicContextMenu(s.Win10ClassicContextMenu);
-        SetTaskbarSearchMode(
-            s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
-        SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
-        SetTaskbarAutoHide(s.TaskbarAutoHide);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "ShowTaskViewButton", s.ShowTaskViewButton ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "EndTask", s.TaskbarEndTask ? 1 : 0);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarDa", s.DisableWidgets ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", s.DisableSearchHighlights ? 0 : 1);
-        SetDword(Hive.HkCu, ExplorerAdvanced, "Start_ShowRecentRecommendations", s.DisableRecommendedItems ? 0 : 1);
-        // Start_TrackDocs 由 ShowRecentFiles（开始屏幕最近文件）统一管理，避免两开关互相覆盖
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
-        SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
-        SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
-        // 暂停更新由 EasySettingsTweaks.ApplyPrivacyBits 统一写入，避免误触发资源管理器重启
+        bool D(Func<Optimizer.State, bool> f) => baseline is null || f(baseline) != f(s);
+        bool Di(Func<Optimizer.State, int> f) => baseline is null || f(baseline) != f(s);
+
+        if (D(x => x.ShowItemCheckboxes))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "AutoCheckSelect", s.ShowItemCheckboxes ? 1 : 0);
+        if (D(x => x.ShowCommonFolders))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "NavPaneShowAllFolders", s.ShowCommonFolders ? 1 : 0);
+        if (D(x => x.RemoveAdminShield))
+            SetShellIconBlank(77, s.RemoveAdminShield);
+        if (D(x => x.NoShortcutSuffix))
+            SetShortcutSuffixOff(s.NoShortcutSuffix);
+        if (D(x => x.Win11ExplorerStyle))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "UseCompactMode", s.Win11ExplorerStyle ? 0 : 1);
+        if (D(x => x.Win10ClassicContextMenu))
+            SetClassicContextMenu(s.Win10ClassicContextMenu);
+        if (Di(x => x.TaskbarSearchMode) || D(x => x.TaskbarSearchBox))
+        {
+            SetTaskbarSearchMode(
+                s.TaskbarSearchMode is 0 or 1 or 2 ? s.TaskbarSearchMode : (s.TaskbarSearchBox ? 2 : 1));
+        }
+        if (D(x => x.TaskbarAlignLeft))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarAl", s.TaskbarAlignLeft ? 0 : 1);
+        if (D(x => x.TaskbarCombineAlways))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarGlomLevel", s.TaskbarCombineAlways ? 0 : 2);
+        if (D(x => x.TaskbarAutoHide))
+            SetTaskbarAutoHide(s.TaskbarAutoHide);
+        if (D(x => x.ShowTaskViewButton))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "ShowTaskViewButton", s.ShowTaskViewButton ? 1 : 0);
+        if (D(x => x.TaskbarEndTask))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "EndTask", s.TaskbarEndTask ? 1 : 0);
+        if (D(x => x.DisableWidgets))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "TaskbarDa", s.DisableWidgets ? 0 : 1);
+        if (D(x => x.DisableSearchHighlights))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", s.DisableSearchHighlights ? 0 : 1);
+        if (D(x => x.DisableRecommendedItems))
+            SetDword(Hive.HkCu, ExplorerAdvanced, "Start_ShowRecentRecommendations", s.DisableRecommendedItems ? 0 : 1);
+        if (D(x => x.DisableAdTracking))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", s.DisableAdTracking ? 0 : 1);
+        if (D(x => x.DisableSearchHistory))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", s.DisableSearchHistory ? 0 : 1);
+        if (D(x => x.DisableStickyKeys))
+            SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
+    }
+
+    /// <summary>仅任务栏 / 资源管理器界面相关变更才需要重启 explorer；隐私类开关不必。</summary>
+    public static bool NeedsExplorerRestart(Optimizer.State? b, Optimizer.State s)
+    {
+        if (b is null) return true;
+        return b.ShowItemCheckboxes != s.ShowItemCheckboxes
+            || b.ShowCommonFolders != s.ShowCommonFolders
+            || b.RemoveAdminShield != s.RemoveAdminShield
+            || b.NoShortcutSuffix != s.NoShortcutSuffix
+            || b.Win11ExplorerStyle != s.Win11ExplorerStyle
+            || b.Win10ClassicContextMenu != s.Win10ClassicContextMenu
+            || b.TaskbarSearchBox != s.TaskbarSearchBox
+            || b.TaskbarSearchMode != s.TaskbarSearchMode
+            || b.TaskbarAlignLeft != s.TaskbarAlignLeft
+            || b.TaskbarCombineAlways != s.TaskbarCombineAlways
+            || b.TaskbarAutoHide != s.TaskbarAutoHide
+            || b.ShowTaskViewButton != s.ShowTaskViewButton
+            || b.TaskbarEndTask != s.TaskbarEndTask
+            || b.DisableWidgets != s.DisableWidgets
+            || b.DisableSearchHighlights != s.DisableSearchHighlights
+            || b.DisableRecommendedItems != s.DisableRecommendedItems;
     }
 
     public static bool IsShowItemCheckboxesOn() =>
@@ -463,24 +506,145 @@ internal static class Win11DesktopTweaks
 
 internal static class DesktopQuickActions
 {
+    private static readonly object Sync = new();
+    private static int _deferDepth;
+    private static bool _pendingRestart;
+    private static DateTime _lastRestartUtc = DateTime.MinValue;
+
+    /// <summary>
+    /// 批量应用期间合并多次「重启资源管理器」请求，结束时最多执行一次，避免桌面反复抖动。
+    /// </summary>
+    public static IDisposable DeferRestarts() => new RestartDeferScope();
+
+    /// <summary>请求重启资源管理器；若在 DeferRestarts 内则只记标志，出口时统一执行。</summary>
     public static void RestartExplorer()
     {
+        lock (Sync)
+        {
+            if (_deferDepth > 0)
+            {
+                _pendingRestart = true;
+                ApplyLog.Debug("资源管理器重启已延后（批量写入中）");
+                return;
+            }
+        }
+
+        RestartExplorerCore();
+    }
+
+    /// <summary>广播外壳变更（图标/策略），比杀进程更轻；任务栏类改动仍可能需 RestartExplorer。</summary>
+    public static void NotifyShellChanged()
+    {
+        try
+        {
+            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST | SHCNF_FLUSH, IntPtr.Zero, IntPtr.Zero);
+            _ = SendMessageTimeout(
+                new IntPtr(-1), WM_SETTINGCHANGE, IntPtr.Zero, "Policy",
+                SMTO_ABORTIFHUNG, 1000, out _);
+            _ = SendMessageTimeout(
+                new IntPtr(-1), WM_SETTINGCHANGE, IntPtr.Zero, "TraySettings",
+                SMTO_ABORTIFHUNG, 1000, out _);
+            ApplyLog.Debug("已广播外壳刷新（SHChangeNotify / WM_SETTINGCHANGE）");
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Debug("外壳刷新失败：" + ex.Message);
+        }
+    }
+
+    private static void FlushPendingRestart()
+    {
+        bool need;
+        lock (Sync)
+        {
+            need = _pendingRestart;
+            _pendingRestart = false;
+        }
+
+        if (!need) return;
+        // 先轻量刷新，再必要时杀进程一次
+        NotifyShellChanged();
+        RestartExplorerCore();
+    }
+
+    private static void RestartExplorerCore()
+    {
+        lock (Sync)
+        {
+            // 短时间防抖：系统常会自动拉起 explorer，连杀会反复闪任务栏
+            if ((DateTime.UtcNow - _lastRestartUtc).TotalSeconds < 2.5)
+            {
+                ApplyLog.Debug("跳过重复重启资源管理器（防抖）");
+                return;
+            }
+
+            _lastRestartUtc = DateTime.UtcNow;
+        }
+
         try
         {
             foreach (var proc in Process.GetProcessesByName("explorer"))
             {
-                proc.Kill();
-                proc.WaitForExit(5000);
+                try
+                {
+                    proc.Kill();
+                    proc.WaitForExit(4000);
+                }
+                catch { /* ignore */ }
             }
         }
         catch { /* ignore */ }
 
-        Process.Start(new ProcessStartInfo
+        // 等系统自动拉起外壳；已存在则不再 Start，避免双实例抖动
+        for (var i = 0; i < 20; i++)
         {
-            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
-            UseShellExecute = true,
-        });
-        ApplyLog.Write("重启资源管理器");
+            Thread.Sleep(100);
+            if (Process.GetProcessesByName("explorer").Length > 0)
+            {
+                ApplyLog.Write("重启资源管理器（系统已自动拉起）");
+                ApplyLog.Debug("explorer 已由系统恢复，跳过二次启动");
+                return;
+            }
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
+                UseShellExecute = true,
+            });
+            ApplyLog.Write("重启资源管理器");
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("重启资源管理器失败：" + ex.Message);
+        }
+    }
+
+    private sealed class RestartDeferScope : IDisposable
+    {
+        private bool _disposed;
+
+        public RestartDeferScope()
+        {
+            lock (Sync) _deferDepth++;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            bool flush;
+            lock (Sync)
+            {
+                _deferDepth = Math.Max(0, _deferDepth - 1);
+                flush = _deferDepth == 0 && _pendingRestart;
+            }
+
+            if (flush)
+                FlushPendingRestart();
+        }
     }
 
     public static void RefreshIconCache(IWin32Window? owner)
@@ -548,7 +712,19 @@ internal static class DesktopQuickActions
     private const int SHERB_NOCONFIRMATION = 0x00000001;
     private const int SHERB_NOPROGRESSUI = 0x00000002;
     private const int SHERB_NOSOUND = 0x00000004;
+    private const uint SHCNE_ASSOCCHANGED = 0x08000000;
+    private const uint SHCNF_IDLIST = 0x0000;
+    private const uint SHCNF_FLUSH = 0x1000;
+    private const int WM_SETTINGCHANGE = 0x001A;
+    private const int SMTO_ABORTIFHUNG = 0x0002;
 
     [System.Runtime.InteropServices.DllImport("Shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int SHEmptyRecycleBin(IntPtr hwnd, string? pszRootPath, int dwFlags);
+
+    [System.Runtime.InteropServices.DllImport("Shell32.dll")]
+    private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+    private static extern IntPtr SendMessageTimeout(
+        IntPtr hWnd, int msg, IntPtr wParam, string lParam, int fuFlags, int uTimeout, out IntPtr lpdwResult);
 }
