@@ -2729,6 +2729,9 @@ internal sealed class MainForm : Form
     private sealed class SettingRow
     {
         private readonly ToggleSwitch _toggle;
+        private readonly ComboBox? _choice;
+        private readonly int _optimizedIndex;
+        private readonly int _offIndex;
         private readonly Label _item;
         private readonly Label _scope;
         private readonly Label _info;
@@ -2743,11 +2746,24 @@ internal sealed class MainForm : Form
         public string ItemText { get; }
         public SettingHelpInfo Help { get; }
         public Action<SettingRow>? OnCheckedChanged { get; set; }
+        public bool HasChoice => _choice is not null;
 
         public SettingRow(string item, string systemDefault, SettingHelpInfo help)
+            : this(item, systemDefault, help, null, 1)
+        {
+        }
+
+        public SettingRow(
+            string item,
+            string systemDefault,
+            SettingHelpInfo help,
+            string[]? options,
+            int optimizedIndex)
         {
             ItemText = item;
             Help = help;
+            _optimizedIndex = optimizedIndex;
+            _offIndex = optimizedIndex == 0 ? 1 : 0;
             _item = new Label
             {
                 Text = item,
@@ -2811,6 +2827,26 @@ internal sealed class MainForm : Form
             };
             _toggle = new ToggleSwitch();
             _toggle.CheckedChanged += (_, _) => OnCheckedChanged?.Invoke(this);
+            if (options is { Length: > 0 })
+            {
+                _choice = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Font = new Font("Microsoft YaHei UI", 8.25F),
+                    FlatStyle = FlatStyle.Flat,
+                    IntegralHeight = false,
+                    Cursor = Cursors.Hand,
+                };
+                foreach (var opt in options)
+                    _choice.Items.Add(opt);
+                var init = optimizedIndex < 0 ? 0 : (optimizedIndex >= options.Length ? options.Length - 1 : optimizedIndex);
+                _choice.SelectedIndex = init;
+                _choice.SelectedIndexChanged += (_, _) =>
+                {
+                    SyncCurrentValueFromState();
+                    OnCheckedChanged?.Invoke(this);
+                };
+            }
             _system = new Label
             {
                 Text = systemDefault,
@@ -2832,8 +2868,47 @@ internal sealed class MainForm : Form
 
         public bool Checked
         {
-            get => _toggle.Checked;
-            set => _toggle.Checked = value;
+            get => HasChoice ? ChoiceIndex == _optimizedIndex : _toggle.Checked;
+            set
+            {
+                if (HasChoice)
+                {
+                    var target = value ? _optimizedIndex : _offIndex;
+                    if (_choice!.SelectedIndex != target)
+                        _choice.SelectedIndex = target < 0 ? 0 : (target >= _choice.Items.Count ? _choice.Items.Count - 1 : target);
+                    else
+                        SyncCurrentValueFromState();
+                }
+                else
+                {
+                    _toggle.Checked = value;
+                }
+            }
+        }
+
+        public int ChoiceIndex
+        {
+            get
+            {
+                if (_choice is null)
+                    return _toggle.Checked ? _optimizedIndex : _offIndex;
+                return _choice.SelectedIndex < 0 ? _offIndex : _choice.SelectedIndex;
+            }
+            set
+            {
+                if (_choice is null)
+                {
+                    Checked = value == _optimizedIndex;
+                    return;
+                }
+
+                if (_choice.Items.Count == 0) return;
+                var idx = value < 0 ? 0 : (value >= _choice.Items.Count ? _choice.Items.Count - 1 : value);
+                if (_choice.SelectedIndex != idx)
+                    _choice.SelectedIndex = idx;
+                else
+                    SyncCurrentValueFromState();
+            }
         }
 
         public void SetSystemDefault(string text) => _system.Text = text;
@@ -2844,6 +2919,16 @@ internal sealed class MainForm : Form
         /// </summary>
         public void SyncCurrentValueFromState()
         {
+            if (HasChoice)
+            {
+                var idx = ChoiceIndex;
+                _current.Text = idx >= 0 && idx < _choice!.Items.Count
+                    ? _choice.Items[idx]?.ToString() ?? "—"
+                    : "—";
+                _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
+                return;
+            }
+
             _current.Text = FormatCurrentValue(Checked, _system.Text);
             _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
         }
@@ -2958,8 +3043,17 @@ internal sealed class MainForm : Form
             }
 
             _script.SetBounds(scriptX, (h - 20) / 2, SettingListLayout.ScriptW, 20);
-            _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
-            _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
+            if (HasChoice)
+            {
+                _choice!.Size = new Size(SettingListLayout.ChoiceW, 24);
+                _choice.Location = new Point(SettingListLayout.ChoiceX, (h - _choice.Height) / 2);
+            }
+            else
+            {
+                _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
+                _toggle.Location = new Point(toggleX, (h - _toggle.Height) / 2);
+            }
+
             _system.SetBounds(systemX, 0, SettingListLayout.SystemW, h);
             _current.SetBounds(currentX, 0, SettingListLayout.CurrentW, h);
             _level.SetBounds(levelX, 0, SettingListLayout.LevelW, h);
@@ -2980,6 +3074,8 @@ internal sealed class MainForm : Form
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
             toolTip.SetToolTip(_system, "系统默认值（出厂）");
             toolTip.SetToolTip(_current, "系统当前值（读取自本机）");
+            if (HasChoice)
+                toolTip.SetToolTip(_choice!, "下拉选择设置值");
 
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
@@ -2997,8 +3093,17 @@ internal sealed class MainForm : Form
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
             wrap.Controls.Add(_script);
-            wrap.Controls.Add(_toggle);
-            _toggle.BringToFront();
+            if (HasChoice)
+            {
+                wrap.Controls.Add(_choice!);
+                _choice!.BringToFront();
+            }
+            else
+            {
+                wrap.Controls.Add(_toggle);
+                _toggle.BringToFront();
+            }
+
             wrap.Controls.Add(new Panel
             {
                 BackColor = AppTheme.BorderLight,

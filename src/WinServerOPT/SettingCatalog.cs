@@ -654,7 +654,7 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo TaskbarCombineAlways = H(
         "任务栏按钮始终合并。", "TaskbarGlomLevel=0。", "节省任务栏空间。", "关闭则从不合并。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo TaskbarAutoHide = H(
-        "自动隐藏任务栏。", "StuckRects3 Settings。", "最大化屏幕空间。", "鼠标移至边缘显示。", "重启资源管理器后生效。", W10De);
+        "任务栏显示方式：一直显示或自动隐藏。", "StuckRects3 Settings。", "自动隐藏可最大化屏幕空间。", "鼠标移至边缘临时显示。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo ShowTaskViewButton = H(
         "任务栏显示任务视图按钮。", "ShowTaskViewButton=1。", "多桌面/任务概览。", "不用时可关闭。", "重启资源管理器后生效。", W10De);
     public static readonly SettingHelpInfo TaskbarEndTask = H(

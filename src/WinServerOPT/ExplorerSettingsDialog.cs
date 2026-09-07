@@ -20,7 +20,6 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _win10Explorer = new("紧凑 / Win10 间距");
     private readonly InstantToggleRow _classicMenu = new("Win10 经典右键菜单");
     private readonly InstantToggleRow _onedrive = new("禁止 OneDrive");
-    private readonly InstantToggleRow _autohide = new("自动隐藏任务栏");
     private readonly InstantToggleRow _taskView = new("显示任务视图按钮");
     private readonly InstantToggleRow _chat = new("隐藏任务栏聊天");
     private readonly InstantToggleRow _copilot = new("隐藏任务栏 Copilot");
@@ -30,6 +29,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly ComboBox _searchMode = new();
     private readonly ComboBox _align = new();
     private readonly ComboBox _glom = new();
+    private readonly ComboBox _autohideMode = new();
     private bool _loading;
     private bool _loaded;
     private bool _warmLoadSkip;
@@ -59,7 +59,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         var taskbar = ThemedSettingsChrome.CreateSection("任务栏", [
             BuildSearchRow(), BuildAlignRow(),
             _widgets, _chat, _copilot,
-            _autohide, _taskView, _seconds, BuildGlomRow(),
+            BuildAutohideRow(), _taskView, _seconds, BuildGlomRow(),
         ]);
         var tools = BuildToolsSection();
 
@@ -131,6 +131,13 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         return row;
     }
 
+    private Control BuildAutohideRow()
+    {
+        var row = ThemedSettingsChrome.CreateComboRow("任务栏显示", _autohideMode, ["一直显示", "自动隐藏"]);
+        _autohideMode.SelectedIndexChanged += (_, _) => { /* deferred */ };
+        return row;
+    }
+
     private Panel BuildToolsSection()
     {
         var (card, host) = ThemedSettingsChrome.CreateSectionShell("快捷操作");
@@ -156,7 +163,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
                 _align.SelectedIndex == 0 ? 0 : 1);
             EasySettingsTweaks.SetTaskbarGlomLevel(_glom.SelectedIndex is >= 0 and <= 2 ? _glom.SelectedIndex : 0);
 
-            Win11DesktopTweaks.SetTaskbarAutoHideEnabled(_autohide.Checked);
+            Win11DesktopTweaks.SetTaskbarAutoHideEnabled(_autohideMode.SelectedIndex == 1);
             Win11DesktopTweaks.SetShowTaskViewButton(_taskView.Checked);
             Win11DesktopTweaks.SetDisableWidgets(_widgets.Checked);
             SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSecondsInSystemClock",
@@ -227,7 +234,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), Win11DesktopTweaks.SetRemoveAdminShield);
         _win10Explorer.Bind(!Win11DesktopTweaks.IsWin11ExplorerStyleOn(), Win11DesktopTweaks.SetCompactExplorerSpacing);
         _classicMenu.Bind(Win11DesktopTweaks.IsWin10ClassicContextMenuOn(), Win11DesktopTweaks.SetWin10ClassicContextMenu);
-        _autohide.Bind(Win11DesktopTweaks.IsTaskbarAutoHideOn(), _ => { });
+        _autohideMode.SelectedIndex = Win11DesktopTweaks.IsTaskbarAutoHideOn() ? 1 : 0;
         _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), _ => { });
         _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), _ => { });
         _seconds.Bind(seconds == 1, _ => { });
