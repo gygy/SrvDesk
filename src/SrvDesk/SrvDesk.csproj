@@ -42,6 +42,15 @@
     <EmbeddedResource Include="..\..\DISCLAIMER.md" Link="Legal\DISCLAIMER.md" LogicalName="SrvDesk.DISCLAIMER.md" />
     <EmbeddedResource Include="..\..\PRIVACY.md" Link="Legal\PRIVACY.md" LogicalName="SrvDesk.PRIVACY.md" />
   </ItemGroup>
+  <Target Name="CopyExeToDist" AfterTargets="CoreCompile">
+    <PropertyGroup>
+      <_CopyDistScript>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\scripts\copy-to-dist.ps1'))</_CopyDistScript>
+      <_CopyDistSource Condition="Exists('$(IntermediateOutputPath)$(TargetFileName)')">$(IntermediateOutputPath)$(TargetFileName)</_CopyDistSource>
+      <_CopyDistSource Condition="'$(_CopyDistSource)'=='' And Exists('$(TargetPath)')">$(TargetPath)</_CopyDistSource>
+    </PropertyGroup>
+    <Exec Condition="'$(_CopyDistSource)'!='' And Exists('$(_CopyDistScript)')"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_CopyDistScript)&quot; -SourceExe &quot;$(_CopyDistSource)&quot;" />
+  </Target>
   <Target Name="RemoveAppConfigAfterBuild" AfterTargets="Build">
     <Delete Files="$(TargetPath).config" Condition="Exists('$(TargetPath).config')" />
   </Target>

@@ -233,11 +233,11 @@ internal static class Optimizer
         public bool HideSettingsHomeAds;
         public bool DisableWin11ExtraAi;
         public bool AlwaysShowMenus;
-        public bool HideMergeConflicts;
-        public bool ShowCompColor;
+        public bool HideMergeConflicts = true;
+        public bool ShowCompColor = true;
         public bool ShowInfoTip = true;
         public bool ShowStatusBar = true;
-        public bool DisablePersistBrowsers;
+        public bool DisablePersistBrowsers = true;
         public bool NavPaneExpandCurrent;
         public bool DisableSharingWizard;
         public int ShowDriveLettersMode;
