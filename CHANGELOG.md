@@ -4,6 +4,18 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.24] - 2026-09-07
+
+### Added
+
+- Common software: resolve the latest official Windows installer (GitHub Releases, download pages, vendor JSON APIs) and silent-install when winget is missing or fails
+- HikConnect and Tianyi Cloud Drive use their official APIs so SPA download pages still get a fresh package
+
+### Fixed
+
+- Short ASCII detect patterns (e.g. `pi`) no longer match unrelated apps
+- 7-Zip latest-package scoring prefers `7-zip.org` over third-party GitHub mirrors
+
 ## [1.0.23] - 2026-09-07
 
 ### Added

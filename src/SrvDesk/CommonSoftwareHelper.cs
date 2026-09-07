@@ -240,7 +240,7 @@ internal static class CommonSoftwareHelper
 
         var appx = TryGetAppxWingetPath();
         if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx!))
-            yield return appx;
+            yield return appx!;
 
         foreach (var path in TryFindWindowsAppsWingetPaths())
         {
@@ -635,13 +635,63 @@ internal static class CommonSoftwareHelper
             }
         }
 
+        try
+        {
+            Report(onProgress, "正在解析官网最新安装包…", 70);
+            var officialMsg = TryInstallFromOfficialLatest(item, onProgress);
+            if (officialMsg is not null)
+                return officialMsg;
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("官网自动安装失败：" + ex.Message);
+            Report(onProgress, "官网自动安装失败，打开下载页…", 90);
+        }
+
         Report(onProgress, "打开官方下载页…", 95);
         OpenDownloadPage(item);
         return IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId)
-            ? "winget 安装未成功，已在浏览器打开官方下载页，请手动安装。"
+            ? "自动安装未成功，已在浏览器打开官方下载页，请手动安装。"
             : string.IsNullOrWhiteSpace(item.WingetId)
-                ? "该软件暂无 winget 包，已在浏览器打开官方下载页。"
-                : "本机未检测到 winget，已在浏览器打开官方下载页，请手动安装。";
+                ? "未能从官网解析到安装包，已在浏览器打开下载页。"
+                : "本机未检测到 winget，且官网自动安装未成功，已打开下载页。";
+    }
+
+    /// <summary>解析官网/GitHub 最新直链并静默安装。成功返回文案；无法解析或安装失败返回 null。</summary>
+    private static string? TryInstallFromOfficialLatest(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var url = OfficialInstallerResolver.TryResolve(item);
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (string.Equals(url.Trim(), item.OfflineInstallerUrl?.Trim(), StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+            return null; // 已经用这条直链试过了
+
+        ApplyLog.Write("官网最新包：" + item.Title + " → " + url);
+        Report(onProgress, "已解析到最新安装包，开始下载…", 72);
+        var copy = CloneForOfflineInstall(item, url);
+        return TryInstallOffline(copy, onProgress);
+    }
+
+    private static CommonSoftwareItem CloneForOfflineInstall(CommonSoftwareItem item, string url)
+    {
+        var args = (item.OfflineInstallArgs ?? "").Trim();
+        if (args.Length == 0)
+            args = OfficialInstallerResolver.GuessSilentArgs(url);
+        return new CommonSoftwareItem
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Category = item.Category,
+            WingetId = item.WingetId,
+            DetectPatterns = item.DetectPatterns,
+            DetectExeNames = item.DetectExeNames,
+            DownloadUrl = item.DownloadUrl,
+            OfflineInstallerUrl = url,
+            OfflineInstallArgs = args,
+            OfflinePortable = item.OfflinePortable,
+        };
     }
 
     private static bool PreferOfflineNow(CommonSoftwareItem item) =>
@@ -829,22 +879,34 @@ internal static class CommonSoftwareHelper
         if (url.Length == 0) return null;
 
         Directory.CreateDirectory(DownloadDir);
-        var fileName = Path.GetFileName(new Uri(url).LocalPath);
-        if (string.IsNullOrWhiteSpace(fileName))
-            fileName = item.Id + "-setup.exe";
+        Uri uri;
+        try { uri = new Uri(url); }
+        catch { return null; }
+        var fileName = Path.GetFileName(uri.LocalPath);
+        if (string.IsNullOrWhiteSpace(fileName)
+            || !OfficialInstallerResolver.HasInstallerExtension(fileName))
+            fileName = item.Id + (url.IndexOf(".msi", StringComparison.OrdinalIgnoreCase) >= 0 ? "-setup.msi" : "-setup.exe");
         var dest = Path.Combine(DownloadDir, fileName);
 
         Report(onProgress, "下载离线安装包…", 5);
-        // iCloudSetup 约 150MB+；其它包按 1MB 下限防误下 HTML
-        DownloadInstaller(url, dest, minBytes: 1_000_000, onProgress, percentBase: 5, percentSpan: 55);
+        DownloadInstaller(url, dest, minBytes: 80_000, onProgress, percentBase: 5, percentSpan: 55);
 
         var args = string.IsNullOrWhiteSpace(item.OfflineInstallArgs)
-            ? "/quiet /norestart"
+            ? OfficialInstallerResolver.GuessSilentArgs(url)
             : item.OfflineInstallArgs.Trim();
+        var attempts = BuildSilentArgAttempts(dest, args);
         Report(onProgress, "正在静默安装离线包…", 65);
         ApplyLog.Write("离线安装：" + dest + " " + args);
 
-        var code = Run(dest, args);
+        var code = -1;
+        foreach (var one in attempts)
+        {
+            code = RunInstaller(dest, one);
+            InvalidateStatusCache();
+            if (code == 0) break;
+            var mid = Query(item);
+            if (mid.Installed) break;
+        }
         InvalidateStatusCache();
         if (code == 0)
         {
@@ -862,6 +924,31 @@ internal static class CommonSoftwareHelper
 
         ApplyLog.Write("离线安装退出码：" + code);
         return null;
+    }
+
+    private static List<string> BuildSilentArgAttempts(string dest, string primary)
+    {
+        var list = new List<string>();
+        if (!string.IsNullOrWhiteSpace(primary)) list.Add(primary);
+        var msi = dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase);
+        if (msi)
+        {
+            if (!list.Contains("/qn /norestart")) list.Add("/qn /norestart");
+            return list;
+        }
+
+        if (list.All(a => a.IndexOf("VERYSILENT", StringComparison.OrdinalIgnoreCase) < 0))
+            list.Add("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART");
+        if (list.All(a => a != "/S"))
+            list.Add("/S");
+        return list;
+    }
+
+    private static int RunInstaller(string dest, string args)
+    {
+        if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+            return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
+        return Run(dest, args);
     }
 
     /// <summary>
@@ -1452,7 +1539,20 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         if (item.IsWingetBootstrap)
             return "winget 自身请使用「修复安装」。";
         if (!IsWingetAvailable() || string.IsNullOrWhiteSpace(item.WingetId))
-            return "无法更新：本机无 winget 或该软件无包 ID。";
+        {
+            try
+            {
+                Report(onProgress, "无 winget 包，改从官网下载最新安装包…", 10);
+                var officialOnly = TryInstallFromOfficialLatest(item, onProgress);
+                if (officialOnly is not null)
+                    return officialOnly.Length == 0 ? "" : officialOnly;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("官网更新失败：" + ex.Message);
+            }
+            return "无法更新：本机无 winget 或未能从官网解析到安装包。";
+        }
 
         EnsureWingetSpeedSettings();
         Report(onProgress, "正在更新 " + item.Title, 5);
@@ -1477,7 +1577,22 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             return "已是最新版本或不需要更新。";
         }
 
-        return "更新未成功，退出码 " + code + "。可尝试「一键安装/修复安装」。";
+        try
+        {
+            Report(onProgress, "winget 更新未成功，改从官网下载最新包…", 40);
+            var official = TryInstallFromOfficialLatest(item, onProgress);
+            if (official is not null)
+            {
+                _lastUpdates.RemoveAll(u => u.Item.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase));
+                return official.Length == 0 ? "" : official;
+            }
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("官网更新失败：" + ex.Message);
+        }
+
+        return "更新未成功（winget 退出码 " + code + "）。";
     }
 
     private static List<SoftwareUpdateInfo> ParseUpgradeList(string output, IReadOnlyList<CommonSoftwareItem> items)
@@ -2522,11 +2637,48 @@ Add-AppxPackage -Path '{escaped}'
     {
         foreach (var p in patterns)
         {
+            if (string.IsNullOrWhiteSpace(p)) continue;
+            if (IsAsciiShort(p))
+            {
+                if (IsAsciiWordMatch(displayName, p)) return true;
+                continue;
+            }
+
             if (displayName.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
         }
         return false;
     }
+
+    private static bool IsAsciiShort(string p)
+    {
+        if (p.Length > 3) return false;
+        foreach (var c in p)
+        {
+            if (c > 127) return false;
+        }
+        return true;
+    }
+
+    /// <summary>短英文模式按词匹配，避免 "pi" 命中 Epic / Appium 等。</summary>
+    private static bool IsAsciiWordMatch(string displayName, string pattern)
+    {
+        var start = 0;
+        while (start <= displayName.Length - pattern.Length)
+        {
+            var i = displayName.IndexOf(pattern, start, StringComparison.OrdinalIgnoreCase);
+            if (i < 0) return false;
+            var beforeOk = i == 0 || !IsAsciiLetterOrDigit(displayName[i - 1]);
+            var after = i + pattern.Length;
+            var afterOk = after >= displayName.Length || !IsAsciiLetterOrDigit(displayName[after]);
+            if (beforeOk && afterOk) return true;
+            start = i + 1;
+        }
+        return false;
+    }
+
+    private static bool IsAsciiLetterOrDigit(char c) =>
+        c <= 127 && char.IsLetterOrDigit(c);
 
     private static IEnumerable<(RegistryHive Hive, string SubKey)> UninstallKeyPaths()
     {

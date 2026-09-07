@@ -117,7 +117,7 @@ internal sealed class CommonSoftwareDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "常用软件",
-            "官方源下载与安装 · 优先 winget",
+            "官方源下载与安装 · 优先 winget，否则自动下载官网最新包",
             body,
             "",
             () => ReloadStatusesAsync(),
@@ -447,7 +447,7 @@ internal sealed class CommonSoftwareDialog : Form
         _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
             ? "已检测到 winget · 静默安装 · 源索引后台预热"
-            : "未检测到 winget，请先安装后再使用一键安装其它软件。";
+            : "未检测到 winget：有 winget 的软件会优先走商店源；其余仍可从官网下载最新包安装。";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
         if (_rows.Count == 0) BuildList();
@@ -633,7 +633,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先使用 winget；失败则打开官方下载页。\r\n安装期间可继续使用主窗口。\r\n是否继续？",
+                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先 winget；失败则自动从官网下载最新安装包并静默安装。\r\n都失败才会打开下载页。\r\n安装期间可继续使用主窗口。\r\n是否继续？",
                 "常用软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }

@@ -1,21 +1,19 @@
-﻿# SrvDesk v1.0.23
+﻿# SrvDesk v1.0.24
 
 ## 中文
 
-- 应用到系统前可询问创建还原点（文件 → 程序设置可关闭）；查看请用系统 `rstrui`
-- 对照 Zyper / Sophia / WinUtil：损坏快捷方式、独立进程开文件夹、深色模式、诊断数据最低档、隐藏主页/图库等
-- 资源管理器增加文件夹选项：分组依据、排序方式、盘符位置、始终显示菜单等
-- 配置导入导出现在保留分组/排序/盘符/任务栏搜索及自动登录用户名（**不导出密码**）
-- 「运行」不记历史 与「关闭应用启动跟踪」不再抢同一个注册表值
+- 常用软件：winget 不可用或失败时，自动从官网解析最新安装包并静默安装；仍失败才打开下载页
+- 海康互联、天翼云盘走官方接口取最新包（下载页是动态页面，HTML 里没有直链）
+- 短英文检测不再误报（例如 `pi` 不会命中无关软件）
+- 7-Zip 优先解析官网同域安装包
 
 下载：单文件 `SrvDesk.exe`，请以管理员身份运行。
 
 ## English
 
-- Optional System Restore point before applying (File → Settings to disable); view points with `rstrui`
-- Zyper / Sophia / WinUtil-aligned tweaks: broken shortcuts, separate Explorer process, dark mode, minimal diagnostics, hide Home/Gallery, and more
-- Folder Options: group by, sort by, drive-letter position, always-show menus
-- Profiles now keep int/string settings (folder view, taskbar search, autologon user). **Passwords are never exported.**
-- Run-dialog history no longer shares `Start_TrackProgs` with app-launch tracking
+- Common software: if winget is missing or fails, resolve the latest official installer and silent-install; the download page opens only as a last resort
+- HikConnect and Tianyi Cloud Drive use official APIs (their download sites are SPAs with no static `.exe` links)
+- Short ASCII detect patterns no longer false-match unrelated apps
+- 7-Zip scoring prefers the official `7-zip.org` package
 
 Download `SrvDesk.exe` and run as Administrator.
