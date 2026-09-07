@@ -30,6 +30,17 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly ComboBox _align = new();
     private readonly ComboBox _glom = new();
     private readonly ComboBox _autohideMode = new();
+    private readonly InstantToggleRow _alwaysMenu = new("始终显示菜单栏");
+    private readonly InstantToggleRow _hideMerge = new("隐藏文件夹合并冲突");
+    private readonly InstantToggleRow _compColor = new("加密/压缩文件用颜色标识");
+    private readonly InstantToggleRow _infoTip = new("显示文件夹弹出说明");
+    private readonly InstantToggleRow _statusBar = new("显示状态栏");
+    private readonly InstantToggleRow _noPersist = new("登录时不还原上次文件夹窗口");
+    private readonly InstantToggleRow _navExpand = new("导航窗格展开到当前文件夹");
+    private readonly InstantToggleRow _noShareWiz = new("不使用共享向导");
+    private readonly ComboBox _driveLetters = new();
+    private readonly ComboBox _folderGroup = new();
+    private readonly ComboBox _folderSort = new();
     private bool _loading;
     private bool _loaded;
     private bool _warmLoadSkip;
@@ -47,6 +58,11 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
         // 分区：常用 → 快速访问 → 快捷方式/云 → 任务栏 → 工具
+        var folderOpts = ThemedSettingsChrome.CreateSection("文件夹选项", [
+            _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar,
+            _noPersist, _navExpand, _noShareWiz,
+            BuildDriveLetterRow(), BuildGroupByRow(), BuildSortByRow(),
+        ]);
         var common = ThemedSettingsChrome.CreateSection("常用显示", [
             _ext, _hidden, _fullPath, _osFiles, BuildLaunchRow(),
         ]);
@@ -67,6 +83,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         body.Controls.Add(taskbar);
         body.Controls.Add(shortcuts);
         body.Controls.Add(quickAccess);
+        body.Controls.Add(folderOpts);
         body.Controls.Add(common);
 
         ThemedSettingsChrome.MountEmbedded(
@@ -135,6 +152,43 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     {
         var row = ThemedSettingsChrome.CreateComboRow("任务栏显示", _autohideMode, ["一直显示", "自动隐藏"]);
         _autohideMode.SelectedIndexChanged += (_, _) => { /* deferred */ };
+        return row;
+    }
+
+    private Control BuildDriveLetterRow()
+    {
+        var row = ThemedSettingsChrome.CreateComboRow("盘符位置", _driveLetters, FolderViewTweaks.DriveLetterLabels);
+        _driveLetters.SelectedIndexChanged += (_, _) =>
+        {
+            if (_loading) return;
+            var i = _driveLetters.SelectedIndex is >= 0 and <= 2 ? _driveLetters.SelectedIndex : 0;
+            FolderViewTweaks.SetAdv("ShowDriveLettersFirst", i);
+            DesktopQuickActions.RestartExplorer();
+        };
+        return row;
+    }
+
+    private Control BuildGroupByRow()
+    {
+        var row = ThemedSettingsChrome.CreateComboRow("分组依据", _folderGroup, FolderViewTweaks.GroupByLabels);
+        _folderGroup.SelectedIndexChanged += (_, _) =>
+        {
+            if (_loading) return;
+            FolderViewTweaks.ApplyGroupBy(_folderGroup.SelectedIndex);
+            DesktopQuickActions.RestartExplorer();
+        };
+        return row;
+    }
+
+    private Control BuildSortByRow()
+    {
+        var row = ThemedSettingsChrome.CreateComboRow("排序方式", _folderSort, FolderViewTweaks.SortByLabels);
+        _folderSort.SelectedIndexChanged += (_, _) =>
+        {
+            if (_loading) return;
+            FolderViewTweaks.ApplySortBy(_folderSort.SelectedIndex);
+            DesktopQuickActions.RestartExplorer();
+        };
         return row;
     }
 
@@ -238,6 +292,27 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _taskView.Bind(Win11DesktopTweaks.IsShowTaskViewButtonOn(), _ => { });
         _widgets.Bind(Win11DesktopTweaks.IsDisableWidgetsOn(), _ => { });
         _seconds.Bind(seconds == 1, _ => { });
+
+        _alwaysMenu.Bind(FolderViewTweaks.GetAdv("AlwaysShowMenus", 0) == 1,
+            v => FolderViewTweaks.SetAdv("AlwaysShowMenus", v ? 1 : 0));
+        _hideMerge.Bind(FolderViewTweaks.GetAdv("HideMergeConflicts", 0) == 1,
+            v => FolderViewTweaks.SetAdv("HideMergeConflicts", v ? 1 : 0));
+        _compColor.Bind(FolderViewTweaks.GetAdv("ShowCompColor", 0) == 1,
+            v => FolderViewTweaks.SetAdv("ShowCompColor", v ? 1 : 0));
+        _infoTip.Bind(FolderViewTweaks.GetAdv("ShowInfoTip", 1) != 0,
+            v => FolderViewTweaks.SetAdv("ShowInfoTip", v ? 1 : 0));
+        _statusBar.Bind(FolderViewTweaks.GetAdv("ShowStatusBar", 1) != 0,
+            v => FolderViewTweaks.SetAdv("ShowStatusBar", v ? 1 : 0));
+        _noPersist.Bind(FolderViewTweaks.GetAdv("PersistBrowsers", 0) != 1,
+            v => FolderViewTweaks.SetAdv("PersistBrowsers", v ? 0 : 1));
+        _navExpand.Bind(FolderViewTweaks.GetAdv("NavPaneExpandToCurrentFolder", 0) == 1,
+            v => FolderViewTweaks.SetAdv("NavPaneExpandToCurrentFolder", v ? 1 : 0));
+        _noShareWiz.Bind(FolderViewTweaks.GetAdv("SharingWizardOn", 1) == 0,
+            v => FolderViewTweaks.SetAdv("SharingWizardOn", v ? 0 : 1));
+        var letters = FolderViewTweaks.GetAdv("ShowDriveLettersFirst", 0);
+        _driveLetters.SelectedIndex = letters is >= 0 and <= 2 ? letters : 0;
+        _folderGroup.SelectedIndex = FolderViewTweaks.ReadGroupBy();
+        _folderSort.SelectedIndex = FolderViewTweaks.ReadSortBy();
 
         _launchTo.SelectedIndex = launchTo == 1 ? 0 : 1;
         var mode = EasySettingsTweaks.GetSearchboxMode();

@@ -1051,6 +1051,84 @@ internal static class SettingCatalog
         "立即写入；Recall 可选功能需重启后完全消失。",
         W10);
 
+    public static readonly SettingHelpInfo AlwaysShowMenus = H(
+        "资源管理器始终显示菜单栏（文件/编辑/查看）。",
+        "Explorer\\Advanced AlwaysShowMenus=1。",
+        "不必按 Alt 才出现菜单，文件夹选项里「始终显示菜单」同一项。",
+        "桌面运维推荐开启。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo HideMergeConflicts = H(
+        "复制文件夹时不弹出「合并冲突」确认。",
+        "HideMergeConflicts=1，对应文件夹选项「隐藏文件夹合并冲突」。",
+        "同名文件夹直接合并，少一次对话框。",
+        "需要每次确认合并时关闭。",
+        "新开的资源管理器窗口生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo ShowCompColor = H(
+        "加密或压缩的 NTFS 文件用蓝色/绿色显示。",
+        "ShowCompColor=1。",
+        "一眼看出哪些文件被压缩或 EFS 加密。",
+        "推荐开启。",
+        "刷新文件夹后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo ShowInfoTip = H(
+        "鼠标悬停文件夹/桌面图标时显示弹出说明。",
+        "ShowInfoTip=1（系统默认多为开）。",
+        "提示尺寸、修改时间等，对应文件夹选项「显示弹出说明」。",
+        "嫌气泡烦可关。",
+        "立即生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo ShowStatusBar = H(
+        "资源管理器底部显示状态栏（选中数量/大小）。",
+        "ShowStatusBar=1。",
+        "对齐文件夹选项「显示状态栏」。",
+        "推荐开启。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo DisablePersistBrowsers = H(
+        "登录后不自动还原上次未关的文件夹窗口。",
+        "PersistBrowsers=0，对应「登录时还原上一个文件夹窗口」。",
+        "开机桌面更干净，少一堆上次留下的窗口。",
+        "希望接着上次浏览位置时关闭本项。",
+        "下次登录生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo NavPaneExpandCurrent = H(
+        "导航窗格自动展开到当前打开的文件夹。",
+        "NavPaneExpandToCurrentFolder=1。",
+        "左边树跟着当前路径走，少自己点开层级。",
+        "推荐开启。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo DisableSharingWizard = H(
+        "不用「共享向导」，改走经典共享对话框。",
+        "SharingWizardOn=0。",
+        "右键共享少几步向导。",
+        "不习惯经典对话框时关闭。",
+        "立即生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo ShowDriveLettersMode = H(
+        "此电脑里盘符相对卷标的位置。",
+        "ShowDriveLettersFirst：0=卷标后，1=卷标前，2=隐藏。",
+        "运维看盘符更方便时可把盘符放到前面。",
+        "推荐「卷标后面」（系统默认）或「卷标前面」。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo FolderGroupByMode = H(
+        "所有常见文件夹类型的默认「分组依据」。",
+        "写入 FolderTypes TopViews 的 GroupBy，并同步 Bags\\AllFolders GroupView。",
+        "下载目录不再按日期一大组；可统一改成不分组或按名称/类型。",
+        "桌面推荐「不分组」。已打开的窗口需重启资源管理器。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+    public static readonly SettingHelpInfo FolderSortByMode = H(
+        "所有常见文件夹类型的默认「排序方式」。",
+        "FolderTypes TopViews SortByList（名称/日期/类型/大小，升序或降序）。",
+        "新开窗口按你选的列排序，不必每个文件夹再点一次。",
+        "推荐名称升序；下载目录若习惯新文件在上可选「日期新到旧」。",
+        "重启资源管理器后生效。",
+        SettingScope.DesktopExperience);
+
     static SettingHelpInfo H(
         string summary,
         string purpose,

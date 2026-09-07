@@ -981,6 +981,46 @@ internal static class SettingRecipeCatalog
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\WindowsNotepad"),
                 ActionScript.Dword("DisableAIFeatures", 0)),
             "WSAIFabricSvc 由软件按需禁用。"));
+        Add(SettingCatalog.AlwaysShowMenus, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "AlwaysShowMenus", 1, 0,
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.HideMergeConflicts, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideMergeConflicts", 1, 0));
+        Add(SettingCatalog.ShowCompColor, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowCompColor", 1, 0));
+        Add(SettingCatalog.ShowInfoTip, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowInfoTip", 1, 0));
+        Add(SettingCatalog.ShowStatusBar, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowStatusBar", 1, 0,
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.DisablePersistBrowsers, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "PersistBrowsers", 0, 1));
+        Add(SettingCatalog.NavPaneExpandCurrent, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "NavPaneExpandToCurrentFolder", 1, 0,
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.DisableSharingWizard, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "SharingWizardOn", 0, 1));
+        Add(SettingCatalog.ShowDriveLettersMode, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowDriveLettersFirst", 0, 1,
+            "下拉还有「隐藏盘符=2」；软件按所选写入。导入后重启资源管理器。"));
+        Add(SettingCatalog.FolderGroupByMode, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\FolderTypes\{885a186e-a440-4ada-812b-db871b942259}\TopViews\{00000000-0000-0000-0000-000000000000}"),
+                ActionScript.Sz("GroupBy", "System.Null"),
+                ActionScript.Sz("SortByList", "prop:System.ItemNameDisplay")) +
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags\AllFolders\Shell"),
+                ActionScript.Dword("GroupView", 0)),
+            ActionScript.HkCuDelete(@"Software\Microsoft\Windows\CurrentVersion\Explorer\FolderTypes\{885a186e-a440-4ada-812b-db871b942259}") + "\r\n",
+            "开启示例=不分组；完整多文件夹类型由软件写入。导入后重启资源管理器。"));
+        Add(SettingCatalog.FolderSortByMode, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\FolderTypes\{885a186e-a440-4ada-812b-db871b942259}\TopViews\{00000000-0000-0000-0000-000000000000}"),
+                ActionScript.Sz("SortByList", "prop:System.ItemNameDisplay")),
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\FolderTypes\{885a186e-a440-4ada-812b-db871b942259}\TopViews\{00000000-0000-0000-0000-000000000000}"),
+                ActionScript.Sz("SortByList", "prop:-System.DateModified")),
+            "开启示例=名称升序；关闭示例=日期新到旧。导入后重启资源管理器。"));
 
         return m;
     }

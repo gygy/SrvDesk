@@ -122,6 +122,20 @@ internal sealed class MainForm : Form
     private readonly SettingRow _noUpdateAsap = Row("关闭「尽快获取最新更新」", "开启", SettingCatalog.DisableUpdateAsap);
     private readonly SettingRow _hideSettingsHome = Row("隐藏设置首页与 365 广告", "显示", SettingCatalog.HideSettingsHomeAds);
     private readonly SettingRow _extraAi = Row("关闭 Recall / Click to Do / 记事本画图 AI", "允许", SettingCatalog.DisableWin11ExtraAi);
+    private readonly SettingRow _alwaysMenu = Row("始终显示菜单栏", "按 Alt 才显示", SettingCatalog.AlwaysShowMenus);
+    private readonly SettingRow _hideMerge = Row("隐藏文件夹合并冲突", "每次确认", SettingCatalog.HideMergeConflicts);
+    private readonly SettingRow _compColor = Row("加密/压缩文件用颜色标识", "不着色", SettingCatalog.ShowCompColor);
+    private readonly SettingRow _infoTip = Row("显示文件夹弹出说明", "不显示", SettingCatalog.ShowInfoTip);
+    private readonly SettingRow _statusBar = Row("显示资源管理器状态栏", "不显示", SettingCatalog.ShowStatusBar);
+    private readonly SettingRow _noPersistFold = Row("登录时不还原上次文件夹窗口", "还原", SettingCatalog.DisablePersistBrowsers);
+    private readonly SettingRow _navExpand = Row("导航窗格展开到当前文件夹", "不展开", SettingCatalog.NavPaneExpandCurrent);
+    private readonly SettingRow _noShareWiz = Row("不使用共享向导", "使用向导", SettingCatalog.DisableSharingWizard);
+    private readonly SettingRow _driveLetters = Choice("盘符显示位置", "卷标后面", SettingCatalog.ShowDriveLettersMode,
+        FolderViewTweaks.DriveLetterLabels, optimizedIndex: 0);
+    private readonly SettingRow _folderGroup = Choice("分组依据", "按修改日期", SettingCatalog.FolderGroupByMode,
+        FolderViewTweaks.GroupByLabels, optimizedIndex: 0);
+    private readonly SettingRow _folderSort = Choice("排序方式", "日期新到旧", SettingCatalog.FolderSortByMode,
+        FolderViewTweaks.SortByLabels, optimizedIndex: 0);
 
     private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
     private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
@@ -309,6 +323,8 @@ internal sealed class MainForm : Form
         _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
         _diagMinimal, _noSigninReopen, _noSilentApps, _hideHomeGallery, _noSnapAssist, _darkMode,
         _noBitlockerAuto, _noCompanionApps, _noUpdateAsap, _hideSettingsHome, _extraAi,
+        _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
+        _driveLetters, _folderGroup, _folderSort,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
@@ -393,6 +409,11 @@ internal sealed class MainForm : Form
             ]),
             ("快速访问", [
                 _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly, _noRunMru,
+            ]),
+            ("文件夹选项", [
+                _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar,
+                _noPersistFold, _navExpand, _noShareWiz, _driveLetters,
+                _folderGroup, _folderSort,
             ]),
             ("快捷方式与布局", [
                 _noArrow, _noSuffix, _noShield, _noBrokenLnk, _sepProcess,
@@ -2433,6 +2454,17 @@ internal sealed class MainForm : Form
         _noUpdateAsap.Checked = s.DisableUpdateAsap;
         _hideSettingsHome.Checked = s.HideSettingsHomeAds;
         _extraAi.Checked = s.DisableWin11ExtraAi;
+        _alwaysMenu.Checked = s.AlwaysShowMenus;
+        _hideMerge.Checked = s.HideMergeConflicts;
+        _compColor.Checked = s.ShowCompColor;
+        _infoTip.Checked = s.ShowInfoTip;
+        _statusBar.Checked = s.ShowStatusBar;
+        _noPersistFold.Checked = s.DisablePersistBrowsers;
+        _navExpand.Checked = s.NavPaneExpandCurrent;
+        _noShareWiz.Checked = s.DisableSharingWizard;
+        _driveLetters.ChoiceIndex = s.ShowDriveLettersMode is >= 0 and <= 2 ? s.ShowDriveLettersMode : 0;
+        _folderGroup.ChoiceIndex = s.FolderGroupByMode is >= 0 and <= 4 ? s.FolderGroupByMode : 0;
+        _folderSort.ChoiceIndex = s.FolderSortByMode is >= 0 and <= 5 ? s.FolderSortByMode : 0;
         _rdp.Checked = s.EnableRdp;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
@@ -2583,6 +2615,17 @@ internal sealed class MainForm : Form
         DisableUpdateAsap = _noUpdateAsap.Checked,
         HideSettingsHomeAds = _hideSettingsHome.Checked,
         DisableWin11ExtraAi = _extraAi.Checked,
+        AlwaysShowMenus = _alwaysMenu.Checked,
+        HideMergeConflicts = _hideMerge.Checked,
+        ShowCompColor = _compColor.Checked,
+        ShowInfoTip = _infoTip.Checked,
+        ShowStatusBar = _statusBar.Checked,
+        DisablePersistBrowsers = _noPersistFold.Checked,
+        NavPaneExpandCurrent = _navExpand.Checked,
+        DisableSharingWizard = _noShareWiz.Checked,
+        ShowDriveLettersMode = _driveLetters.ChoiceIndex is >= 0 and <= 2 ? _driveLetters.ChoiceIndex : 0,
+        FolderGroupByMode = _folderGroup.ChoiceIndex is >= 0 and <= 4 ? _folderGroup.ChoiceIndex : 0,
+        FolderSortByMode = _folderSort.ChoiceIndex is >= 0 and <= 5 ? _folderSort.ChoiceIndex : 0,
         TaskbarSearchMode = _tbSearch.ChoiceIndex is >= 0 and <= 2 ? _tbSearch.ChoiceIndex : 1,
         TaskbarSearchBox = false,
         ShowThisPcIcon = _thisPc.Checked,

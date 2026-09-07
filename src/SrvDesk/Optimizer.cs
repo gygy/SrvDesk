@@ -232,6 +232,17 @@ internal static class Optimizer
         public bool DisableUpdateAsap;
         public bool HideSettingsHomeAds;
         public bool DisableWin11ExtraAi;
+        public bool AlwaysShowMenus;
+        public bool HideMergeConflicts;
+        public bool ShowCompColor;
+        public bool ShowInfoTip = true;
+        public bool ShowStatusBar = true;
+        public bool DisablePersistBrowsers;
+        public bool NavPaneExpandCurrent;
+        public bool DisableSharingWizard;
+        public int ShowDriveLettersMode;
+        public int FolderGroupByMode;
+        public int FolderSortByMode;
     }
 
     public static bool IsWindowsServer()
@@ -369,6 +380,7 @@ internal static class Optimizer
         CompetitorTweaks.ReadInto(state);
         CommunityTweaks.ReadInto(state);
         SophiaGapTweaks.ReadInto(state);
+        FolderViewTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
         state.EnableAutologon = auto.Enabled;
         if (auto.Enabled)
@@ -600,6 +612,7 @@ internal static class Optimizer
         Do(AnyCompetitorChanged(baseline, s), "竞品常用项", () => CompetitorTweaks.Apply(s, baseline));
         Do(CommunityTweaks.AnyChanged(baseline, s), "社区对齐项", () => CommunityTweaks.Apply(s, baseline));
         Do(SophiaGapTweaks.AnyChanged(baseline, s), "Sophia对齐项", () => SophiaGapTweaks.Apply(s, baseline));
+        Do(FolderViewTweaks.AnyChanged(baseline, s), "文件夹选项", () => FolderViewTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;
     }
