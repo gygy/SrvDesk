@@ -3,8 +3,8 @@ namespace SrvDesk;
 /// <summary>主窗与子窗共用的左侧导航：宽度、行高、选中/悬停绘制一致。</summary>
 internal static class NavMenuStyle
 {
-    public const int SidebarWidth = 196;
-    public const int ItemHeight = 44;
+    public static int SidebarWidth => UiScale.S(188);
+    public static int ItemHeight => UiScale.S(40);
 
     public static Panel CreateSidebar() =>
         new() { Width = SidebarWidth, BackColor = AppTheme.NavBg };
@@ -15,6 +15,7 @@ internal static class NavMenuStyle
         menu.BorderStyle = BorderStyle.None;
         menu.BackColor = AppTheme.NavBg;
         menu.ForeColor = AppTheme.TextMain;
+        menu.Font = UiFit.UiFont;
         menu.IntegralHeight = false;
         menu.DrawMode = DrawMode.OwnerDrawFixed;
         menu.ItemHeight = ItemHeight;
@@ -55,25 +56,26 @@ internal static class NavMenuStyle
 
         if (selected)
         {
-            using var accent = new SolidBrush(AppTheme.PrimarySoft);
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 8, 3, e.Bounds.Height - 16);
+            using var accent = new SolidBrush(Color.FromArgb(255, 255, 255));
+            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 10, 3, e.Bounds.Height - 20);
         }
 
         Font? bold = null;
         try
         {
-            var use = font;
+            var use = font ?? UiFit.UiFont;
             if (selected)
             {
-                bold = new Font(font, FontStyle.Bold);
+                bold = new Font(use, FontStyle.Bold);
                 use = bold;
             }
 
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             TextRenderer.DrawText(
                 e.Graphics,
                 text,
                 use,
-                new Rectangle(e.Bounds.X + 18, e.Bounds.Y, e.Bounds.Width - 22, e.Bounds.Height),
+                new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - 20, e.Bounds.Height),
                 selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
         }

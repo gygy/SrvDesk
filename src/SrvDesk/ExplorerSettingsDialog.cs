@@ -5,39 +5,39 @@ namespace SrvDesk;
 /// <summary>资源管理器即时页：单列分区布局（与「系统服务」等页一致），避免多列 TableLayout 切换重排。</summary>
 internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 {
-    private readonly InstantToggleRow _ext = new("显示文件扩展名");
-    private readonly InstantToggleRow _fullPath = new("标题栏显示完整路径");
-    private readonly InstantToggleRow _hidden = new("显示隐藏的文件和文件夹");
-    private readonly InstantToggleRow _osFiles = new("隐藏受保护的系统文件");
-    private readonly InstantToggleRow _iconsOnly = new("始终显示图标（无缩略图）");
-    private readonly InstantToggleRow _emptyDrives = new("显示空驱动器");
-    private readonly InstantToggleRow _recent = new("开始屏幕显示最近文件");
-    private readonly InstantToggleRow _frequent = new("显示常用文件夹");
-    private readonly InstantToggleRow _office = new("隐藏 office.com 云文件");
-    private readonly InstantToggleRow _arrow = new("去掉快捷方式箭头");
-    private readonly InstantToggleRow _suffix = new("快捷方式不加「快捷方式」后缀");
-    private readonly InstantToggleRow _shield = new("去掉管理员盾牌图标");
-    private readonly InstantToggleRow _win10Explorer = new("紧凑 / Win10 间距");
-    private readonly InstantToggleRow _classicMenu = new("Win10 经典右键菜单");
-    private readonly InstantToggleRow _onedrive = new("禁止 OneDrive");
-    private readonly InstantToggleRow _taskView = new("显示任务视图按钮");
-    private readonly InstantToggleRow _chat = new("隐藏任务栏聊天");
-    private readonly InstantToggleRow _copilot = new("隐藏任务栏 Copilot");
-    private readonly InstantToggleRow _widgets = new("关闭任务栏小组件");
-    private readonly InstantToggleRow _seconds = new("托盘时钟显示秒");
+    private readonly InstantToggleRow _ext = new(AppLang.L("显示文件扩展名", "Show file extensions"));
+    private readonly InstantToggleRow _fullPath = new(AppLang.L("标题栏显示完整路径", "Full path in title bar"));
+    private readonly InstantToggleRow _hidden = new(AppLang.L("显示隐藏的文件和文件夹", "Show hidden files"));
+    private readonly InstantToggleRow _osFiles = new(AppLang.L("隐藏受保护的系统文件", "Hide protected OS files"));
+    private readonly InstantToggleRow _iconsOnly = new(AppLang.L("始终显示图标（无缩略图）", "Icons only (no thumbnails)"));
+    private readonly InstantToggleRow _emptyDrives = new(AppLang.L("显示空驱动器", "Show empty drives"));
+    private readonly InstantToggleRow _recent = new(AppLang.L("开始屏幕显示最近文件", "Show recent files"));
+    private readonly InstantToggleRow _frequent = new(AppLang.L("显示常用文件夹", "Show frequent folders"));
+    private readonly InstantToggleRow _office = new(AppLang.L("隐藏 office.com 云文件", "Hide office.com cloud files"));
+    private readonly InstantToggleRow _arrow = new(AppLang.L("去掉快捷方式箭头", "Remove shortcut arrow"));
+    private readonly InstantToggleRow _suffix = new(AppLang.L("快捷方式不加「快捷方式」后缀", "No \"Shortcut\" suffix"));
+    private readonly InstantToggleRow _shield = new(AppLang.L("去掉管理员盾牌图标", "Remove admin shield icon"));
+    private readonly InstantToggleRow _win10Explorer = new(AppLang.L("紧凑 / Win10 间距", "Compact / Win10 spacing"));
+    private readonly InstantToggleRow _classicMenu = new(AppLang.L("Win10 经典右键菜单", "Win10 classic context menu"));
+    private readonly InstantToggleRow _onedrive = new(AppLang.L("禁止 OneDrive", "Disable OneDrive"));
+    private readonly InstantToggleRow _taskView = new(AppLang.L("显示任务视图按钮", "Show Task View button"));
+    private readonly InstantToggleRow _chat = new(AppLang.L("隐藏任务栏聊天", "Hide taskbar chat"));
+    private readonly InstantToggleRow _copilot = new(AppLang.L("隐藏任务栏 Copilot", "Hide taskbar Copilot"));
+    private readonly InstantToggleRow _widgets = new(AppLang.L("关闭任务栏小组件", "Disable taskbar widgets"));
+    private readonly InstantToggleRow _seconds = new(AppLang.L("托盘时钟显示秒", "Show seconds in tray clock"));
     private readonly ComboBox _launchTo = new();
     private readonly ComboBox _searchMode = new();
     private readonly ComboBox _align = new();
     private readonly ComboBox _glom = new();
     private readonly ComboBox _autohideMode = new();
-    private readonly InstantToggleRow _alwaysMenu = new("始终显示菜单栏");
-    private readonly InstantToggleRow _hideMerge = new("隐藏文件夹合并冲突");
-    private readonly InstantToggleRow _compColor = new("加密/压缩文件用颜色标识");
-    private readonly InstantToggleRow _infoTip = new("显示文件夹弹出说明");
-    private readonly InstantToggleRow _statusBar = new("显示状态栏");
-    private readonly InstantToggleRow _noPersist = new("登录时不还原上次文件夹窗口");
-    private readonly InstantToggleRow _navExpand = new("导航窗格展开到当前文件夹");
-    private readonly InstantToggleRow _noShareWiz = new("不使用共享向导");
+    private readonly InstantToggleRow _alwaysMenu = new(AppLang.L("始终显示菜单栏", "Always show menu bar"));
+    private readonly InstantToggleRow _hideMerge = new(AppLang.L("隐藏文件夹合并冲突", "Hide folder merge conflicts"));
+    private readonly InstantToggleRow _compColor = new(AppLang.L("加密/压缩文件用颜色标识", "Color encrypted/compressed files"));
+    private readonly InstantToggleRow _infoTip = new(AppLang.L("显示文件夹弹出说明", "Show folder info tips"));
+    private readonly InstantToggleRow _statusBar = new(AppLang.L("显示状态栏", "Show status bar"));
+    private readonly InstantToggleRow _noPersist = new(AppLang.L("登录时不还原上次文件夹窗口", "Don't restore folder windows at logon"));
+    private readonly InstantToggleRow _navExpand = new(AppLang.L("导航窗格展开到当前文件夹", "Expand nav pane to current folder"));
+    private readonly InstantToggleRow _noShareWiz = new(AppLang.L("不使用共享向导", "Don't use sharing wizard"));
     private readonly ComboBox _driveLetters = new();
     private readonly ComboBox _folderGroup = new();
     private readonly ComboBox _folderSort = new();
@@ -47,7 +47,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     public ExplorerSettingsDialog()
     {
-        Text = "资源管理器";
+        Text = AppLang.L("资源管理器", "File Explorer");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -88,10 +88,14 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
         ThemedSettingsChrome.MountEmbedded(
             this,
-            "资源管理器",
-            "资源管理器即时生效 · 任务栏改完后点「应用到系统」",
+            AppLang.L("资源管理器", "File Explorer"),
+            AppLang.L(
+                "资源管理器即时生效 · 任务栏改完后点「应用到系统」",
+                "Explorer applies instantly · use Apply for taskbar changes"),
             body,
-            "任务栏搜索/对齐等需点「应用到系统」（会重启资源管理器）。",
+            AppLang.L(
+                "任务栏搜索/对齐等需点「应用到系统」（会重启资源管理器）。",
+                "Taskbar search/alignment need Apply (restarts Explorer)."),
             LoadValues,
             ApplyTaskbarToSystem);
 
@@ -116,7 +120,8 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private Control BuildLaunchRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("打开至", _launchTo, ["此电脑", "快速访问"]);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("打开至", "Open to"), _launchTo,
+            [AppLang.L("此电脑", "This PC"), AppLang.L("快速访问", "Quick access")]);
         _launchTo.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -128,7 +133,8 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private Control BuildSearchRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("搜索", _searchMode, ["隐藏", "仅图标", "搜索框"]);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("搜索", "Search"), _searchMode,
+            [AppLang.L("隐藏", "Hidden"), AppLang.L("仅图标", "Icon only"), AppLang.L("搜索框", "Search box")]);
         // 任务栏项：改动后需「应用到系统」才写入并重启资源管理器
         _searchMode.SelectedIndexChanged += (_, _) => { /* deferred */ };
         return row;
@@ -136,28 +142,31 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private Control BuildAlignRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("对齐", _align, ["靠左", "居中"]);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("对齐", "Alignment"), _align,
+            [AppLang.L("靠左", "Left"), AppLang.L("居中", "Center")]);
         _align.SelectedIndexChanged += (_, _) => { /* deferred */ };
         return row;
     }
 
     private Control BuildGlomRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("合并", _glom, ["始终合并", "已满时合并", "从不合并"]);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("合并", "Combine"), _glom,
+            [AppLang.L("始终合并", "Always"), AppLang.L("已满时合并", "When full"), AppLang.L("从不合并", "Never")]);
         _glom.SelectedIndexChanged += (_, _) => { /* deferred */ };
         return row;
     }
 
     private Control BuildAutohideRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("任务栏显示", _autohideMode, ["一直显示", "自动隐藏"]);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("任务栏显示", "Taskbar"), _autohideMode,
+            [AppLang.L("一直显示", "Always show"), AppLang.L("自动隐藏", "Auto-hide")]);
         _autohideMode.SelectedIndexChanged += (_, _) => { /* deferred */ };
         return row;
     }
 
     private Control BuildDriveLetterRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("盘符位置", _driveLetters, FolderViewTweaks.DriveLetterLabels);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("盘符位置", "Drive letter"), _driveLetters, FolderViewTweaks.DriveLetterLabels);
         _driveLetters.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -170,7 +179,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private Control BuildGroupByRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("分组依据", _folderGroup, FolderViewTweaks.GroupByLabels);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("分组依据", "Group by"), _folderGroup, FolderViewTweaks.GroupByLabels);
         _folderGroup.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;
@@ -182,7 +191,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
 
     private Control BuildSortByRow()
     {
-        var row = ThemedSettingsChrome.CreateComboRow("排序方式", _folderSort, FolderViewTweaks.SortByLabels);
+        var row = ThemedSettingsChrome.CreateComboRow(AppLang.L("排序方式", "Sort by"), _folderSort, FolderViewTweaks.SortByLabels);
         _folderSort.SelectedIndexChanged += (_, _) =>
         {
             if (_loading) return;

@@ -18,6 +18,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
     {
         Text = "自定义配置";
         AppBrand.ApplyWindowIcon(this);
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;

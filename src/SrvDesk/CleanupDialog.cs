@@ -12,7 +12,7 @@ internal sealed class CleanupDialog : Form
 
     public CleanupDialog()
     {
-        Text = "垃圾清理";
+        Text = AppLang.L("垃圾清理", "Junk cleanup");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -33,8 +33,8 @@ internal sealed class CleanupDialog : Form
         _list.BackColor = AppTheme.SurfaceCard;
         _list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         UiBuffer.Enable(_list);
-        _list.Columns.Add("项目", 200);
-        _list.Columns.Add("说明", 200);
+        _list.Columns.Add(AppLang.L("项目", "Item"), 200);
+        _list.Columns.Add(AppLang.L("说明", "Description"), 200);
         FillItems();
 
         var actions = new FlowLayoutPanel
@@ -47,27 +47,30 @@ internal sealed class CleanupDialog : Form
             Padding = new Padding(0, 8, 0, 0),
         };
         UiBuffer.ConfigureNoScrollRow(actions);
-        _run = ThemedSettingsChrome.CreateButton("开始清理", true);
+        _run = ThemedSettingsChrome.CreateButton(AppLang.L("开始清理", "Start cleanup"), true);
         _run.Click += (_, _) => StartCleanup();
-        _cancelRun = ThemedSettingsChrome.CreateButton("停止", false);
+        _cancelRun = ThemedSettingsChrome.CreateButton(AppLang.L("停止", "Stop"), false);
         _cancelRun.Enabled = false;
         _cancelRun.Margin = new Padding(8, 0, 0, 0);
         _cancelRun.Click += (_, _) => _cts?.Cancel();
-        var allOn = ThemedSettingsChrome.CreateButton("全选", false);
+        var allOn = ThemedSettingsChrome.CreateButton(AppLang.L("全选", "Select all"), false);
         allOn.Margin = new Padding(16, 0, 0, 0);
         allOn.Click += (_, _) => SetAll(true);
-        var allOff = ThemedSettingsChrome.CreateButton("全不选", false);
+        var allOff = ThemedSettingsChrome.CreateButton(AppLang.L("全不选", "Select none"), false);
         allOff.Margin = new Padding(8, 0, 0, 0);
         allOff.Click += (_, _) => SetAll(false);
-        var safe = ThemedSettingsChrome.CreateButton("仅安全项", false);
+        var safe = ThemedSettingsChrome.CreateButton(AppLang.L("仅安全项", "Safe items only"), false);
         safe.Margin = new Padding(8, 0, 0, 0);
         safe.Click += (_, _) => ResetDefaults();
-        var repair = ThemedSettingsChrome.CreateButton("修复被锁组件", false);
+        var repair = ThemedSettingsChrome.CreateButton(AppLang.L("修复被锁组件", "Repair locked components"), false);
         repair.Margin = new Padding(16, 0, 0, 0);
         repair.Click += (_, _) =>
         {
             CompetitorTweaks.RepairLockedComponents();
-            MessageBox.Show(this, "已尝试恢复任务管理器、CMD、注册表编辑器、控制面板等。", "策略修复",
+            MessageBox.Show(this,
+                AppLang.L("已尝试恢复任务管理器、CMD、注册表编辑器、控制面板等。",
+                    "Tried to restore Task Manager, CMD, Registry Editor, Control Panel, etc."),
+                AppLang.L("策略修复", "Policy repair"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         actions.Controls.AddRange([_run, _cancelRun, allOn, allOff, safe, repair]);
@@ -83,7 +86,9 @@ internal sealed class CleanupDialog : Form
         _status.Dock = DockStyle.Fill;
         _status.ForeColor = AppTheme.TextMute;
         _status.TextAlign = ContentAlignment.MiddleLeft;
-        _status.Text = "默认勾选安全项。Cookies、WinSxS、.NET 镜像、系统日志默认不勾。";
+        _status.Text = AppLang.L(
+            "默认勾选安全项。Cookies、WinSxS、.NET 镜像、系统日志默认不勾。",
+            "Safe items checked by default. Cookies, WinSxS, .NET image, and system logs are unchecked.");
         progress.Controls.Add(_status);
         progress.Controls.Add(_bar);
 
@@ -96,10 +101,14 @@ internal sealed class CleanupDialog : Form
 
         ThemedSettingsChrome.MountModal(
             this,
-            "垃圾清理",
-            "缓存 · 系统残留 · 临时文件 · 对照 ZyperWin++ 项，占用中的文件会跳过",
+            AppLang.L("垃圾清理", "Junk cleanup"),
+            AppLang.L(
+                "缓存 · 系统残留 · 临时文件 · 对照 ZyperWin++ 项，占用中的文件会跳过",
+                "Cache · leftovers · temp · ZyperWin++-aligned; in-use files are skipped"),
             body,
-            "清理不可恢复。WinSxS / .NET 镜像较重，请按需勾选。");
+            AppLang.L(
+                "清理不可恢复。WinSxS / .NET 镜像较重，请按需勾选。",
+                "Cleanup cannot be undone. WinSxS / .NET image are heavy — check only if needed."));
         UiBuffer.BindListViewColumnFit(_list, 1, 160);
         FormClosing += (_, e) =>
         {
@@ -227,7 +236,7 @@ internal sealed class CleanupDialog : Form
         }
         catch (OperationCanceledException)
         {
-            _status.Text = "已取消。";
+            _status.Text = AppLang.L("已取消。", "Cancelled.");
         }
         catch (Exception ex)
         {

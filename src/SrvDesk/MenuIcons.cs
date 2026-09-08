@@ -6,7 +6,7 @@ namespace SrvDesk;
 /// <summary>菜单项图标：优先取系统程序关联图标，失败时画简易字形。</summary>
 internal static class MenuIcons
 {
-    private const int Size = 16;
+    private static int Size => Math.Max(16, UiScale.S(16));
     private static readonly Dictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
 
     // —— 文件 ——
@@ -141,6 +141,11 @@ internal static class MenuIcons
         Array.Empty<Cand>(),
         DrawConfig);
 
+    /// <summary>列表行内说明入口（自绘，不依赖 Segoe UI Symbol）。</summary>
+    public static Image RowInfo => Get("row-info",
+        Array.Empty<Cand>(),
+        DrawRowInfo);
+
     // —— 帮助 ——
     public static Image HelpUsage => Get("help-usage",
         [FileCand(Sys("hh.exe")), FileCand(Sys("shell32.dll"), 23)],
@@ -184,7 +189,8 @@ internal static class MenuIcons
 
     private static Image Get(string key, Cand[] candidates, Action<Graphics> fallback)
     {
-        if (Cache.TryGetValue(key, out var cached))
+        var cacheKey = key + "@" + Size;
+        if (Cache.TryGetValue(cacheKey, out var cached))
             return cached;
 
         Image? img = null;
@@ -195,7 +201,7 @@ internal static class MenuIcons
         }
 
         img ??= Draw(fallback);
-        Cache[key] = img;
+        Cache[cacheKey] = img;
         return img;
     }
 
@@ -235,6 +241,10 @@ internal static class MenuIcons
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
+        // 绘制逻辑按 16×16 设计；高 DPI 时等比放大
+        var scale = Size / 16f;
+        if (scale > 1.01f)
+            g.ScaleTransform(scale, scale);
         paint(g);
         return bmp;
     }
@@ -297,9 +307,18 @@ internal static class MenuIcons
     {
         using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
         g.FillEllipse(b, 2, 2, 12, 12);
-        using var f = new Font("Segoe UI", 8f, FontStyle.Bold);
+        using var f = new Font(UiFit.UiFontFamily, 8f, FontStyle.Bold);
         using var w = new SolidBrush(Color.White);
         g.DrawString("i", f, w, 5, 1);
+    }
+
+    private static void DrawRowInfo(Graphics g)
+    {
+        using var ring = new Pen(Color.FromArgb(0, 120, 215), 1.6f);
+        g.DrawEllipse(ring, 2, 2, 12, 12);
+        using var f = new Font(UiFit.UiFontFamily, 8.5f, FontStyle.Bold);
+        using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
+        g.DrawString("i", f, b, 5.2f, 1.2f);
     }
 
     private static void DrawDoc(Graphics g)

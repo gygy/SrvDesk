@@ -9,6 +9,7 @@ static class Program
         Application.SetCompatibleTextRenderingDefault(false);
         AppPaths.MigrateLegacyDataIfNeeded();
         AppUpdate.TryDeleteBackup();
+        AppLang.Apply(UiPrefs.Load());
 
         if (TryRunCli(args, out var exitCode))
             return exitCode;
@@ -38,12 +39,17 @@ static class Program
                     return true;
                 case "--help":
                 case "-h":
-                    Console.WriteLine(
+                    Console.WriteLine(AppLang.L(
                         $"{AppBrand.ProductName} CLI（需管理员）\r\n\r\n" +
                         "  --apply-preset <id>      应用预设（server-desktop/security/remote-work/minimal）\r\n" +
                         "  --load-profile <file>    从 JSON 配置应用\r\n" +
                         "  --export-profile <file>  导出当前系统状态为配置\r\n" +
-                        "  --help                   显示帮助");
+                        "  --help                   显示帮助",
+                        $"{AppBrand.ProductName} CLI (Administrator required)\r\n\r\n" +
+                        "  --apply-preset <id>      Apply preset (server-desktop/security/remote-work/minimal)\r\n" +
+                        "  --load-profile <file>    Apply from JSON profile\r\n" +
+                        "  --export-profile <file>  Export current system state\r\n" +
+                        "  --help                   Show help"));
                     return true;
             }
         }

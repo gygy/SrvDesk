@@ -145,7 +145,13 @@ internal static class Win11DesktopTweaks
         if (D(x => x.DisableStickyKeys))
         {
             Field("DisableStickyKeys", x => x.DisableStickyKeys);
-            SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags", s.DisableStickyKeys ? "506" : "510");
+            // StickyKeys=506 保留本软件既有语义；并写入 FilterKeys/ToggleKeys，对齐 Duck DisableAccessibilityKeyboardHotkeys
+            SetString(Hive.HkCu, @"Control Panel\Accessibility\StickyKeys", "Flags",
+                s.DisableStickyKeys ? "506" : "510");
+            SetString(Hive.HkCu, @"Control Panel\Accessibility\Keyboard Response", "Flags",
+                s.DisableStickyKeys ? "2" : "126");
+            SetString(Hive.HkCu, @"Control Panel\Accessibility\ToggleKeys", "Flags",
+                s.DisableStickyKeys ? "34" : "62");
         }
     }
 

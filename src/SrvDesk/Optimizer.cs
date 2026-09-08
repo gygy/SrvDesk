@@ -191,6 +191,9 @@ internal static class Optimizer
         public bool DisableHpet;
         public bool EnableLoginVerbose;
         public bool DisableNetworkThrottling;
+        public bool OptimizeMultimediaScheduler;
+        public bool OptimizeKeyboardLatency;
+        public bool LiftWebDavFileSizeLimit;
         public bool DisableGameDvr;
         public bool DisableLocationTracking;
         public bool DisableConsumerFeatures;
@@ -695,6 +698,9 @@ internal static class Optimizer
             || b.DisableHpet != s.DisableHpet
             || b.EnableLoginVerbose != s.EnableLoginVerbose
             || b.DisableNetworkThrottling != s.DisableNetworkThrottling
+            || b.OptimizeMultimediaScheduler != s.OptimizeMultimediaScheduler
+            || b.OptimizeKeyboardLatency != s.OptimizeKeyboardLatency
+            || b.LiftWebDavFileSizeLimit != s.LiftWebDavFileSizeLimit
             || b.DisableGameDvr != s.DisableGameDvr
             || b.DisableLocationTracking != s.DisableLocationTracking
             || b.DisableConsumerFeatures != s.DisableConsumerFeatures

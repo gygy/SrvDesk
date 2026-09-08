@@ -15,6 +15,8 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     {
         Text = "登录启动项";
         AppBrand.ApplyWindowIcon(this);
+        // 嵌入主窗后按字体自动缩放会打乱手工坐标，导致按钮盖住说明
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
@@ -84,32 +86,30 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 
     private Panel BuildToolStrip()
     {
-        var bar = new Panel { Height = 64, BackColor = AppTheme.Surface };
+        // 两行：上行筛选/按钮，下行说明；说明绝不与按钮重叠
+        var btnH = UiScale.S(30);
+        var row1 = btnH + UiScale.S(10);
+        var bar = new Panel { Height = row1 + UiScale.S(28), BackColor = AppTheme.Surface };
 
         var filterLabel = new Label
         {
             Text = "筛选",
-            Location = new Point(0, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
         _filter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _filter.SetBounds(40, 4, 110, 26);
         _filter.Items.AddRange(Filters);
         _filter.SelectedIndexChanged += (_, _) => ApplyFilter();
 
         var searchLabel = new Label
         {
             Text = "搜索",
-            Location = new Point(164, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
-        _search.SetBounds(204, 4, 200, 26);
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.TextChanged += (_, _) => ApplyFilter();
 
-        _count.Location = new Point(416, 8);
         _count.AutoSize = true;
         _count.ForeColor = AppTheme.TextMute;
 
@@ -118,7 +118,6 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _detail.ForeColor = AppTheme.TextMute;
         _detail.TextAlign = ContentAlignment.MiddleLeft;
         _detail.Text = "双击切换启用/禁用。添加写入当前用户 Run；系统级项需管理员。";
-        _detail.SetBounds(0, 34, 400, 26);
 
         bar.Controls.Add(filterLabel);
         bar.Controls.Add(_filter);
@@ -129,29 +128,49 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 
         var buttons = new[]
         {
-            ToolBtn("启用", () => SetSelected(true)),
-            ToolBtn("禁用", () => SetSelected(false)),
-            ToolBtn("删除", DeleteSelected),
-            ToolBtn("添加", AddItem),
-            ToolBtn("打开位置", OpenSelected),
+            ToolBtn("启用", () => SetSelected(true), btnH),
+            ToolBtn("禁用", () => SetSelected(false), btnH),
+            ToolBtn("删除", DeleteSelected, btnH),
+            ToolBtn("添加", AddItem, btnH),
+            ToolBtn("打开位置", OpenSelected, btnH),
         };
         foreach (var b in buttons)
             bar.Controls.Add(b);
 
         void LayoutTools()
         {
-            var x = bar.ClientSize.Width - 8;
+            var gap = UiScale.S(6);
+            var pad = UiScale.S(4);
+            foreach (var b in buttons)
+                UiFit.FitButton(b, btnH, minWidth: 64, padding: 16);
+
+            var x = bar.ClientSize.Width - pad;
             for (var i = buttons.Length - 1; i >= 0; i--)
             {
                 var b = buttons[i];
                 x -= b.Width;
-                b.Location = new Point(Math.Max(8, x), 2);
-                x -= 8;
+                b.Location = new Point(Math.Max(pad, x), UiScale.S(4));
+                x -= gap;
             }
-            var detailRight = buttons[0].Left - 12;
-            _detail.SetBounds(0, 34, Math.Max(80, detailRight), 26);
-            // 统计文字避开右侧按钮组
-            _count.Visible = _count.Right <= buttons[0].Left - 8 || bar.ClientSize.Width > 780;
+
+            var btnLeft = buttons[0].Left;
+            var y1 = UiScale.S(8);
+            filterLabel.Location = new Point(0, y1);
+            _filter.SetBounds(filterLabel.Right + UiScale.S(4), UiScale.S(4), UiScale.S(110), UiScale.S(26));
+            searchLabel.Location = new Point(_filter.Right + UiScale.S(12), y1);
+
+            var countW = _count.PreferredSize.Width;
+            var countVisible = btnLeft - countW - UiScale.S(16) > searchLabel.Right + UiScale.S(100);
+            _count.Visible = countVisible;
+            if (countVisible)
+                _count.Location = new Point(btnLeft - countW - UiScale.S(12), y1);
+
+            var searchRight = countVisible ? _count.Left - UiScale.S(12) : btnLeft - UiScale.S(12);
+            var searchW = Math.Max(UiScale.S(80), searchRight - (searchLabel.Right + UiScale.S(4)));
+            _search.SetBounds(searchLabel.Right + UiScale.S(4), UiScale.S(4), searchW, UiScale.S(26));
+
+            // 说明独占第二行，避开按钮高度
+            _detail.SetBounds(0, row1, Math.Max(80, bar.ClientSize.Width - pad), UiScale.S(24));
         }
 
         bar.Resize += (_, _) => LayoutTools();
@@ -159,10 +178,10 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         return bar;
     }
 
-    private Button ToolBtn(string text, Action click)
+    private Button ToolBtn(string text, Action click, int height)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Height = 28;
+        UiFit.FitButton(b, height, minWidth: 64, padding: 16);
         b.Click += (_, _) => click();
         return b;
     }

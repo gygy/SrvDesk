@@ -204,11 +204,14 @@ internal static class ServerDesktopTweaks
         {
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground", 2);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1);
+            // 对齐 optimizerDuck DisableBackgroundApps
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle", 0);
         }
         else
         {
             DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
             DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled");
+            DeleteValue(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle");
         }
     }
 

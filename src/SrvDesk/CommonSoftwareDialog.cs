@@ -15,17 +15,50 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly ProgressBar _progressBar = new();
     private readonly List<Control> _actionButtons = [];
     private readonly ToolTip _toolTip = new();
-    private string _selectedCategory = "全部";
+    private string _selectedCategoryKey = "全部";
     private int _categoryHover = -1;
     private string? _busyItemId;
 
-    private static readonly string[] Categories =
-        ["全部", "必备", "AI", "微软运行库", "工具", "浏览器", "通讯", "网盘", "开发", "自定义"];
+    private static readonly (string Key, string En)[] CategoryDefs =
+    [
+        ("全部", "All"),
+        ("必备", "Essentials"),
+        ("AI", "AI"),
+        ("微软运行库", "Microsoft runtimes"),
+        ("工具", "Tools"),
+        ("浏览器", "Browsers"),
+        ("通讯", "Comms"),
+        ("网盘", "Cloud drives"),
+        ("开发", "Dev"),
+        ("自定义", "Custom"),
+    ];
+
+    private static string CategoryLabel(string key)
+    {
+        foreach (var c in CategoryDefs)
+        {
+            if (c.Key.Equals(key, StringComparison.Ordinal))
+                return AppLang.L(c.Key, c.En);
+        }
+        return key;
+    }
+
+    private static string CategoryKeyFromLabel(string label)
+    {
+        foreach (var c in CategoryDefs)
+        {
+            if (AppLang.L(c.Key, c.En).Equals(label, StringComparison.Ordinal)
+                || c.Key.Equals(label, StringComparison.Ordinal))
+                return c.Key;
+        }
+        return label;
+    }
 
     public CommonSoftwareDialog()
     {
-        Text = "常用软件";
+        Text = AppLang.L("常用软件", "Common software");
         AppBrand.ApplyWindowIcon(this);
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
@@ -117,8 +150,10 @@ internal sealed class CommonSoftwareDialog : Form
 
         ThemedSettingsChrome.MountModal(
             this,
-            "常用软件",
-            "官方源下载与安装 · 优先 winget，否则自动下载官网最新包",
+            AppLang.L("常用软件", "Common software"),
+            AppLang.L(
+                "官方下载安装 · 优先 winget，否则取官网安装包",
+                "Official installers · prefer winget, else vendor download"),
             body,
             "",
             () => ReloadStatusesAsync(),
@@ -132,15 +167,15 @@ internal sealed class CommonSoftwareDialog : Form
             if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
             BuildList();
             SetRowsPendingStatus();
-            _wingetHint.Text = "正在检测软件状态…";
+            _wingetHint.Text = AppLang.L("正在检测软件状态…", "Detecting software status…");
             CommonSoftwareHelper.WarmUpInBackground();
             ReloadStatusesAsync(forceRefresh: false);
         };
         _categoryMenu.SelectedIndexChanged += (_, _) =>
         {
-            if (_categoryMenu.SelectedItem is string cat)
+            if (_categoryMenu.SelectedIndex >= 0 && _categoryMenu.SelectedIndex < CategoryDefs.Length)
             {
-                _selectedCategory = cat;
+                _selectedCategoryKey = CategoryDefs[_categoryMenu.SelectedIndex].Key;
                 BuildList();
             }
         };
@@ -198,7 +233,7 @@ internal sealed class CommonSoftwareDialog : Form
     {
         var sidebar = NavMenuStyle.CreateSidebar();
         NavMenuStyle.Apply(_categoryMenu);
-        _categoryMenu.Items.AddRange(Categories);
+        _categoryMenu.Items.AddRange(CategoryDefs.Select(c => CategoryLabel(c.Key)).Cast<object>().ToArray());
         _categoryMenu.DrawItem += DrawCategoryItem;
         NavMenuStyle.BindHover(_categoryMenu, () => _categoryHover, v => _categoryHover = v);
         sidebar.Controls.Add(_categoryMenu);
@@ -219,30 +254,20 @@ internal sealed class CommonSoftwareDialog : Form
     {
         var strip = new Panel
         {
-            Height = 44,
+            Height = 48,
             BackColor = AppTheme.Surface,
-            Padding = new Padding(0, 4, 0, 4),
+            Padding = new Padding(0, 0, 0, 0),
         };
-
-        var flow = new NoScrollFlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoScroll = false,
-            BackColor = AppTheme.Surface,
-            Padding = new Padding(0),
-        };
-        UiBuffer.ConfigureNoScrollRow(flow);
 
         _wingetHint.AutoSize = false;
-        _wingetHint.Size = new Size(280, 24);
-        _wingetHint.Margin = new Padding(0, 4, 12, 0);
+        _wingetHint.Font = UiFit.UiFont;
         _wingetHint.ForeColor = AppTheme.TextMute;
+        _wingetHint.TextAlign = ContentAlignment.MiddleLeft;
+        _wingetHint.AutoEllipsis = true;
 
         _installWingetBtn.Text = "一键安装 winget";
-        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", 28, padding: 22);
-        _installWingetBtn.Margin = new Padding(0, 4, 12, 0);
+        _installWingetBtn.Font = UiFit.UiFont;
+        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", 30, padding: 22);
         _installWingetBtn.FlatStyle = FlatStyle.Flat;
         _installWingetBtn.BackColor = AppTheme.Primary;
         _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
@@ -251,18 +276,19 @@ internal sealed class CommonSoftwareDialog : Form
         _installWingetBtn.Visible = false;
         _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
-        // 左侧：状态 / winget；右侧紧凑区：确认开关 + 选择快捷
         _askBeforeInstall.Text = "安装前确认";
+        _askBeforeInstall.Font = UiFit.UiFont;
         _askBeforeInstall.Checked = false;
-        _askBeforeInstall.AutoSize = true;
-        _askBeforeInstall.Margin = new Padding(8, 6, 4, 0);
+        _askBeforeInstall.AutoSize = false;
         _askBeforeInstall.ForeColor = AppTheme.TextMain;
+        _askBeforeInstall.BackColor = Color.Transparent;
+        _askBeforeInstall.FlatStyle = FlatStyle.System;
         _toolTip.SetToolTip(_askBeforeInstall, "勾选后，安装前会弹出确认对话框");
 
         var selectBtn = ThemedSettingsChrome.CreateButton("选择 ▾", false);
-        selectBtn.Height = 28;
-        selectBtn.Margin = new Padding(4, 4, 0, 0);
+        selectBtn.Font = UiFit.UiFont;
         selectBtn.Padding = new Padding(0);
+        UiFit.FitButton(selectBtn, 30, minWidth: 72, padding: 20);
         var selectMenu = new ContextMenuStrip();
         selectMenu.Items.Add("全选当前分类", null, (_, _) => SetAllSelected(true));
         selectMenu.Items.Add("全不选", null, (_, _) => SetAllSelected(false));
@@ -272,20 +298,64 @@ internal sealed class CommonSoftwareDialog : Form
             SelectBy(r => r.Item.Id.Equals("vcredist-2022-x64", StringComparison.OrdinalIgnoreCase)));
         selectMenu.Items.Add("仅选未安装", null, (_, _) => SelectBy(r => !r.IsInstalled));
         selectBtn.Click += (_, _) => selectMenu.Show(selectBtn, new Point(0, selectBtn.Height));
-        _toolTip.SetToolTip(selectBtn, "快速勾选列表项，便于「安装所选」");
+        _toolTip.SetToolTip(selectBtn, "快速勾选，配合「安装所选」");
 
         var customBtn = ThemedSettingsChrome.CreateButton("自定义…", false);
-        customBtn.Height = 28;
-        customBtn.Margin = new Padding(8, 4, 0, 0);
+        customBtn.Font = UiFit.UiFont;
+        UiFit.FitButton(customBtn, 30, minWidth: 88, padding: 20);
         customBtn.Click += (_, _) => ManageCustomSoftware();
-        _toolTip.SetToolTip(customBtn, "添加可经 winget 安装的自定义软件");
+        _toolTip.SetToolTip(customBtn, "添加可用 winget 安装的软件");
 
-        flow.Controls.Add(_wingetHint);
-        flow.Controls.Add(_installWingetBtn);
-        flow.Controls.Add(_askBeforeInstall);
-        flow.Controls.Add(selectBtn);
-        flow.Controls.Add(customBtn);
-        strip.Controls.Add(flow);
+        // 不用 FlowLayout：窄宽 + 隐藏滚动条时易把按钮顶部裁掉
+        strip.Controls.AddRange([_wingetHint, _installWingetBtn, _askBeforeInstall, selectBtn, customBtn]);
+
+        void LayoutStrip()
+        {
+            const int y = 9;
+            const int gap = 10;
+            // 右侧留足边距，避免「自定义…」贴边被裁
+            var right = Math.Max(0, strip.ClientSize.Width - UiScale.S(14));
+
+            UiFit.FitButton(customBtn, 30, minWidth: 88, padding: 20);
+            UiFit.FitButton(selectBtn, 30, minWidth: 72, padding: 20);
+
+            customBtn.Location = new Point(right - customBtn.Width, y);
+            right = customBtn.Left - gap;
+            selectBtn.Location = new Point(right - selectBtn.Width, y);
+            right = selectBtn.Left - gap;
+
+            // 勾选框宽度按实际字形量，避免 PreferredSize 偏小导致文字伸进右侧按钮下
+            var askTextW = TextRenderer.MeasureText(
+                _askBeforeInstall.Text,
+                _askBeforeInstall.Font ?? UiFit.UiFont,
+                new Size(int.MaxValue, 32),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+            var askW = askTextW + UiScale.S(22);
+            var askH = Math.Max(22, UiFit.LineHeight(_askBeforeInstall.Font));
+            _askBeforeInstall.Size = new Size(askW, askH);
+            _askBeforeInstall.Location = new Point(right - askW, y + (30 - askH) / 2);
+            right = _askBeforeInstall.Left - gap;
+
+            if (_installWingetBtn.Visible)
+            {
+                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, 30, padding: 22);
+                _installWingetBtn.Location = new Point(Math.Max(0, right - _installWingetBtn.Width), y);
+                right = _installWingetBtn.Left - gap;
+            }
+
+            _wingetHint.SetBounds(0, y, Math.Max(60, right), 30);
+            // 保证右侧控件在提示文字之上，不被盖住
+            customBtn.BringToFront();
+            selectBtn.BringToFront();
+            _askBeforeInstall.BringToFront();
+            if (_installWingetBtn.Visible)
+                _installWingetBtn.BringToFront();
+        }
+
+        strip.Resize += (_, _) => LayoutStrip();
+        _installWingetBtn.VisibleChanged += (_, _) => LayoutStrip();
+        strip.HandleCreated += (_, _) => LayoutStrip();
+        LayoutStrip();
         return strip;
     }
 
@@ -302,11 +372,11 @@ internal sealed class CommonSoftwareDialog : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderCell("选", 8, 36, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell("软件名称", 44, 300));
-        header.Controls.Add(MakeHeaderCell("安装", 352, 96, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell("卸载", 456, 72, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell("状态", 536, 300));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("选", "Sel"), 8, 36, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("软件名称", "Name"), 44, 300));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("安装", "Install"), 352, 96, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("卸载", "Uninstall"), 456, 72, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("状态", "Status"), 536, 300));
         header.Resize += (_, _) => header.Invalidate();
         return header;
     }
@@ -320,9 +390,9 @@ internal sealed class CommonSoftwareDialog : Form
         _listHost.Controls.Clear();
         _rows.Clear();
 
-        var items = _selectedCategory == "全部"
+        var items = _selectedCategoryKey == "全部"
             ? CommonSoftwareCatalog.GetAll()
-            : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategory).ToList();
+            : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategoryKey).ToList();
 
         const int rowH = 44;
         var y = 0;
@@ -359,8 +429,8 @@ internal sealed class CommonSoftwareDialog : Form
         using var dlg = new CustomSoftwareManageDialog();
         dlg.ShowDialog(this);
         if (!dlg.Changed) return;
-        if (_selectedCategory == CommonSoftwareCatalog.CustomCategory
-            || _selectedCategory == "全部")
+        if (_selectedCategoryKey == CommonSoftwareCatalog.CustomCategory
+            || _selectedCategoryKey == "全部")
         {
             BuildList();
             ReloadStatusesAsync(forceRefresh: true);
@@ -368,7 +438,7 @@ internal sealed class CommonSoftwareDialog : Form
         else
         {
             // 切到自定义分类方便查看
-            var idx = Array.IndexOf(Categories, CommonSoftwareCatalog.CustomCategory);
+            var idx = Array.FindIndex(CategoryDefs, c => c.Key == CommonSoftwareCatalog.CustomCategory);
             if (idx >= 0) _categoryMenu.SelectedIndex = idx;
         }
     }
@@ -406,8 +476,8 @@ internal sealed class CommonSoftwareDialog : Form
         var wingetOk = CommonSoftwareHelper.IsWingetAvailable();
         _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
-            ? "已检测到 winget · 静默安装 · 源索引后台预热"
-            : "未检测到 winget：有 winget 的软件会优先走商店源；其余仍可从官网下载最新包安装。";
+            ? "已检测到 winget · 可静默安装"
+            : "未检测到 winget：有 winget 的项走商店源，其余仍可从官网下载安装。";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
         if (_rows.Count == 0) BuildList();
@@ -562,9 +632,11 @@ internal sealed class CommonSoftwareDialog : Form
     {
         var wrapWidth = 520;
         var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix;
-        var measured = TextRenderer.MeasureText(text, Font, new Size(wrapWidth, int.MaxValue), flags);
+        var measured = TextRenderer.MeasureText(text ?? "", Font, new Size(wrapWidth - 8, int.MaxValue), flags);
         var work = Screen.FromControl(this).WorkingArea;
-        var textH = Math.Min(Math.Max(measured.Height + 8, 48), Math.Max(120, work.Height - 180));
+        // 限高 + 可滚动，避免批量安装结果撑满半屏
+        var maxTextH = Math.Min(360, Math.Max(160, (int)(work.Height * 0.45)));
+        var textH = Math.Min(Math.Max(measured.Height + 12, 64), maxTextH);
         using var f = new Form
         {
             Text = title,
@@ -579,18 +651,25 @@ internal sealed class CommonSoftwareDialog : Form
             ForeColor = AppTheme.TextMain,
             ClientSize = new Size(wrapWidth + 40, textH + 72),
         };
-        var label = new Label
+        var box = new TextBox
         {
-            AutoSize = false,
+            Multiline = true,
+            ReadOnly = true,
+            BorderStyle = BorderStyle.None,
+            BackColor = AppTheme.Surface,
+            ForeColor = AppTheme.TextMain,
             Location = new Point(16, 16),
             Size = new Size(wrapWidth, textH),
-            Text = text,
+            Text = text ?? "",
+            ScrollBars = ScrollBars.Vertical,
+            TabStop = false,
+            WordWrap = true,
         };
         var ok = ThemedSettingsChrome.CreateButton("确定", true);
         ok.DialogResult = DialogResult.OK;
         ok.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         ok.Location = new Point(f.ClientSize.Width - 16 - ok.Width, f.ClientSize.Height - 16 - ok.Height);
-        f.Controls.Add(label);
+        f.Controls.Add(box);
         f.Controls.Add(ok);
         f.AcceptButton = ok;
         f.CancelButton = ok;
@@ -855,8 +934,7 @@ internal sealed class CommonSoftwareDialog : Form
                 SetInstallBusy(true, $"全部完成（{updates.Count}/{updates.Count}）", percent: 100);
                 SetInstallBusy(false);
                 ReloadStatusesAsync();
-                MessageBox.Show(this, string.Join("\r\n", notes), "批量更新",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowNotice("批量更新", string.Join("\r\n", notes), MessageBoxIcon.Information);
             });
         });
     }
@@ -931,7 +1009,7 @@ internal sealed class CommonSoftwareDialog : Form
                 SetInstallBusy(true, $"全部完成（{ordered.Count}/{ordered.Count}）", percent: 100);
                 SetInstallBusy(false);
                 ReloadStatusesAsync();
-                MessageBox.Show(this, string.Join("\r\n", notes), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowNotice(title, string.Join("\r\n", notes), MessageBoxIcon.Information);
             });
         });
     }
@@ -1033,19 +1111,23 @@ internal sealed class CommonSoftwareDialog : Form
             _item = item;
             _onInstall = onInstall;
             _onUninstall = onUninstall;
+            // 行内有 CheckBox/Button：不要开 UserPaint，否则子控件易残影/只剩边线
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.UserPaint
                 | ControlStyles.ResizeRedraw,
                 true);
             DoubleBuffered = true;
             Height = height;
             BackColor = bg;
 
-            _select.Location = new Point(12, (height - 18) / 2);
-            _select.Size = new Size(18, 18);
-            _select.BackColor = Color.Transparent;
+            _select.AutoSize = false;
+            _select.Text = "";
+            _select.Size = new Size(16, 16);
+            _select.Location = new Point(14, (height - 16) / 2);
+            _select.BackColor = bg;
+            _select.FlatStyle = FlatStyle.Standard;
+            _select.UseVisualStyleBackColor = true;
 
             var name = new SingleLineLabel
             {
@@ -1058,10 +1140,11 @@ internal sealed class CommonSoftwareDialog : Form
                 BackColor = Color.Transparent,
             };
 
-            _install = RowButton("一键安装", 352);
+            var btnY = Math.Max(6, (height - 28) / 2);
+            _install = RowButton("一键安装", 352, btnY);
             _install.Click += (_, _) => _onInstall(_item);
 
-            _uninstall = RowButton("卸载", 352 + _install.Width + 12);
+            _uninstall = RowButton("卸载", 352 + _install.Width + 12, btnY);
             _uninstall.Click += (_, _) => _onUninstall(_item);
             if (item.IsWingetBootstrap)
             {
@@ -1071,11 +1154,12 @@ internal sealed class CommonSoftwareDialog : Form
 
             _status = new SingleLineLabel
             {
-                Location = new Point(_uninstall.Right + 12, 10),
-                Size = new Size(Math.Max(160, 280), 24),
+                Location = new Point(_uninstall.Right + 12, 0),
+                Size = new Size(Math.Max(160, 280), height),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Microsoft YaHei UI", 8.75F),
                 Padding = new Padding(8, 0, 8, 0),
+                BackColor = Color.Transparent,
             };
 
             Controls.AddRange([_select, name, _install, _uninstall, _status]);
@@ -1083,6 +1167,12 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 if (Width <= 0) return;
                 _status.Width = Math.Max(120, Width - _status.Left - 12);
+                _status.Height = Height;
+                name.Height = Height;
+                _select.Top = (Height - _select.Height) / 2;
+                var by = Math.Max(6, (Height - _install.Height) / 2);
+                _install.Top = by;
+                _uninstall.Top = by;
             };
             Paint += (_, e) =>
             {
@@ -1186,19 +1276,21 @@ internal sealed class CommonSoftwareDialog : Form
             _statusTip.SetToolTip(_status, "任务进行中，请稍候…");
         }
 
-        private static Button RowButton(string text, int x)
+        private static Button RowButton(string text, int x, int y)
         {
             var font = new Font("Microsoft YaHei UI", 9F);
             var b = new Button
             {
                 Text = text,
-                Location = new Point(x, 8),
+                Location = new Point(x, y),
                 Size = UiFit.ButtonSize(text, 28, font, minWidth: 72, padding: 20),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = AppTheme.PrimaryDeep,
                 BackColor = AppTheme.SurfaceCard,
                 Cursor = Cursors.Hand,
                 Font = font,
+                TextAlign = ContentAlignment.MiddleCenter,
+                UseVisualStyleBackColor = false,
             };
             b.FlatAppearance.BorderColor = AppTheme.Border;
             b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;

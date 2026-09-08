@@ -7,7 +7,7 @@ internal sealed class SupportDialog : Form
 {
     public SupportDialog()
     {
-        Text = "支持";
+        Text = AppBrand.SupportDialogTitle;
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -29,7 +29,7 @@ internal sealed class SupportDialog : Form
 
         var subtitle = new Label
         {
-            Text = "Windows Server 桌面优化助手",
+            Text = AppLang.L("Windows Server 桌面优化助手", "Windows Server desktop optimizer"),
             ForeColor = AppTheme.TextMute,
             AutoSize = true,
             Location = new Point(28, 58),
@@ -37,7 +37,7 @@ internal sealed class SupportDialog : Form
 
         var author = new Label
         {
-            Text = "作者",
+            Text = AppLang.L("作者", "Author"),
             ForeColor = AppTheme.TextMute,
             AutoSize = true,
             Location = new Point(28, 100),
@@ -53,7 +53,7 @@ internal sealed class SupportDialog : Form
 
         var feedback = new Label
         {
-            Text = "反馈",
+            Text = AppLang.L("反馈", "Feedback"),
             ForeColor = AppTheme.TextMute,
             AutoSize = true,
             Location = new Point(28, 132),
@@ -79,11 +79,11 @@ internal sealed class SupportDialog : Form
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, "支持", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, ex.Message, AppBrand.SupportDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
 
-        var ok = ThemedSettingsChrome.CreateButton("关闭", true);
+        var ok = ThemedSettingsChrome.CreateButton(AppLang.L("关闭", "Close"), true);
         ok.Size = new Size(88, 32);
         ok.Location = new Point(ClientSize.Width - 28 - 88, 168);
         ok.DialogResult = DialogResult.OK;

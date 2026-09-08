@@ -23,20 +23,20 @@ internal static class BrandPalette
     public static readonly Color PrimaryLight = Color.FromArgb(222, 236, 249);
     public static readonly Color PrimaryPale = Color.FromArgb(243, 248, 253);
 
-    public static readonly Color Surface = Color.FromArgb(250, 251, 252);
+    public static readonly Color Surface = Color.FromArgb(246, 248, 251);
     public static readonly Color SurfaceCard = Color.White;
-    public static readonly Color NavBg = Color.FromArgb(245, 248, 252);
-    public static readonly Color NavHover = Color.FromArgb(229, 240, 250);
-    public static readonly Color RowAlt = Color.FromArgb(240, 247, 253);
-    public static readonly Color GroupBg = Color.FromArgb(232, 242, 251);
-    public static readonly Color Border = Color.FromArgb(199, 218, 235);
-    public static readonly Color BorderLight = Color.FromArgb(220, 232, 244);
+    public static readonly Color NavBg = Color.FromArgb(240, 244, 249);
+    public static readonly Color NavHover = Color.FromArgb(226, 237, 248);
+    public static readonly Color RowAlt = Color.FromArgb(243, 247, 252);
+    public static readonly Color GroupBg = Color.FromArgb(229, 239, 249);
+    public static readonly Color Border = Color.FromArgb(196, 214, 232);
+    public static readonly Color BorderLight = Color.FromArgb(226, 235, 244);
 
-    public static readonly Color TextMain = Color.FromArgb(32, 47, 62);
-    public static readonly Color TextMute = Color.FromArgb(96, 112, 128);
+    public static readonly Color TextMain = Color.FromArgb(28, 40, 54);
+    public static readonly Color TextMute = Color.FromArgb(90, 106, 122);
     public static readonly Color TextOnPrimary = Color.White;
-    public static readonly Color TextOnPrimarySoft = Color.FromArgb(204, 228, 248);
-    public static readonly Color TextHeader = Color.FromArgb(0, 69, 120);
+    public static readonly Color TextOnPrimarySoft = Color.FromArgb(210, 230, 248);
+    public static readonly Color TextHeader = Color.FromArgb(0, 74, 128);
 
     /// <summary>适用范围标签（版本/桌面体验）。</summary>
     public static readonly Color ScopeTag = Color.FromArgb(0, 99, 177);

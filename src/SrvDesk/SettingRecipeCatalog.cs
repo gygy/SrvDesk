@@ -395,11 +395,15 @@ internal static class SettingRecipeCatalog
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"),
                 ActionScript.Dword("LetAppsRunInBackground", 2)) +
             ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"),
-                ActionScript.Dword("GlobalUserDisabled", 1)),
+                ActionScript.Dword("GlobalUserDisabled", 1)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Search"),
+                ActionScript.Dword("BackgroundAppGlobalToggle", 0)),
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"),
                 ActionScript.DeleteValue("LetAppsRunInBackground")) +
             ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"),
-                ActionScript.DeleteValue("GlobalUserDisabled"))));
+                ActionScript.DeleteValue("GlobalUserDisabled")) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Search"),
+                ActionScript.DeleteValue("BackgroundAppGlobalToggle"))));
 
         Add(SettingCatalog.ClassicFileSearch, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search"),
@@ -482,8 +486,12 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.DisableSearchHistory, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Search", "HistoryViewEnabled", 0, 1));
         Add(SettingCatalog.DisableStickyKeys, ActionScript.Reg(
-            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\StickyKeys"), ActionScript.Sz("Flags", "506")),
-            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\StickyKeys"), ActionScript.Sz("Flags", "510"))));
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\StickyKeys"), ActionScript.Sz("Flags", "506")) +
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\Keyboard Response"), ActionScript.Sz("Flags", "2")) +
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\ToggleKeys"), ActionScript.Sz("Flags", "34")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\StickyKeys"), ActionScript.Sz("Flags", "510")) +
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\Keyboard Response"), ActionScript.Sz("Flags", "126")) +
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Accessibility\ToggleKeys"), ActionScript.Sz("Flags", "62"))));
         Add(SettingCatalog.DisablePca, ActionScript.Service("PcaSvc", enableMeansStart: false));
         Add(SettingCatalog.PauseFeatureUpdatesUntil2035, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"),
@@ -703,6 +711,36 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.DisableNetworkThrottling, ActionScript.DwordOnDeleteOff(false,
             @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile",
             "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF)));
+        Add(SettingCatalog.OptimizeMultimediaScheduler, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"),
+                ActionScript.Dword("NoLazyMode", 1),
+                ActionScript.Dword("AlwaysOn", 1),
+                ActionScript.Dword("SystemResponsiveness", 10)) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"),
+                ActionScript.Dword("Priority", 2),
+                ActionScript.Sz("Scheduling Category", "High"),
+                ActionScript.Sz("SFIO Priority", "High"),
+                ActionScript.Dword("GPU Priority", 8)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"),
+                ActionScript.DeleteValue("NoLazyMode"),
+                ActionScript.DeleteValue("AlwaysOn"),
+                ActionScript.DeleteValue("SystemResponsiveness")) +
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"),
+                ActionScript.DeleteValue("Priority"),
+                ActionScript.DeleteValue("Scheduling Category"),
+                ActionScript.DeleteValue("SFIO Priority"),
+                ActionScript.DeleteValue("GPU Priority")),
+            "对齐 optimizerDuck；NetworkThrottlingIndex 由「关闭多媒体网络节流」单独控制。"));
+        Add(SettingCatalog.OptimizeKeyboardLatency, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Keyboard"),
+                ActionScript.Sz("KeyboardDelay", "0"),
+                ActionScript.Sz("KeyboardSpeed", "31")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Keyboard"),
+                ActionScript.Sz("KeyboardDelay", "1"),
+                ActionScript.Sz("KeyboardSpeed", "31"))));
+        Add(SettingCatalog.LiftWebDavFileSizeLimit, ActionScript.DwordOnDeleteOff(false,
+            @"SYSTEM\CurrentControlSet\Services\WebClient\Parameters",
+            "FileSizeLimitInBytes", unchecked((int)0xFFFFFFFF)));
         Add(SettingCatalog.DisableGameDvr, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR"),
                 ActionScript.Dword("AllowGameDVR", 0)) +

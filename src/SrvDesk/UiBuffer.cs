@@ -180,6 +180,30 @@ internal static class UiBuffer
         const int lvmSetExtendedListViewStyle = lvmFirst + 54;
         const int lvsExDoubleBuffer = 0x00010000;
         SendMessage(list.Handle, lvmSetExtendedListViewStyle, (IntPtr)lvsExDoubleBuffer, (IntPtr)lvsExDoubleBuffer);
+        FitListViewRowHeight(list);
+    }
+
+    /// <summary>
+    /// 按当前字体抬高报告行。注意：不存在可用的 LVM_SETITEMHEIGHT；
+    /// 此前误用 LVM_FIRST+27（实为 LVM_INSERTCOLUMN）会导致原生访问冲突并直接退出。
+    /// 正确做法是挂一个高度合适的 SmallImageList。
+    /// </summary>
+    public static void FitListViewRowHeight(ListView list)
+    {
+        if (list is null) return;
+        var h = Math.Max(22, UiFit.LineHeight(list.Font) + 10);
+        var cur = list.SmallImageList;
+        if (cur is not null && cur.ImageSize.Width == 1 && cur.ImageSize.Height == h)
+            return;
+
+        var imgs = new ImageList
+        {
+            ColorDepth = ColorDepth.Depth32Bit,
+            ImageSize = new Size(1, h),
+        };
+        list.SmallImageList = imgs;
+        try { cur?.Dispose(); }
+        catch { /* ignore */ }
     }
 
     /// <summary>切换标签时暂停重绘，减轻内容区高度跳动带来的闪烁。</summary>

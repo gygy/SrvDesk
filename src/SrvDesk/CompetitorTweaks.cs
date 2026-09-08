@@ -23,6 +23,9 @@ internal static class CompetitorTweaks
         if (Take("DisableHpet", x => x.DisableHpet)) SetHpet(!s.DisableHpet);
         if (Take("EnableLoginVerbose", x => x.EnableLoginVerbose)) SetLoginVerbose(s.EnableLoginVerbose);
         if (Take("DisableNetworkThrottling", x => x.DisableNetworkThrottling)) SetNetworkThrottling(!s.DisableNetworkThrottling);
+        if (Take("OptimizeMultimediaScheduler", x => x.OptimizeMultimediaScheduler)) SetMultimediaScheduler(s.OptimizeMultimediaScheduler);
+        if (Take("OptimizeKeyboardLatency", x => x.OptimizeKeyboardLatency)) SetKeyboardLatency(s.OptimizeKeyboardLatency);
+        if (Take("LiftWebDavFileSizeLimit", x => x.LiftWebDavFileSizeLimit)) SetWebDavFileSizeLimit(s.LiftWebDavFileSizeLimit);
         if (Take("DisableGameDvr", x => x.DisableGameDvr)) SetGameDvr(!s.DisableGameDvr);
         if (Take("DisableLocationTracking", x => x.DisableLocationTracking)) SetLocation(!s.DisableLocationTracking);
         if (Take("DisableConsumerFeatures", x => x.DisableConsumerFeatures)) SetConsumerFeatures(!s.DisableConsumerFeatures);
@@ -52,6 +55,9 @@ internal static class CompetitorTweaks
         s.DisableHpet = IsHpetDisabled();
         s.EnableLoginVerbose = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "VerboseStatus", 1);
         s.DisableNetworkThrottling = IsDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF));
+        s.OptimizeMultimediaScheduler = IsMultimediaSchedulerOptimized();
+        s.OptimizeKeyboardLatency = IsKeyboardLatencyOptimized();
+        s.LiftWebDavFileSizeLimit = IsDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Services\WebClient\Parameters", "FileSizeLimitInBytes", unchecked((int)0xFFFFFFFF));
         s.DisableGameDvr = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0);
         s.DisableLocationTracking = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors", "DisableLocation", 1);
         s.DisableConsumerFeatures = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\CloudContent", "DisableWindowsConsumerFeatures", 1);
@@ -138,6 +144,74 @@ internal static class CompetitorTweaks
             DeleteValue(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex");
         else
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF));
+    }
+
+    /// <summary>对齐 optimizerDuck OptimizeMultimediaScheduler（不含 NetworkThrottlingIndex，该项单独开关）。</summary>
+    private static void SetMultimediaScheduler(bool optimize)
+    {
+        const string profile = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+        const string games = profile + @"\Tasks\Games";
+        if (optimize)
+        {
+            SetDword(Hive.HkLm, profile, "NoLazyMode", 1);
+            SetDword(Hive.HkLm, profile, "AlwaysOn", 1);
+            SetDword(Hive.HkLm, profile, "SystemResponsiveness", 10);
+            SetDword(Hive.HkLm, games, "Priority", 2);
+            SetString(Hive.HkLm, games, "Scheduling Category", "High");
+            SetString(Hive.HkLm, games, "SFIO Priority", "High");
+            SetDword(Hive.HkLm, games, "GPU Priority", 8);
+        }
+        else
+        {
+            DeleteValue(Hive.HkLm, profile, "NoLazyMode");
+            DeleteValue(Hive.HkLm, profile, "AlwaysOn");
+            DeleteValue(Hive.HkLm, profile, "SystemResponsiveness");
+            DeleteValue(Hive.HkLm, games, "Priority");
+            DeleteValue(Hive.HkLm, games, "Scheduling Category");
+            DeleteValue(Hive.HkLm, games, "SFIO Priority");
+            DeleteValue(Hive.HkLm, games, "GPU Priority");
+        }
+    }
+
+    private static bool IsMultimediaSchedulerOptimized()
+    {
+        const string profile = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+        const string games = profile + @"\Tasks\Games";
+        return IsDword(Hive.HkLm, profile, "NoLazyMode", 1)
+            && IsDword(Hive.HkLm, profile, "AlwaysOn", 1)
+            && IsDword(Hive.HkLm, profile, "SystemResponsiveness", 10)
+            && IsDword(Hive.HkLm, games, "Priority", 2)
+            && GetString(Hive.HkLm, games, "Scheduling Category") == "High"
+            && GetString(Hive.HkLm, games, "SFIO Priority") == "High"
+            && IsDword(Hive.HkLm, games, "GPU Priority", 8);
+    }
+
+    private static void SetKeyboardLatency(bool optimize)
+    {
+        const string key = @"Control Panel\Keyboard";
+        if (optimize)
+        {
+            SetString(Hive.HkCu, key, "KeyboardDelay", "0");
+            SetString(Hive.HkCu, key, "KeyboardSpeed", "31");
+        }
+        else
+        {
+            SetString(Hive.HkCu, key, "KeyboardDelay", "1");
+            SetString(Hive.HkCu, key, "KeyboardSpeed", "31");
+        }
+    }
+
+    private static bool IsKeyboardLatencyOptimized() =>
+        GetString(Hive.HkCu, @"Control Panel\Keyboard", "KeyboardDelay") == "0"
+        && GetString(Hive.HkCu, @"Control Panel\Keyboard", "KeyboardSpeed") == "31";
+
+    private static void SetWebDavFileSizeLimit(bool lift)
+    {
+        const string key = @"SYSTEM\CurrentControlSet\Services\WebClient\Parameters";
+        if (lift)
+            SetDword(Hive.HkLm, key, "FileSizeLimitInBytes", unchecked((int)0xFFFFFFFF));
+        else
+            DeleteValue(Hive.HkLm, key, "FileSizeLimitInBytes");
     }
 
     private static void SetGameDvr(bool enable)
@@ -280,6 +354,31 @@ internal static class CompetitorTweaks
             hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
         using var k = writeBase.CreateSubKey(key, true);
         k?.SetValue(name, value, RegistryValueKind.DWord);
+    }
+
+    private static string? GetString(Hive hive, string key, string name)
+    {
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
+        using var k = baseKey.OpenSubKey(key);
+        return k?.GetValue(name) as string;
+    }
+
+    private static void SetString(Hive hive, string key, string name, string value)
+    {
+        object? old = null;
+        using (var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default))
+        using (var r = baseKey.OpenSubKey(key))
+            old = r?.GetValue(name);
+        ApplyLog.RegistryString(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
+        using var writeBase = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
+        using var k = writeBase.CreateSubKey(key, true);
+        k?.SetValue(name, value, RegistryValueKind.String);
     }
 
     private static void DeleteValue(Hive hive, string key, string name)

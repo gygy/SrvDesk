@@ -4,217 +4,220 @@ namespace SrvDesk;
 
 internal sealed class MainForm : Form
 {
-    private readonly SettingRow _cpu = Choice("CPU 资源分配", "后台服务优先", SettingCatalog.CpuProgramPriority,
-        ["后台服务优先", "程序优先"], optimizedIndex: 1);
-    private readonly SettingRow _dep = Row("数据执行保护 DEP（T）", "按系统策略", SettingCatalog.Dep);
-    private readonly SettingRow _uac = Choice("UAC 设置", "默认通知", SettingCatalog.DisableUac,
-        ["默认通知", "从不通知"], optimizedIndex: 1);
-    private readonly SettingRow _ie = Row("关闭 IE 增强安全配置", "开启", SettingCatalog.DisableIeEsc);
-    private readonly SettingRow _highPerf = Choice("电源计划", "平衡", SettingCatalog.HighPerfPower,
-        ["平衡", "高性能"], optimizedIndex: 1);
-    private readonly SettingRow _telemetry = Row("关闭遥测与 DiagTrack", "开启", SettingCatalog.DisableTelemetry);
-    private readonly SettingRow _noUpdateReboot = Choice("更新后重启策略", "允许重启", SettingCatalog.NoUpdateReboot,
-        ["允许重启", "不自动重启"], optimizedIndex: 1);
-    private readonly SettingRow _deliveryOpt = Row("关闭更新传递优化（P2P）", "开启", SettingCatalog.DisableDeliveryOpt);
-    private readonly SettingRow _wuNotify = Choice("Windows 更新下载方式", "自动安装", SettingCatalog.WuNotifyOnly,
-        ["自动安装", "仅通知下载"], optimizedIndex: 1);
-    private readonly SettingRow _sysMain = Row("禁用 SysMain 超级预读", "自动", SettingCatalog.DisableSysMain);
-    private readonly SettingRow _visualPerf = Choice("视觉效果", "系统自选", SettingCatalog.VisualBestPerf,
-        ["系统自选", "最佳性能"], optimizedIndex: 1);
-    private readonly SettingRow _powerThrottle = Row("关闭 CPU 电源节流", "开启", SettingCatalog.PowerThrottlingOff);
-    private readonly SettingRow _boostMode = Row("显示处理器性能提升模式", "隐藏", SettingCatalog.ShowProcessorBoostMode);
-    private readonly SettingRow _hibernate = Row("关闭休眠释放磁盘空间", "开启", SettingCatalog.DisableHibernate);
-    private readonly SettingRow _tcp = Row("TCP 参数优化（对齐 Win10）", "默认", SettingCatalog.TcpOptimized);
-    private readonly SettingRow _qosSpeed = Row("QoS 网速优化（零保留+入站TCP级别3）", "系统默认", SettingCatalog.QosSpeedOptimize);
-    private readonly SettingRow _errorReport = Row("关闭 Windows 错误报告", "开启", SettingCatalog.DisableErrorReport);
-    private readonly SettingRow _longPaths = Row("启用 NTFS 长路径支持", "关闭", SettingCatalog.LongPathsEnabled);
-    private readonly SettingRow _fastStartup = Row("关闭快速启动（稳定双系统）", "开启", SettingCatalog.DisableFastStartup);
-    private readonly SettingRow _autoMaint = Row("禁用自动维护计划", "开启", SettingCatalog.DisableAutoMaintenance);
-    private readonly SettingRow _noDriverWu = Row("Windows 更新不含驱动", "含驱动", SettingCatalog.ExcludeDriverUpdates);
-    private readonly SettingRow _smb1 = Row("禁用 SMB 1.0 协议", "允许", SettingCatalog.DisableSmb1);
-    private readonly SettingRow _remoteReg = Row("禁用 Remote Registry 服务", "手动", SettingCatalog.DisableRemoteRegistry);
-    private readonly SettingRow _spooler = Row("禁用打印后台处理（无打印机）", "自动", SettingCatalog.DisablePrintSpooler);
-    private readonly SettingRow _largeCache = Row("大系统缓存与 NTFS 缓冲优化", "默认", SettingCatalog.LargeSystemCacheOptimize);
-    private readonly SettingRow _reservedStorage = Row("关闭系统保留存储", "开启", SettingCatalog.DisableReservedStorage);
-    private readonly SettingRow _srvSplit = Row("关闭 LanmanServer 服务拆分", "默认", SettingCatalog.DisableSrvSplit);
-    private readonly SettingRow _gpuSched = Row("启用 GPU 硬件加速计划", "关闭", SettingCatalog.EnableGpuHwScheduling);
-    private readonly SettingRow _pca = Row("禁用程序兼容性助手 PCA", "开启", SettingCatalog.DisablePca);
-    private readonly SettingRow _wuPause2035 = Row("暂停功能更新至 2035", "不暂停", SettingCatalog.PauseFeatureUpdatesUntil2035);
-    private readonly SettingRow _wuPauseUx = Row("延迟 Windows 更新至 2099", "不延迟", SettingCatalog.PauseWindowsUpdatesUx);
-    private readonly SettingRow _meltdown = Row("关闭 Meltdown/Spectre 缓解", "系统默认", SettingCatalog.DisableMeltdownSpectre);
-    private readonly SettingRow _hvci = Row("关闭内存完整性 HVCI", "由系统决定", SettingCatalog.DisableMemoryIntegrity);
-    private readonly SettingRow _wdac = Row("关闭 WDAC 应用控制", "系统默认", SettingCatalog.DisableWdac);
-    private readonly SettingRow _vbs = Row("强制关闭 VBS 虚拟化安全", "由系统决定", SettingCatalog.DisableVbs);
-    private readonly SettingRow _bbr2 = Row("TCP 拥塞控制开启 BBR2", "CUBIC 默认", SettingCatalog.EnableTcpBbr2);
-    private readonly SettingRow _sysRestore = Row("禁用系统还原", "启用", SettingCatalog.DisableSystemRestore);
-    private readonly SettingRow _ceip = Row("关闭客户体验改善计划", "启用", SettingCatalog.DisableCeip);
-    private readonly SettingRow _dps = Row("禁用诊断策略服务 DPS", "自动", SettingCatalog.DisableDiagnosticPolicy);
-    private readonly SettingRow _hideOs = Row("隐藏受保护的系统文件", "显示", SettingCatalog.HideProtectedOsFiles);
-    private readonly SettingRow _iconsOnly = Row("始终显示图标从不缩略图", "允许缩略图", SettingCatalog.AlwaysShowIconsNeverThumbnails);
-    private readonly SettingRow _emptyDrives = Row("显示空驱动器", "隐藏", SettingCatalog.ShowEmptyDrives);
-    private readonly SettingRow _recentFiles = Row("开始屏幕显示最近文件", "显示", SettingCatalog.ShowRecentFiles);
-    private readonly SettingRow _frequent = Row("显示快速访问常用文件夹", "不显示", SettingCatalog.ShowFrequentPlaces);
-    private readonly SettingRow _officeCloud = Row("隐藏 office.com 云文件", "显示", SettingCatalog.HideOfficeCloudFiles);
-    private readonly SettingRow _onedrive = Row("禁止 OneDrive 同步", "允许", SettingCatalog.DisableOneDrive);
-    private readonly SettingRow _tbChat = Row("隐藏任务栏聊天", "显示", SettingCatalog.HideTaskbarChat);
-    private readonly SettingRow _tbCopilot = Row("隐藏任务栏 Copilot", "显示", SettingCatalog.HideTaskbarCopilot);
-    private readonly SettingRow _notepadWrap = Row("记事本默认自动换行", "不换行", SettingCatalog.NotepadWordWrap);
-    private readonly SettingRow _notepadStatus = Row("记事本显示状态栏", "不显示", SettingCatalog.NotepadStatusBar);
-    private readonly SettingRow _cloudSearch = Row("禁止搜索云内容", "允许", SettingCatalog.DisableCloudSearch);
-    private readonly SettingRow _langList = Row("禁止网站读取语言列表", "允许", SettingCatalog.DisableWebsiteLangList);
-    private readonly SettingRow _trackApps = Row("关闭应用启动跟踪", "开启", SettingCatalog.DisableAppLaunchTracking);
-    private readonly SettingRow _settingsSuggest = Row("关闭设置应用建议内容", "开启", SettingCatalog.DisableSettingsSuggestions);
-    private readonly SettingRow _inking = Row("关闭墨迹与键入个性化", "开启", SettingCatalog.DisableInkingPersonalization);
-    private readonly SettingRow _msPinyinEn = Row("微软拼音默认英文", "默认中文", SettingCatalog.MsPinyinDefaultEnglish);
-    private readonly SettingRow _msPinyinCloud = Row("关闭微软拼音云候选与输入见解", "开启", SettingCatalog.DisableMsPinyinCloudAndInsights);
-    private readonly SettingRow _msPinyinBar = Row("关闭拼音工具条与帮助按钮", "显示", SettingCatalog.DisableMsPinyinToolbar);
-    private readonly SettingRow _msrt = Row("更新不含恶意软件删除工具", "包含", SettingCatalog.ExcludeMsrtFromWu);
-    private readonly SettingRow _ra = Row("禁用远程协助", "允许", SettingCatalog.DisableRemoteAssistance);
-    private readonly SettingRow _memComp = Row("禁用内存压缩", "启用", SettingCatalog.DisableMemoryCompression);
-    private readonly SettingRow _prelaunch = Row("禁用应用预启动", "启用", SettingCatalog.DisableAppPrelaunch);
-    private readonly SettingRow _pageCombine = Row("禁用内存页面合并", "启用", SettingCatalog.DisablePageCombining);
-    private readonly SettingRow _ucpd = Row("禁用微软 UCPD 驱动", "启用", SettingCatalog.DisableUcpdDriver);
-    private readonly SettingRow _cortana = Row("关闭 Cortana", "开启", SettingCatalog.DisableCortana);
-    private readonly SettingRow _copilotAi = Row("关闭 Copilot（系统+Edge）", "开启", SettingCatalog.DisableCopilotAi);
-    private readonly SettingRow _officeTel = Row("关闭 Office 遥测", "开启", SettingCatalog.DisableOfficeTelemetry);
-    private readonly SettingRow _utc = Row("硬件时钟使用 UTC（双系统）", "本地时间", SettingCatalog.EnableUtcTime);
-    private readonly SettingRow _hpet = Row("关闭 HPET 高精度计时器", "开启", SettingCatalog.DisableHpet);
-    private readonly SettingRow _loginVerbose = Row("登录显示详细状态", "简洁", SettingCatalog.EnableLoginVerbose);
-    private readonly SettingRow _netThrottle = Row("关闭多媒体网络节流", "开启", SettingCatalog.DisableNetworkThrottling);
-    private readonly SettingRow _gameDvr = Row("关闭游戏栏 / Game DVR", "开启", SettingCatalog.DisableGameDvr);
-    private readonly SettingRow _location = Row("禁止定位服务", "允许", SettingCatalog.DisableLocationTracking);
-    private readonly SettingRow _consumer = Row("关闭消费者体验推送", "开启", SettingCatalog.DisableConsumerFeatures);
-    private readonly SettingRow _edgePre = Row("禁止 Edge 预启动与后台", "允许", SettingCatalog.DisableEdgePreload);
-    private readonly SettingRow _teredo = Row("禁用 Teredo 隧道", "允许", SettingCatalog.DisableTeredo);
-    private readonly SettingRow _clipCloud = Row("关闭剪贴板云同步", "允许", SettingCatalog.DisableClipboardCloud);
-    private readonly SettingRow _ntfsStamp = Row("关闭 NTFS 最后访问时间戳", "记录", SettingCatalog.DisableNtfsLastAccess);
-    private readonly SettingRow _xbox = Row("禁用 Xbox Live 服务", "手动", SettingCatalog.DisableXboxServices);
-    private readonly SettingRow _fax = Row("禁用传真服务", "手动", SettingCatalog.DisableFaxService);
-    private readonly SettingRow _f8 = Row("启用 F8 高级启动菜单", "标准", SettingCatalog.EnableF8BootMenu);
-    private readonly SettingRow _takeOwn = Row("右键菜单：取得所有权", "无", SettingCatalog.ContextMenuTakeOwnership);
-    private readonly SettingRow _openCmd = Row("右键菜单：在此处打开 CMD", "无", SettingCatalog.ContextMenuOpenCmd);
-    private readonly SettingRow _copyMoveTo = Row("右键菜单：复制到 / 移动到", "无", SettingCatalog.ContextMenuCopyMoveTo);
-    private readonly SettingRow _quickOps = Row("右键菜单：快捷操作组", "无", SettingCatalog.ContextMenuQuickOps);
-    private readonly SettingRow _wmpShare = Row("禁用媒体播放器网络共享", "手动", SettingCatalog.DisableMediaPlayerSharing);
-    private readonly SettingRow _insider = Row("禁用 Windows Insider 服务", "手动", SettingCatalog.DisableInsiderService);
-    private readonly SettingRow _storeUpd = Row("禁止商店自动更新应用", "自动", SettingCatalog.DisableStoreAutoUpdate);
-    private readonly SettingRow _news = Row("关闭资讯与兴趣", "开启", SettingCatalog.DisableNewsInterests);
-    private readonly SettingRow _noBrokenLnk = Row("禁止跟踪损坏快捷方式", "跟踪", SettingCatalog.DisableBrokenShortcutTracking);
-    private readonly SettingRow _sepProcess = Row("单独进程打开文件夹", "同一进程", SettingCatalog.ExplorerSeparateProcess);
-    private readonly SettingRow _autoRestartShell = Row("资源管理器崩溃自动重启", "不重启", SettingCatalog.AutoRestartExplorer);
-    private readonly SettingRow _hideSpotlight = Row("隐藏桌面「了解此图片」", "显示", SettingCatalog.HideDesktopSpotlight);
-    private readonly SettingRow _noDupDrives = Row("去除本地磁盘重复显示", "保留", SettingCatalog.HideDuplicateRemovableDrives);
-    private readonly SettingRow _noRunMru = Row("「运行」对话框不显示历史", "保留", SettingCatalog.DisableRunDialogHistory);
-    private readonly SettingRow _mergeSvchost = Row("合并 svchost 进程", "默认拆分", SettingCatalog.MergeSvchostProcesses);
-    private readonly SettingRow _trkWks = Row("禁用 NTFS 分布式链接跟踪", "启用", SettingCatalog.DisableDistributedLinkTracking);
-    private readonly SettingRow _noLowDisk = Row("禁用磁盘空间不足警告", "提示", SettingCatalog.DisableLowDiskSpaceChecks);
-    private readonly SettingRow _usbPowerOff = Row("弹出 USB 后彻底断电", "保持供电", SettingCatalog.UsbFullPowerOff);
-    private readonly SettingRow _autoReboot = Row("蓝屏时自动重启", "停留蓝屏", SettingCatalog.AutoRebootOnCrash);
-    private readonly SettingRow _cliTelemetry = Row("关闭 .NET / PowerShell 遥测", "允许", SettingCatalog.DisableDotNetPowerShellTelemetry);
-    private readonly SettingRow _diagMinimal = Row("诊断数据设为最小（官方级别）", "完整", SettingCatalog.DiagnosticDataMinimal);
-    private readonly SettingRow _noSigninReopen = Row("更新后不自动重开应用", "允许重开", SettingCatalog.DisableSigninReopen);
-    private readonly SettingRow _noSilentApps = Row("禁止静默安装建议应用", "允许", SettingCatalog.DisableSilentAppInstall);
-    private readonly SettingRow _hideHomeGallery = Row("隐藏资源管理器主页与图库", "显示", SettingCatalog.HideExplorerHomeGallery);
-    private readonly SettingRow _noSnapAssist = Row("关闭窗口贴靠建议", "开启", SettingCatalog.DisableSnapAssist);
-    private readonly SettingRow _darkMode = Row("使用深色模式", "浅色", SettingCatalog.EnableDarkMode);
-    private readonly SettingRow _noBitlockerAuto = Row("禁止 BitLocker 自动加密", "允许", SettingCatalog.DisableBitLockerAutoEncrypt);
-    private readonly SettingRow _noCompanionApps = Row("禁止外设配套应用自动安装", "允许", SettingCatalog.PreventDeviceCompanionApps);
-    private readonly SettingRow _noUpdateAsap = Row("关闭「尽快获取最新更新」", "开启", SettingCatalog.DisableUpdateAsap);
-    private readonly SettingRow _hideSettingsHome = Row("隐藏设置首页与 365 广告", "显示", SettingCatalog.HideSettingsHomeAds);
-    private readonly SettingRow _extraAi = Row("关闭 Recall / Click to Do / 记事本画图 AI", "允许", SettingCatalog.DisableWin11ExtraAi);
-    private readonly SettingRow _alwaysMenu = Row("始终显示菜单栏", "按 Alt 才显示", SettingCatalog.AlwaysShowMenus);
-    private readonly SettingRow _hideMerge = Row("隐藏文件夹合并冲突", "每次确认", SettingCatalog.HideMergeConflicts);
-    private readonly SettingRow _compColor = Row("加密/压缩文件用颜色标识", "不着色", SettingCatalog.ShowCompColor);
-    private readonly SettingRow _infoTip = Row("显示文件夹弹出说明", "不显示", SettingCatalog.ShowInfoTip);
-    private readonly SettingRow _statusBar = Row("显示资源管理器状态栏", "不显示", SettingCatalog.ShowStatusBar);
-    private readonly SettingRow _noPersistFold = Row("登录时不还原上次文件夹窗口", "还原", SettingCatalog.DisablePersistBrowsers);
-    private readonly SettingRow _navExpand = Row("导航窗格展开到当前文件夹", "不展开", SettingCatalog.NavPaneExpandCurrent);
-    private readonly SettingRow _noShareWiz = Row("不使用共享向导", "使用向导", SettingCatalog.DisableSharingWizard);
-    private readonly SettingRow _driveLetters = Choice("盘符显示位置", "卷标后面", SettingCatalog.ShowDriveLettersMode,
+    private readonly SettingRow _cpu = Choice(AppLang.L("CPU 资源分配", "CPU scheduling"), AppLang.L("后台服务优先", "Background first"), SettingCatalog.CpuProgramPriority,
+        [AppLang.L("后台服务优先", "Background first"), AppLang.L("程序优先", "Programs first")], optimizedIndex: 1);
+    private readonly SettingRow _dep = Row(AppLang.L("数据执行保护 DEP（T）", "DEP (OptOut)"), AppLang.L("按系统策略", "System policy"), SettingCatalog.Dep);
+    private readonly SettingRow _uac = Choice(AppLang.L("UAC 设置", "UAC settings"), AppLang.L("默认通知", "Default notify"), SettingCatalog.DisableUac,
+        [AppLang.L("默认通知", "Default notify"), AppLang.L("从不通知", "Never notify")], optimizedIndex: 1);
+    private readonly SettingRow _ie = Row(AppLang.L("关闭 IE 增强安全配置", "Disable IE ESC"), AppLang.L("开启", "On"), SettingCatalog.DisableIeEsc);
+    private readonly SettingRow _highPerf = Choice(AppLang.L("电源计划", "Power plan"), AppLang.L("平衡", "Balanced"), SettingCatalog.HighPerfPower,
+        [AppLang.L("平衡", "Balanced"), AppLang.L("高性能", "High performance")], optimizedIndex: 1);
+    private readonly SettingRow _telemetry = Row(AppLang.L("关闭遥测与 DiagTrack", "Disable telemetry & DiagTrack"), AppLang.L("开启", "On"), SettingCatalog.DisableTelemetry);
+    private readonly SettingRow _noUpdateReboot = Choice(AppLang.L("更新后重启策略", "Post-update reboot"), AppLang.L("允许重启", "Allow reboot"), SettingCatalog.NoUpdateReboot,
+        [AppLang.L("允许重启", "Allow reboot"), AppLang.L("不自动重启", "No auto-reboot")], optimizedIndex: 1);
+    private readonly SettingRow _deliveryOpt = Row(AppLang.L("关闭更新传递优化（P2P）", "Disable Delivery Optimization"), AppLang.L("开启", "On"), SettingCatalog.DisableDeliveryOpt);
+    private readonly SettingRow _wuNotify = Choice(AppLang.L("Windows 更新下载方式", "Windows Update download"), AppLang.L("自动安装", "Auto install"), SettingCatalog.WuNotifyOnly,
+        [AppLang.L("自动安装", "Auto install"), AppLang.L("仅通知下载", "Notify only")], optimizedIndex: 1);
+    private readonly SettingRow _sysMain = Row(AppLang.L("禁用 SysMain 超级预读", "Disable SysMain"), AppLang.L("自动", "Automatic"), SettingCatalog.DisableSysMain);
+    private readonly SettingRow _visualPerf = Choice(AppLang.L("视觉效果", "Visual effects"), AppLang.L("系统自选", "Let Windows decide"), SettingCatalog.VisualBestPerf,
+        [AppLang.L("系统自选", "Let Windows decide"), AppLang.L("最佳性能", "Best performance")], optimizedIndex: 1);
+    private readonly SettingRow _powerThrottle = Row(AppLang.L("关闭 CPU 电源节流", "Disable CPU power throttling"), AppLang.L("开启", "On"), SettingCatalog.PowerThrottlingOff);
+    private readonly SettingRow _boostMode = Row(AppLang.L("显示处理器性能提升模式", "Show processor boost mode"), AppLang.L("隐藏", "Hidden"), SettingCatalog.ShowProcessorBoostMode);
+    private readonly SettingRow _hibernate = Row(AppLang.L("关闭休眠释放磁盘空间", "Disable hibernation"), AppLang.L("开启", "On"), SettingCatalog.DisableHibernate);
+    private readonly SettingRow _tcp = Row(AppLang.L("TCP 参数优化（对齐 Win10）", "TCP tweak (Win10-like)"), AppLang.L("默认", "Default"), SettingCatalog.TcpOptimized);
+    private readonly SettingRow _qosSpeed = Row(AppLang.L("QoS 网速优化（零保留+入站TCP级别3）", "QoS speed (0 reserved + inbound L3)"), AppLang.L("系统默认", "System default"), SettingCatalog.QosSpeedOptimize);
+    private readonly SettingRow _errorReport = Row(AppLang.L("关闭 Windows 错误报告", "Disable Windows Error Reporting"), AppLang.L("开启", "On"), SettingCatalog.DisableErrorReport);
+    private readonly SettingRow _longPaths = Row(AppLang.L("启用 NTFS 长路径支持", "Enable NTFS long paths"), AppLang.L("关闭", "Off"), SettingCatalog.LongPathsEnabled);
+    private readonly SettingRow _fastStartup = Row(AppLang.L("关闭快速启动（稳定双系统）", "Disable Fast Startup"), AppLang.L("开启", "On"), SettingCatalog.DisableFastStartup);
+    private readonly SettingRow _autoMaint = Row(AppLang.L("禁用自动维护计划", "Disable automatic maintenance"), AppLang.L("开启", "On"), SettingCatalog.DisableAutoMaintenance);
+    private readonly SettingRow _noDriverWu = Row(AppLang.L("Windows 更新不含驱动", "Exclude drivers from WU"), AppLang.L("含驱动", "Include drivers"), SettingCatalog.ExcludeDriverUpdates);
+    private readonly SettingRow _smb1 = Row(AppLang.L("禁用 SMB 1.0 协议", "Disable SMB 1.0"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableSmb1);
+    private readonly SettingRow _remoteReg = Row(AppLang.L("禁用 Remote Registry 服务", "Disable Remote Registry"), AppLang.L("手动", "Manual"), SettingCatalog.DisableRemoteRegistry);
+    private readonly SettingRow _spooler = Row(AppLang.L("禁用打印后台处理（无打印机）", "Disable Print Spooler"), AppLang.L("自动", "Automatic"), SettingCatalog.DisablePrintSpooler);
+    private readonly SettingRow _largeCache = Row(AppLang.L("大系统缓存与 NTFS 缓冲优化", "Large system cache + NTFS"), AppLang.L("默认", "Default"), SettingCatalog.LargeSystemCacheOptimize);
+    private readonly SettingRow _reservedStorage = Row(AppLang.L("关闭系统保留存储", "Disable reserved storage"), AppLang.L("开启", "On"), SettingCatalog.DisableReservedStorage);
+    private readonly SettingRow _srvSplit = Row(AppLang.L("关闭 LanmanServer 服务拆分", "Disable LanmanServer split"), AppLang.L("默认", "Default"), SettingCatalog.DisableSrvSplit);
+    private readonly SettingRow _gpuSched = Row(AppLang.L("启用 GPU 硬件加速计划", "Enable GPU HW scheduling"), AppLang.L("关闭", "Off"), SettingCatalog.EnableGpuHwScheduling);
+    private readonly SettingRow _pca = Row(AppLang.L("禁用程序兼容性助手 PCA", "Disable PCA"), AppLang.L("开启", "On"), SettingCatalog.DisablePca);
+    private readonly SettingRow _wuPause2035 = Row(AppLang.L("暂停功能更新至 2035", "Pause feature updates to 2035"), AppLang.L("不暂停", "Not paused"), SettingCatalog.PauseFeatureUpdatesUntil2035);
+    private readonly SettingRow _wuPauseUx = Row(AppLang.L("延迟 Windows 更新至 2099", "Defer Windows Update to 2099"), AppLang.L("不延迟", "Not delayed"), SettingCatalog.PauseWindowsUpdatesUx);
+    private readonly SettingRow _meltdown = Row(AppLang.L("关闭 Meltdown/Spectre 缓解", "Disable Meltdown/Spectre mitigations"), AppLang.L("系统默认", "System default"), SettingCatalog.DisableMeltdownSpectre);
+    private readonly SettingRow _hvci = Row(AppLang.L("关闭内存完整性 HVCI", "Disable memory integrity (HVCI)"), AppLang.L("由系统决定", "System decides"), SettingCatalog.DisableMemoryIntegrity);
+    private readonly SettingRow _wdac = Row(AppLang.L("关闭 WDAC 应用控制", "Disable WDAC"), AppLang.L("系统默认", "System default"), SettingCatalog.DisableWdac);
+    private readonly SettingRow _vbs = Row(AppLang.L("强制关闭 VBS 虚拟化安全", "Force-disable VBS"), AppLang.L("由系统决定", "System decides"), SettingCatalog.DisableVbs);
+    private readonly SettingRow _bbr2 = Row(AppLang.L("TCP 拥塞控制开启 BBR2", "Enable TCP BBR2"), AppLang.L("CUBIC 默认", "CUBIC default"), SettingCatalog.EnableTcpBbr2);
+    private readonly SettingRow _sysRestore = Row(AppLang.L("禁用系统还原", "Disable System Restore"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableSystemRestore);
+    private readonly SettingRow _ceip = Row(AppLang.L("关闭客户体验改善计划", "Disable CEIP"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableCeip);
+    private readonly SettingRow _dps = Row(AppLang.L("禁用诊断策略服务 DPS", "Disable DPS"), AppLang.L("自动", "Automatic"), SettingCatalog.DisableDiagnosticPolicy);
+    private readonly SettingRow _hideOs = Row(AppLang.L("隐藏受保护的系统文件", "Hide protected OS files"), AppLang.L("显示", "Shown"), SettingCatalog.HideProtectedOsFiles);
+    private readonly SettingRow _iconsOnly = Row(AppLang.L("始终显示图标从不缩略图", "Icons only, never thumbnails"), AppLang.L("允许缩略图", "Allow thumbnails"), SettingCatalog.AlwaysShowIconsNeverThumbnails);
+    private readonly SettingRow _emptyDrives = Row(AppLang.L("显示空驱动器", "Show empty drives"), AppLang.L("隐藏", "Hidden"), SettingCatalog.ShowEmptyDrives);
+    private readonly SettingRow _recentFiles = Row(AppLang.L("开始屏幕显示最近文件", "Show recent files"), AppLang.L("显示", "Shown"), SettingCatalog.ShowRecentFiles);
+    private readonly SettingRow _frequent = Row(AppLang.L("显示快速访问常用文件夹", "Show frequent folders"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowFrequentPlaces);
+    private readonly SettingRow _officeCloud = Row(AppLang.L("隐藏 office.com 云文件", "Hide office.com cloud files"), AppLang.L("显示", "Shown"), SettingCatalog.HideOfficeCloudFiles);
+    private readonly SettingRow _onedrive = Row(AppLang.L("禁止 OneDrive 同步", "Disable OneDrive sync"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableOneDrive);
+    private readonly SettingRow _tbChat = Row(AppLang.L("隐藏任务栏聊天", "Hide taskbar Chat"), AppLang.L("显示", "Shown"), SettingCatalog.HideTaskbarChat);
+    private readonly SettingRow _tbCopilot = Row(AppLang.L("隐藏任务栏 Copilot", "Hide taskbar Copilot"), AppLang.L("显示", "Shown"), SettingCatalog.HideTaskbarCopilot);
+    private readonly SettingRow _notepadWrap = Row(AppLang.L("记事本默认自动换行", "Notepad word wrap"), AppLang.L("不换行", "No wrap"), SettingCatalog.NotepadWordWrap);
+    private readonly SettingRow _notepadStatus = Row(AppLang.L("记事本显示状态栏", "Notepad status bar"), AppLang.L("不显示", "Hidden"), SettingCatalog.NotepadStatusBar);
+    private readonly SettingRow _cloudSearch = Row(AppLang.L("禁止搜索云内容", "Disable cloud search"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableCloudSearch);
+    private readonly SettingRow _langList = Row(AppLang.L("禁止网站读取语言列表", "Block sites reading language list"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableWebsiteLangList);
+    private readonly SettingRow _trackApps = Row(AppLang.L("关闭应用启动跟踪", "Disable app launch tracking"), AppLang.L("开启", "On"), SettingCatalog.DisableAppLaunchTracking);
+    private readonly SettingRow _settingsSuggest = Row(AppLang.L("关闭设置应用建议内容", "Disable Settings suggestions"), AppLang.L("开启", "On"), SettingCatalog.DisableSettingsSuggestions);
+    private readonly SettingRow _inking = Row(AppLang.L("关闭墨迹与键入个性化", "Disable inking personalization"), AppLang.L("开启", "On"), SettingCatalog.DisableInkingPersonalization);
+    private readonly SettingRow _msPinyinEn = Row(AppLang.L("微软拼音默认英文", "MS Pinyin default English"), AppLang.L("默认中文", "Chinese default"), SettingCatalog.MsPinyinDefaultEnglish);
+    private readonly SettingRow _msPinyinCloud = Row(AppLang.L("关闭微软拼音云候选与输入见解", "Disable MS Pinyin cloud/insights"), AppLang.L("开启", "On"), SettingCatalog.DisableMsPinyinCloudAndInsights);
+    private readonly SettingRow _msPinyinBar = Row(AppLang.L("关闭拼音工具条与帮助按钮", "Hide Pinyin toolbar/help"), AppLang.L("显示", "Shown"), SettingCatalog.DisableMsPinyinToolbar);
+    private readonly SettingRow _msrt = Row(AppLang.L("更新不含恶意软件删除工具", "Exclude MSRT from updates"), AppLang.L("包含", "Included"), SettingCatalog.ExcludeMsrtFromWu);
+    private readonly SettingRow _ra = Row(AppLang.L("禁用远程协助", "Disable Remote Assistance"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableRemoteAssistance);
+    private readonly SettingRow _memComp = Row(AppLang.L("禁用内存压缩", "Disable memory compression"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableMemoryCompression);
+    private readonly SettingRow _prelaunch = Row(AppLang.L("禁用应用预启动", "Disable app prelaunch"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableAppPrelaunch);
+    private readonly SettingRow _pageCombine = Row(AppLang.L("禁用内存页面合并", "Disable page combining"), AppLang.L("启用", "Enabled"), SettingCatalog.DisablePageCombining);
+    private readonly SettingRow _ucpd = Row(AppLang.L("禁用微软 UCPD 驱动", "Disable UCPD driver"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableUcpdDriver);
+    private readonly SettingRow _cortana = Row(AppLang.L("关闭 Cortana", "Disable Cortana"), AppLang.L("开启", "On"), SettingCatalog.DisableCortana);
+    private readonly SettingRow _copilotAi = Row(AppLang.L("关闭 Copilot（系统+Edge）", "Disable Copilot (OS + Edge)"), AppLang.L("开启", "On"), SettingCatalog.DisableCopilotAi);
+    private readonly SettingRow _officeTel = Row(AppLang.L("关闭 Office 遥测", "Disable Office telemetry"), AppLang.L("开启", "On"), SettingCatalog.DisableOfficeTelemetry);
+    private readonly SettingRow _utc = Row(AppLang.L("硬件时钟使用 UTC（双系统）", "Hardware clock UTC (dual-boot)"), AppLang.L("本地时间", "Local time"), SettingCatalog.EnableUtcTime);
+    private readonly SettingRow _hpet = Row(AppLang.L("关闭 HPET 高精度计时器", "Disable HPET"), AppLang.L("开启", "On"), SettingCatalog.DisableHpet);
+    private readonly SettingRow _loginVerbose = Row(AppLang.L("登录显示详细状态", "Verbose login status"), AppLang.L("简洁", "Brief"), SettingCatalog.EnableLoginVerbose);
+    private readonly SettingRow _netThrottle = Row(AppLang.L("关闭多媒体网络节流", "Disable multimedia network throttle"), AppLang.L("开启", "On"), SettingCatalog.DisableNetworkThrottling);
+    private readonly SettingRow _mmcss = Row(AppLang.L("优化多媒体调度 (MMCSS)", "Optimize MMCSS"), AppLang.L("默认", "Default"), SettingCatalog.OptimizeMultimediaScheduler);
+    private readonly SettingRow _keyboardLatency = Row(AppLang.L("优化键盘重复延迟", "Optimize keyboard repeat delay"), AppLang.L("默认", "Default"), SettingCatalog.OptimizeKeyboardLatency);
+    private readonly SettingRow _webDavLimit = Row(AppLang.L("放开 WebDAV 文件大小限制", "Lift WebDAV size limit"), AppLang.L("默认约 50MB", "~50 MB default"), SettingCatalog.LiftWebDavFileSizeLimit);
+    private readonly SettingRow _gameDvr = Row(AppLang.L("关闭游戏栏 / Game DVR", "Disable Game Bar / Game DVR"), AppLang.L("开启", "On"), SettingCatalog.DisableGameDvr);
+    private readonly SettingRow _location = Row(AppLang.L("禁止定位服务", "Disable location"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableLocationTracking);
+    private readonly SettingRow _consumer = Row(AppLang.L("关闭消费者体验推送", "Disable consumer features"), AppLang.L("开启", "On"), SettingCatalog.DisableConsumerFeatures);
+    private readonly SettingRow _edgePre = Row(AppLang.L("禁止 Edge 预启动与后台", "Disable Edge preload"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableEdgePreload);
+    private readonly SettingRow _teredo = Row(AppLang.L("禁用 Teredo 隧道", "Disable Teredo"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableTeredo);
+    private readonly SettingRow _clipCloud = Row(AppLang.L("关闭剪贴板云同步", "Disable clipboard cloud sync"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableClipboardCloud);
+    private readonly SettingRow _ntfsStamp = Row(AppLang.L("关闭 NTFS 最后访问时间戳", "Disable NTFS last-access stamp"), AppLang.L("记录", "Recorded"), SettingCatalog.DisableNtfsLastAccess);
+    private readonly SettingRow _xbox = Row(AppLang.L("禁用 Xbox Live 服务", "Disable Xbox Live services"), AppLang.L("手动", "Manual"), SettingCatalog.DisableXboxServices);
+    private readonly SettingRow _fax = Row(AppLang.L("禁用传真服务", "Disable Fax service"), AppLang.L("手动", "Manual"), SettingCatalog.DisableFaxService);
+    private readonly SettingRow _f8 = Row(AppLang.L("启用 F8 高级启动菜单", "Enable F8 advanced boot menu"), AppLang.L("标准", "Standard"), SettingCatalog.EnableF8BootMenu);
+    private readonly SettingRow _takeOwn = Row(AppLang.L("右键菜单：取得所有权", "Context menu: Take ownership"), AppLang.L("无", "None"), SettingCatalog.ContextMenuTakeOwnership);
+    private readonly SettingRow _openCmd = Row(AppLang.L("右键菜单：在此处打开 CMD", "Context menu: Open CMD here"), AppLang.L("无", "None"), SettingCatalog.ContextMenuOpenCmd);
+    private readonly SettingRow _copyMoveTo = Row(AppLang.L("右键菜单：复制到 / 移动到", "Context menu: Copy/Move to"), AppLang.L("无", "None"), SettingCatalog.ContextMenuCopyMoveTo);
+    private readonly SettingRow _quickOps = Row(AppLang.L("右键菜单：快捷操作组", "Context menu: Quick ops"), AppLang.L("无", "None"), SettingCatalog.ContextMenuQuickOps);
+    private readonly SettingRow _wmpShare = Row(AppLang.L("禁用媒体播放器网络共享", "Disable Media Player sharing"), AppLang.L("手动", "Manual"), SettingCatalog.DisableMediaPlayerSharing);
+    private readonly SettingRow _insider = Row(AppLang.L("禁用 Windows Insider 服务", "Disable Windows Insider service"), AppLang.L("手动", "Manual"), SettingCatalog.DisableInsiderService);
+    private readonly SettingRow _storeUpd = Row(AppLang.L("禁止商店自动更新应用", "Disable Store auto-update"), AppLang.L("自动", "Automatic"), SettingCatalog.DisableStoreAutoUpdate);
+    private readonly SettingRow _news = Row(AppLang.L("关闭资讯与兴趣", "Disable News and interests"), AppLang.L("开启", "On"), SettingCatalog.DisableNewsInterests);
+    private readonly SettingRow _noBrokenLnk = Row(AppLang.L("禁止跟踪损坏快捷方式", "Disable broken shortcut tracking"), AppLang.L("跟踪", "Track"), SettingCatalog.DisableBrokenShortcutTracking);
+    private readonly SettingRow _sepProcess = Row(AppLang.L("单独进程打开文件夹", "Separate process per folder"), AppLang.L("同一进程", "Same process"), SettingCatalog.ExplorerSeparateProcess);
+    private readonly SettingRow _autoRestartShell = Row(AppLang.L("资源管理器崩溃自动重启", "Auto-restart Explorer"), AppLang.L("不重启", "No restart"), SettingCatalog.AutoRestartExplorer);
+    private readonly SettingRow _hideSpotlight = Row(AppLang.L("隐藏桌面「了解此图片」", "Hide desktop Spotlight tip"), AppLang.L("显示", "Shown"), SettingCatalog.HideDesktopSpotlight);
+    private readonly SettingRow _noDupDrives = Row(AppLang.L("去除本地磁盘重复显示", "Hide duplicate drive entries"), AppLang.L("保留", "Keep"), SettingCatalog.HideDuplicateRemovableDrives);
+    private readonly SettingRow _noRunMru = Row(AppLang.L("「运行」对话框不显示历史", "Clear Run dialog history"), AppLang.L("保留", "Keep"), SettingCatalog.DisableRunDialogHistory);
+    private readonly SettingRow _mergeSvchost = Row(AppLang.L("合并 svchost 进程", "Merge svchost processes"), AppLang.L("默认拆分", "Split (default)"), SettingCatalog.MergeSvchostProcesses);
+    private readonly SettingRow _trkWks = Row(AppLang.L("禁用 NTFS 分布式链接跟踪", "Disable distributed link tracking"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableDistributedLinkTracking);
+    private readonly SettingRow _noLowDisk = Row(AppLang.L("禁用磁盘空间不足警告", "Disable low disk space warnings"), AppLang.L("提示", "Warn"), SettingCatalog.DisableLowDiskSpaceChecks);
+    private readonly SettingRow _usbPowerOff = Row(AppLang.L("弹出 USB 后彻底断电", "Full power-off after USB eject"), AppLang.L("保持供电", "Keep powered"), SettingCatalog.UsbFullPowerOff);
+    private readonly SettingRow _autoReboot = Row(AppLang.L("蓝屏时自动重启", "Auto-reboot on BSOD"), AppLang.L("停留蓝屏", "Stay on BSOD"), SettingCatalog.AutoRebootOnCrash);
+    private readonly SettingRow _cliTelemetry = Row(AppLang.L("关闭 .NET / PowerShell 遥测", "Disable .NET/PowerShell telemetry"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableDotNetPowerShellTelemetry);
+    private readonly SettingRow _diagMinimal = Row(AppLang.L("诊断数据设为最小（官方级别）", "Diagnostic data: Required"), AppLang.L("完整", "Full"), SettingCatalog.DiagnosticDataMinimal);
+    private readonly SettingRow _noSigninReopen = Row(AppLang.L("更新后不自动重开应用", "Don't reopen apps after update"), AppLang.L("允许重开", "Allow reopen"), SettingCatalog.DisableSigninReopen);
+    private readonly SettingRow _noSilentApps = Row(AppLang.L("禁止静默安装建议应用", "Block silent suggested apps"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableSilentAppInstall);
+    private readonly SettingRow _hideHomeGallery = Row(AppLang.L("隐藏资源管理器主页与图库", "Hide Explorer Home & Gallery"), AppLang.L("显示", "Shown"), SettingCatalog.HideExplorerHomeGallery);
+    private readonly SettingRow _noSnapAssist = Row(AppLang.L("关闭窗口贴靠建议", "Disable Snap Assist"), AppLang.L("开启", "On"), SettingCatalog.DisableSnapAssist);
+    private readonly SettingRow _darkMode = Row(AppLang.L("使用深色模式", "Dark mode"), AppLang.L("浅色", "Light"), SettingCatalog.EnableDarkMode);
+    private readonly SettingRow _noBitlockerAuto = Row(AppLang.L("禁止 BitLocker 自动加密", "Disable BitLocker auto-encrypt"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableBitLockerAutoEncrypt);
+    private readonly SettingRow _noCompanionApps = Row(AppLang.L("禁止外设配套应用自动安装", "Block companion app installs"), AppLang.L("允许", "Allowed"), SettingCatalog.PreventDeviceCompanionApps);
+    private readonly SettingRow _noUpdateAsap = Row(AppLang.L("关闭「尽快获取最新更新」", "Disable 'Get the latest updates'"), AppLang.L("开启", "On"), SettingCatalog.DisableUpdateAsap);
+    private readonly SettingRow _hideSettingsHome = Row(AppLang.L("隐藏设置首页与 365 广告", "Hide Settings home & 365 ads"), AppLang.L("显示", "Shown"), SettingCatalog.HideSettingsHomeAds);
+    private readonly SettingRow _extraAi = Row(AppLang.L("关闭 Recall / Click to Do / 记事本画图 AI", "Disable Recall / Click to Do / AI"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableWin11ExtraAi);
+    private readonly SettingRow _alwaysMenu = Row(AppLang.L("始终显示菜单栏", "Always show menu bar"), AppLang.L("按 Alt 才显示", "Show with Alt"), SettingCatalog.AlwaysShowMenus);
+    private readonly SettingRow _hideMerge = Row(AppLang.L("隐藏文件夹合并冲突", "Hide folder merge conflicts"), AppLang.L("每次确认", "Ask each time"), SettingCatalog.HideMergeConflicts);
+    private readonly SettingRow _compColor = Row(AppLang.L("加密/压缩文件用颜色标识", "Color encrypted/compressed files"), AppLang.L("不着色", "No color"), SettingCatalog.ShowCompColor);
+    private readonly SettingRow _infoTip = Row(AppLang.L("显示文件夹弹出说明", "Show folder info tips"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowInfoTip);
+    private readonly SettingRow _statusBar = Row(AppLang.L("显示资源管理器状态栏", "Show Explorer status bar"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowStatusBar);
+    private readonly SettingRow _noPersistFold = Row(AppLang.L("登录时不还原上次文件夹窗口", "Don't restore folders at logon"), AppLang.L("还原", "Restore"), SettingCatalog.DisablePersistBrowsers);
+    private readonly SettingRow _navExpand = Row(AppLang.L("导航窗格展开到当前文件夹", "Expand nav pane to current"), AppLang.L("不展开", "Collapsed"), SettingCatalog.NavPaneExpandCurrent);
+    private readonly SettingRow _noShareWiz = Row(AppLang.L("不使用共享向导", "Don't use sharing wizard"), AppLang.L("使用向导", "Use wizard"), SettingCatalog.DisableSharingWizard);
+    private readonly SettingRow _driveLetters = Choice(AppLang.L("盘符显示位置", "Drive letter position"), AppLang.L("卷标后面", "After label"), SettingCatalog.ShowDriveLettersMode,
         FolderViewTweaks.DriveLetterLabels, optimizedIndex: 0);
-    private readonly SettingRow _folderGroup = Choice("分组依据", "按修改日期", SettingCatalog.FolderGroupByMode,
+    private readonly SettingRow _folderGroup = Choice(AppLang.L("分组依据", "Group by"), AppLang.L("按修改日期", "By modified date"), SettingCatalog.FolderGroupByMode,
         FolderViewTweaks.GroupByLabels, optimizedIndex: 0);
-    private readonly SettingRow _folderSort = Choice("排序方式", "日期新到旧", SettingCatalog.FolderSortByMode,
+    private readonly SettingRow _folderSort = Choice(AppLang.L("排序方式", "Sort by"), AppLang.L("日期新到旧", "Newest first"), SettingCatalog.FolderSortByMode,
         FolderViewTweaks.SortByLabels, optimizedIndex: 0);
 
-    private readonly SettingRow _thisPc = Row("显示桌面「此电脑」图标", "不显示", SettingCatalog.ShowThisPcIcon);
-    private readonly SettingRow _launchThisPc = Row("资源管理器打开到「此电脑」", "快速访问", SettingCatalog.LaunchExplorerThisPc);
-    private readonly SettingRow _taskbar = Row("使用小按钮任务栏", "标准大小", SettingCatalog.SmallTaskbar);
-    private readonly SettingRow _confirmDel = Row("显示删除确认对话框", "不提示", SettingCatalog.ConfirmDelete);
-    private readonly SettingRow _audio = Row("启动音频服务", "不启动", SettingCatalog.EnableAudio);
-    private readonly SettingRow _fileExt = Row("显示已知文件扩展名", "隐藏", SettingCatalog.ShowFileExtensions);
-    private readonly SettingRow _themes = Row("启用主题服务（完整桌面外观）", "手动", SettingCatalog.EnableThemes);
-    private readonly SettingRow _search = Row("启用 Windows 搜索", "手动", SettingCatalog.EnableSearch);
-    private readonly SettingRow _webSearch = Row("关闭开始菜单 Bing 网络搜索", "开启", SettingCatalog.DisableWebSearch);
-    private readonly SettingRow _feedback = Row("关闭 Windows 体验反馈提示", "开启", SettingCatalog.DisableFeedback);
-    private readonly SettingRow _noLockScreen = Row("禁用锁屏界面", "显示", SettingCatalog.NoLockScreen);
-    private readonly SettingRow _hiddenFiles = Row("显示隐藏文件", "不显示", SettingCatalog.ShowHiddenFiles);
-    private readonly SettingRow _noArrow = Row("隐藏快捷方式小箭头", "显示", SettingCatalog.NoShortcutArrow);
-    private readonly SettingRow _fullPath = Row("标题栏显示完整路径", "仅文件夹名", SettingCatalog.ExplorerFullPath);
-    private readonly SettingRow _allTrayIcons = Row("任务栏显示全部图标", "自动隐藏", SettingCatalog.TaskbarAllIcons);
-    private readonly SettingRow _taskbarClock = Row("任务栏时钟显示星期与秒", "无星期/无秒", SettingCatalog.TaskbarClockWeekdaySeconds);
-    private readonly SettingRow _desktopIcons = Row("显示控制面板与回收站图标", "不显示", SettingCatalog.ShowControlPanelRecycleBin);
-    private readonly SettingRow _smartScreen = Row("关闭 SmartScreen 与打开文件警告", "开启", SettingCatalog.DisableSmartScreenWarning);
-    private readonly SettingRow _classicSearch = Row("搜索退回传统模式", "现代搜索", SettingCatalog.ClassicFileSearch);
-    private readonly SettingRow _searchEngine = Row("禁用 SearchEngine 功能包", "已安装", SettingCatalog.DisableSearchEngineFeature);
+    private readonly SettingRow _thisPc = Row(AppLang.L("显示桌面「此电脑」图标", "Show This PC on desktop"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowThisPcIcon);
+    private readonly SettingRow _launchThisPc = Row(AppLang.L("资源管理器打开到「此电脑」", "Explorer opens to This PC"), AppLang.L("快速访问", "Quick access"), SettingCatalog.LaunchExplorerThisPc);
+    private readonly SettingRow _taskbar = Row(AppLang.L("使用小按钮任务栏", "Small taskbar buttons"), AppLang.L("标准大小", "Standard size"), SettingCatalog.SmallTaskbar);
+    private readonly SettingRow _confirmDel = Row(AppLang.L("显示删除确认对话框", "Confirm delete dialog"), AppLang.L("不提示", "No prompt"), SettingCatalog.ConfirmDelete);
+    private readonly SettingRow _audio = Row(AppLang.L("启动音频服务", "Enable audio service"), AppLang.L("不启动", "Not started"), SettingCatalog.EnableAudio);
+    private readonly SettingRow _fileExt = Row(AppLang.L("显示已知文件扩展名", "Show file extensions"), AppLang.L("隐藏", "Hidden"), SettingCatalog.ShowFileExtensions);
+    private readonly SettingRow _themes = Row(AppLang.L("启用主题服务（完整桌面外观）", "Enable Themes service"), AppLang.L("手动", "Manual"), SettingCatalog.EnableThemes);
+    private readonly SettingRow _search = Row(AppLang.L("启用 Windows 搜索", "Enable Windows Search"), AppLang.L("手动", "Manual"), SettingCatalog.EnableSearch);
+    private readonly SettingRow _webSearch = Row(AppLang.L("关闭开始菜单 Bing 网络搜索", "Disable Bing web search"), AppLang.L("开启", "On"), SettingCatalog.DisableWebSearch);
+    private readonly SettingRow _feedback = Row(AppLang.L("关闭 Windows 体验反馈提示", "Disable feedback prompts"), AppLang.L("开启", "On"), SettingCatalog.DisableFeedback);
+    private readonly SettingRow _noLockScreen = Row(AppLang.L("禁用锁屏界面", "Disable lock screen"), AppLang.L("显示", "Shown"), SettingCatalog.NoLockScreen);
+    private readonly SettingRow _hiddenFiles = Row(AppLang.L("显示隐藏文件", "Show hidden files"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowHiddenFiles);
+    private readonly SettingRow _noArrow = Row(AppLang.L("隐藏快捷方式小箭头", "Hide shortcut arrows"), AppLang.L("显示", "Shown"), SettingCatalog.NoShortcutArrow);
+    private readonly SettingRow _fullPath = Row(AppLang.L("标题栏显示完整路径", "Full path in title bar"), AppLang.L("仅文件夹名", "Folder name only"), SettingCatalog.ExplorerFullPath);
+    private readonly SettingRow _allTrayIcons = Row(AppLang.L("任务栏显示全部图标", "Show all tray icons"), AppLang.L("自动隐藏", "Auto-hide"), SettingCatalog.TaskbarAllIcons);
+    private readonly SettingRow _taskbarClock = Row(AppLang.L("任务栏时钟显示星期与秒", "Taskbar clock: weekday & seconds"), AppLang.L("无星期/无秒", "No weekday/sec"), SettingCatalog.TaskbarClockWeekdaySeconds);
+    private readonly SettingRow _desktopIcons = Row(AppLang.L("显示控制面板与回收站图标", "Show Control Panel & Recycle Bin"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowControlPanelRecycleBin);
+    private readonly SettingRow _smartScreen = Row(AppLang.L("关闭 SmartScreen 与打开文件警告", "Disable SmartScreen warnings"), AppLang.L("开启", "On"), SettingCatalog.DisableSmartScreenWarning);
+    private readonly SettingRow _classicSearch = Row(AppLang.L("搜索退回传统模式", "Classic file search"), AppLang.L("现代搜索", "Modern search"), SettingCatalog.ClassicFileSearch);
+    private readonly SettingRow _searchEngine = Row(AppLang.L("禁用 SearchEngine 功能包", "Disable SearchEngine feature"), AppLang.L("已安装", "Installed"), SettingCatalog.DisableSearchEngineFeature);
 
-    private readonly SettingRow _itemCheckboxes = Row("显示项目复选框", "不显示", SettingCatalog.ShowItemCheckboxes);
-    private readonly SettingRow _commonFolders = Row("显示常用文件夹", "不显示", SettingCatalog.ShowCommonFolders);
-    private readonly SettingRow _noShield = Row("去除快捷方式管理员盾牌", "显示", SettingCatalog.RemoveAdminShield);
-    private readonly SettingRow _noSuffix = Row("快捷方式不加「快捷方式」后缀", "添加", SettingCatalog.NoShortcutSuffix);
-    private readonly SettingRow _win11Explorer = Row("Win11 资源管理器布局", "紧凑", SettingCatalog.Win11ExplorerStyle);
-    private readonly SettingRow _classicMenu = Row("Win10 经典右键菜单", "Win11 现代", SettingCatalog.Win10ClassicContextMenu);
-    private readonly SettingRow _tbSearch = Choice("任务栏搜索", "仅图标", SettingCatalog.HideTaskbarSearch,
-        ["隐藏", "仅图标", "搜索框"], optimizedIndex: 0);
-    private readonly SettingRow _tbLeft = Choice("任务栏对齐", "居中", SettingCatalog.TaskbarAlignLeft,
-        ["居中", "靠左"], optimizedIndex: 1);
-    private readonly SettingRow _tbCombine = Choice("任务栏按钮合并", "从不", SettingCatalog.TaskbarCombineAlways,
-        ["从不合并", "始终合并"], optimizedIndex: 1);
-    private readonly SettingRow _tbAutohide = Choice("任务栏显示方式", "一直显示", SettingCatalog.TaskbarAutoHide,
-        ["一直显示", "自动隐藏"], optimizedIndex: 1);
-    private readonly SettingRow _taskView = Row("显示任务视图按钮", "不显示", SettingCatalog.ShowTaskViewButton);
-    private readonly SettingRow _tbEndTask = Row("任务栏右键结束任务", "关闭", SettingCatalog.TaskbarEndTask);
-    private readonly SettingRow _widgets = Row("关闭任务栏小组件", "开启", SettingCatalog.DisableWidgets);
+    private readonly SettingRow _itemCheckboxes = Row(AppLang.L("显示项目复选框", "Show item checkboxes"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowItemCheckboxes);
+    private readonly SettingRow _commonFolders = Row(AppLang.L("显示常用文件夹", "Show common folders"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowCommonFolders);
+    private readonly SettingRow _noShield = Row(AppLang.L("去除快捷方式管理员盾牌", "Remove admin shield on shortcuts"), AppLang.L("显示", "Shown"), SettingCatalog.RemoveAdminShield);
+    private readonly SettingRow _noSuffix = Row(AppLang.L("快捷方式不加「快捷方式」后缀", "No 'Shortcut' suffix"), AppLang.L("添加", "Add"), SettingCatalog.NoShortcutSuffix);
+    private readonly SettingRow _win11Explorer = Row(AppLang.L("Win11 资源管理器布局", "Win11 Explorer layout"), AppLang.L("紧凑", "Compact"), SettingCatalog.Win11ExplorerStyle);
+    private readonly SettingRow _classicMenu = Row(AppLang.L("Win10 经典右键菜单", "Win10 classic context menu"), AppLang.L("Win11 现代", "Win11 modern"), SettingCatalog.Win10ClassicContextMenu);
+    private readonly SettingRow _tbSearch = Choice(AppLang.L("任务栏搜索", "Taskbar search"), AppLang.L("仅图标", "Icon only"), SettingCatalog.HideTaskbarSearch,
+        [AppLang.L("隐藏", "Hidden"), AppLang.L("仅图标", "Icon only"), AppLang.L("搜索框", "Search box")], optimizedIndex: 0);
+    private readonly SettingRow _tbLeft = Choice(AppLang.L("任务栏对齐", "Taskbar alignment"), AppLang.L("居中", "Center"), SettingCatalog.TaskbarAlignLeft,
+        [AppLang.L("居中", "Center"), AppLang.L("靠左", "Left")], optimizedIndex: 1);
+    private readonly SettingRow _tbCombine = Choice(AppLang.L("任务栏按钮合并", "Taskbar button combining"), AppLang.L("从不", "Never"), SettingCatalog.TaskbarCombineAlways,
+        [AppLang.L("从不合并", "Never combine"), AppLang.L("始终合并", "Always combine")], optimizedIndex: 1);
+    private readonly SettingRow _tbAutohide = Choice(AppLang.L("任务栏显示方式", "Taskbar visibility"), AppLang.L("一直显示", "Always show"), SettingCatalog.TaskbarAutoHide,
+        [AppLang.L("一直显示", "Always show"), AppLang.L("自动隐藏", "Auto-hide")], optimizedIndex: 1);
+    private readonly SettingRow _taskView = Row(AppLang.L("显示任务视图按钮", "Show Task View button"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowTaskViewButton);
+    private readonly SettingRow _tbEndTask = Row(AppLang.L("任务栏右键结束任务", "Taskbar End task"), AppLang.L("关闭", "Off"), SettingCatalog.TaskbarEndTask);
+    private readonly SettingRow _widgets = Row(AppLang.L("关闭任务栏小组件", "Disable Widgets"), AppLang.L("开启", "On"), SettingCatalog.DisableWidgets);
 
-    private readonly SettingRow _animations = Row("禁用窗口与任务栏动画", "开启", SettingCatalog.DisableAnimations);
-    private readonly SettingRow _transparency = Row("禁用透明效果", "开启", SettingCatalog.DisableTransparency);
-    private readonly SettingRow _tips = Row("关闭 Windows 提示与建议", "开启", SettingCatalog.DisableTips);
-    private readonly SettingRow _autoplay = Row("禁用所有驱动器自动播放", "开启", SettingCatalog.DisableAutoplay);
-    private readonly SettingRow _activityHist = Row("禁用活动历史记录", "开启", SettingCatalog.DisableActivityHistory);
-    private readonly SettingRow _storageSense = Row("禁用存储感知", "开启", SettingCatalog.DisableStorageSense);
-    private readonly SettingRow _backgroundApps = Row("禁止应用在后台运行", "允许", SettingCatalog.DisableBackgroundApps);
-    private readonly SettingRow _searchHighlights = Row("关闭搜索要点/亮点", "开启", SettingCatalog.DisableSearchHighlights);
-    private readonly SettingRow _recommended = Row("关闭开始菜单推荐", "开启", SettingCatalog.DisableRecommendedItems);
-    private readonly SettingRow _adTracking = Row("关闭广告标识符跟踪", "开启", SettingCatalog.DisableAdTracking);
-    private readonly SettingRow _searchHistory = Row("关闭搜索历史记录", "开启", SettingCatalog.DisableSearchHistory);
-    private readonly SettingRow _stickyKeys = Row("禁用粘滞键提示", "开启", SettingCatalog.DisableStickyKeys);
+    private readonly SettingRow _animations = Row(AppLang.L("禁用窗口与任务栏动画", "Disable animations"), AppLang.L("开启", "On"), SettingCatalog.DisableAnimations);
+    private readonly SettingRow _transparency = Row(AppLang.L("禁用透明效果", "Disable transparency"), AppLang.L("开启", "On"), SettingCatalog.DisableTransparency);
+    private readonly SettingRow _tips = Row(AppLang.L("关闭 Windows 提示与建议", "Disable tips & suggestions"), AppLang.L("开启", "On"), SettingCatalog.DisableTips);
+    private readonly SettingRow _autoplay = Row(AppLang.L("禁用所有驱动器自动播放", "Disable AutoPlay"), AppLang.L("开启", "On"), SettingCatalog.DisableAutoplay);
+    private readonly SettingRow _activityHist = Row(AppLang.L("禁用活动历史记录", "Disable activity history"), AppLang.L("开启", "On"), SettingCatalog.DisableActivityHistory);
+    private readonly SettingRow _storageSense = Row(AppLang.L("禁用存储感知", "Disable Storage Sense"), AppLang.L("开启", "On"), SettingCatalog.DisableStorageSense);
+    private readonly SettingRow _backgroundApps = Row(AppLang.L("禁止应用在后台运行", "Block background apps"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableBackgroundApps);
+    private readonly SettingRow _searchHighlights = Row(AppLang.L("关闭搜索要点/亮点", "Disable search highlights"), AppLang.L("开启", "On"), SettingCatalog.DisableSearchHighlights);
+    private readonly SettingRow _recommended = Row(AppLang.L("关闭开始菜单推荐", "Disable Start recommendations"), AppLang.L("开启", "On"), SettingCatalog.DisableRecommendedItems);
+    private readonly SettingRow _adTracking = Row(AppLang.L("关闭广告标识符跟踪", "Disable advertising ID"), AppLang.L("开启", "On"), SettingCatalog.DisableAdTracking);
+    private readonly SettingRow _searchHistory = Row(AppLang.L("关闭搜索历史记录", "Disable search history"), AppLang.L("开启", "On"), SettingCatalog.DisableSearchHistory);
+    private readonly SettingRow _stickyKeys = Row(AppLang.L("禁用辅助功能键盘热键", "Disable sticky keys hotkeys"), AppLang.L("开启", "On"), SettingCatalog.DisableStickyKeys);
 
-    private readonly SettingRow _rdp = Choice("启用远程桌面（RDP）", "禁用", SettingCatalog.EnableRdp,
-        ["禁用", "启用"], optimizedIndex: 1);
-    private readonly SettingRow _rdpGpu = Choice("RDP 硬件图形加速", "关闭", SettingCatalog.RdpGpuAccel,
-        ["关闭", "开启"], optimizedIndex: 1);
-    private readonly SettingRow _rdpFps = Choice("RDP 提高远程帧率", "默认", SettingCatalog.RdpHighRefresh,
-        ["默认", "提高"], optimizedIndex: 1);
-    private readonly SettingRow _rdpNla = Choice("RDP 网络级身份验证 NLA", "要求 NLA", SettingCatalog.RdpDisableNla,
-        ["要求 NLA", "关闭 NLA"], optimizedIndex: 1);
-    private readonly SettingRow _netDiscovery = Row("启用网络发现与文件共享", "关闭", SettingCatalog.EnableNetworkDiscovery);
-    private readonly SettingRow _smRemoting = Row("关闭 Server Manager 远程管理", "开启", SettingCatalog.DisableSmRemoting);
+    private readonly SettingRow _rdp = Choice(AppLang.L("启用远程桌面（RDP）", "Enable Remote Desktop (RDP)"), AppLang.L("禁用", "Disabled"), SettingCatalog.EnableRdp,
+        [AppLang.L("禁用", "Disabled"), AppLang.L("启用", "Enabled")], optimizedIndex: 1);
+    private readonly SettingRow _rdpGpu = Choice(AppLang.L("RDP 硬件图形加速", "RDP GPU acceleration"), AppLang.L("关闭", "Off"), SettingCatalog.RdpGpuAccel,
+        [AppLang.L("关闭", "Off"), AppLang.L("开启", "On")], optimizedIndex: 1);
+    private readonly SettingRow _rdpFps = Choice(AppLang.L("RDP 提高远程帧率", "RDP higher frame rate"), AppLang.L("默认", "Default"), SettingCatalog.RdpHighRefresh,
+        [AppLang.L("默认", "Default"), AppLang.L("提高", "Boost")], optimizedIndex: 1);
+    private readonly SettingRow _rdpNla = Choice(AppLang.L("RDP 网络级身份验证 NLA", "RDP NLA"), AppLang.L("要求 NLA", "Require NLA"), SettingCatalog.RdpDisableNla,
+        [AppLang.L("要求 NLA", "Require NLA"), AppLang.L("关闭 NLA", "Disable NLA")], optimizedIndex: 1);
+    private readonly SettingRow _netDiscovery = Row(AppLang.L("启用网络发现与文件共享", "Enable network discovery & sharing"), AppLang.L("关闭", "Off"), SettingCatalog.EnableNetworkDiscovery);
+    private readonly SettingRow _smRemoting = Row(AppLang.L("关闭 Server Manager 远程管理", "Disable Server Manager remoting"), AppLang.L("开启", "On"), SettingCatalog.DisableSmRemoting);
 
-    private readonly SettingRow _svrMgr = Row("登录时不自动启动服务器管理器", "登录时启动", SettingCatalog.SkipServerManager);
-    private readonly SettingRow _wacPrompt = Row("不再显示「立即尝试 WAC/Azure Arc」弹窗", "每次弹出", SettingCatalog.HideServerManagerWacPrompt);
-    private readonly SettingRow _azure = Row("禁止启动 Azure Arc 托盘", "允许启动", SettingCatalog.DisableAzureArc);
-    private readonly SettingRow _installer = Row("Windows Installer 自动启动", "手动", SettingCatalog.EnableInstaller);
-    private readonly SettingRow _wia = Row("启用 WIA（摄像头/扫描仪）", "手动", SettingCatalog.EnableWia);
-    private readonly SettingRow _mediaFeatures = Row("开启桌面媒体组件（DISM）", "未安装", SettingCatalog.EnableDesktopMediaFeatures);
-    private readonly SettingRow _bloatFeatures = Row("关闭 Server 冗余组件（DISM）", "已安装", SettingCatalog.DisableServerBloatFeatures);
+    private readonly SettingRow _svrMgr = Row(AppLang.L("登录时不自动启动服务器管理器", "Don't auto-start Server Manager"), AppLang.L("登录时启动", "Start at logon"), SettingCatalog.SkipServerManager);
+    private readonly SettingRow _wacPrompt = Row(AppLang.L("不再显示「立即尝试 WAC/Azure Arc」弹窗", "Hide WAC/Azure Arc prompt"), AppLang.L("每次弹出", "Every time"), SettingCatalog.HideServerManagerWacPrompt);
+    private readonly SettingRow _azure = Row(AppLang.L("禁止启动 Azure Arc 托盘", "Disable Azure Arc tray"), AppLang.L("允许启动", "Allow start"), SettingCatalog.DisableAzureArc);
+    private readonly SettingRow _installer = Row(AppLang.L("Windows Installer 自动启动", "Windows Installer auto-start"), AppLang.L("手动", "Manual"), SettingCatalog.EnableInstaller);
+    private readonly SettingRow _wia = Row(AppLang.L("启用 WIA（摄像头/扫描仪）", "Enable WIA"), AppLang.L("手动", "Manual"), SettingCatalog.EnableWia);
+    private readonly SettingRow _mediaFeatures = Row(AppLang.L("开启桌面媒体组件（DISM）", "Enable desktop media features"), AppLang.L("未安装", "Not installed"), SettingCatalog.EnableDesktopMediaFeatures);
+    private readonly SettingRow _bloatFeatures = Row(AppLang.L("关闭 Server 冗余组件（DISM）", "Disable Server bloat features"), AppLang.L("已安装", "Installed"), SettingCatalog.DisableServerBloatFeatures);
 
-    private readonly SettingRow _pwd = Row("禁用密码复杂性要求", "必须符合", SettingCatalog.DisablePasswordComplexity);
-    private readonly SettingRow _pwdExpire = Row("密码永不过期", "42 天", SettingCatalog.PasswordNeverExpire);
-    private readonly SettingRow _shutdownLogon = Row("允许未登录时关机", "不允许", SettingCatalog.ShutdownWithoutLogon);
-    private readonly SettingRow _shutdownReason = Row("关闭关机事件跟踪", "显示", SettingCatalog.DisableShutdownReason);
-    private readonly SettingRow _noCad = Row("无需 Ctrl+Alt+Del 登录", "需要按键", SettingCatalog.DisableCad);
-    private readonly SettingRow _autologon = Row("启用 Windows 自动登录（Autologon）", "未启用", SettingCatalog.EnableAutologon);
-    private readonly SettingRow _keyboardFilter = Row("取消登录粘滞键/筛选键提示", "显示", SettingCatalog.DisableLoginKeyboardFilters);
+    private readonly SettingRow _pwd = Row(AppLang.L("禁用密码复杂性要求", "Disable password complexity"), AppLang.L("必须符合", "Required"), SettingCatalog.DisablePasswordComplexity);
+    private readonly SettingRow _pwdExpire = Row(AppLang.L("密码永不过期", "Password never expires"), AppLang.L("42 天", "42 days"), SettingCatalog.PasswordNeverExpire);
+    private readonly SettingRow _shutdownLogon = Row(AppLang.L("允许未登录时关机", "Shutdown without logon"), AppLang.L("不允许", "Not allowed"), SettingCatalog.ShutdownWithoutLogon);
+    private readonly SettingRow _shutdownReason = Row(AppLang.L("关闭关机事件跟踪", "Disable shutdown reason UI"), AppLang.L("显示", "Shown"), SettingCatalog.DisableShutdownReason);
+    private readonly SettingRow _noCad = Row(AppLang.L("无需 Ctrl+Alt+Del 登录", "No Ctrl+Alt+Del at logon"), AppLang.L("需要按键", "Require keys"), SettingCatalog.DisableCad);
+    private readonly SettingRow _autologon = Row(AppLang.L("启用 Windows 自动登录（Autologon）", "Enable Autologon"), AppLang.L("未启用", "Off"), SettingCatalog.EnableAutologon);
+    private readonly SettingRow _keyboardFilter = Row(AppLang.L("取消登录粘滞键/筛选键提示", "Disable sticky/filter key prompts"), AppLang.L("显示", "Shown"), SettingCatalog.DisableLoginKeyboardFilters);
     private AutologonSettings? _autologonSettings;
 
     private readonly HelpDetailPanel _helpDetail = new();
@@ -285,22 +288,26 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
-        "登录启动项", "DNS 设置", "自定义配置",
+        AppLang.L("登录启动项", "Startup apps"),
+        AppLang.L("服务优化", "Service optimize"),
+        AppLang.L("DNS 设置", "DNS settings"),
+        AppLang.L("自定义配置", "Custom config"),
     ];
 
     private static readonly string[] MenuItems =
     [
-        "Server专属",
-        "账户策略",
-        "资源管理器",
-        "桌面外观",
-        "远程与网络",
-        "隐私与体验",
-        "性能及安全",
-        "登录启动项",
-        "电源与服务",
-        "DNS 设置",
-        "自定义配置",
+        AppLang.L("Server专属", "Server only"),
+        AppLang.L("账户策略", "Account policy"),
+        AppLang.L("资源管理器", "File Explorer"),
+        AppLang.L("桌面外观", "Desktop look"),
+        AppLang.L("远程与网络", "Remote & network"),
+        AppLang.L("隐私与体验", "Privacy & UX"),
+        AppLang.L("性能及安全", "Performance & security"),
+        AppLang.L("登录启动项", "Startup apps"),
+        AppLang.L("电源与服务", "Power & services"),
+        AppLang.L("服务优化", "Service optimize"),
+        AppLang.L("DNS 设置", "DNS settings"),
+        AppLang.L("自定义配置", "Custom config"),
     ];
 
     private SettingRow[] AllRows =>
@@ -311,7 +318,7 @@ internal sealed class MainForm : Form
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035, _wuPauseUx,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
         _memComp, _prelaunch, _pageCombine, _ucpd,
-        _netThrottle, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
+        _netThrottle, _mmcss, _keyboardLatency, _webDavLimit, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
@@ -340,9 +347,11 @@ internal sealed class MainForm : Form
     {
         Text = $"{AppBrand.ProductName} v{AppBrand.VersionText}";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1180, 720);
-        ClientSize = new Size(1280, 760);
-        Font = new Font("Microsoft YaHei UI", 9F);
+        MinimumSize = new Size(UiScale.S(1180), UiScale.S(720));
+        ClientSize = new Size(UiScale.S(1280), UiScale.S(760));
+        Font = UiFit.UiFont;
+        // 列表坐标为手工布局；若再用 Dpi AutoScale 会与 UiScale 叠乘导致错位
+        AutoScaleMode = AutoScaleMode.None;
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
         AppBrand.ApplyWindowIcon(this);
@@ -350,128 +359,128 @@ internal sealed class MainForm : Form
         MainMenuStrip = _appMenu;
 
         // 批量分组顺序与 MenuItems 中分组项一致；组内可再分可折叠分区
-        _groups.Add(("性能及安全", [
-            ("常用开关", [
+        _groups.Add((AppLang.L("性能及安全", "Performance & security"), [
+            (AppLang.L("常用开关", "Common"), [
                 _ie, _uac, _highPerf,
             ]),
-            ("性能加速", [
-                _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu,
+            (AppLang.L("性能加速", "Performance"), [
+                _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu, _mmcss,
             ]),
-            ("Windows 更新", [
+            (AppLang.L("Windows 更新", "Windows Update"), [
                 _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt, _noUpdateAsap,
             ]),
-            ("网络优化", [
-                _tcp, _qosSpeed, _bbr2, _netThrottle,
+            (AppLang.L("网络优化", "Network"), [
+                _tcp, _qosSpeed, _bbr2, _netThrottle, _webDavLimit,
             ]),
-            ("遥测与诊断", [
+            (AppLang.L("遥测与诊断", "Telemetry & diagnostics"), [
                 _telemetry, _diagMinimal, _dps, _ceip, _errorReport,
             ]),
-            ("安全服务", [
+            (AppLang.L("安全服务", "Security services"), [
                 _smb1, _remoteReg, _spooler, _dep,
             ]),
-            ("进阶安全", [
+            (AppLang.L("进阶安全", "Advanced security"), [
                 _meltdown, _hvci, _wdac, _vbs, _sysRestore, _noBitlockerAuto,
             ]),
-            ("磁盘与文件", [
+            (AppLang.L("磁盘与文件", "Disk & files"), [
                 _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
             ]),
-            ("启动与维护", [
+            (AppLang.L("启动与维护", "Boot & maintenance"), [
                 _autoMaint, _utc, _hpet, _loginVerbose, _f8, _autoReboot,
             ]),
-            ("少用服务", [
+            (AppLang.L("少用服务", "Seldom-used services"), [
                 _xbox, _fax, _wmpShare, _trkWks,
             ]),
         ]));
-        _groups.Add(("桌面外观", [
-            ("桌面图标", [
+        _groups.Add((AppLang.L("桌面外观", "Desktop look"), [
+            (AppLang.L("桌面图标", "Desktop icons"), [
                 _thisPc, _desktopIcons, _confirmDel,
             ]),
-            ("任务栏", [
+            (AppLang.L("任务栏", "Taskbar"), [
                 _tbAutohide, _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
-            ("桌面服务", [
+            (AppLang.L("桌面服务", "Desktop services"), [
                 _themes, _audio, _search, _darkMode, _notepadWrap, _notepadStatus,
             ]),
-            ("安全与锁屏", [
+            (AppLang.L("安全与锁屏", "Security & lock screen"), [
                 _smartScreen, _noLockScreen, _feedback,
             ]),
-            ("搜索模式", [
+            (AppLang.L("搜索模式", "Search mode"), [
                 _classicSearch, _searchEngine,
             ]),
-            ("右键菜单", [
+            (AppLang.L("右键菜单", "Context menu"), [
                 _takeOwn, _openCmd, _copyMoveTo, _quickOps,
             ]),
         ]));
-        _groups.Add(("资源管理器", [
-            ("常用显示", [
+        _groups.Add((AppLang.L("资源管理器", "File Explorer"), [
+            (AppLang.L("常用显示", "Common views"), [
                 _fileExt, _hiddenFiles, _fullPath, _hideOs, _launchThisPc,
                 _hideSpotlight, _noDupDrives, _noLowDisk, _hideHomeGallery, _noSnapAssist,
             ]),
-            ("快速访问", [
+            (AppLang.L("快速访问", "Quick access"), [
                 _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly, _noRunMru,
             ]),
-            ("文件夹选项", [
+            (AppLang.L("文件夹选项", "Folder options"), [
                 _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar,
                 _noPersistFold, _navExpand, _noShareWiz, _driveLetters,
                 _folderGroup, _folderSort,
             ]),
-            ("快捷方式与布局", [
+            (AppLang.L("快捷方式与布局", "Shortcuts & layout"), [
                 _noArrow, _noSuffix, _noShield, _noBrokenLnk, _sepProcess,
                 _autoRestartShell, _win11Explorer, _classicMenu, _onedrive,
             ]),
-            ("任务栏", [
+            (AppLang.L("任务栏", "Taskbar"), [
                 _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbCopilot,
                 _taskView, _taskbarClock,
             ]),
         ]));
-        _groups.Add(("远程与网络", [
-            ("远程与网络", [
+        _groups.Add((AppLang.L("远程与网络", "Remote & network"), [
+            (AppLang.L("远程与网络", "Remote & network"), [
                 _rdp, _rdpGpu, _rdpFps, _rdpNla,
                 _netDiscovery, _smRemoting,
             ]),
         ]));
-        _groups.Add(("电源与服务", [
-            ("远程协助", [
+        _groups.Add((AppLang.L("电源与服务", "Power & services"), [
+            (AppLang.L("远程协助", "Remote Assistance"), [
                 _ra,
             ]),
-            ("电源与休眠", [
+            (AppLang.L("电源与休眠", "Power & hibernation"), [
                 _hibernate, _fastStartup, _usbPowerOff,
             ]),
-            ("后台服务与内存", [
+            (AppLang.L("后台服务与内存", "Background & memory"), [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
             ]),
         ]));
-        _groups.Add(("隐私与体验", [
-            ("广告与推荐", [
+        _groups.Add((AppLang.L("隐私与体验", "Privacy & UX"), [
+            (AppLang.L("广告与推荐", "Ads & recommendations"), [
                 _tips, _recommended, _searchHighlights, _adTracking, _settingsSuggest, _consumer,
                 _noSilentApps, _hideSettingsHome,
             ]),
-            ("搜索与助手", [
+            (AppLang.L("搜索与助手", "Search & assistants"), [
                 _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi, _extraAi,
             ]),
-            ("隐私数据", [
+            (AppLang.L("隐私数据", "Privacy data"), [
                 _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel, _cliTelemetry,
                 _noSigninReopen, _noCompanionApps,
             ]),
-            ("输入法与键盘", [
-                _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys,
+            (AppLang.L("输入法与键盘", "IME & keyboard"), [
+                _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys, _keyboardLatency,
             ]),
-            ("界面体验", [
+            (AppLang.L("界面体验", "UI experience"), [
                 _animations, _transparency, _backgroundApps, _storageSense, _autoplay, _edgePre, _gameDvr,
             ]),
-            ("商店与预览", [
+            (AppLang.L("商店与预览", "Store & Insider"), [
                 _insider, _storeUpd, _teredo,
             ]),
         ]));
-        _groups.Add(("Server专属", [
-            ("Server专属", [
+        _groups.Add((AppLang.L("Server专属", "Server only"), [
+            (AppLang.L("Server专属", "Server only"), [
                 _svrMgr, _wacPrompt, _azure,
                 _mediaFeatures, _bloatFeatures,
                 _installer, _wia,
             ]),
         ]));
-        _groups.Add(("账户策略", [
-            ("账户策略", [
+        _groups.Add((AppLang.L("账户策略", "Account policy"), [
+            (AppLang.L("账户策略", "Account policy"), [
                 _autologon, _pwd, _pwdExpire, _noCad,
                 _shutdownLogon, _shutdownReason, _keyboardFilter,
             ]),
@@ -565,8 +574,11 @@ internal sealed class MainForm : Form
     {
         if (IsDisposed) return;
         var r = MessageBox.Show(this,
-            $"发现新版本 v{info.Version}（当前 v{AppBrand.VersionText}）。\r\n\r\n立即下载并更新？选「否」则本版本不再提醒。",
-            "检查更新",
+            AppLang.Lf(
+                "发现新版本 v{0}（当前 v{1}）。\r\n\r\n立即下载并更新？选「否」则本版本不再提醒。",
+                "New version v{0} (current v{1}).\r\n\r\nDownload and update now? Choose No to skip this version.",
+                info.Version, AppBrand.VersionText),
+            AppLang.L("检查更新", "Check for updates"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
         if (r != DialogResult.Yes)
@@ -587,6 +599,7 @@ internal sealed class MainForm : Form
         _appMenu.FileImport.Click += (_, _) => ImportProfile();
         _appMenu.FileExport.Click += (_, _) => ExportProfile();
         _appMenu.FileSettings.Click += (_, _) => ShowAppSettings();
+        _appMenu.FileExit.Click += (_, _) => Close();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
         _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
@@ -639,15 +652,15 @@ internal sealed class MainForm : Form
             d.Shown += async (_, _) => await d.CheckAsync(autoApply: false);
             d.ShowDialog(this);
         };
-        _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, "变更日志");
-        _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, "操作日志");
-        _appMenu.HelpDebugLog.Click += (_, _) => OpenLogFile(ApplyLog.DebugLogFilePath, "调试日志");
+        _appMenu.HelpChangeLog.Click += (_, _) => OpenLogFile(ApplyLog.ChangeLogFilePath, AppLang.L("变更日志", "Change log"));
+        _appMenu.HelpLog.Click += (_, _) => OpenLogFile(ApplyLog.LogFilePath, AppLang.L("操作日志", "Operation log"));
+        _appMenu.HelpDebugLog.Click += (_, _) => OpenLogFile(ApplyLog.DebugLogFilePath, AppLang.L("调试日志", "Debug log"));
         _appMenu.HelpDisclaimer.Click += (_, _) =>
-            LegalDocumentDialog.Show(this, "免责声明", "SrvDesk.DISCLAIMER.md");
+            LegalDocumentDialog.Show(this, AppLang.L("免责声明", "Disclaimer"), "SrvDesk.DISCLAIMER.md");
         _appMenu.HelpPrivacy.Click += (_, _) =>
-            LegalDocumentDialog.Show(this, "隐私说明", "SrvDesk.PRIVACY.md");
+            LegalDocumentDialog.Show(this, AppLang.L("隐私说明", "Privacy"), "SrvDesk.PRIVACY.md");
         _appMenu.HelpLicense.Click += (_, _) =>
-            LegalDocumentDialog.Show(this, "许可证（MIT）", "SrvDesk.LICENSE");
+            LegalDocumentDialog.Show(this, AppLang.L("许可证（MIT）", "License (MIT)"), "SrvDesk.LICENSE");
         _appMenu.HelpSupport.Click += (_, _) => ShowSupportDialog();
 
         _appMenu.ViewHideIncompatible.CheckedChanged += (_, _) =>
@@ -689,8 +702,8 @@ internal sealed class MainForm : Form
             SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
 
         _status.Text = prefs.EnableDebugLog
-            ? "程序设置已保存 · 调试日志已开启（帮助 → 调试日志）"
-            : "程序设置已保存";
+            ? AppLang.L("程序设置已保存 · 调试日志已开启（帮助 → 调试日志）", "Settings saved · debug log on (Help → Debug log)")
+            : AppLang.L("程序设置已保存", "Settings saved");
     }
 
     private void OpenLogFile(string path, string title)
@@ -704,22 +717,32 @@ internal sealed class MainForm : Form
             if (!File.Exists(path))
             {
                 var tip = isChangeLog
-                    ? "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
-                      "# 当前尚无变更记录。\r\n" +
-                      "# 请先：勾选推荐项 → 点击底部「应用到系统」→ 再打开本文件。\r\n" +
-                      "# 即时页（登录启动项/DNS 等）开关切换后也会写入。\r\n"
-                    : $"# {title}\r\n# 尚无记录。\r\n";
+                    ? AppLang.L(
+                          "# 变更日志 — 仅记录优化时真正改动的值（原来从 xx 变成 yy）\r\n" +
+                          "# 当前尚无变更记录。\r\n" +
+                          "# 请先：勾选推荐项 → 点击底部「应用到系统」→ 再打开本文件。\r\n" +
+                          "# 即时页（登录启动项/DNS 等）开关切换后也会写入。\r\n",
+                          "# Change log — only values that actually changed (from xx to yy)\r\n" +
+                          "# No changes yet.\r\n" +
+                          "# Check recommended items → click Apply → reopen this file.\r\n" +
+                          "# Instant pages (Startup/DNS, etc.) also write here when toggled.\r\n")
+                    : $"# {title}\r\n# " + AppLang.L("尚无记录。", "No entries yet.") + "\r\n";
                 File.WriteAllText(path, tip, new System.Text.UTF8Encoding(true));
             }
 
             if (isChangeLog && !ApplyLog.HasRealChangeEntries())
             {
                 MessageBox.Show(
-                    "变更日志里还没有「原来从 xx 变成 yy」的记录。\r\n\r\n" +
-                    "请先点击底部「应用到系统」（或以管理员运行新版 SrvDesk.exe），\r\n" +
-                    "应用成功后再打开「帮助 → 打开变更日志」。\r\n\r\n" +
-                    "路径：\r\n" + path,
-                    "变更日志为空",
+                    AppLang.L(
+                        "变更日志里还没有「原来从 xx 变成 yy」的记录。\r\n\r\n" +
+                        "请先点击底部「应用到系统」（或以管理员运行新版 SrvDesk.exe），\r\n" +
+                        "应用成功后再打开「帮助 → 打开变更日志」。\r\n\r\n" +
+                        "路径：\r\n",
+                        "No from→to change entries yet.\r\n\r\n" +
+                        "Click Apply first (or run SrvDesk.exe as admin),\r\n" +
+                        "then open Help → Change log.\r\n\r\n" +
+                        "Path:\r\n") + path,
+                    AppLang.L("变更日志为空", "Change log empty"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
             }
@@ -732,7 +755,7 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "无法打开" + title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(ex.Message, AppLang.L("无法打开", "Cannot open ") + title, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -934,25 +957,25 @@ internal sealed class MainForm : Form
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
-            _status.Text = "提示：当前进程未提升权限，部分系统级项可能写入失败（失败项会显示在状态栏）。";
+            _status.Text = AppLang.L("提示：当前进程未提升权限，部分系统级项可能写入失败（失败项会显示在状态栏）。", "Tip: not elevated — some system writes may fail (shown in status bar).");
             _headerSubtitle.Text = _systemFacts.Summary;
         }
         else if (!_systemFacts.IsServer)
         {
             _status.ForeColor = AppTheme.ScopeServer;
-            _status.Text = "提示：当前不是 Windows Server（" + _systemFacts.Summary + "）。部分「Server 专属」项可能无效。";
-            _headerSubtitle.Text = _systemFacts.Summary + " · 非 Server 环境";
+            _status.Text = AppLang.Lf("提示：当前不是 Windows Server（{0}）。部分「Server 专属」项可能无效。", "Tip: not Windows Server ({0}). Some Server-only items may not apply.", _systemFacts.Summary);
+            _headerSubtitle.Text = _systemFacts.Summary + AppLang.L(" · 非 Server 环境", " · Non-Server");
         }
         else if (!_systemFacts.HasDesktopExperience)
         {
             _status.ForeColor = AppTheme.ScopeServer;
-            _status.Text = "提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。";
+            _status.Text = AppLang.L("提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。", "Tip: Server Core detected. Desktop-Experience items are hidden; uncheck the filter to show them.");
             _headerSubtitle.Text = _systemFacts.Summary + " · Server Core";
             _hideIncompatible.Checked = true;
         }
         else
         {
-            _status.Text = _systemFacts.Summary + " · 正在加载…";
+            _status.Text = _systemFacts.Summary + AppLang.L(" · 正在加载…", " · Loading…");
             _headerSubtitle.Text = _systemFacts.Summary;
             System.Threading.Tasks.Task.Run(() => ComputerIdentityHelper.Read().Summary)
                 .ContinueWith(t =>
@@ -971,9 +994,9 @@ internal sealed class MainForm : Form
         if (_systemFacts.HasDesktopExperience && UiPrefs.Load().HideIncompatibleByDefault)
             _hideIncompatible.Checked = true;
 
-        ApplyLog.Write("启动 " + _systemFacts.Summary);
+        ApplyLog.Write(AppLang.L("启动 ", "Start ") + _systemFacts.Summary);
         if (UiPrefs.EnableDebugLog)
-            ApplyLog.Debug("启动调试会话 · " + _systemFacts.Summary);
+            ApplyLog.Debug(AppLang.L("启动调试会话 · ", "Debug session · ") + _systemFacts.Summary);
         UseWaitCursor = false;
         Cursor = Cursors.Default;
         // 后台预热常用软件状态，点击打开时尽量秒开
@@ -995,7 +1018,13 @@ internal sealed class MainForm : Form
     {
         System.Threading.Tasks.Task.Run(EasySettingsTweaks.WarmupMmAgentCache);
 
-        var titles = new[] { "登录启动项", "DNS 设置", "自定义配置" };
+        var titles = new[]
+        {
+            AppLang.L("登录启动项", "Startup apps"),
+            AppLang.L("服务优化", "Service optimize"),
+            AppLang.L("DNS 设置", "DNS settings"),
+            AppLang.L("自定义配置", "Custom config"),
+        };
         var i = 0;
         var timer = new System.Windows.Forms.Timer { Interval = 40 };
         timer.Tick += (_, _) =>
@@ -1011,16 +1040,11 @@ internal sealed class MainForm : Form
             if (_pageCache.ContainsKey(title)) return;
             try
             {
-                Form page = title switch
-                {
-                    "登录启动项" => new StartupManagerDialog(),
-                    "DNS 设置" => new DnsSwitcherDialog(),
-                    "自定义配置" => new CustomConfigDialog(),
-                    _ => throw new InvalidOperationException(title),
-                };
+                Form page = CreateEmbeddedPage(title);
                 page.TopLevel = false;
                 page.FormBorderStyle = FormBorderStyle.None;
                 page.ControlBox = false;
+                page.AutoScaleMode = AutoScaleMode.None;
                 page.Dock = DockStyle.Fill;
                 page.Visible = false;
                 // 空闲时创建窗口句柄，避免首次点开时同步 CreateHandle
@@ -1056,7 +1080,7 @@ internal sealed class MainForm : Form
         _commandFlow.Padding = new Padding(0);
         UiBuffer.ConfigureNoScrollRow(_commandFlow);
 
-        _commandFlow.Controls.Add(BarLabel("搜索"));
+        _commandFlow.Controls.Add(BarLabel(AppLang.L("搜索", "Search")));
         _searchBox.Width = 200;
         _searchBox.Height = 26;
         _searchBox.Margin = new Padding(0, 2, 16, 0);
@@ -1065,33 +1089,33 @@ internal sealed class MainForm : Form
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
         _commandFlow.Controls.Add(_searchBox);
 
-        _hideIncompatible.Text = "隐藏不适用项";
+        _hideIncompatible.Text = AppLang.L("隐藏不适用项", "Hide incompatible");
         _hideIncompatible.AutoSize = true;
         _hideIncompatible.Margin = new Padding(0, 4, 16, 0);
         _hideIncompatible.ForeColor = AppTheme.TextMute;
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
         _commandFlow.Controls.Add(_hideIncompatible);
 
-        _commandFlow.Controls.Add(BarLabel("分类"));
+        _commandFlow.Controls.Add(BarLabel(AppLang.L("分类", "Filter")));
         _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
         _categoryFilter.IntegralHeight = false;
         _categoryFilter.Height = 26;
         _categoryFilter.Margin = new Padding(0, 2, 0, 0);
         _categoryFilter.Items.AddRange([
-            "全部",
-            "Server 推荐",
-            "优化推荐",
-            "已优化",
-            "未优化",
+            AppLang.L("全部", "All"),
+            AppLang.L("Server 推荐", "Server picks"),
+            AppLang.L("优化推荐", "Recommended"),
+            AppLang.L("已优化", "Optimized"),
+            AppLang.L("未优化", "Not optimized"),
         ]);
         _categoryFilter.SelectedIndex = 0;
         _categoryFilter.SelectedIndexChanged += (_, _) => ApplySearchFilter();
         FitComboToItems(_categoryFilter, minWidth: 120, extra: 48);
         _toolTip.SetToolTip(_categoryFilter,
-            "Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选");
+            AppLang.L("Server 推荐：Server 专属项\r\n优化推荐：通用桌面/性能/隐私项\r\n已优化 / 未优化：按当前开关状态筛选", "Server picks: Server-only\r\nRecommended: general desktop/perf/privacy\r\nOptimized / Not: by current toggle state"));
         _commandFlow.Controls.Add(_categoryFilter);
 
-        _commandFlow.Controls.Add(BarLabel("预设"));
+        _commandFlow.Controls.Add(BarLabel(AppLang.L("预设", "Preset")));
         _presetCombo.Height = 26;
         _presetCombo.Margin = new Padding(0, 2, 8, 0);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -1101,9 +1125,9 @@ internal sealed class MainForm : Form
         if (_presetCombo.Items.Count > 0)
             _presetCombo.SelectedIndex = 0;
         FitComboToItems(_presetCombo, minWidth: 220, extra: 48);
-        _toolTip.SetToolTip(_presetCombo, "选择预设方案后点「载入」，再检查开关并应用到系统");
+        _toolTip.SetToolTip(_presetCombo, AppLang.L("选择预设方案后点「载入」，再检查开关并应用到系统", "Pick a preset, click Load, review, then Apply"));
         _commandFlow.Controls.Add(_presetCombo);
-        _commandFlow.Controls.Add(BarQuickButton("载入", "把所选预设勾选到界面（不会立刻写入系统）", () =>
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("载入", "Load"), AppLang.L("把所选预设勾选到界面（不会立刻写入系统）", "Apply preset to UI (does not write system yet)"), () =>
         {
             if (_presetCombo.SelectedItem is OptPresets.PresetInfo p)
                 LoadPreset(p);
@@ -1119,8 +1143,8 @@ internal sealed class MainForm : Form
             Margin = new Padding(0),
         };
         _commandFlow.Controls.Add(quickGap);
-        _commandFlow.Controls.Add(BarQuickButton("配置脚本", "显示或隐藏配置脚本面板（可查看/编辑）", ToggleConfigScriptPanel));
-        _commandFlow.Controls.Add(BarQuickButton("常用软件", "打开常用软件安装与更新", ShowCommonSoftware));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("配置脚本", "Config script"), AppLang.L("显示或隐藏配置脚本面板（可查看/编辑）", "Show or hide config script panel"), ToggleConfigScriptPanel));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("常用软件", "Apps"), AppLang.L("打开常用软件安装与更新", "Install or update common apps"), ShowCommonSoftware));
 
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
@@ -1156,8 +1180,8 @@ internal sealed class MainForm : Form
     {
         Bind(preset.Build(), updateCurrentValues: false);
         _uiDirty = true;
-        _status.Text = $"已载入预设「{preset.Title}」。请检查后点「应用到系统」。";
-        ApplyLog.Write("载入预设 " + preset.Id + " / " + preset.Title);
+        _status.Text = AppLang.Lf("已载入预设「{0}」。请检查后点「应用到系统」。", "Loaded preset “{0}”. Review, then Apply.", preset.Title);
+        ApplyLog.Write(AppLang.L("载入预设 ", "Load preset ") + preset.Id + " / " + preset.Title);
     }
 
     private Button BarQuickButton(string text, string tip, Action click)
@@ -1246,20 +1270,20 @@ internal sealed class MainForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = "SrvDesk 配置 (*.json)|*.json",
-            FileName = "SrvDesk-配置.json",
+            Filter = AppLang.L("SrvDesk 配置 (*.json)|*.json", "SrvDesk profile (*.json)|*.json"),
+            FileName = AppLang.L("SrvDesk-配置.json", "SrvDesk-profile.json"),
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
         try
         {
-            ProfileStore.Save(dlg.FileName, CaptureState(), "用户导出");
-            _status.Text = "已导出全部配置（开关 + 脚本覆盖 + 自定义方案）：" + dlg.FileName;
-            ApplyLog.Write("导出配置 " + dlg.FileName);
+            ProfileStore.Save(dlg.FileName, CaptureState(), AppLang.L("用户导出", "User export"));
+            _status.Text = AppLang.L("已导出全部配置（开关 + 脚本覆盖 + 自定义方案）：", "Exported full profile (toggles + scripts + packs): ") + dlg.FileName;
+            ApplyLog.Write(AppLang.L("导出配置 ", "Export profile ") + dlg.FileName);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "导出失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(ex.Message, AppLang.L("导出失败", "Export failed"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -1267,7 +1291,7 @@ internal sealed class MainForm : Form
     {
         using var dlg = new OpenFileDialog
         {
-            Filter = "SrvDesk 配置 (*.json)|*.json",
+            Filter = AppLang.L("SrvDesk 配置 (*.json)|*.json", "SrvDesk profile (*.json)|*.json"),
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
@@ -1279,37 +1303,37 @@ internal sealed class MainForm : Form
             {
                 Bind(bundle.State);
                 _uiDirty = true;
-                parts.Add("开关");
+                parts.Add(AppLang.L("开关", "Toggles"));
             }
             if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
             {
-                var tip = "将写入本机保存的配置脚本覆盖与自定义方案，覆盖现有本地内容。是否继续？";
-                if (MessageBox.Show(this, tip, "导入配置",
+                var tip = AppLang.L("将写入本机保存的配置脚本覆盖与自定义方案，覆盖现有本地内容。是否继续？", "This will overwrite local script overrides and custom packs. Continue?");
+                if (MessageBox.Show(this, tip, AppLang.L("导入配置", "Import profile"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 {
                     if (parts.Count > 0)
-                        _status.Text = "已导入开关到界面（未导入脚本）：" + dlg.FileName;
+                        _status.Text = AppLang.L("已导入开关到界面（未导入脚本）：", "Imported toggles to UI (scripts skipped): ") + dlg.FileName;
                     return;
                 }
                 ProfileStore.ApplyLocalData(bundle);
-                if (bundle.HasScriptOverrides) parts.Add("脚本覆盖");
-                if (bundle.HasCustomPacks) parts.Add("自定义方案");
+                if (bundle.HasScriptOverrides) parts.Add(AppLang.L("脚本覆盖", "Script overrides"));
+                if (bundle.HasCustomPacks) parts.Add(AppLang.L("自定义方案", "Custom packs"));
                 RefreshAfterProfileImport();
             }
 
-            _status.Text = "已导入" + string.Join("、", parts) + "：" + dlg.FileName
-                           + (bundle.HasSettings ? "（开关需点「应用到系统」生效）" : "");
-            ApplyLog.Write("导入配置 " + dlg.FileName + " [" + string.Join(",", parts) + "]");
+            _status.Text = AppLang.L("已导入", "Imported ") + string.Join(AppLang.L("、", ", "), parts) + "：" + dlg.FileName
+                           + (bundle.HasSettings ? AppLang.L("（开关需点「应用到系统」生效）", " (toggles need Apply)") : "");
+            ApplyLog.Write(AppLang.L("导入配置 ", "Import profile ") + dlg.FileName + " [" + string.Join(",", parts) + "]");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(ex.Message, AppLang.L("导入失败", "Import failed"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     private void RefreshAfterProfileImport()
     {
-        if (_pageCache.TryGetValue("自定义配置", out var page) && page is IEmbeddedSettingsPage embedded)
+        if (_pageCache.TryGetValue(AppLang.L("自定义配置", "Custom config"), out var page) && page is IEmbeddedSettingsPage embedded)
             embedded.RefreshFromSystem();
         _helpDetail.ReloadScriptsIfShowing();
     }
@@ -1318,7 +1342,7 @@ internal sealed class MainForm : Form
     {
         if (!ConfigureAutologonDialog()) return;
         _autologon.Checked = true;
-        _status.Text = $"Autologon 已配置：{_autologonSettings!.Username}（应用到系统后下次重启生效）";
+        _status.Text = AppLang.Lf("Autologon 已配置：{0}（应用到系统后下次重启生效）", "Autologon set for {0} (takes effect after Apply + reboot)", _autologonSettings!.Username);
     }
 
     private void ConfigureComputerIdentity() => PromptComputerIdentity();
@@ -1376,20 +1400,20 @@ internal sealed class MainForm : Form
         {
             if (HostsFileHelper.FlushDns())
             {
-                _status.Text = "已刷新 DNS 缓存（ipconfig /flushdns）。";
-                MessageBox.Show(this, "DNS 解析缓存已清空。\r\n之后的域名解析会重新向 DNS 服务器查询。",
-                    "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _status.Text = AppLang.L("已刷新 DNS 缓存（ipconfig /flushdns）。", "DNS cache flushed (ipconfig /flushdns).");
+                MessageBox.Show(this, AppLang.L("DNS 解析缓存已清空。\r\n之后的域名解析会重新向 DNS 服务器查询。", "DNS cache cleared.\r\nNext lookups will query the DNS server again."),
+                    AppLang.L("刷新 DNS 缓存", "Flush DNS"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
-                MessageBox.Show(this, "ipconfig /flushdns 未成功完成。",
-                    "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, AppLang.L("ipconfig /flushdns 未成功完成。", "ipconfig /flushdns did not complete."),
+                    AppLang.L("刷新 DNS 缓存", "Flush DNS"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "无法刷新 DNS 缓存。\r\n\r\n" + ex.Message,
-                "刷新 DNS 缓存", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, AppLang.L("无法刷新 DNS 缓存。\r\n\r\n", "Could not flush DNS cache.\r\n\r\n") + ex.Message,
+                AppLang.L("刷新 DNS 缓存", "Flush DNS"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -1408,12 +1432,12 @@ internal sealed class MainForm : Form
                 FileName = "eventvwr.msc",
                 UseShellExecute = true,
             });
-            ApplyLog.Write("打开事件查看器");
+            ApplyLog.Write(AppLang.L("打开事件查看器", "Open Event Viewer"));
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "无法打开事件查看器。\r\n\r\n" + ex.Message,
-                "事件查看器", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, AppLang.L("无法打开事件查看器。\r\n\r\n", "Could not open Event Viewer.\r\n\r\n") + ex.Message,
+                AppLang.L("事件查看器", "Event Viewer"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -1505,8 +1529,8 @@ internal sealed class MainForm : Form
 
         RelayoutActiveSections();
         if (totalVisible == 0 && (!string.IsNullOrWhiteSpace(query) || category != RowCategoryFilter.All))
-            _status.Text = "无匹配项，请调整搜索或分类筛选。";
-        else if (_status.Text.StartsWith("无匹配项", StringComparison.Ordinal))
+            _status.Text = AppLang.L("无匹配项，请调整搜索或分类筛选。", "No matches — adjust search or filter.");
+        else if (_status.Text.StartsWith(AppLang.L("无匹配项", "No matches"), StringComparison.Ordinal))
             _status.Text = _defaultStatusText;
     }
 
@@ -1577,10 +1601,10 @@ internal sealed class MainForm : Form
         _headerSubtitle.Location = new Point(54, 0);
         _headerSubtitle.Height = 48;
         _headerSubtitle.ForeColor = AppTheme.TextOnPrimarySoft;
-        _headerSubtitle.Font = new Font("Microsoft YaHei UI", 9F);
+        _headerSubtitle.Font = UiFit.UiFont;
         _headerSubtitle.TextAlign = ContentAlignment.MiddleLeft;
         _headerSubtitle.BackColor = Color.Transparent;
-        _headerSubtitle.Text = "Windows Server 桌面优化 · 菜单栏访问文件/工具/帮助";
+        _headerSubtitle.Text = AppLang.L("Windows Server 桌面优化", "Windows Server desktop tweaks");
 
         header.Controls.Add(_headerSubtitle);
         header.Controls.Add(_headerMeter);
@@ -1588,10 +1612,13 @@ internal sealed class MainForm : Form
         void LayoutHeader()
         {
             if (_headerMeter is null) return;
-            _headerMeter.Left = Math.Max(200, header.Width - _headerMeter.Width - 12);
+            // 右侧多留一点边距，避免 IP/资源字被窗体边缘裁切
+            const int rightPad = 28;
+            _headerMeter.Left = Math.Max(200, header.ClientSize.Width - _headerMeter.Width - rightPad);
             _headerSubtitle.Width = Math.Max(120, _headerMeter.Left - _headerSubtitle.Left - 12);
         }
         header.Resize += (_, _) => LayoutHeader();
+        _headerMeter.SizeChanged += (_, _) => LayoutHeader();
         LayoutHeader();
         return header;
     }
@@ -1619,6 +1646,23 @@ internal sealed class MainForm : Form
 
     private static bool IsEmbeddedMenuTitle(string title) =>
         Array.IndexOf(EmbeddedPageTitles, title) >= 0;
+
+    private Form CreateEmbeddedPage(string title)
+    {
+        if (title == AppLang.L("登录启动项", "Startup apps"))
+            return new StartupManagerDialog();
+        if (title == AppLang.L("服务优化", "Service optimize"))
+        {
+            var page = new ServiceOptimizeDialog();
+            page.SelectionChanged = row => _helpDetail.ShowServiceOptimize(row);
+            return page;
+        }
+        if (title == AppLang.L("DNS 设置", "DNS settings"))
+            return new DnsSwitcherDialog();
+        if (title == AppLang.L("自定义配置", "Custom config"))
+            return new CustomConfigDialog();
+        throw new InvalidOperationException(title);
+    }
 
     private int FindBatchGroupIndex(string title)
     {
@@ -1748,16 +1792,11 @@ internal sealed class MainForm : Form
 
             if (!_pageCache.TryGetValue(title, out var page))
             {
-                page = title switch
-                {
-                    "登录启动项" => new StartupManagerDialog(),
-                    "DNS 设置" => new DnsSwitcherDialog(),
-                    "自定义配置" => new CustomConfigDialog(),
-                    _ => throw new InvalidOperationException(title),
-                };
+                page = CreateEmbeddedPage(title);
                 page.TopLevel = false;
                 page.FormBorderStyle = FormBorderStyle.None;
                 page.ControlBox = false;
+                page.AutoScaleMode = AutoScaleMode.None;
                 page.Dock = DockStyle.Fill;
                 _pageCache[title] = page;
             }
@@ -1869,10 +1908,10 @@ internal sealed class MainForm : Form
     private void SetBatchMode(bool batch, string? embeddedTitle = null)
     {
         _inBatchMode = batch;
-        // 命令栏高度始终保留，避免即时页/批量页切换时内容区上下跳动
-        _commandBar.Visible = true;
-        _commandBar.Height = 48;
+        // 批量页显示搜索/预设命令栏；嵌入页（服务优化等）收起，避免顶部空一截
         _commandFlow.Visible = batch;
+        _commandBar.Visible = batch;
+        _commandBar.Height = batch ? 48 : 0;
 
         UpdateBottomActionEnablement(embeddedTitle);
 
@@ -1931,7 +1970,7 @@ internal sealed class MainForm : Form
         var header = new BufferedPanel
         {
             Location = new Point(0, 0),
-            Size = new Size(ContentWidth(), h),
+            Size = new Size(ContentWidth(), UiScale.S(h)),
             BackColor = AppTheme.PrimaryLight,
             Tag = "table-header",
         };
@@ -1940,15 +1979,15 @@ internal sealed class MainForm : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderLabel("项目", SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX - 4));
-        header.Controls.Add(MakeHeaderLabel("设置操作", SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统默认值", SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderLabel("系统当前值", SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
-        var levelHeader = MakeHeaderLabel("推荐值", SettingListLayout.LevelX, SettingListLayout.LevelW, ContentAlignment.MiddleCenter);
+        header.Controls.Add(MakeHeaderLabel(AppLang.L("项目", "Item"), SettingListLayout.InfoX, SettingListLayout.RecommendHeaderX - SettingListLayout.InfoX - 4));
+        header.Controls.Add(MakeHeaderLabel(AppLang.L("设置操作", "Action"), SettingListLayout.RecommendHeaderX, SettingListLayout.RecommendHeaderW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel(AppLang.L("系统默认值", "Default"), SettingListLayout.SystemX, SettingListLayout.SystemW, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderLabel(AppLang.L("系统当前值", "Current"), SettingListLayout.CurrentX, SettingListLayout.CurrentW, ContentAlignment.MiddleCenter));
+        var levelHeader = MakeHeaderLabel(AppLang.L("推荐值", "Recommend"), SettingListLayout.LevelX, SettingListLayout.LevelW, ContentAlignment.MiddleCenter);
         levelHeader.Tag = "level-header";
         _toolTip.SetToolTip(levelHeader, RecommendLevelUi.LegendShort);
         header.Controls.Add(levelHeader);
-        var noteHeader = MakeHeaderLabel("说明", SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
+        var noteHeader = MakeHeaderLabel(AppLang.L("说明", "Notes"), SettingListLayout.NoteX, SettingListLayout.NoteWidthFor(ContentWidth()));
         noteHeader.Tag = "note-header";
         header.Controls.Add(noteHeader);
         return header;
@@ -1959,9 +1998,9 @@ internal sealed class MainForm : Form
         {
             Text = text,
             Location = new Point(x, 0),
-            Size = new Size(w, 36),
+            Size = new Size(w, UiScale.S(36)),
             ForeColor = AppTheme.TextHeader,
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            Font = UiFit.UiFontBold(),
             TextAlign = align,
             BackColor = Color.Transparent,
         };
@@ -2003,19 +2042,19 @@ internal sealed class MainForm : Form
         var arrow = new Label
         {
             Text = "▼",
-            Location = new Point(12, 8),
+            Location = new Point(UiScale.S(12), UiScale.S(8)),
             AutoSize = true,
             ForeColor = AppTheme.PrimaryDark,
-            Font = new Font("Segoe UI Symbol", 8F),
+            Font = new Font(UiFit.UiFontFamily, 8F),
             BackColor = Color.Transparent,
         };
         var titleLabel = new Label
         {
             Text = title,
-            Location = new Point(32, 0),
-            Size = new Size(section.Width - 120, headerH),
+            Location = new Point(UiScale.S(32), 0),
+            Size = new Size(section.Width - UiScale.S(120), headerH),
             ForeColor = AppTheme.TextHeader,
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            Font = UiFit.UiFontBold(),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
         };
@@ -2060,7 +2099,7 @@ internal sealed class MainForm : Form
 
         var restoreGroup = new LinkLabel
         {
-            Text = "恢复本组默认",
+            Text = AppLang.L("恢复本组默认", "Reset section"),
             AutoSize = true,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             LinkColor = AppTheme.PrimaryDark,
@@ -2119,31 +2158,31 @@ internal sealed class MainForm : Form
         _bottomActions = actions;
 
         // 底部三键始终占位：刷新 / 恢复默认 / 应用到系统（按页启用）
-        _refreshBottom = ToolButton("刷新", () => LoadState(fullScan: true, forceUi: true));
+        _refreshBottom = ToolButton(AppLang.L("刷新", "Refresh"), () => LoadState(fullScan: true, forceUi: true));
 
-        _restore.Text = "恢复默认";
+        _restore.Text = AppLang.L("恢复默认", "Reset");
         _restore.AutoSize = false;
-        _restore.Size = UiFit.ButtonSize("恢复默认", 36, new Font("Microsoft YaHei UI", 9F, FontStyle.Bold), padding: 28);
+        _restore.Size = UiFit.ButtonSize(AppLang.L("恢复默认", "Reset"), 36, UiFit.UiFontBold(), padding: 28);
         _restore.Margin = new Padding(8, 0, 0, 0);
         _restore.FlatStyle = FlatStyle.Flat;
         _restore.BackColor = AppTheme.SurfaceCard;
         _restore.ForeColor = AppTheme.PrimaryDeep;
-        _restore.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+        _restore.Font = UiFit.UiFontBold();
         _restore.Cursor = Cursors.Hand;
         _restore.FlatAppearance.BorderColor = AppTheme.Border;
         _restore.Click += (_, _) => RestoreDefaults();
         _restore.MouseEnter += (_, _) => _restore.BackColor = AppTheme.PrimaryPale;
         _restore.MouseLeave += (_, _) => _restore.BackColor = AppTheme.SurfaceCard;
 
-        _apply.Text = "应用到系统";
+        _apply.Text = AppLang.L("应用到系统", "Apply");
         _apply.AutoSize = false;
-        _apply.Size = UiFit.ButtonSize("应用到系统", 36, new Font("Microsoft YaHei UI", 9F, FontStyle.Bold), padding: 28);
+        _apply.Size = UiFit.ButtonSize(AppLang.L("应用到系统", "Apply"), 36, UiFit.UiFontBold(), padding: 28);
         _apply.Margin = new Padding(8, 0, 0, 0);
         _apply.FlatStyle = FlatStyle.Flat;
         _apply.FlatAppearance.BorderSize = 0;
         _apply.BackColor = AppTheme.Primary;
         _apply.ForeColor = AppTheme.TextOnPrimary;
-        _apply.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+        _apply.Font = UiFit.UiFontBold();
         _apply.Cursor = Cursors.Hand;
         _apply.Click += (_, _) => OnApplyClicked();
         _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
@@ -2169,7 +2208,7 @@ internal sealed class MainForm : Form
             MenuItems[e.Index],
             Font,
             e.Index == _menuHover,
-            separator: MenuItems[e.Index] == "性能及安全");
+            separator: MenuItems[e.Index] == AppLang.L("性能及安全", "Performance & security"));
     }
 
     /// <param name="forceUi">
@@ -2187,7 +2226,7 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
-            _status.Text = "读取当前配置失败：" + ex.Message;
+            _status.Text = AppLang.L("读取当前配置失败：", "Failed to read settings: ") + ex.Message;
             return false;
         }
     }
@@ -2195,7 +2234,7 @@ internal sealed class MainForm : Form
     private void LoadState(bool fullScan = false, bool forceUi = false)
     {
         if (fullScan && forceUi)
-            _status.Text = "正在完整扫描系统状态（含 DISM，可能需要数十秒）…";
+            _status.Text = AppLang.L("正在完整扫描系统状态（含 DISM，可能需要数十秒）…", "Full scan in progress (includes DISM; may take a while)…");
 
         var epoch = ++_loadEpoch;
         System.Threading.Tasks.Task.Run(() =>
@@ -2214,12 +2253,12 @@ internal sealed class MainForm : Form
                         {
                             // 保留用户勾选；后台扫描结果不写回开关
                             if (fullScan &&
-                                !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal) &&
-                                _status.Text.IndexOf("已载入预设", StringComparison.Ordinal) < 0 &&
-                                _status.Text.IndexOf("已导入", StringComparison.Ordinal) < 0)
+                                !_status.Text.StartsWith(AppLang.L("读取当前配置失败", "Failed to read settings"), StringComparison.Ordinal) &&
+                                _status.Text.IndexOf(AppLang.L("已载入预设", "Loaded preset"), StringComparison.Ordinal) < 0 &&
+                                _status.Text.IndexOf(AppLang.L("已导入", "Imported"), StringComparison.Ordinal) < 0)
                             {
                                 _status.Text = _systemFacts.Summary +
-                                    " · 后台扫描完成（已保留你改过的开关；要同步系统请点「刷新」）。";
+                                    AppLang.L(" · 后台扫描完成（已保留你的勾选；点「刷新」可对齐系统）。", " · Background scan done (kept your toggles; Refresh to sync).");
                             }
                             return;
                         }
@@ -2227,7 +2266,7 @@ internal sealed class MainForm : Form
                         Bind(state, updateCurrentValues: true);
                         _uiDirty = false;
                     }
-                    catch (Exception ex) { _status.Text = "读取当前配置失败：" + ex.Message; }
+                    catch (Exception ex) { _status.Text = AppLang.L("读取当前配置失败：", "Failed to read settings: ") + ex.Message; }
                     finally
                     {
                         UseWaitCursor = false;
@@ -2235,8 +2274,8 @@ internal sealed class MainForm : Form
                         Application.UseWaitCursor = false;
                         RefreshEmbeddedPageIfVisible();
                         if (fullScan && forceUi &&
-                            !_status.Text.StartsWith("读取当前配置失败", StringComparison.Ordinal))
-                            _status.Text = _systemFacts.Summary + " · 状态已刷新。";
+                            !_status.Text.StartsWith(AppLang.L("读取当前配置失败", "Failed to read settings"), StringComparison.Ordinal))
+                            _status.Text = _systemFacts.Summary + AppLang.L(" · 状态已刷新。", " · Status refreshed.");
                     }
                 }));
             }
@@ -2245,7 +2284,7 @@ internal sealed class MainForm : Form
                 BeginInvoke(new Action(() =>
                 {
                     if (epoch != _loadEpoch) return;
-                    _status.Text = "读取当前配置失败：" + ex.Message;
+                    _status.Text = AppLang.L("读取当前配置失败：", "Failed to read settings: ") + ex.Message;
                     UseWaitCursor = false;
                     Cursor = Cursors.Default;
                     Application.UseWaitCursor = false;
@@ -2397,6 +2436,9 @@ internal sealed class MainForm : Form
         _hpet.Checked = s.DisableHpet;
         _loginVerbose.Checked = s.EnableLoginVerbose;
         _netThrottle.Checked = s.DisableNetworkThrottling;
+        _mmcss.Checked = s.OptimizeMultimediaScheduler;
+        _keyboardLatency.Checked = s.OptimizeKeyboardLatency;
+        _webDavLimit.Checked = s.LiftWebDavFileSizeLimit;
         _gameDvr.Checked = s.DisableGameDvr;
         _location.Checked = s.DisableLocationTracking;
         _consumer.Checked = s.DisableConsumerFeatures;
@@ -2558,6 +2600,9 @@ internal sealed class MainForm : Form
         DisableHpet = _hpet.Checked,
         EnableLoginVerbose = _loginVerbose.Checked,
         DisableNetworkThrottling = _netThrottle.Checked,
+        OptimizeMultimediaScheduler = _mmcss.Checked,
+        OptimizeKeyboardLatency = _keyboardLatency.Checked,
+        LiftWebDavFileSizeLimit = _webDavLimit.Checked,
         DisableGameDvr = _gameDvr.Checked,
         DisableLocationTracking = _location.Checked,
         DisableConsumerFeatures = _consumer.Checked,
@@ -2778,30 +2823,32 @@ internal sealed class MainForm : Form
     private void RestoreDefaults()
     {
         var answer = MessageBox.Show(
-            "将把全部设置项恢复为 Windows Server 出厂默认值（「系统默认值」列）。\n\n" +
-            "所有优化建议开关将关闭并立即写入系统。部分项目需注销或重启后生效。\n\n是否继续？",
-            "恢复出厂默认",
+            AppLang.L(
+                "将把全部设置项恢复为 Windows Server 出厂默认值（「系统默认值」列）。\n\n" +
+                "所有优化建议开关将关闭并立即写入系统。部分项目需注销或重启后生效。\n\n是否继续？",
+                "Reset all items to Windows Server factory defaults (Default column).\n\nAll optimization toggles will turn off and write to the system. Some need sign-out/reboot.\n\nContinue?"),
+            AppLang.L("恢复出厂默认", "Factory reset"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
 
         SetAll(false);
-        RunApply("正在恢复出厂默认…", "已恢复为系统出厂默认。开关已全部关闭并与系统状态同步。");
+        RunApply(AppLang.L("正在恢复出厂默认…", "Restoring factory defaults…"), AppLang.L("已恢复为出厂默认。", "Restored to factory defaults."));
     }
 
     private void RestoreGroup(string title, SettingRow[] rows)
     {
         var answer = MessageBox.Show(
-            $"将「{title}」分组内的 {rows.Length} 项恢复为出厂默认。\n\n是否立即写入系统？",
-            "恢复本组默认",
+            AppLang.Lf("将「{0}」分组内的 {1} 项恢复为出厂默认。\n\n是否立即写入系统？", "Reset {1} items in “{0}” to factory defaults.\n\nWrite to system now?", title, rows.Length),
+            AppLang.L("恢复本组默认", "Reset section"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question,
             MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
 
         SetRowsChecked(rows, false);
-        RunApply($"正在恢复「{title}」…", $"「{title}」已恢复为出厂默认。");
+        RunApply(AppLang.Lf("正在恢复「{0}」…", "Resetting “{0}”…", title), AppLang.Lf("「{0}」已恢复为出厂默认。", "“{0}” restored to factory defaults.", title));
     }
 
     private void OnApplyClicked()
@@ -2817,7 +2864,7 @@ internal sealed class MainForm : Form
 
     private void ApplyRecommended()
     {
-        if (!RunApply("正在写入系统…", "已写入本次改动。仅同步有变化的开关。"))
+        if (!RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written.")))
             return;
         // 改名请从「工具 → 计算机名 / 工作组」单独打开，不再每次追问
     }
@@ -2832,14 +2879,14 @@ internal sealed class MainForm : Form
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
             var msg = dlg.RestartScheduled
-                ? "计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。"
-                : "计算机名/工作组已修改，请自行选择合适时间重启以完全生效。";
+                ? AppLang.L("计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。", "Computer name/workgroup changed. Restart in 60s (run shutdown /a to cancel).")
+                : AppLang.L("计算机名/工作组已修改，请自行选择合适时间重启以完全生效。", "Computer name/workgroup changed. Restart when ready for full effect.");
             _status.Text = msg;
-            MessageBox.Show(this, msg, "修改成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, msg, AppLang.L("修改成功", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "计算机名", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, AppLang.L("计算机名", "Computer name"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -2850,8 +2897,8 @@ internal sealed class MainForm : Form
             return true;
 
         var ask = MessageBox.Show(this,
-            "建议先创建系统还原点，出问题可以回退。\r\n\r\n是 = 创建后继续写入\r\n否 = 跳过还原点直接写入\r\n取消 = 不应用",
-            "应用到系统",
+            AppLang.L("建议先创建系统还原点，出问题可以回退。\r\n\r\n是 = 创建后继续写入\r\n否 = 跳过还原点直接写入\r\n取消 = 不应用", "Create a restore point first?\r\n\r\nYes = create then apply\r\nNo = skip and apply\r\nCancel = abort"),
+            AppLang.L("应用到系统", "Apply"),
             MessageBoxButtons.YesNoCancel,
             MessageBoxIcon.Question);
         if (ask == DialogResult.Cancel)
@@ -2859,9 +2906,9 @@ internal sealed class MainForm : Form
         if (ask != DialogResult.Yes)
             return true;
 
-        _status.Text = "正在创建系统还原点…";
+        _status.Text = AppLang.L("正在创建系统还原点…", "Creating restore point…");
         Application.DoEvents();
-        SystemRestoreHelper.TryCreate("SrvDesk 应用前", out var msg);
+        SystemRestoreHelper.TryCreate(AppLang.L("SrvDesk 应用前", "SrvDesk before apply"), out var msg);
         if (!string.IsNullOrEmpty(msg))
             _status.Text = msg;
         return true;
@@ -2881,13 +2928,13 @@ internal sealed class MainForm : Form
         {
             if (!EnsureAutologonReady())
             {
-                _status.Text = "已取消：启用自动登录需先配置账户。";
+                _status.Text = AppLang.L("已取消：启用自动登录需先配置账户。", "Cancelled: configure Autologon account first.");
                 return false;
             }
 
             if (!TryCreateRestorePointBeforeApply())
             {
-                _status.Text = "已取消应用。";
+                _status.Text = AppLang.L("已取消应用。", "Apply cancelled.");
                 return false;
             }
 
@@ -2907,7 +2954,7 @@ internal sealed class MainForm : Form
 
             if (Optimizer.LastApplyActionCount == 0 && errors.Count == 0)
             {
-                _status.Text = "没有需要写入的更改（相对上次同步未改动）。";
+                _status.Text = AppLang.L("没有需要写入的更改（相对上次同步未改动）。", "No changes to write (unchanged since last sync).");
                 ok = true;
                 return true;
             }
@@ -2919,14 +2966,14 @@ internal sealed class MainForm : Form
             var changed = ApplyLog.LastBatchRealChangeCount;
             var attempted = Optimizer.LastApplyActionCount;
             _status.Text = errors.Count == 0
-                ? $"{success} 仅同步本次改动 {attempted} 项（实际变更 {changed} 条）→ 帮助「变更日志」。"
-                : "部分失败：\r\n" + string.Join("\r\n", errors) +
-                  $"\r\n（本次仅改动项 {attempted}，已写入变更 {changed} 条，见帮助 → 变更日志）";
+                ? AppLang.Lf("{0} 已写入 {1} 项（{2} 条变更）→ 帮助「变更日志」。", "{0} Wrote {1} item(s) ({2} change(s)) → Help → Change log.", success, attempted, changed)
+                : AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", errors) +
+                  AppLang.Lf("\r\n（本次仅改动项 {0}，已写入变更 {1} 条，见帮助 → 变更日志）", "\r\n({0} attempted, {1} real changes — see Help → Change log)", attempted, changed);
             ok = true;
         }
         catch (Exception ex)
         {
-            _status.Text = "操作失败：" + ex.Message;
+            _status.Text = AppLang.L("操作失败：", "Operation failed: ") + ex.Message;
             ok = false;
         }
         finally
@@ -2988,7 +3035,7 @@ internal sealed class MainForm : Form
         private readonly int _offIndex;
         private readonly SingleLineLabel _item;
         private readonly SingleLineLabel _scope;
-        private readonly Label _info;
+        private readonly PictureBox _info;
         private readonly PictureBox _script;
         private readonly Label _level;
         private readonly SingleLineLabel _note;
@@ -3037,14 +3084,11 @@ internal sealed class MainForm : Form
                 Visible = help.Scope.HasBadge,
                 Cursor = Cursors.Hand,
             };
-            _info = new Label
+            _info = new PictureBox
             {
-                Text = "ⓘ",
-                AutoSize = false,
-                Size = new Size(18, 18),
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = AppTheme.Primary,
-                Font = new Font("Segoe UI Symbol", 9F, FontStyle.Bold),
+                Image = MenuIcons.RowInfo,
+                SizeMode = PictureBoxSizeMode.CenterImage,
+                Size = UiScale.Size(18, 18),
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
             };
@@ -3054,14 +3098,14 @@ internal sealed class MainForm : Form
                 SizeMode = PictureBoxSizeMode.CenterImage,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
-                Size = new Size(SettingListLayout.ScriptW, 20),
+                Size = new Size(SettingListLayout.ScriptW, UiScale.S(20)),
             };
             _level = new Label
             {
-                Text = RecommendLevelUi.Icon(help.Recommend),
+                Text = "",
                 AutoSize = false,
                 ForeColor = RecommendLevelUi.StarOn,
-                Font = new Font("Segoe UI Symbol", 11F, FontStyle.Bold),
+                Font = UiFit.UiFont,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
@@ -3084,7 +3128,7 @@ internal sealed class MainForm : Form
                 _choice = new ComboBox
                 {
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    Font = new Font("Microsoft YaHei UI", 8.25F),
+                    Font = new Font(UiFit.UiFontFamily, 8.25F),
                     FlatStyle = FlatStyle.Flat,
                     IntegralHeight = false,
                     Cursor = Cursors.Hand,
@@ -3181,7 +3225,7 @@ internal sealed class MainForm : Form
             }
             else
             {
-                _current.Text = Checked ? "开启" : "关闭";
+                _current.Text = Checked ? AppLang.L("开启", "On") : AppLang.L("关闭", "Off");
             }
 
             _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
@@ -3267,17 +3311,17 @@ internal sealed class MainForm : Form
             var tip = Help.Summary;
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
-            toolTip.SetToolTip(_info, "点击查看详细说明与一键脚本\r\n" + tip);
-            toolTip.SetToolTip(_script, "配置脚本：查看/编辑本项开启与关闭脚本");
+            toolTip.SetToolTip(_info, AppLang.L("查看说明与配置脚本\r\n", "View notes & config script\r\n") + tip);
+            toolTip.SetToolTip(_script, AppLang.L("配置脚本：查看/编辑开启与关闭脚本", "Config script: view/edit on/off scripts"));
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
             toolTip.SetToolTip(_note,
-                (Help.WhenHint.Length > 0 ? "建议：" + Help.WhenHint + "\r\n" : "") +
-                (Help.UiPlace.Length > 0 ? "对应：" + Help.UiPlace : Help.ListNote));
+                (Help.WhenHint.Length > 0 ? AppLang.L("建议：", "When: ") + Help.WhenHint + "\r\n" : "") +
+                (Help.UiPlace.Length > 0 ? AppLang.L("对应：", "Where: ") + Help.UiPlace : Help.ListNote));
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
-            toolTip.SetToolTip(_system, "系统默认值（出厂）");
-            toolTip.SetToolTip(_current, "系统当前值：与左侧设置操作一致（读取自本机）");
+            toolTip.SetToolTip(_system, AppLang.L("系统默认值（出厂）", "Factory default"));
+            toolTip.SetToolTip(_current, AppLang.L("系统当前值：与左侧设置操作一致（读取自本机）", "Current value: matches Action (read from this PC)"));
             if (HasChoice)
-                toolTip.SetToolTip(_choice!, "下拉选择设置值");
+                toolTip.SetToolTip(_choice!, AppLang.L("下拉选择设置值", "Choose a value"));
 
             void Select(object? _, EventArgs __) => onSelectHelp(this);
             _item.Click += Select;
@@ -3324,23 +3368,23 @@ internal sealed class MainForm : Form
             var textW = Math.Max(120, scriptX - itemX - 4);
             var hasScope = Help.Scope.HasBadge;
 
-            _info.SetBounds(SettingListLayout.InfoX, (h - 18) / 2, 18, 18);
+            _info.SetBounds(SettingListLayout.InfoX, (h - UiScale.S(18)) / 2, UiScale.S(18), UiScale.S(18));
             if (hasScope)
             {
                 var titleH = UiFit.LineHeight(_item.Font);
                 var scopeH = UiFit.LineHeight(_scope.Font);
                 var gap = SettingListLayout.TitleScopeGap;
                 var block = titleH + gap + scopeH;
-                var inner = Math.Max(titleH + gap + 12, h - 4);
+                var inner = Math.Max(titleH + gap + UiScale.S(12), h - UiScale.S(4));
                 if (block > inner)
                 {
                     var scale = (float)inner / block;
-                    titleH = Math.Max(14, (int)Math.Floor(titleH * scale));
-                    scopeH = Math.Max(12, inner - gap - titleH);
+                    titleH = Math.Max(UiScale.S(14), (int)Math.Floor(titleH * scale));
+                    scopeH = Math.Max(UiScale.S(12), inner - gap - titleH);
                     block = titleH + gap + scopeH;
                 }
 
-                var top = Math.Max(2, (h - block) / 2);
+                var top = Math.Max(UiScale.S(2), (h - block) / 2);
                 _item.SetBounds(itemX, top, textW, titleH);
                 _scope.SetBounds(itemX, top + titleH + gap, textW, scopeH);
             }
@@ -3349,15 +3393,15 @@ internal sealed class MainForm : Form
                 _item.SetBounds(itemX, 0, textW, h);
             }
 
-            _script.SetBounds(scriptX, (h - 20) / 2, SettingListLayout.ScriptW, 20);
+            _script.SetBounds(scriptX, (h - UiScale.S(20)) / 2, SettingListLayout.ScriptW, UiScale.S(20));
             if (HasChoice)
             {
-                _choice!.Size = new Size(SettingListLayout.ChoiceW, 24);
+                _choice!.Size = new Size(SettingListLayout.ChoiceW, UiScale.S(24));
                 _choice.Location = new Point(SettingListLayout.ChoiceX, (h - _choice.Height) / 2);
             }
             else
             {
-                _toggle.Size = new Size(SettingListLayout.ToggleW, 26);
+                _toggle.Size = new Size(SettingListLayout.ToggleW, UiScale.S(28));
                 _toggle.Location = new Point(SettingListLayout.ToggleX, (h - _toggle.Height) / 2);
             }
 
@@ -3372,30 +3416,15 @@ internal sealed class MainForm : Form
         {
             if (sender is not Label label) return;
             var g = e.Graphics;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            // 透明标签需铺底，避免残影；并保证五星完整落在列宽内
+            // 透明标签需铺底，避免残影；几何星绘制保证不变形、不溢列
             var bg = label.BackColor.A == 255
                 ? label.BackColor
                 : (label.Parent?.BackColor ?? AppTheme.SurfaceCard);
             using (var brush = new SolidBrush(bg))
                 g.FillRectangle(brush, label.ClientRectangle);
 
-            var on = RecommendLevelUi.StarsOn(Help.Recommend);
-            var step = RecommendLevelUi.StarStep;
-            var totalW = RecommendLevelUi.StarsBlockWidth;
-            using var font = new Font("Segoe UI Symbol", RecommendLevelUi.StarFontSize, FontStyle.Regular);
-            var x0 = Math.Max(2, (label.ClientSize.Width - totalW) / 2);
-            var y0 = Math.Max(0, (label.ClientSize.Height - font.Height) / 2 - 1);
-
-            for (var i = 0; i < 5; i++)
-            {
-                var filled = i < on;
-                using var brush = new SolidBrush(filled ? RecommendLevelUi.StarOn : RecommendLevelUi.StarOff);
-                // 统一用 ★，靠颜色区分亮/暗，间隔固定且紧凑
-                g.DrawString("★", font, brush, x0 + i * step, y0);
-            }
+            RecommendLevelUi.DrawStarsInBounds(g, Help.Recommend, label.ClientRectangle, paddingLeft: 2);
         }
     }
 }

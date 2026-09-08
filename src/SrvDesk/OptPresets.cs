@@ -15,37 +15,47 @@ internal static class OptPresets
         public override string ToString() => Title;
     }
 
-    public static IReadOnlyList<PresetInfo> All { get; } = new List<PresetInfo>
-    {
+    public static IReadOnlyList<PresetInfo> All => BuildList();
+
+    static List<PresetInfo> BuildList() =>
+    [
         new()
         {
             Id = "server-desktop",
-            Title = "Server 桌面（推荐）",
-            Description = "Server 当日常桌面：个性化、RDP、隐私与性能项全开，对齐 m2nlight / 社区 Server 桌面帖。",
+            Title = AppLang.L("Server 桌面（推荐）", "Server desktop (recommended)"),
+            Description = AppLang.L(
+                "Server 当日常桌面：个性化、RDP、隐私与性能项全开，对齐 m2nlight / 社区 Server 桌面帖。",
+                "Server as daily desktop: personalization, RDP, privacy and performance on; aligned with common Server-desktop guides."),
             Build = ServerDesktop,
         },
         new()
         {
             Id = "security",
-            Title = "安全加固",
-            Description = "保留 UAC、NLA 与密码复杂性；关闭 SMB1、Remote Registry、遥测与远程管理。",
+            Title = AppLang.L("安全加固", "Security hardened"),
+            Description = AppLang.L(
+                "保留 UAC、NLA 与密码复杂性；关闭 SMB1、Remote Registry、遥测与远程管理。",
+                "Keep UAC, NLA and password complexity; disable SMB1, Remote Registry, telemetry and remote mgmt."),
             Build = SecurityHardened,
         },
         new()
         {
             Id = "remote-work",
-            Title = "远程办公",
-            Description = "RDP 高帧率与 GPU、高性能电源、关闭动画，适合长期远程桌面。",
+            Title = AppLang.L("远程办公", "Remote work"),
+            Description = AppLang.L(
+                "RDP 高帧率与 GPU、高性能电源、关闭动画，适合长期远程桌面。",
+                "High-FPS RDP with GPU, high-performance power, animations off — for long remote sessions."),
             Build = RemoteWork,
         },
         new()
         {
             Id = "minimal",
-            Title = "最小改动",
-            Description = "只改 Server 专属与账户便利项，少动系统默认。",
+            Title = AppLang.L("最小改动", "Minimal changes"),
+            Description = AppLang.L(
+                "只改 Server 专属与账户便利项，少动系统默认。",
+                "Only Server-specific and account convenience items; leave most defaults alone."),
             Build = Minimal,
         },
-    };
+    ];
 
     public static PresetInfo? Find(string id) =>
         All.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -58,7 +68,6 @@ internal static class OptPresets
             if (field.FieldType == typeof(bool))
                 field.SetValue(s, true);
         }
-        // 与「全开」语义冲突的项：Server 桌面帖推荐关闭搜索，改用 DISM 项
         s.EnableSearch = false;
         s.DisableSearchEngineFeature = true;
         s.EnableUtcTime = false;

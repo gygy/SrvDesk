@@ -25,9 +25,29 @@ internal static class FolderViewTweaks
 
     private static readonly string DownloadsGuid = FolderTypeGuids[5];
 
-    public static readonly string[] GroupByLabels = ["不分组", "按名称", "按修改日期", "按类型", "按大小"];
-    public static readonly string[] SortByLabels = ["名称升序", "名称降序", "日期新到旧", "日期旧到新", "按类型", "按大小"];
-    public static readonly string[] DriveLetterLabels = ["卷标后面", "卷标前面", "隐藏盘符"];
+    public static string[] GroupByLabels =>
+    [
+        AppLang.L("不分组", "No grouping"),
+        AppLang.L("按名称", "Name"),
+        AppLang.L("按修改日期", "Date modified"),
+        AppLang.L("按类型", "Type"),
+        AppLang.L("按大小", "Size"),
+    ];
+    public static string[] SortByLabels =>
+    [
+        AppLang.L("名称升序", "Name A–Z"),
+        AppLang.L("名称降序", "Name Z–A"),
+        AppLang.L("日期新到旧", "Newest first"),
+        AppLang.L("日期旧到新", "Oldest first"),
+        AppLang.L("按类型", "Type"),
+        AppLang.L("按大小", "Size"),
+    ];
+    public static string[] DriveLetterLabels =>
+    [
+        AppLang.L("卷标后面", "After label"),
+        AppLang.L("卷标前面", "Before label"),
+        AppLang.L("隐藏盘符", "Hide letter"),
+    ];
 
     private static readonly string[] GroupByProps =
     {

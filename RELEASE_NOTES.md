@@ -1,17 +1,21 @@
-﻿# SrvDesk v1.0.26
+﻿# SrvDesk v1.0.28
 
 ## 中文
 
-- 一键安装 winget 对齐 asheroto/winget-install：桌面/Server 2025 优先 Repair-WinGetPackageManager
-- Server 2019/2022：依赖包 + License1.xml 预配安装，并修正 PATH/目录权限；失败再便携部署
-- 安装失败时显示更完整的错误信息，结果窗口不再挤出小滚动条
+- 新增「服务优化」：枚举本机全部服务，按建议调整启动类型；支持分类折叠、五星推荐值、备份/还原快照
+- 批量改服务前自动备份启动类型，出问题可一键回退
+- 顶栏去掉工作组显示；IP/资源占用不再被窗口右缘裁切
+- 常用软件工具栏文字不再被盖住；服务优化列表列序与显示名换行优化
+- 文件菜单增加「退出」；嵌入页不再留空命令栏
 
 下载：单文件 `SrvDesk.exe`，请以管理员身份运行。
 
 ## English
 
-- One-click winget install aligned with asheroto/winget-install: Repair-WinGetPackageManager first on desktop / Server 2025
-- Server 2019/2022: provision with dependencies + License1.xml, fix PATH/ACL, then portable fallback
-- Clearer install errors; longer result dialog without a leftover scrollbar
+- New Service Optimize: live local services, advice-based start types, collapsible categories, star ratings, backup/restore snapshots
+- Auto-backup before batch service changes for easy rollback
+- Header: drop workgroup text; IP/resource meter no longer clipped on the right
+- Common-software toolbar text no longer covered; service list column order and wrapped display names
+- File → Exit; embedded pages no longer leave an empty command bar
 
 Download `SrvDesk.exe` and run as Administrator.

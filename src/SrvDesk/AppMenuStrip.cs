@@ -6,6 +6,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem FileImport { get; }
     public ToolStripMenuItem FileExport { get; }
     public ToolStripMenuItem FileSettings { get; }
+    public ToolStripMenuItem FileExit { get; }
     public ToolStripMenuItem ToolAutologon { get; }
     public ToolStripMenuItem ToolIdentity { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
@@ -51,35 +52,39 @@ internal sealed class AppMenuStrip : MenuStrip
         ImageScalingSize = new Size(16, 16);
         ShowItemToolTips = true;
 
-        var file = new ToolStripMenuItem("文件(&F)");
-        FileImport = Item("导入配置(&O)...", MenuIcons.Import, Keys.Control | Keys.O);
-        FileExport = Item("导出配置(&S)...", MenuIcons.Export, Keys.Control | Keys.S);
-        FileSettings = Item("程序设置(&P)...", MenuIcons.Advanced);
-        file.DropDownItems.AddRange([FileImport, FileExport, new ToolStripSeparator(), FileSettings]);
+        var file = new ToolStripMenuItem(AppLang.L("文件(&F)", "File(&F)"));
+        FileImport = Item(AppLang.L("导入配置(&O)...", "Import profile(&O)..."), MenuIcons.Import, Keys.Control | Keys.O);
+        FileExport = Item(AppLang.L("导出配置(&S)...", "Export profile(&S)..."), MenuIcons.Export, Keys.Control | Keys.S);
+        FileSettings = Item(AppLang.L("程序设置(&P)...", "Settings(&P)..."), MenuIcons.Advanced);
+        FileExit = Item(AppLang.L("退出(&X)", "Exit(&X)"), MenuIcons.PanelClose, Keys.Alt | Keys.F4);
+        file.DropDownItems.AddRange([
+            FileImport, FileExport, new ToolStripSeparator(), FileSettings,
+            new ToolStripSeparator(), FileExit,
+        ]);
 
-        var tools = new ToolStripMenuItem("工具(&T)");
-        ToolAutologon = Item("Autologon 配置...", MenuIcons.Autologon);
-        ToolIdentity = Item("计算机名 / 工作组...", MenuIcons.Identity);
-        ToolSystemInfo = Item("系统信息...", MenuIcons.SystemInfo);
-        ToolHosts = Item("编辑 hosts...", MenuIcons.Hosts);
-        ToolFlushDns = Item("刷新 DNS 缓存", MenuIcons.FlushDns);
-        ToolEventViewer = Item("事件查看器", MenuIcons.EventViewer);
-        ToolGroupPolicy = Item("组策略...", MenuIcons.GroupPolicy);
-        ToolCmd = Item("命令提示符", MenuIcons.Cmd);
+        var tools = new ToolStripMenuItem(AppLang.L("工具(&T)", "Tools(&T)"));
+        ToolAutologon = Item(AppLang.L("Autologon 配置...", "Autologon..."), MenuIcons.Autologon);
+        ToolIdentity = Item(AppLang.L("计算机名 / 工作组...", "Computer name / workgroup..."), MenuIcons.Identity);
+        ToolSystemInfo = Item(AppLang.L("系统信息...", "System info..."), MenuIcons.SystemInfo);
+        ToolHosts = Item(AppLang.L("编辑 hosts...", "Edit hosts..."), MenuIcons.Hosts);
+        ToolFlushDns = Item(AppLang.L("刷新 DNS 缓存", "Flush DNS cache"), MenuIcons.FlushDns);
+        ToolEventViewer = Item(AppLang.L("事件查看器", "Event Viewer"), MenuIcons.EventViewer);
+        ToolGroupPolicy = Item(AppLang.L("组策略...", "Group Policy..."), MenuIcons.GroupPolicy);
+        ToolCmd = Item(AppLang.L("命令提示符", "Command Prompt"), MenuIcons.Cmd);
         ToolPowerShell = Item("Windows PowerShell", MenuIcons.PowerShell);
-        ToolTaskScheduler = Item("计划任务", MenuIcons.TaskScheduler);
-        ToolComputerMgmt = Item("计算机管理", MenuIcons.ComputerMgmt);
-        ToolCommonSoftware = Item("常用软件...", MenuIcons.CommonSoftware);
-        ToolCleanup = Item("垃圾清理...", MenuIcons.Cleanup);
-        ToolDesktopMaintenance = Item("桌面维护...", MenuIcons.DesktopMaintenance);
-        ToolPowerExtras = Item("高级设置...", MenuIcons.Advanced);
-        ToolWindowsFeatures = Item("可选功能 / Capabilities...", MenuIcons.WindowsFeatures);
-        ToolSecurityCenter = Item("安全中心管理...", MenuIcons.SecurityCenter);
-        ToolEdgeManage = Item("MSEdge 管理...", MenuIcons.EdgeManage);
-        ToolContextMenu = Item("右键菜单...", MenuIcons.ContextMenu);
-        ToolQuick = Item("快速工具...", MenuIcons.Quick);
-        ToolRefresh = Item("刷新当前状态", MenuIcons.Refresh, Keys.F5);
-        ToolRestoreDefaults = Item("恢复出厂默认...", MenuIcons.Restore);
+        ToolTaskScheduler = Item(AppLang.L("计划任务", "Task Scheduler"), MenuIcons.TaskScheduler);
+        ToolComputerMgmt = Item(AppLang.L("计算机管理", "Computer Management"), MenuIcons.ComputerMgmt);
+        ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
+        ToolCleanup = Item(AppLang.L("垃圾清理...", "Junk cleanup..."), MenuIcons.Cleanup);
+        ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
+        ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);
+        ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
+        ToolSecurityCenter = Item(AppLang.L("安全中心管理...", "Security Center..."), MenuIcons.SecurityCenter);
+        ToolEdgeManage = Item(AppLang.L("MSEdge 管理...", "MSEdge management..."), MenuIcons.EdgeManage);
+        ToolContextMenu = Item(AppLang.L("右键菜单...", "Context menu..."), MenuIcons.ContextMenu);
+        ToolQuick = Item(AppLang.L("快速工具...", "Quick tools..."), MenuIcons.Quick);
+        ToolRefresh = Item(AppLang.L("刷新当前状态", "Refresh status"), MenuIcons.Refresh, Keys.F5);
+        ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
             ToolAutologon, ToolIdentity, ToolSystemInfo,
@@ -93,31 +98,33 @@ internal sealed class AppMenuStrip : MenuStrip
             ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);
 
-        var view = new ToolStripMenuItem("视图(&V)");
-        ViewAllOn = Item("全部开启当前页", MenuIcons.ViewAllOn);
-        ViewAllOff = Item("全部关闭当前页", MenuIcons.ViewAllOff);
-        ViewHideIncompatible = Item("隐藏不适用项", MenuIcons.ViewHide);
+        var view = new ToolStripMenuItem(AppLang.L("视图(&V)", "View(&V)"));
+        ViewAllOn = Item(AppLang.L("全部开启当前页", "Enable all on this page"), MenuIcons.ViewAllOn);
+        ViewAllOff = Item(AppLang.L("全部关闭当前页", "Disable all on this page"), MenuIcons.ViewAllOff);
+        ViewHideIncompatible = Item(AppLang.L("隐藏不适用项", "Hide incompatible items"), MenuIcons.ViewHide);
         ViewHideIncompatible.CheckOnClick = true;
-        ViewHelpPanel = Item("显示配置脚本", MenuIcons.ViewHelpPanel);
+        ViewHelpPanel = Item(AppLang.L("显示配置脚本", "Show config script"), MenuIcons.ViewHelpPanel);
         ViewHelpPanel.CheckOnClick = true;
         ViewHelpPanel.Checked = true;
-        ViewHelpPanel.ToolTipText = "显示配置脚本面板：查看/编辑开启与关闭脚本（停靠位置在面板顶部切换）";
+        ViewHelpPanel.ToolTipText = AppLang.L(
+            "显示配置脚本面板：查看/编辑开启与关闭脚本（停靠位置在面板顶部切换）",
+            "Show the config script panel to view/edit on/off scripts (dock position switches at the top of the panel)");
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
             ViewHideIncompatible, ViewHelpPanel,
         ]);
 
-        PresetRoot = new ToolStripMenuItem("预设(&P)");
+        PresetRoot = new ToolStripMenuItem(AppLang.L("预设(&P)", "Presets(&P)"));
 
-        var help = new ToolStripMenuItem("帮助(&H)");
-        HelpCheckUpdate = Item("检查更新...", MenuIcons.HelpCheckUpdate);
-        HelpChangeLog = Item("变更日志...", MenuIcons.HelpChangeLog);
-        HelpLog = Item("操作日志...", MenuIcons.HelpLog);
-        HelpDebugLog = Item("调试日志...", MenuIcons.HelpLog);
-        HelpDisclaimer = Item("免责声明...", MenuIcons.HelpUsage);
-        HelpPrivacy = Item("隐私说明...", MenuIcons.HelpLegend);
-        HelpLicense = Item("许可证...", MenuIcons.HelpChangeLog);
-        HelpSupport = Item("支持", MenuIcons.HelpAbout);
+        var help = new ToolStripMenuItem(AppLang.L("帮助(&H)", "Help(&H)"));
+        HelpCheckUpdate = Item(AppLang.L("检查更新...", "Check for updates..."), MenuIcons.HelpCheckUpdate);
+        HelpChangeLog = Item(AppLang.L("变更日志...", "Change log..."), MenuIcons.HelpChangeLog);
+        HelpLog = Item(AppLang.L("操作日志...", "Operation log..."), MenuIcons.HelpLog);
+        HelpDebugLog = Item(AppLang.L("调试日志...", "Debug log..."), MenuIcons.HelpLog);
+        HelpDisclaimer = Item(AppLang.L("免责声明...", "Disclaimer..."), MenuIcons.HelpUsage);
+        HelpPrivacy = Item(AppLang.L("隐私说明...", "Privacy..."), MenuIcons.HelpLegend);
+        HelpLicense = Item(AppLang.L("许可证...", "License..."), MenuIcons.HelpChangeLog);
+        HelpSupport = Item(AppLang.L("支持", "Support"), MenuIcons.HelpAbout);
         help.DropDownItems.AddRange([
             HelpCheckUpdate, HelpChangeLog, HelpLog, HelpDebugLog,
             new ToolStripSeparator(),

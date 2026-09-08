@@ -11,7 +11,7 @@ internal sealed class QuickToolsDialog : Form
     public QuickToolsDialog(SystemFacts facts)
     {
         _facts = facts;
-        Text = "快速工具";
+        Text = AppLang.L("快速工具", "Quick tools");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -24,7 +24,7 @@ internal sealed class QuickToolsDialog : Form
         var toolbar = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = AppTheme.Surface };
         toolbar.Controls.Add(new Label
         {
-            Text = "搜索",
+            Text = AppLang.L("搜索", "Search"),
             Location = new Point(0, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
@@ -49,12 +49,12 @@ internal sealed class QuickToolsDialog : Form
         _list.BackColor = AppTheme.SurfaceCard;
         _list.BorderStyle = BorderStyle.FixedSingle;
         UiBuffer.Enable(_list);
-        _list.Columns.Add("分类", 108);
-        _list.Columns.Add("工具", 200);
-        _list.Columns.Add("说明", 260);
+        _list.Columns.Add(AppLang.L("分类", "Category"), 108);
+        _list.Columns.Add(AppLang.L("工具", "Tool"), 200);
+        _list.Columns.Add(AppLang.L("说明", "Description"), 260);
         _list.DoubleClick += (_, _) => OpenSelected();
 
-        var openBtn = ThemedSettingsChrome.CreateButton("打开", true);
+        var openBtn = ThemedSettingsChrome.CreateButton(AppLang.L("打开", "Open"), true);
         openBtn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         openBtn.Click += (_, _) => OpenSelected();
 
@@ -64,8 +64,10 @@ internal sealed class QuickToolsDialog : Form
 
         ThemedSettingsChrome.MountModal(
             this,
-            "快速工具",
-            "系统管理工具快捷入口 · 已按 Server 桌面场景筛选",
+            AppLang.L("快速工具", "Quick tools"),
+            AppLang.L(
+                "系统管理工具快捷入口 · 已按 Server 桌面场景筛选",
+                "Shortcuts to system tools · filtered for Server desktop"),
             body,
             "");
 

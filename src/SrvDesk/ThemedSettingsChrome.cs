@@ -143,7 +143,7 @@ internal static class ThemedSettingsChrome
             Location = new Point(54, 6),
             Size = new Size(520, 24),
             ForeColor = AppTheme.TextOnPrimary,
-            Font = new Font("Microsoft YaHei UI", 12.5F, FontStyle.Bold),
+            Font = UiFit.UiFontBold(12.5F),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
             AutoEllipsis = false,
@@ -157,7 +157,7 @@ internal static class ThemedSettingsChrome
             Height = 22,
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = AppTheme.TextOnPrimarySoft,
-            Font = new Font("Microsoft YaHei UI", 8.5F),
+            Font = UiFit.UiFontSmall,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
             AutoEllipsis = false,
@@ -248,10 +248,11 @@ internal static class ThemedSettingsChrome
         {
             Text = hint,
             AutoSize = false,
-            Location = new Point(16, 4),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 44),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+            Location = new Point(16, 8),
+            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 36),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = AppTheme.TextMute,
+            Font = UiFit.UiFontSmall,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true,
         };
@@ -268,7 +269,7 @@ internal static class ThemedSettingsChrome
 
     public static Button CreateButton(string text, bool primary)
     {
-        var font = new Font("Microsoft YaHei UI", 9F);
+        var font = UiFit.UiFont;
         var b = new Button
         {
             Text = text,
@@ -277,9 +278,16 @@ internal static class ThemedSettingsChrome
             BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
             ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             Font = font,
-            Size = UiFit.ButtonSize(text, 34, font),
+            Size = UiFit.ButtonSize(text, 32, font, minWidth: 72, padding: 22),
+            TextAlign = ContentAlignment.MiddleCenter,
+            UseVisualStyleBackColor = false,
         };
-        if (primary) b.FlatAppearance.BorderSize = 0;
+        if (primary)
+        {
+            b.FlatAppearance.BorderSize = 0;
+            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryDark;
+            b.MouseLeave += (_, _) => b.BackColor = AppTheme.Primary;
+        }
         else
         {
             b.FlatAppearance.BorderColor = AppTheme.Border;
@@ -315,7 +323,7 @@ internal static class ThemedSettingsChrome
             Text = title,
             Dock = DockStyle.Top,
             Height = 28,
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+            Font = UiFit.UiFontBold(10F),
             ForeColor = AppTheme.TextHeader,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = false,
@@ -456,7 +464,7 @@ internal static class ThemedSettingsChrome
         bool showHeader = false)
     {
         form.BackColor = AppTheme.Surface;
-        form.Font = new Font("Microsoft YaHei UI", 9F);
+        form.Font = UiFit.UiFont;
         body.Dock = DockStyle.Fill;
         var footer = CreateFooter(form, footerHint, onRefresh, showClose: true);
         form.Controls.Add(body);
@@ -475,7 +483,7 @@ internal static class ThemedSettingsChrome
         Action? onApply = null)
     {
         form.BackColor = AppTheme.Surface;
-        form.Font = new Font("Microsoft YaHei UI", 9F);
+        form.Font = UiFit.UiFont;
         body.Dock = DockStyle.Fill;
         var footer = CreateFooter(form, footerHint, onRefresh, showClose: false, onApply: onApply);
         form.Controls.Add(body);

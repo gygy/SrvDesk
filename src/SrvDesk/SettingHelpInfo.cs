@@ -52,11 +52,14 @@ internal sealed class SettingHelpInfo
 
     public string FormatDetail() =>
         Scope.FormatHelpSection() +
-        "\r\n【推荐】" + RecommendLevelUi.Tip(Recommend) +
-        (UiPlace.Length > 0 ? "\r\n【对应】" + UiPlace : "") +
-        (WhenHint.Length > 0 ? "\r\n【建议】" + WhenHint : "") +
-        "\r\n【作用】" + Purpose +
-        "\r\n【好处】" + Benefit + "\r\n【指引】" + Guide + "\r\n【生效】" + Effect;
+        "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.Tip(Recommend) +
+        (UiPlace.Length > 0 ? "\r\n" + AppLang.L("【对应】", "[Where] ") + UiPlace : "") +
+        (WhenHint.Length > 0 ? "\r\n" + AppLang.L("【建议】", "[When] ") + WhenHint : "") +
+        "\r\n" + AppLang.L("【作用】", "[What] ") + Purpose +
+        "\r\n" + AppLang.L("【好处】", "[Benefit] ") + Benefit +
+        "\r\n" + AppLang.L("【指引】", "[Guide] ") + Guide +
+        "\r\n" + AppLang.L("【生效】", "[Effect] ") + Effect;
+
 
     private static string Compact(string text, int max)
     {

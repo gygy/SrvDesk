@@ -55,28 +55,28 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 e.Graphics.DrawLine(edge, 0, 0, 0, Height);
         };
 
-        _caption.Text = "配置脚本";
+        _caption.Text = AppLang.L("配置脚本", "Config script");
         _caption.SetBounds(PadX, 10, 200, 18);
         _caption.ForeColor = AppTheme.TextMute;
-        _caption.Font = new Font("Microsoft YaHei UI", 8F);
+        _caption.Font = UiFit.UiFontScope;
         _caption.BackColor = Color.Transparent;
 
-        StyleDockButton(_dockRight, MenuIcons.DockRight, "靠右停靠");
-        StyleDockButton(_dockBottom, MenuIcons.DockBottom, "靠底停靠");
-        StyleDockButton(_dockClose, MenuIcons.PanelClose, "关闭配置脚本面板");
+        StyleDockButton(_dockRight, MenuIcons.DockRight, AppLang.L("靠右停靠", "Dock right"));
+        StyleDockButton(_dockBottom, MenuIcons.DockBottom, AppLang.L("靠底停靠", "Dock bottom"));
+        StyleDockButton(_dockClose, MenuIcons.PanelClose, AppLang.L("关闭面板", "Close panel"));
         _dockRight.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Right);
         _dockBottom.Click += (_, _) => DockRequested?.Invoke(ConfigScriptDock.Bottom);
         _dockClose.Click += (_, _) => CloseRequested?.Invoke();
 
-        _title.SetBounds(PadX, 30, 280, 44);
+        _title.SetBounds(PadX, 30, 280, 40);
         _title.ForeColor = AppTheme.PrimaryDeep;
-        _title.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
+        _title.Font = UiFit.UiFontBold(10F);
         _title.BackColor = Color.Transparent;
         _title.AutoEllipsis = false;
 
-        _summary.SetBounds(PadX, 76, 280, 48);
+        _summary.SetBounds(PadX, 72, 280, 52);
         _summary.ForeColor = AppTheme.TextMute;
-        _summary.Font = new Font("Microsoft YaHei UI", 8.75F);
+        _summary.Font = UiFit.UiFontSmall;
         _summary.BackColor = Color.Transparent;
         _summary.AutoEllipsis = false;
 
@@ -88,7 +88,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         _footer.SetBounds(PadX, 140, 280, 36);
         _footer.ForeColor = AppTheme.PrimaryDark;
-        _footer.Font = new Font("Microsoft YaHei UI", 8F);
+        _footer.Font = UiFit.UiFontScope;
         _footer.BackColor = Color.Transparent;
 
         Controls.Add(_footer);
@@ -149,21 +149,21 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeHost.Padding = new Padding(8);
         _recipeHost.Visible = false;
 
-        _recipeCaption.Text = "配置脚本";
-        _recipeCaption.Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold);
+        _recipeCaption.Text = AppLang.L("配置脚本", "Config script");
+        _recipeCaption.Font = UiFit.UiFontBold(8.75F);
         _recipeCaption.ForeColor = AppTheme.PrimaryDeep;
         _recipeCaption.BackColor = Color.Transparent;
         _recipeCaption.AutoSize = true;
         _recipeCaption.Location = new Point(8, 6);
 
-        _recipeKind.Font = new Font("Microsoft YaHei UI", 8F);
+        _recipeKind.Font = UiFit.UiFontScope;
         _recipeKind.ForeColor = AppTheme.TextMute;
         _recipeKind.BackColor = Color.Transparent;
         _recipeKind.AutoSize = true;
         _recipeKind.Location = new Point(80, 8);
 
-        StyleTab(_tabEnable, "开启", true);
-        StyleTab(_tabDisable, "关闭", false);
+        StyleTab(_tabEnable, AppLang.L("开启", "On"), true);
+        StyleTab(_tabDisable, AppLang.L("关闭", "Off"), false);
         _tabEnable.Location = new Point(8, 28);
         _tabDisable.Location = new Point(8 + _tabEnable.Width + 8, 28);
         _tabEnable.Click += (_, _) => SetRecipeSide(true);
@@ -174,11 +174,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeBox.Width = 240;
         _recipeBox.ReadOnly = false;
         _recipeBox.DetectUrls = false;
-        _tip.SetToolTip(_recipeBox, "可直接编辑；改完会自动记住。可用复制/导出/恢复默认。");
+        _tip.SetToolTip(_recipeBox, AppLang.L(
+            "可直接编辑；改完会自动记住。可用复制/导出/恢复默认。",
+            "Editable; changes are remembered. Copy / export / reset available."));
 
-        StyleAction(_btnCopy, "复制");
-        StyleAction(_btnSave, "导出");
-        StyleAction(_btnReset, "恢复默认");
+        StyleAction(_btnCopy, AppLang.L("复制", "Copy"));
+        StyleAction(_btnSave, AppLang.L("导出", "Export"));
+        StyleAction(_btnReset, AppLang.L("恢复默认", "Reset"));
         _btnCopy.Click += (_, _) => CopyRecipe();
         _btnSave.Click += (_, _) => ExportRecipe();
         _btnReset.Click += (_, _) => ResetRecipeToBuiltin();
@@ -194,14 +196,16 @@ internal sealed class HelpDetailPanel : BufferedPanel
             UpdateOverrideHint();
         };
 
-        _recipeNote.Font = new Font("Microsoft YaHei UI", 8F);
+        _recipeNote.Font = UiFit.UiFontScope;
         _recipeNote.ForeColor = AppTheme.PrimaryDark;
         _recipeNote.BackColor = Color.Transparent;
         _recipeNote.AutoSize = false;
         _recipeNote.MaximumSize = new Size(260, 0);
 
-        _emptyRecipe.Text = "此项为组合操作（DISM/多服务等），未单独收录脚本；请用左侧开关 +「应用到系统」。";
-        _emptyRecipe.Font = new Font("Microsoft YaHei UI", 8.5F);
+        _emptyRecipe.Text = AppLang.L(
+            "此项为组合操作（DISM/多服务等），未单独收录脚本；请用左侧开关 +「应用到系统」。",
+            "This item is a combined action (DISM/multi-service); use the left toggle + Apply.");
+        _emptyRecipe.Font = UiFit.UiFontSmall;
         _emptyRecipe.ForeColor = AppTheme.TextMute;
         _emptyRecipe.BackColor = Color.Transparent;
         _emptyRecipe.AutoSize = false;
@@ -222,12 +226,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private static void StyleTab(Button b, string text, bool primaryLook)
     {
         b.Text = text;
-        b.Font = new Font("Microsoft YaHei UI", 8.5F);
+        b.Font = UiFit.UiFontSmall;
         b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
-        ApplyTabVisual(b, selected: primaryLook && text == "开启");
+        ApplyTabVisual(b, selected: primaryLook);
     }
 
     private static void ApplyTabVisual(Button b, bool selected)
@@ -249,7 +253,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private static void StyleAction(Button b, string text)
     {
         b.Text = text;
-        b.Font = new Font("Microsoft YaHei UI", 8.5F);
+        b.Font = UiFit.UiFontSmall;
         b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.BackColor = Color.White;
@@ -261,56 +265,135 @@ internal sealed class HelpDetailPanel : BufferedPanel
     public void ShowEmbeddedGuide(string pageTitle)
     {
         HideRecipe();
-        _caption.Text = "配置脚本";
+        _caption.Text = AppLang.L("配置脚本", "Config script");
         _title.Text = pageTitle;
-        _summary.Text = "本页开关会直接写入系统。";
-        BuildSections([]);
         _footer.Text = "";
+        if (pageTitle == AppLang.L("服务优化", "Service optimize"))
+        {
+            _summary.Text = AppLang.L(
+                "选中服务后此处显示说明。改动立即生效；改前会自动备份。",
+                "Select a service to see notes. Changes apply immediately; auto-backup before edits.");
+            BuildSections([
+                (AppLang.L("备份/还原", "Backup/Restore"), AppLang.L(
+                    "「备份」保存本机全部服务启动类型；「还原」可回退。批量修改前也会自动备份。",
+                    "Backup saves all start types; Restore rolls back. Auto-backup also runs before batch changes.")),
+                (AppLang.L("操作", "Actions"), AppLang.L("可按建议改启动类型；「保持」不会被批量改动。", "Change start type by advice; Keep items are skipped in batch.")),
+            ]);
+        }
+        else
+        {
+            _summary.Text = AppLang.L("本页改动会立即写入系统。", "Changes on this page write to the system immediately.");
+            BuildSections([]);
+        }
+    }
+
+    /// <summary>服务优化页：展示当前选中服务的说明。</summary>
+    public void ShowServiceOptimize(ServiceOptimizeRow? row)
+    {
+        HideRecipe();
+        _caption.Text = AppLang.L("服务说明", "Service notes");
+        if (row is null)
+        {
+            _title.Text = AppLang.L("服务优化", "Service optimize");
+            _summary.Text = AppLang.L(
+                "列表来自本机实时服务。点一项查看说明；有建议的可按建议调整。",
+                "List is live from this PC. Select a row for notes; apply advice when suggested.");
+            _footer.Text = "";
+            BuildSections([
+                (AppLang.L("建议", "Advice"), AppLang.L("禁用 / 手动 / 自动 / 保持。", "Disable / Manual / Auto / Keep.")),
+            ]);
+            return;
+        }
+
+        _title.Text = row.DisplayName;
+        _summary.Text = row.AdviceNote;
+        _footer.Text = "";
+
+        _sections.Controls.Clear();
+        _sections.AutoSize = false;
+        _sections.Controls.Add(new RecommendStarsRow
+        {
+            Level = row.OptimizeLevel,
+            TrailingText = RecommendLevelUi.Title(row.OptimizeLevel) + " · " + row.AdviceTag,
+            Tag = "stars",
+        });
+
+        void AddPair(string head, string body)
+        {
+            _sections.Controls.Add(new Label
+            {
+                Text = head,
+                AutoSize = false,
+                ForeColor = AppTheme.PrimaryDeep,
+                Font = UiFit.UiFontBold(8.75F),
+                BackColor = Color.Transparent,
+                Tag = "h",
+            });
+            _sections.Controls.Add(new Label
+            {
+                Text = body,
+                AutoSize = false,
+                ForeColor = AppTheme.TextMain,
+                Font = UiFit.UiFontSmall,
+                BackColor = Color.Transparent,
+                Tag = "b",
+            });
+        }
+
+        AddPair(AppLang.L("服务名", "Service"), row.ActualServiceName);
+        AddPair(AppLang.L("说明", "Note"), row.AdviceNote);
+        LayoutInner();
     }
 
     public void ShowPlaceholder(string? groupTitle = null)
     {
         HideRecipe();
-        _caption.Text = "配置脚本";
-        _title.Text = groupTitle is null ? "选择左侧配置项" : groupTitle;
-        _summary.Text = "点选一项后，下方可查看并编辑开启/关闭脚本。";
-        BuildSections([]);
+        _caption.Text = AppLang.L("配置脚本", "Config script");
+        _title.Text = groupTitle is null ? AppLang.L("选择左侧配置项", "Select an item on the left") : groupTitle;
+        _summary.Text = AppLang.L(
+            "点一项后，可查看并编辑开启/关闭脚本。",
+            "Select an item to view and edit its on/off scripts.");
         _footer.Text = "";
+        BuildSections([]);
     }
 
     public void ShowUsageGuide()
     {
         HideRecipe();
-        _caption.Text = "使用说明";
+        _caption.Text = AppLang.L("使用说明", "How to use");
         _title.Text = AppBrand.ProductName;
-        _summary.Text = "勾选优化项 →「应用到系统」。需管理员运行。";
-        BuildSections([
-            ("配置脚本", "点选左侧项可查看/编辑对应脚本。"),
-            ("备份", "文件菜单可导入、导出配置。"),
-        ]);
+        _summary.Text = AppLang.L(
+            "勾选后点「应用到系统」。需管理员权限。",
+            "Check items, then Apply. Administrator required.");
         _footer.Text = "";
+        BuildSections([
+            (AppLang.L("配置脚本", "Config script"), AppLang.L("点左侧项可查看对应脚本。", "Select an item to view its scripts.")),
+            (AppLang.L("备份", "Backup"), AppLang.L("文件菜单可导入、导出配置。", "Import/export profiles from the File menu.")),
+        ]);
     }
 
     public void ShowScopeLegend()
     {
         HideRecipe();
-        _caption.Text = "标识图例";
-        _title.Text = "适用范围";
-        _summary.Text = "名称下方标签表示该项适用的系统范围。";
-        BuildSections([
-            ("Server 专属", "仅 Windows Server。"),
-            ("需桌面体验", "Server Core 不可用。"),
-        ]);
+        _caption.Text = AppLang.L("标识图例", "Legend");
+        _title.Text = AppLang.L("适用范围", "Scope");
+        _summary.Text = AppLang.L(
+            "名称下方标签表示该项适用的系统范围。",
+            "Badges under the name show where the item applies.");
         _footer.Text = "";
+        BuildSections([
+            (AppLang.L("Server 专属", "Server only"), AppLang.L("仅 Windows Server。", "Windows Server only.")),
+            (AppLang.L("需桌面体验", "Needs Desktop Experience"), AppLang.L("Server Core 不可用。", "Not available on Server Core.")),
+        ]);
     }
 
     public void ShowSetting(string itemTitle, SettingHelpInfo help)
     {
-        _caption.Text = "配置脚本 · 当前项";
+        _caption.Text = AppLang.L("配置脚本 · 当前项", "Config script · current");
         _title.Text = itemTitle;
         _summary.Text = help.Summary;
-        BuildSettingBrief(help);
         _footer.Text = "";
+        BuildSettingBrief(help);
 
         _itemTitle = itemTitle;
         _recipe = SettingRecipeCatalog.Get(help);
@@ -345,7 +428,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 Text = line2,
                 AutoSize = false,
                 ForeColor = AppTheme.TextMain,
-                Font = new Font("Microsoft YaHei UI", 8.5F),
+                Font = UiFit.UiFontSmall,
                 BackColor = Color.Transparent,
                 Tag = "b",
             });
@@ -366,7 +449,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 Text = line3,
                 AutoSize = false,
                 ForeColor = AppTheme.TextMute,
-                Font = new Font("Microsoft YaHei UI", 8.25F),
+                Font = UiFit.UiFontSmall,
                 BackColor = Color.Transparent,
                 Tag = "b",
             });
@@ -519,11 +602,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         try
         {
             Clipboard.SetText(CurrentScriptText());
-            _btnCopy.Text = "已复制";
+            _btnCopy.Text = AppLang.L("已复制", "Copied");
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
-                _btnCopy.Text = "复制";
+                _btnCopy.Text = AppLang.L("复制", "Copy");
                 t.Stop();
                 t.Dispose();
             };
@@ -544,17 +627,17 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var ext = _recipe?.FileExtension ?? ".txt";
         var filter = _recipe?.Kind switch
         {
-            SettingActionKind.Reg => "注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*",
-            SettingActionKind.Cmd => "批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*",
-            SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|所有文件 (*.*)|*.*",
-            _ => "文本 (*.txt)|*.txt|所有文件 (*.*)|*.*",
+            SettingActionKind.Reg => AppLang.L("注册表 (*.reg)|*.reg|所有文件 (*.*)|*.*", "Registry (*.reg)|*.reg|All files (*.*)|*.*"),
+            SettingActionKind.Cmd => AppLang.L("批处理 (*.cmd)|*.cmd|所有文件 (*.*)|*.*", "Batch (*.cmd)|*.cmd|All files (*.*)|*.*"),
+            SettingActionKind.PowerShell => "PowerShell (*.ps1)|*.ps1|" + AppLang.L("所有文件 (*.*)|*.*", "All files (*.*)|*.*"),
+            _ => AppLang.L("文本 (*.txt)|*.txt|所有文件 (*.*)|*.*", "Text (*.txt)|*.txt|All files (*.*)|*.*"),
         };
         var suggested = _recipe?.SuggestedFileName(_itemTitle, _showEnable)
-                        ?? ("配置脚本" + (_showEnable ? "-开启" : "-关闭") + ext);
+                        ?? (AppLang.L("配置脚本", "config-script") + (_showEnable ? AppLang.L("-开启", "-on") : AppLang.L("-关闭", "-off")) + ext);
 
         using var dlg = new SaveFileDialog
         {
-            Title = "导出配置脚本",
+            Title = AppLang.L("导出配置脚本", "Export config script"),
             Filter = filter,
             FileName = suggested,
             OverwritePrompt = true,
@@ -565,11 +648,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
         {
             File.WriteAllText(dlg.FileName, CurrentScriptText(),
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-            _btnSave.Text = "已导出";
+            _btnSave.Text = AppLang.L("已导出", "Exported");
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
-                _btnSave.Text = "导出";
+                _btnSave.Text = AppLang.L("导出", "Export");
                 t.Stop();
                 t.Dispose();
             };
@@ -577,7 +660,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
         catch (Exception ex)
         {
-            MessageBox.Show("导出失败：\n" + ex.Message, AppBrand.ProductName,
+            MessageBox.Show(AppLang.L("导出失败：\n", "Export failed:\n") + ex.Message, AppBrand.ProductName,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -595,7 +678,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                     Text = head,
                     AutoSize = false,
                     ForeColor = AppTheme.PrimaryDeep,
-                    Font = new Font("Microsoft YaHei UI", 8.75F, FontStyle.Bold),
+                    Font = UiFit.UiFontBold(8.75F),
                     BackColor = Color.Transparent,
                     Tag = "h",
                 });
@@ -605,7 +688,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 Text = body,
                 AutoSize = false,
                 ForeColor = AppTheme.TextMain,
-                Font = new Font("Microsoft YaHei UI", 8.5F),
+                Font = UiFit.UiFontSmall,
                 BackColor = Color.Transparent,
                 Tag = "b",
             });
@@ -673,13 +756,21 @@ internal sealed class HelpDetailPanel : BufferedPanel
         }
 
         _footer.Top = y;
-        var footerH = string.IsNullOrEmpty(_footer.Text)
-            ? 0
-            : TextRenderer.MeasureText(
+        if (string.IsNullOrEmpty(_footer.Text))
+        {
+            _footer.Height = 0;
+            _footer.Visible = false;
+        }
+        else
+        {
+            _footer.Visible = true;
+            var footerH = TextRenderer.MeasureText(
                 _footer.Text, _footer.Font, new Size(w, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4;
-        _footer.Height = Math.Max(footerH, 8);
-        AutoScrollMinSize = new Size(0, Math.Max(_footer.Bottom + 12, ClientSize.Height));
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 6;
+            // 至少一行高，避免字号/测量偏差时只露出字顶
+            _footer.Height = Math.Max(footerH, UiFit.LineHeight(_footer.Font) + 6);
+        }
+        AutoScrollMinSize = new Size(0, Math.Max(_footer.Bottom + 16, ClientSize.Height));
     }
 
     /// <summary>按当前宽度重新测量并纵向排布说明块，避免换行高度变化后文字重叠。</summary>

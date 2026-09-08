@@ -4,6 +4,20 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.28] - 2026-09-08
+
+### Added
+
+- Service Optimize: live Win32 services list, advice tags, collapsible categories, recommend stars, start-type backup/restore snapshots (auto before batch changes)
+- File menu → Exit
+
+### Fixed
+
+- Header no longer shows workgroup; IP/CPU/memory meter stays fully visible
+- Common software toolbar labels/buttons no longer clipped on the right
+- Embedded pages (Service Optimize, etc.) no longer leave an empty top command bar
+- Service list column order and wider wrapping display names
+
 ## [1.0.26] - 2026-09-08
 
 ### Fixed

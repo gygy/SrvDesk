@@ -26,6 +26,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
     {
         Text = "DNS 设置";
         AppBrand.ApplyWindowIcon(this);
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;

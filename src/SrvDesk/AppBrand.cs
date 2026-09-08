@@ -7,14 +7,16 @@ namespace SrvDesk;
 /// </summary>
 internal static class AppBrand
 {
-    public const string ProductName = "Windows server优化助手SrvDesk";
+    public const string ProductNameZh = "Windows Server 优化助手 SrvDesk";
+    public const string ProductNameEn = "SrvDesk — Windows Server Desktop Optimizer";
+    public static string ProductName => AppLang.L(ProductNameZh, ProductNameEn);
     public const string ShortName = "SrvDesk";
     public const string Author = "gygy";
     public const string FeedbackUrl = "https://github.com/gygy/SrvDesk";
 
     public static string ExeFileName => $"{ShortName}.exe";
 
-    public static string SupportDialogTitle => "支持";
+    public static string SupportDialogTitle => AppLang.L("支持", "Support");
 
     /// <summary>短版本号（如 1.0.1），不含 git 提交哈希等后缀。</summary>
     public static string VersionText

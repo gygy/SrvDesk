@@ -17,19 +17,24 @@ internal static class RecommendLevelUi
 {
     /// <summary>实心星：偏暖琥珀金，对比清晰。</summary>
     public static readonly Color StarOn = Color.FromArgb(230, 145, 12);
-    /// <summary>未亮星：同字形灰色实心星（不用☆，避免字形宽窄不一）。</summary>
+    /// <summary>未亮星：同形灰色（几何星，不用☆以免宽窄不一）。</summary>
     public static readonly Color StarOff = Color.FromArgb(168, 176, 188);
 
-    /// <summary>单星步进（像素），尽量紧凑仍可辨。</summary>
-    public const int StarStep = 11;
-    public const float StarFontSize = 10f;
+    /// <summary>单星外接直径（像素）。用几何星绘制，避免字体 ★ 在窄列里叠成变形块。</summary>
+    public static int StarSize => Math.Max(11, UiScale.S(12));
+
+    /// <summary>相邻星中心距（直径 + 间隙，互不重叠）。</summary>
+    public static int StarStep => StarSize + Math.Max(2, UiScale.S(2));
+
+    /// <summary>兼容旧调用：几何星高度约等于字号观感。</summary>
+    public static float StarFontSize => StarSize;
 
     public static string Title(RecommendLevel level) => level switch
     {
-        RecommendLevel.Must => "必优化",
-        RecommendLevel.Strong => "强烈推荐",
-        RecommendLevel.Suggested => "建议优化",
-        _ => "可选",
+        RecommendLevel.Must => AppLang.L("必优化", "Must"),
+        RecommendLevel.Strong => AppLang.L("强烈推荐", "Strongly recommended"),
+        RecommendLevel.Suggested => AppLang.L("建议优化", "Suggested"),
+        _ => AppLang.L("可选", "Optional"),
     };
 
     /// <summary>亮星数量：5=必优化，4=强烈，3=建议，1=可选。</summary>
@@ -41,7 +46,7 @@ internal static class RecommendLevelUi
         _ => 1,
     };
 
-    public static int StarsBlockWidth => StarStep * 5;
+    public static int StarsBlockWidth => StarStep * 4 + StarSize;
 
     /// <summary>五星纯文本（提示/日志）；列表用自绘着色。</summary>
     public static string Icon(RecommendLevel level)
@@ -56,31 +61,107 @@ internal static class RecommendLevelUi
     public static string Tip(RecommendLevel level) =>
         $"{Icon(level)} {Title(level)}（{StarsOn(level)}/5） · " + level switch
         {
-            RecommendLevel.Must => "Server 当桌面几乎必做，否则基础体验会明显变差。",
-            RecommendLevel.Strong => "个人/内网桌面建议开，改动面小、收益明确。",
-            RecommendLevel.Suggested => "多数场景可开，按习惯取舍即可。",
-            _ => "按需开启；有兼容性、安全或业务依赖时请谨慎。",
+            RecommendLevel.Must => AppLang.L(
+                "Server 当桌面几乎必做，否则基础体验会明显变差。",
+                "Almost required for Server-as-desktop; otherwise basic UX suffers."),
+            RecommendLevel.Strong => AppLang.L(
+                "个人/内网桌面建议开，改动面小、收益明确。",
+                "Recommended for personal/LAN desktops; small change, clear benefit."),
+            RecommendLevel.Suggested => AppLang.L(
+                "多数场景可开，按需取舍。",
+                "Fine for most scenarios; enable as you prefer."),
+            _ => AppLang.L(
+                "按需开启；有兼容性、安全或业务依赖时请谨慎。",
+                "Optional; be careful with compatibility, security, or business deps."),
         };
 
-    public static string LegendShort =>
-        "★★★★★ 必优化 · ★★★★☆ 强烈推荐 · ★★★☆☆ 建议优化 · ★☆☆☆☆ 可选";
+    public static string LegendShort => AppLang.L(
+        "★★★★★ 必优化 · ★★★★☆ 强烈推荐 · ★★★☆☆ 建议优化 · ★☆☆☆☆ 可选",
+        "★★★★★ Must · ★★★★☆ Strong · ★★★☆☆ Suggested · ★☆☆☆☆ Optional");
 
-    /// <summary>与列表「推荐值」列相同的五星着色绘制（实心琥珀金 / 灰色）。</summary>
+    /// <summary>与列表「推荐值」列相同的五星着色绘制（几何星，比例固定）。</summary>
     public static void DrawStars(Graphics g, RecommendLevel level, int x, int y)
     {
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         var on = StarsOn(level);
-        using var font = new Font("Segoe UI Symbol", StarFontSize, FontStyle.Regular);
+        var size = StarSize;
+        var step = StarStep;
+        var r = size / 2f;
         for (var i = 0; i < 5; i++)
         {
             var filled = i < on;
             using var brush = new SolidBrush(filled ? StarOn : StarOff);
-            g.DrawString("★", font, brush, x + i * StarStep, y);
+            var cx = x + i * step + r;
+            var cy = y + r;
+            FillStar(g, brush, cx, cy, r);
         }
     }
 
-    public static Size MeasureStars() => new(StarsBlockWidth + 2, (int)StarFontSize + 6);
+    /// <summary>在指定矩形内绘制五星（裁剪 + 居中，避免溢出邻列或被盖住）。</summary>
+    public static void DrawStarsInBounds(Graphics g, RecommendLevel level, Rectangle bounds, int paddingLeft = 4)
+    {
+        if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+        var state = g.Save();
+        try
+        {
+            // 略内缩裁剪，防止抗锯齿像素渗到邻列
+            var clip = Rectangle.Inflate(bounds, -1, 0);
+            if (clip.Width <= 0 || clip.Height <= 0) clip = bounds;
+            g.SetClip(clip);
+
+            var blockW = StarsBlockWidth;
+            var blockH = StarSize;
+            var padL = Math.Max(2, paddingLeft);
+            var x = bounds.X + padL;
+            // 列够宽时水平居中，避免贴边看起来「压住」邻列
+            if (bounds.Width > blockW + padL * 2)
+                x = bounds.X + (bounds.Width - blockW) / 2;
+            var y = bounds.Y + Math.Max(0, (bounds.Height - blockH) / 2);
+            DrawStars(g, level, x, y);
+        }
+        finally
+        {
+            g.Restore(state);
+        }
+    }
+
+    /// <summary>推荐值列建议宽度（五星完整 + 边距，且不窄于表头）。</summary>
+    public static int PreferredColumnWidth
+    {
+        get
+        {
+            var stars = StarsBlockWidth + UiScale.S(16);
+            var header = TextRenderer.MeasureText(
+                AppLang.L("推荐值", "Recommend"),
+                UiFit.UiFont,
+                new Size(int.MaxValue, 64),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width
+                + UiScale.S(16);
+            return Math.Max(stars, header);
+        }
+    }
+
+    public static Size MeasureStars() => new(StarsBlockWidth + 2, StarSize + 4);
+
+    /// <summary>正五角星（尖朝上），外接半径 r，内半径约 0.4r。</summary>
+    private static void FillStar(Graphics g, Brush brush, float cx, float cy, float outerR)
+    {
+        if (outerR < 2f) return;
+        var innerR = outerR * 0.42f;
+        var pts = new PointF[10];
+        for (var i = 0; i < 10; i++)
+        {
+            var angle = -Math.PI / 2 + i * Math.PI / 5;
+            var r = (i % 2 == 0) ? outerR : innerR;
+            pts[i] = new PointF(
+                cx + (float)(r * Math.Cos(angle)),
+                cy + (float)(r * Math.Sin(angle)));
+        }
+
+        g.FillPolygon(brush, pts);
+    }
 }
 
 /// <summary>彩色五星 + 右侧说明文字（与列表推荐值同色）。</summary>
@@ -91,7 +172,6 @@ internal sealed class RecommendStarsRow : Control
 
     public RecommendStarsRow()
     {
-        // SupportsTransparentBackColor：基类 Control 默认不支持 Transparent，否则会抛「控件不支持透明的背景色」
         SetStyle(
             ControlStyles.AllPaintingInWmPaint
             | ControlStyles.UserPaint
@@ -126,12 +206,12 @@ internal sealed class RecommendStarsRow : Control
             g.FillRectangle(b, ClientRectangle);
         }
 
-        var starY = Math.Max(0, (Height - (int)RecommendLevelUi.StarFontSize) / 2 - 1);
+        var starY = Math.Max(0, (Height - RecommendLevelUi.StarSize) / 2);
         RecommendLevelUi.DrawStars(g, _level, 0, starY);
 
         if (_text.Length == 0) return;
         var textX = RecommendLevelUi.StarsBlockWidth + 6;
-        using var font = new Font("Microsoft YaHei UI", 8.5F);
+        using var font = new Font(UiFit.UiFontFamily, 8.5F);
         var color = AppTheme.TextMain;
         TextRenderer.DrawText(g, _text, font,
             new Rectangle(textX, 0, Math.Max(20, Width - textX), Height),

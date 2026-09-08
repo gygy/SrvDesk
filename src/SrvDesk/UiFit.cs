@@ -3,9 +3,49 @@ namespace SrvDesk;
 /// <summary>按实际文字宽度计算控件尺寸，避免中文被裁成半个字。</summary>
 internal static class UiFit
 {
-    public static readonly Font UiFont = new("Microsoft YaHei UI", 9F);
-    public static readonly Font UiFontSmall = new("Microsoft YaHei UI", 8.5F);
-    public static readonly Font UiFontScope = new("Microsoft YaHei UI", 8F);
+    private static Font? _ui;
+    private static Font? _uiSmall;
+    private static Font? _uiScope;
+    private static string? _family;
+
+    /// <summary>优先雅黑 UI；Server 精简环境可能缺失，依次回退。</summary>
+    public static string UiFontFamily
+    {
+        get
+        {
+            if (_family is not null) return _family;
+            foreach (var name in new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "Tahoma" })
+            {
+                if (FontFamilyExists(name))
+                {
+                    _family = name;
+                    return _family;
+                }
+            }
+            _family = SystemFonts.MessageBoxFont?.FontFamily.Name ?? "Microsoft Sans Serif";
+            return _family;
+        }
+    }
+
+    private static bool FontFamilyExists(string name)
+    {
+        try
+        {
+            foreach (var ff in FontFamily.Families)
+            {
+                if (string.Equals(ff.Name, name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
+    }
+
+    public static Font UiFont => _ui ??= new Font(UiFontFamily, 9F);
+    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, 8.5F);
+    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, 8F);
+
+    public static Font UiFontBold(float size = 9F) => new(UiFontFamily, size, FontStyle.Bold);
 
     public static readonly TextFormatFlags SingleLineFlags =
         TextFormatFlags.SingleLine
@@ -29,7 +69,7 @@ internal static class UiFit
 
     /// <summary>按钮宽度：文字宽 + 内边距，且不小于 minWidth。</summary>
     public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 24) =>
-        Math.Max(minWidth, TextWidth(text, font ?? UiFont) + padding);
+        Math.Max(UiScale.S(minWidth), TextWidth(text, font ?? UiFont) + UiScale.S(padding));
 
     public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 24) =>
         new(ButtonWidth(text, font, minWidth, padding), height);
@@ -91,6 +131,7 @@ internal sealed class SingleLineLabel : Label
         var rect = ClientRectangle;
         if (rect.Width > 4)
             rect = new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, rect.Height);
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
         TextRenderer.DrawText(g, Text, Font, rect, ForeColor, flags);
     }
 }

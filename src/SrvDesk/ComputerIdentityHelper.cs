@@ -13,7 +13,7 @@ internal sealed class ComputerIdentityInfo
     public string Summary =>
         PartOfDomain
             ? $"{ComputerName} · 域 {Domain}"
-            : $"{ComputerName} · 工作组 {Workgroup}";
+            : ComputerName;
 }
 
 internal static class ComputerIdentityHelper

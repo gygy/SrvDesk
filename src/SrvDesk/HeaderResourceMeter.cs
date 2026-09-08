@@ -120,8 +120,12 @@ internal sealed class HeaderResourceMeter : Panel
             var pad = 16;
             var need = TextRenderer.MeasureText(line, _text.Font).Width + pad;
             var next = Math.Max(420, Math.Min(720, need));
-            if (Math.Abs(Width - next) >= 8)
-                Width = next;
+            if (Math.Abs(Width - next) < 8) return;
+
+            Width = next;
+            // 右锚定时宽度变大后必须左移，否则右侧文字会被窗体裁掉
+            if (Parent is not null && (Anchor & AnchorStyles.Right) != 0)
+                Left = Math.Max(0, Parent.ClientSize.Width - Width - 28);
         }
         catch { /* ignore */ }
     }

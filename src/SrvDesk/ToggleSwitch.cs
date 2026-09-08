@@ -8,7 +8,7 @@ internal sealed class ToggleSwitch : Control
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
-        Size = new Size(56, 26);
+        Size = new Size(52, 28);
         Cursor = Cursors.Hand;
         TabStop = true;
     }

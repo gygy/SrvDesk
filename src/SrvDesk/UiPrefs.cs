@@ -34,6 +34,8 @@ internal sealed class UiPrefsData
     [DataMember] public bool DisableRestorePointPrompt { get; set; }
     /// <summary>用户选择稍后提醒的版本标签（如 v1.0.22），启动检查时跳过。</summary>
     [DataMember] public string SkippedUpdateTag { get; set; } = "";
+    /// <summary>界面语言：auto / zh-Hans / en。缺省或空 = 自动跟随系统。</summary>
+    [DataMember] public string Language { get; set; } = "auto";
 }
 
 internal static class UiPrefs
@@ -126,6 +128,13 @@ internal static class UiPrefs
         data.HelpPanelHeight = ClampHeight(data.HelpPanelHeight <= 0 ? DefaultHelpPanelHeight : data.HelpPanelHeight);
         if (data.HelpPanelDock != (int)ConfigScriptDock.Bottom)
             data.HelpPanelDock = (int)ConfigScriptDock.Right;
+        if (string.IsNullOrWhiteSpace(data.Language))
+            data.Language = "auto";
+        else
+        {
+            var mode = AppLang.ParseMode(data.Language);
+            data.Language = AppLang.ToPrefsValue(mode);
+        }
     }
 
     static UiPrefsData Defaults() => new()
@@ -137,5 +146,6 @@ internal static class UiPrefs
         HideIncompatibleByDefault = true,
         EnableDebugLog = true,
         SoftSkipUnsupported = true,
+        Language = "auto",
     };
 }
