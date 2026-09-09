@@ -613,6 +613,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
+        _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolPowerExtras.Click += (_, _) =>
         {

@@ -20,6 +20,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolFlushDns { get; }
     public ToolStripMenuItem ToolCommonSoftware { get; }
     public ToolStripMenuItem ToolCleanup { get; }
+    public ToolStripMenuItem ToolShutdownTimer { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolPowerExtras { get; }
     public ToolStripMenuItem ToolWindowsFeatures { get; }
@@ -76,6 +77,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolComputerMgmt = Item(AppLang.L("计算机管理", "Computer Management"), MenuIcons.ComputerMgmt);
         ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
         ToolCleanup = Item(AppLang.L("垃圾清理...", "Junk cleanup..."), MenuIcons.Cleanup);
+        ToolShutdownTimer = Item(AppLang.L("定时关机...", "Shutdown timer..."), MenuIcons.ShutdownTimer);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
         ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
@@ -93,7 +95,7 @@ internal sealed class AppMenuStrip : MenuStrip
             new ToolStripSeparator(),
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolComputerMgmt,
             new ToolStripSeparator(),
-            ToolCommonSoftware, ToolCleanup, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
+            ToolCommonSoftware, ToolCleanup, ToolShutdownTimer, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
             new ToolStripSeparator(),
             ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);

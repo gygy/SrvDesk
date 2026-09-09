@@ -71,6 +71,10 @@ internal static class MenuIcons
         [FileCand(Sys("cleanmgr.exe"))],
         DrawTrash);
 
+    public static Image ShutdownTimer => Get("shutdowntimer",
+        [FileCand(Sys("shutdown.exe")), FileCand(Sys("powercfg.cpl"))],
+        DrawShutdownTimer);
+
     public static Image DesktopMaintenance => Get("desktop",
         [FileCand(Sys("desk.cpl"))],
         DrawDesktop);
@@ -496,6 +500,18 @@ internal static class MenuIcons
         using var p = new Pen(Color.White, 1.5f);
         g.DrawLine(p, 8, 8, 8, 4);
         g.DrawLine(p, 8, 8, 11, 10);
+    }
+
+    private static void DrawShutdownTimer(Graphics g)
+    {
+        using var b = new SolidBrush(Color.FromArgb(200, 80, 60));
+        g.FillEllipse(b, 1, 1, 14, 14);
+        using var p = new Pen(Color.White, 1.5f);
+        g.DrawLine(p, 8, 8, 8, 4);
+        g.DrawLine(p, 8, 8, 11, 10);
+        using var power = new Pen(Color.White, 1.4f);
+        g.DrawArc(power, 5, 5, 6, 6, 40, 280);
+        g.DrawLine(power, 8, 3, 8, 7);
     }
 
     private static void DrawNetwork(Graphics g)
