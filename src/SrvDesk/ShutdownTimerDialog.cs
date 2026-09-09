@@ -248,34 +248,57 @@ internal sealed class ShutdownTimerDialog : Form
         _configBody.Controls.Add(grid);
         _frame.Controls.Add(_configBody);
 
+        var barH = rowH;
         _toggle = ThemedSettingsChrome.CreateButton(AppLang.L("启用定时", "Enable Timer"), true);
-        _toggle.Dock = DockStyle.Bottom;
-        _toggle.Height = rowH + UiScale.S(4);
-        _toggle.Margin = new Padding(0, UiScale.S(10), 0, UiScale.S(6));
+        _toggle.Height = barH;
+        _toggle.MinimumSize = new Size(0, barH);
+        _toggle.Dock = DockStyle.Fill;
         _toggle.Click += (_, _) => ToggleTimer();
 
-        var toggleHost = new Panel
+        _status.Dock = DockStyle.Fill;
+        _status.TextAlign = ContentAlignment.MiddleCenter;
+        _status.BackColor = AppTheme.SurfaceCard;
+        _status.ForeColor = AppTheme.TextMute;
+        _status.Font = UiFit.UiFont;
+        _status.Text = AppLang.L("定时未启用", "Timer Disabled");
+        _status.Padding = Padding.Empty;
+        _status.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AppTheme.Border);
+            var r = _status.ClientRectangle;
+            e.Graphics.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
+        };
+
+        // 底栏：按钮与状态同高、同宽，中间留缝，避免「两块不等高按钮」观感
+        var gap = UiScale.S(8);
+        var footer = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = _toggle.Height + UiScale.S(12),
-            Padding = new Padding(0, UiScale.S(8), 0, 0),
+            Height = barH * 2 + gap + UiScale.S(4),
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
             BackColor = Color.Transparent,
         };
-        _toggle.Dock = DockStyle.Fill;
-        toggleHost.Controls.Add(_toggle);
+        var statusHost = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = barH,
+            Padding = Padding.Empty,
+            BackColor = Color.Transparent,
+        };
+        statusHost.Controls.Add(_status);
+        var btnHost = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = barH,
+            Padding = Padding.Empty,
+            BackColor = Color.Transparent,
+        };
+        btnHost.Controls.Add(_toggle);
+        footer.Controls.Add(statusHost);
+        footer.Controls.Add(btnHost);
 
-        _status.Dock = DockStyle.Bottom;
-        _status.Height = UiScale.S(24);
-        _status.TextAlign = ContentAlignment.MiddleCenter;
-        _status.BackColor = AppTheme.PrimaryDeep;
-        _status.ForeColor = AppTheme.TextOnPrimary;
-        _status.Font = UiFit.UiFontSmall;
-        _status.Text = AppLang.L("定时未启用", "Timer Disabled");
-
-        // Dock order: bottom first
         body.Controls.Add(_frame);
-        body.Controls.Add(toggleHost);
-        body.Controls.Add(_status);
+        body.Controls.Add(footer);
 
         Controls.Add(body);
 
