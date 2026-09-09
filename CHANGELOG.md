@@ -4,6 +4,16 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.29] - 2026-09-09
+
+### Changed
+
+- Service Optimize LTSC hints: richer notes from Win10 LTSC 2021 service remarks (privacy, Bluetooth, update orchestrator, SgrmBroker, Search, vendor drivers, etc.)
+
+### Added
+
+- Common software: Inkscape
+
 ## [1.0.28] - 2026-09-08
 
 ### Added

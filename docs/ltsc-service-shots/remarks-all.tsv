@@ -1,0 +1,141 @@
+﻿Name	Startup Type	Remark	Side
+Agent Activation Runtime_5f643	Disabled	可以禁用，不影响系统使用	L
+Application Layer Gateway Service	Manual	使用系统防火墙保留	L
+AppX Deployment Service (AppXSVC)	Manual         (Trigger Start)	用微软商店和微软账户的保留	L
+NVIDIA Display Container LS	Disabled	本人电脑硬件驱动服务，      可以关闭	R
+NVIDIA LocalSystem Container	Disabled	本人电脑硬件驱动服务，      可以关闭	R
+NVIDIA NetworkService Container	Disabled	本人电脑硬件驱动服务，      可以关闭	R
+Autodesk Desktop Licensing Service	Manual	AUTOCAD授权，不能关闭，否则无法打开CAD	L
+Background Intelligent Transfer Service	Disabled	更新补丁时打开	L
+BitLocker Drive Encryption Service	Disabled	硬盘加密时保留	L
+Block Level Backup Engine Service	Disabled	使用系统备份时保留	L
+Bluetooth Audio Gateway Service	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用	L
+Bluetooth Support Service	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用	L
+Bluetooth User Support Service_5f643	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用	L
+Capability Access Manager Service	Manual	禁用无法打开隐私权限，点击各种隐私会闪退，语音通话无声音	L
+Print Spooler	Running	打印机，需要的保留	R
+Client License Service (ClipSVC)	Manual         (Trigger Start)	保留	L
+PrintWorkflow_5f643	Disabled	可以禁用，不影响系统使用	R
+CNG Key Isolation	Manual         (Trigger Start)	保留	L
+Problem Reports Control Panel Support	Disabled	系统问题报告控制面板，      一般没啥用	R
+COM+ Event System	Automatic	保留	L
+Program Compatibility Assistant Service	Disabled	程序兼容性服务，一般没啥用	R
+COM+ System Application	Manual	保留	L
+Radio Management Service	Manual	禁用后网络无法进入飞行模式	R
+Realtek Audio Universal Service	Disabled	本人电脑硬件驱动服务，      可以关闭	R
+Recommended Troubleshooting Service	Disabled	推荐的解决问题服务，         一般用不着	R
+Remote Access Connection Manager	Disabled	个人电脑，一般用不着远程控制	R
+CoreMessaging	Automatic	禁用后无法进入系统	L
+Remote Desktop Configuration	Disabled	个人电脑，一般用不着远程控制	R
+Credential Manager	Running	保留	L
+Remote Desktop Services	Disabled	个人电脑，一般用不着远程控制	R
+Cryptographic Services	Automatic	保留	L
+Data Usage	Disabled	网络数据使用统计，用不到的关掉	L
+Remote Registry	Disabled	个人电脑，一般用不着远程控制	R
+Device Association Service	Manual         (Trigger Start)	禁用无法添加打印机	L
+RPC Endpoint Mapper	Running	保留	R
+Security Accounts Manager	Running	保留	R
+Device Setup Manager	Manual	设备安装服务，保留	L
+Security Center	Automatic (Delayed Start)	保留	R
+DeviceAssociationBroker_5f643	Disabled	禁用不影响打印机使用	L
+DevicePicker_5f643	Manual	禁用无法使用打印机（估计）	L
+DevicesFlow_5f643	Manual	禁用无法使用打印机（估计）	L
+Server	Manual         (Trigger Start)	文件或者打印机共享时保留	R
+Diagnostic Execution Service	Disabled	诊断模式，不需要的关闭	L
+Diagnostic Policy Service	Disabled	诊断模式，不需要的关闭	L
+Diagnostic Service Host	Disabled	诊断模式，不需要的关闭	L
+Smart Card	Disabled	现在用外部智能卡的不多，   禁用或者保留	R
+Diagnostic System Host	Disabled	诊断模式，不需要的关闭	L
+Smart Card Device Enumeration Service	Disabled	现在用外部智能卡的不多，   禁用或者保留	R
+Smart Card Removal Policy	Disabled	现在用外部智能卡的不多，   禁用或者保留	R
+Display Enhancement Service	Manual         (Trigger Start)	禁用后亮度无法调节	L
+Software Protection	Automatic (Delayed Start)	保留	R
+DNS Client	Automatic     (Trigger Start)	保留	L
+Downloaded Maps Manager	Disabled	下载地图服务，用不着这个的可以关掉	L
+Encrypting File System (EFS)	Manual         (Trigger Start)	解密文件时需要	L
+Fax	Disabled	传真，一般人用不着	L
+SysMain	Disabled	没啥用，直接禁用	R
+FlexNet Licensing Service	Manual	AUTOCAD授权，不能关闭，否则无法打开CAD	L
+Foxit PDF Editor Update Service	Disabled	Foxit PDF服务，可以关掉	L
+System Guard Runtime Monitor Broker	Automatic (Delayed Start)	禁用后，网卡属性内容空白，无法修改IP，同时会导致Task Scheduler服务无法启动	R
+Task Scheduler	Automatic	禁用后没有输入法指示器	R
+GameDVR and Broadcast User Service_5f643	Disabled	游戏录制与广播，用不着的关掉	L
+TCP/IP NetBIOS Helper	Manual         (Trigger Start)	保留	R
+Gateway Session Service	Automatic	VPN服务，没有安装这个的忽略	L
+Gateway Updater Service	Automatic	VPN服务，没有安装这个的忽略	L
+Themes	Automatic	系统主题，保留	R
+Geolocation Service	Disabled	地址服务，用不着这个的可以关掉	L
+Time Broker	Manual         (Trigger Start)	保留	R
+Touch Keyboard and Handwriting Panel Service	Automatic (Trigger Start)	禁用后无法使用输入法	R
+Huawei APO service	Disabled	华为电脑专属，可以禁用，  不影响使用	L
+Update Orchestrator Service	Automatic (Delayed Start)	系统更新时必须打开，         否则设置里面点更新会闪退	R
+Huawei Hiview Windows Service	Disabled	华为电脑专属，可以禁用，  不影响使用	L
+Huawei LCD_Service	Disabled	华为电脑专属，可以禁用，  不影响使用	L
+User Data Access_5f643	Manual	使用微软账户要保留	R
+Huawei PC Core Service	Manual	禁用后无法打开华为电脑管家	L
+User Data Storage_5f643	Manual	使用微软账户要保留	R
+Huawei PCManager Windows Service	Manual	禁用后无法打开华为电脑管家	L
+User Manager	Running	禁用后开始菜单会出错	R
+HV Host Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+HW OSD Service	Disabled	华为电脑专属，可以禁用，  不影响使用	L
+Virtual Disk	Manual	保留，从硬盘安装系统时需要	R
+Hyper-V Data Exchange Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Hyper-V Guest Service Interface	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Hyper-V Guest Shutdown Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Hyper-V Heartbeat Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Hyper-V PowerShell Direct Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Web Account Manager	Manual	使用微软账户要保留	R
+Hyper-V Remote Desktop Virtualization Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+WebClient	Manual         (Trigger Start)	使用微软账户要保留	R
+Hyper-V Time Synchronization Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+Hyper-V Volume Shadow Copy Requestor	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留	L
+IKE and AuthIP IPsec Keying Modules	Disabled	没啥用，直接禁用	L
+Windows Audio	Automatic	保留	R
+Intel(R) Audio Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Audio Endpoint Builder	Automatic	保留	R
+Intel(R) Capability Licensing Service TCP IP Interface	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Backup	Disabled	使用系统备份时保留	R
+Intel(R) Content Protection HDCP Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Biometric Service	Automatic (Trigger Start)	用到指纹识别时保留	R
+Intel(R) Content Protection HECI Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Camera Frame Server	Manual         (Trigger Start)	保留	R
+Intel(R) Dynamic Application Loader Host Interface Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Intel(R) Dynamic Tuning service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Connection Manager	Automatic (Trigger Start)	禁用后，任务栏网络指示器会打XX	R
+Intel(R) Graphics Command Center Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Defender Advanced Threat Protection Service	Manual	用微软杀毒软件的开着	R
+Intel(R) HD Graphics Control Panel Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Defender Firewall	Automatic	用微软杀毒软件的开着	R
+Intel(R) TPM Provisioning Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Encryption Provider Host Service	Manual         (Trigger Start)	解密文件时需要	R
+Intel? PROSet/Wireless Service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Windows Error Reporting Service	Disabled	系统错误报告，可以关闭	R
+Intel? SGX AESM	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+IP Helper	Disabled	IP地址V4 to V6的，暂时用不着	L
+IPsec Policy Agent	Manual         (Trigger Start)	必须保留	L
+Windows Insider Service	Disabled	LTSC里面无需打开系统预览版服务	R
+KtmRm for Distributed Transaction Coordinator	Manual         (Trigger Start)	必须保留	L
+Windows Installer	Manual	保留	R
+Language Experience Service	Manual         (Trigger Start)	切换系统语言时保留	L
+Windows License Manager Service	Manual         (Trigger Start)	微软系统许可服务，保留	R
+Windows Mobile Hotspot Service	Disabled	移动热点，没啥用	R
+Windows Modules Installer	Disabled	更新补丁时打开	R
+Microsoft Account Sign-in Assistant	Running	使用微软账户要保留	L
+Windows Push Notifications User Service_5f643	Automatic	禁用后无法打开网络设置	R
+Microsoft Edge Elevation Service (MicrosoftEdgeElevationService)	Disabled	EDGE浏览器更新服务，        不需要时关闭	L
+Microsoft Edge Update Service (edgeupdate)	Disabled	EDGE浏览器更新服务，        不需要时关闭	L
+Windows Search	Disabled	占资源较大，可以用EVERYTHING代替	R
+Microsoft Edge Update Service (edgeupdatem)	Disabled	EDGE浏览器更新服务，        不需要时关闭	L
+Windows Security Service	Manual	用微软杀毒软件的开着	R
+Windows Update	Disabled	更新补丁时打开	R
+Microsoft Passport	Manual         (Trigger Start)	使用微软账户要保留	L
+WinHTTP Web Proxy Auto-Discovery Service	Disabled	可以禁用，不影响系统使用	R
+Microsoft Passport Container	Manual         (Trigger Start)	使用微软账户要保留	L
+Wired AutoConfig	Manual	使用无线网时保留	R
+WLAN AutoConfig	Automatic	使用无线网时保留	R
+Workstation	Automatic	用企业邮箱时保留	R
+Nahimic service	Disabled	本人电脑硬件驱动服务，      可以关闭	L
+Xbox Accessory Management Service	Disabled	用不着XBOX的关掉	R
+Xbox Live Auth Manager	Disabled	用不着XBOX的关掉	R
+Xbox Live Game Save	Disabled	用不着XBOX的关掉	R
+Xbox Live Networking Service	Disabled	用不着XBOX的关掉	R
