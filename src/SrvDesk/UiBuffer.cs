@@ -117,11 +117,13 @@ internal static class UiBuffer
     /// <summary>
     /// 指定列铺满剩余宽度，并预留竖向滚动条。
     /// 否则列按满宽算，竖条一出现就挤出横条，最后一行会被挡住一半。
+    /// 宁可把填充列压窄，也不要出现横向滚动条。
     /// </summary>
     public static void FitListViewColumn(ListView list, int fillColumnIndex, int minWidth = 80)
     {
         if (list.Columns.Count <= fillColumnIndex || !list.IsHandleCreated)
             return;
+
         var used = 0;
         for (var i = 0; i < list.Columns.Count; i++)
         {
@@ -129,9 +131,52 @@ internal static class UiBuffer
             used += list.Columns[i].Width;
         }
 
-        var avail = list.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - used - 4;
-        list.Columns[fillColumnIndex].Width = Math.Max(minWidth, avail);
+        // 始终按「可能出现竖条」预留；再减边框，避免 1px 溢出触发横条
+        var reserve = SystemInformation.VerticalScrollBarWidth + 6;
+        var avail = list.ClientSize.Width - used - reserve;
+        // 优先消灭横条：填充列可低于 minWidth；仍不够则压缩其它列
+        var fill = Math.Max(48, avail);
+        if (fill < minWidth && avail >= 48)
+            fill = avail;
+        if (used + fill + reserve > list.ClientSize.Width)
+        {
+            fill = Math.Max(48, list.ClientSize.Width - used - reserve);
+            if (used + fill + reserve > list.ClientSize.Width && list.Columns.Count > 1)
+            {
+                var overflow = used + fill + reserve - list.ClientSize.Width;
+                for (var i = 0; i < list.Columns.Count && overflow > 0; i++)
+                {
+                    if (i == fillColumnIndex) continue;
+                    var shrink = Math.Min(overflow, Math.Max(0, list.Columns[i].Width - 80));
+                    if (shrink <= 0) continue;
+                    list.Columns[i].Width -= shrink;
+                    used -= shrink;
+                    overflow -= shrink;
+                }
+                fill = Math.Max(48, list.ClientSize.Width - used - reserve);
+            }
+        }
+
+        if (list.Columns[fillColumnIndex].Width != fill)
+            list.Columns[fillColumnIndex].Width = fill;
+
+        SuppressListViewHorizontalScroll(list);
+    }
+
+    /// <summary>隐藏 ListView 横向滚动条（列已适配时仍可能短暂出现并盖住末行）。</summary>
+    public static void SuppressListViewHorizontalScroll(ListView list)
+    {
+        if (list is null || !list.IsHandleCreated) return;
         ShowScrollBar(list.Handle, SbHorz, false);
+        // 布局后再藏一次，避免 SizeChanged 后系统又画出来
+        if (list.IsHandleCreated)
+        {
+            list.BeginInvoke(new Action(() =>
+            {
+                if (!list.IsDisposed && list.IsHandleCreated)
+                    ShowScrollBar(list.Handle, SbHorz, false);
+            }));
+        }
     }
 
     /// <summary>单行工具栏禁止出现滚动条（AutoScroll 在略溢出时会同时挤出竖条）。</summary>
@@ -156,11 +201,27 @@ internal static class UiBuffer
 
     public static void BindListViewColumnFit(ListView list, int fillColumnIndex, int minWidth = 80)
     {
-        void Fit(object? sender, EventArgs e) => FitListViewColumn(list, fillColumnIndex, minWidth);
-        list.HandleCreated += Fit;
-        list.SizeChanged += Fit;
-        if (list.IsHandleCreated)
+        void Fit(object? sender, EventArgs e)
+        {
             FitListViewColumn(list, fillColumnIndex, minWidth);
+            FitListViewRowHeight(list);
+        }
+
+        list.HandleCreated += (_, _) =>
+        {
+            EnableListView(list);
+            Fit(null, EventArgs.Empty);
+        };
+        list.SizeChanged += Fit;
+        list.ClientSizeChanged += Fit;
+        // 用户拖列或分组刷新后也可能挤出横条
+        list.ColumnWidthChanged += (_, e) =>
+        {
+            if (e.ColumnIndex == fillColumnIndex) return;
+            Fit(null, EventArgs.Empty);
+        };
+        if (list.IsHandleCreated)
+            Fit(null, EventArgs.Empty);
     }
 
     /// <summary>对已有控件开启双缓冲（无法改类型时用）。</summary>

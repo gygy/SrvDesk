@@ -32,15 +32,16 @@ internal sealed class CleanupDialog : Form
         _list.Dock = DockStyle.Fill;
         _list.BackColor = AppTheme.SurfaceCard;
         _list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
-        UiBuffer.Enable(_list);
+        // 勿用反射 DoubleBuffered，改走 LVS_EX_DOUBLEBUFFER + 行高
         _list.Columns.Add(AppLang.L("项目", "Item"), 200);
         _list.Columns.Add(AppLang.L("说明", "Description"), 200);
         FillItems();
 
+        var btnH = UiFit.ControlHeight();
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 44,
+            Height = btnH + 16,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
