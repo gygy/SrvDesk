@@ -430,15 +430,17 @@ internal sealed class ShutdownTimerDialog : Form
                 _toggle.FlatAppearance.BorderColor = AppTheme.Border;
                 var remain = ShutdownTimerService.RemainingSeconds();
                 _status.Text = AppLang.L($"{remain} 秒后执行", $"{remain} Seconds to Execution");
+                _status.ForeColor = AppTheme.TextMain;
                 if (ShutdownTimerService.BlinkEnabled && remain <= ShutdownTimerService.BlinkSeconds)
                 {
-                    // 接近执行时状态栏闪烁
                     var flash = (Environment.TickCount / 500) % 2 == 0;
-                    _status.BackColor = flash ? AppTheme.Primary : AppTheme.PrimaryDeep;
+                    _status.BackColor = flash ? AppTheme.PrimaryPale : AppTheme.SurfaceCard;
+                    _status.ForeColor = flash ? AppTheme.PrimaryDark : AppTheme.TextMain;
                 }
                 else
                 {
-                    _status.BackColor = AppTheme.PrimaryDeep;
+                    _status.BackColor = AppTheme.PrimaryPale;
+                    _status.ForeColor = AppTheme.PrimaryDark;
                 }
             }
             else
@@ -448,7 +450,8 @@ internal sealed class ShutdownTimerDialog : Form
                 _toggle.BackColor = AppTheme.Primary;
                 _toggle.ForeColor = AppTheme.TextOnPrimary;
                 _toggle.FlatAppearance.BorderSize = 0;
-                _status.BackColor = AppTheme.PrimaryDeep;
+                _status.BackColor = AppTheme.SurfaceCard;
+                _status.ForeColor = AppTheme.TextMute;
                 _status.Text = AppLang.L("定时未启用", "Timer Disabled");
             }
         }
