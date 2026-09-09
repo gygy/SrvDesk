@@ -148,35 +148,34 @@ internal static class ChangePlanBuilder
     {
         try
         {
-            var os = ServiceOptimizeHelper.DetectOsTarget();
-            var rows = ServiceOptimizeHelper.LoadRows(os, includeMissing: false);
-            var level = plan.Level;
+            var rows = ServiceOptimizeHelper.LoadApplicable(installedOnly: true);
+            var added = 0;
             foreach (var row in rows)
             {
-                if (plan.Items.Count >= max + 200) break;
-                if (row.Recommend == ServiceRecommend.Keep) continue;
-                if (ServerProfile.MustKeepService(row.ServiceName)) continue;
-                var risk = ServiceRiskCatalog.GetRisk(row.ServiceName, row.Recommend);
+                if (added >= max) break;
+                if (!row.CanOptimize) continue;
+                if (ServerProfile.MustKeepService(row.ActualServiceName)) continue;
+                var risk = ServiceRiskCatalog.GetRisk(row.ActualServiceName, row.Recommend);
                 if (risk >= OptimizeRisk.High) continue;
                 var want = row.Recommend switch
                 {
                     ServiceRecommend.Disable => ServiceStartTypeKind.Disabled,
                     ServiceRecommend.Manual => ServiceStartTypeKind.Manual,
                     ServiceRecommend.Auto => ServiceStartTypeKind.Automatic,
-                    _ => row.CurrentStart,
+                    _ => row.StartType,
                 };
-                if (row.CurrentStart == want) continue;
                 plan.Items.Add(new ChangePlanItem
                 {
                     Module = AppLang.L("服务", "Service"),
-                    Title = row.DisplayName + " (" + row.ServiceName + ")",
-                    Action = AppLang.L("启动类型 → ", "Start type → ") + want,
-                    Reason = row.Note,
-                    Impact = ServiceRiskCatalog.WhyKeep(row.ServiceName),
+                    Title = row.DisplayName + " (" + row.ActualServiceName + ")",
+                    Action = AppLang.L("启动类型 → ", "Start type → ") + ServiceOptimizeHelper.StartTypeLabel(want),
+                    Reason = string.IsNullOrWhiteSpace(row.AdviceNote) ? row.Entry.Note : row.AdviceNote,
+                    Impact = ServiceRiskCatalog.WhyKeep(row.ActualServiceName),
                     Risk = risk,
-                    Selected = false, // 服务建议默认不自动勾选，避免误伤
-                    Key = "svc:" + row.ServiceName,
+                    Selected = false,
+                    Key = "svc:" + row.ActualServiceName,
                 });
+                added++;
             }
         }
         catch { /* ignore */ }

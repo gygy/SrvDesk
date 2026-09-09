@@ -36,6 +36,15 @@ internal sealed class UiPrefsData
     [DataMember] public string SkippedUpdateTag { get; set; } = "";
     /// <summary>界面语言：auto / zh-Hans / en。缺省或空 = 自动跟随系统。</summary>
     [DataMember] public string Language { get; set; } = "auto";
+    /// <summary>服务器用途位标志（ServerRoleFlags）。</summary>
+    [DataMember] public int ServerRoles { get; set; }
+    [DataMember] public bool ServerProfileConfigured { get; set; }
+    /// <summary>OptimizationLevel 枚举整型。</summary>
+    [DataMember] public int OptimizationLevel { get; set; } = 2;
+    [DataMember] public bool HealthInspectionEnabled { get; set; }
+    [DataMember] public string LastInspectionUtc { get; set; } = "";
+    /// <summary>应用到系统前显示变更计划（干跑确认）。缺省 true。</summary>
+    [DataMember] public bool DisableChangePlanPrompt { get; set; }
 }
 
 internal static class UiPrefs

@@ -21,6 +21,12 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolCommonSoftware { get; }
     public ToolStripMenuItem ToolCleanup { get; }
     public ToolStripMenuItem ToolShutdownTimer { get; }
+    public ToolStripMenuItem ToolHealthOverview { get; }
+    public ToolStripMenuItem ToolServerProfile { get; }
+    public ToolStripMenuItem ToolRecommendCenter { get; }
+    public ToolStripMenuItem ToolPortExposure { get; }
+    public ToolStripMenuItem ToolScheduledTasks { get; }
+    public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolPowerExtras { get; }
     public ToolStripMenuItem ToolWindowsFeatures { get; }
@@ -78,6 +84,12 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
         ToolCleanup = Item(AppLang.L("垃圾清理...", "Junk cleanup..."), MenuIcons.Cleanup);
         ToolShutdownTimer = Item(AppLang.L("定时关机...", "Shutdown timer..."), MenuIcons.ShutdownTimer);
+        ToolHealthOverview = Item(AppLang.L("健康总览...", "Health overview..."), MenuIcons.SystemInfo);
+        ToolServerProfile = Item(AppLang.L("服务器用途...", "Server profile..."), MenuIcons.Identity);
+        ToolRecommendCenter = Item(AppLang.L("优化建议中心...", "Recommendations..."), MenuIcons.Quick);
+        ToolPortExposure = Item(AppLang.L("端口与暴露面...", "Ports & exposure..."), MenuIcons.SecurityCenter);
+        ToolScheduledTasks = Item(AppLang.L("计划任务优化...", "Scheduled tasks..."), MenuIcons.TaskScheduler);
+        ToolOptHistory = Item(AppLang.L("优化历史 / 回滚...", "History / rollback..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
         ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
@@ -89,6 +101,8 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
+            ToolHealthOverview, ToolServerProfile, ToolRecommendCenter, ToolPortExposure, ToolScheduledTasks, ToolOptHistory,
+            new ToolStripSeparator(),
             ToolAutologon, ToolIdentity, ToolSystemInfo,
             new ToolStripSeparator(),
             ToolHosts, ToolFlushDns,

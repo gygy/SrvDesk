@@ -614,6 +614,12 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
+        _appMenu.ToolHealthOverview.Click += (_, _) => { using var d = new HealthOverviewDialog(); d.ShowDialog(this); };
+        _appMenu.ToolServerProfile.Click += (_, _) => { using var d = new ServerProfileDialog(); d.ShowDialog(this); };
+        _appMenu.ToolRecommendCenter.Click += (_, _) => { using var d = new RecommendCenterDialog(); d.ShowDialog(this); };
+        _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
+        _appMenu.ToolScheduledTasks.Click += (_, _) => { using var d = new ScheduledTaskDialog(); d.ShowDialog(this); };
+        _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolPowerExtras.Click += (_, _) =>
         {
@@ -2929,18 +2935,54 @@ internal sealed class MainForm : Form
             }
 
             SyncInvisibleRowsFromSystem();
-            ApplyLog.BeginBatch(working);
             var target = CaptureState();
-            // 基线 = 上次从系统同步后的界面快照；只写相对基线有差异的项
             var baseline = _baselineState;
             if (baseline is null)
             {
                 try { baseline = Optimizer.Read(fullScan: false); }
-                catch { /* 保持 null：将写入全部（少见） */ }
+                catch { /* keep null */ }
             }
 
+            var level = ServerProfile.Level;
+            if (level == OptimizationLevel.DetectOnly)
+            {
+                var dry = ChangePlanBuilder.FromToggleDiff(target, baseline, level);
+                dry.DryRunOnly = true;
+                using (var planDlg = new ChangePlanDialog(dry))
+                    planDlg.ShowDialog(this);
+                _status.Text = AppLang.L("当前为「仅检测」等级：未写入系统。可在「服务器用途」调整等级。",
+                    "Detect-only level: nothing written. Change level in Server profile.");
+                return true;
+            }
+
+            if (!UiPrefs.Load().DisableChangePlanPrompt)
+            {
+                var plan = ChangePlanBuilder.FromToggleDiff(target, baseline, level);
+                if (plan.Items.Count > 0)
+                {
+                    using var planDlg = new ChangePlanDialog(plan);
+                    if (planDlg.ShowDialog(this) != DialogResult.OK || !planDlg.Confirmed)
+                    {
+                        _status.Text = AppLang.L("已取消应用。", "Apply cancelled.");
+                        return false;
+                    }
+                    // 未勾选的开关项：把 target 拉回 baseline，避免写入
+                    foreach (var it in plan.Items.Where(i => i.Key.StartsWith("toggle:", StringComparison.Ordinal) && !i.Selected))
+                    {
+                        var field = it.Key.Substring("toggle:".Length);
+                        var fi = typeof(Optimizer.State).GetField(field);
+                        if (fi is null || baseline is null) continue;
+                        fi.SetValue(target, fi.GetValue(baseline));
+                    }
+                }
+            }
+
+            ApplyLog.BeginBatch(working);
             var errors = Optimizer.Apply(target, baseline);
             ApplyLog.WriteApply(working, errors);
+            OptimizationHistory.Add(
+                AppLang.L("应用到系统", "Apply to system"),
+                AppLang.Lf("尝试 {0} 项，错误 {1}", "Attempted {0}, errors {1}", Optimizer.LastApplyActionCount, errors.Count));
 
             if (Optimizer.LastApplyActionCount == 0 && errors.Count == 0)
             {

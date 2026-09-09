@@ -7,12 +7,15 @@ namespace SrvDesk;
 /// </summary>
 internal static class AppBrand
 {
-    public const string ProductNameZh = "Windows Server 优化助手 SrvDesk";
-    public const string ProductNameEn = "SrvDesk — Windows Server Desktop Optimizer";
+    public const string ProductNameZh = "Windows Server 优化与健康助手 SrvDesk";
+    public const string ProductNameEn = "SrvDesk — Windows Server Optimization & Health Assistant";
     public static string ProductName => AppLang.L(ProductNameZh, ProductNameEn);
     public const string ShortName = "SrvDesk";
     public const string Author = "gygy";
     public const string FeedbackUrl = "https://github.com/gygy/SrvDesk";
+    public const string TaglineZh = "不盲目关闭服务，在性能、稳定、安全、兼容之间求平衡";
+    public const string TaglineEn = "Don’t disable blindly — balance performance, stability, security, and compatibility";
+    public static string Tagline => AppLang.L(TaglineZh, TaglineEn);
 
     public static string ExeFileName => $"{ShortName}.exe";
 
