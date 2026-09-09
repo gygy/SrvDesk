@@ -27,7 +27,7 @@ Header shows **IPv4, CPU, memory**.
 
 **Instant (apply immediately):** Startup items · DNS · Custom packs  
 
-**Batch (need Apply):** Server-only · Account policy · Explorer · Desktop · Remote/network · Privacy/experience · Performance/security · Power/services  
+**Batch (need Apply):** Server-only · Account policy · Explorer · Desktop · Remote/network · Privacy/experience · Performance/security · Power/background  
 
 Privacy and performance groups are split into foldable sections by scenario.
 

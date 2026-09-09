@@ -304,7 +304,7 @@ internal sealed class MainForm : Form
         AppLang.L("隐私与体验", "Privacy & UX"),
         AppLang.L("性能及安全", "Performance & security"),
         AppLang.L("登录启动项", "Startup apps"),
-        AppLang.L("电源与服务", "Power & services"),
+        AppLang.L("电源与后台", "Power & background"),
         AppLang.L("服务优化", "Service optimize"),
         AppLang.L("DNS 设置", "DNS settings"),
         AppLang.L("自定义配置", "Custom config"),
@@ -439,14 +439,14 @@ internal sealed class MainForm : Form
                 _netDiscovery, _smRemoting,
             ]),
         ]));
-        _groups.Add((AppLang.L("电源与服务", "Power & services"), [
+        _groups.Add((AppLang.L("电源与后台", "Power & background"), [
             (AppLang.L("远程协助", "Remote Assistance"), [
                 _ra,
             ]),
             (AppLang.L("电源与休眠", "Power & hibernation"), [
                 _hibernate, _fastStartup, _usbPowerOff,
             ]),
-            (AppLang.L("后台服务与内存", "Background & memory"), [
+            (AppLang.L("后台与内存", "Background & memory"), [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
             ]),
         ]));

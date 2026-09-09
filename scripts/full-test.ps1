@@ -439,7 +439,7 @@ if ($Rounds -contains 3) {
         }
         Assert "U-01" (($script:__min.Width -ge 1180) -and ($script:__min.Height -ge 720)) "min=$($script:__min)"
         Assert "U-02" (($script:__title -match "SrvDesk") -and ($script:__title -match $verAsm)) "title=$($script:__title)"
-        $need = @("性能及安全", "桌面外观", "资源管理器", "远程与网络", "电源与服务", "隐私与体验", "Server专属", "账户策略")
+        $need = @("性能及安全", "桌面外观", "资源管理器", "远程与网络", "电源与后台", "隐私与体验", "Server专属", "账户策略")
         # groups live in private field; infer from constructor success + menu strip roots
         $roots = $script:__menus -join " | "
         Assert "U-03" (($roots -match "文件") -and ($roots -match "工具") -and ($roots -match "视图") -and ($roots -match "帮助") -and ($roots -match "预设")) "menu roots=$roots"
