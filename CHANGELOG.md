@@ -4,6 +4,16 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.31] - 2026-09-09
+
+### Added
+
+- Tools → Shutdown timer (Shutdown Agent–style layout, SrvDesk theme): countdown or clock time; shutdown / restart / log off / suspend / hibernate / lock; force terminate; tray blink near execution
+
+### Changed
+
+- Shutdown timer menu icon: self-drawn power + countdown arc
+
 ## [1.0.30] - 2026-09-09
 
 ### Fixed

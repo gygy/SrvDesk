@@ -1,17 +1,19 @@
-﻿# SrvDesk v1.0.30
+﻿# SrvDesk v1.0.31
 
 ## 中文
 
-- 全面修复 Flat 按钮/下拉文字被裁切（自定义配置工具栏、主命令栏、配置脚本面板等）
-- 配置脚本独立窗口可自由缩放；开启/关闭 Tab 不再被编辑框盖住
-- 配置脚本入口图标改为文档+铅笔；右侧面板布局与底部提示不再贴边裁字
+- **工具 → 定时关机**：布局对齐 Shutdown Agent；支持关机 / 重启 / 注销 / 睡眠 / 休眠 / 锁定
+- 可按「之后」倒计时或「定时」时刻执行；强制结束进程；接近执行时托盘图标闪烁
+- 定时未取消时可关窗后台继续，托盘双击可再打开
+- 定时关机菜单图标改为电源键 + 倒计时弧（自绘）
 
-下载：单文件 `SrvDesk.exe`，请以管理员身份运行。
+下载：单文件 `SrvDesk.exe`（轻度混淆），请以管理员身份运行。
 
 ## English
 
-- Fix clipped Flat button/combo text across toolbars (custom packs, main command bar, config script panel, etc.)
-- Config-script dialog is freely resizable; On/Off tabs no longer covered by the editor
-- Script entry icon is now document+pencil; right panel tip/layout no longer clips text
+- **Tools → Shutdown timer**: layout aligned with Shutdown Agent; shutdown / restart / log off / suspend / hibernate / lock
+- Countdown ("In") or clock time ("At"); force-close apps; tray icon blinks near execution
+- Timer can keep running in the tray after closing the dialog; double-click tray to reopen
+- New self-drawn menu icon (power + countdown arc)
 
-Download `SrvDesk.exe` and run as Administrator.
+Download `SrvDesk.exe` (lightly obfuscated) and run as Administrator.

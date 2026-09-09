@@ -2,7 +2,7 @@
 
 面向 **Windows Server 桌面化** 的本机优化工具：注册表 / 服务 / 策略 / DISM，支持即时页与批量开关。
 
-当前版本：**1.0.30** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
+当前版本：**1.0.31** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
 
 [English](README_en.md)
 
