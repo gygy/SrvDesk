@@ -125,7 +125,7 @@ internal static class MenuIcons
 
     public static Image ViewHelpPanel => Get("view-configpanel",
         Array.Empty<Cand>(),
-        DrawConfig);
+        DrawScriptEdit);
 
     /// <summary>配置脚本停靠右侧。</summary>
     public static Image DockRight => Get("dock-right", Array.Empty<Cand>(), DrawDockRight);
@@ -136,10 +136,10 @@ internal static class MenuIcons
     /// <summary>关闭配置脚本面板。</summary>
     public static Image PanelClose => Get("panel-close", Array.Empty<Cand>(), DrawPanelClose);
 
-    /// <summary>列表行内「配置脚本」入口：齿轮，一眼可辨为配置。</summary>
-    public static Image Script => Get("script-config",
+    /// <summary>列表行内「配置脚本」入口：文档+铅笔，表示可编辑脚本。</summary>
+    public static Image Script => Get("script-edit",
         Array.Empty<Cand>(),
-        DrawConfig);
+        DrawScriptEdit);
 
     /// <summary>列表行内说明入口（自绘，不依赖 Segoe UI Symbol）。</summary>
     public static Image RowInfo => Get("row-info",
@@ -400,7 +400,51 @@ internal static class MenuIcons
         g.FillEllipse(knob, 8, 10, 4, 4);
     }
 
-    /// <summary>配置：简洁齿轮（4 齿，小尺寸不糊）。</summary>
+    /// <summary>配置脚本：白底文档 + 短横线 + 斜向铅笔，16px 下清晰。</summary>
+    private static void DrawScriptEdit(Graphics g)
+    {
+        var accent = Color.FromArgb(0, 120, 215);
+        var lineC = Color.FromArgb(140, 170, 200);
+
+        // 文档页
+        using (var fill = new SolidBrush(Color.White))
+        using (var border = new Pen(accent, 1.25f))
+        {
+            g.FillRectangle(fill, 2, 1, 9, 13);
+            g.DrawRectangle(border, 2, 1, 9, 13);
+        }
+
+        // 正文行
+        using (var line = new Pen(lineC, 1.15f))
+        {
+            g.DrawLine(line, 4, 4, 9, 4);
+            g.DrawLine(line, 4, 7, 9, 7);
+            g.DrawLine(line, 4, 10, 7, 10);
+        }
+
+        // 铅笔杆（斜向，压在右下角）
+        using (var shaft = new Pen(accent, 1.7f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        })
+            g.DrawLine(shaft, 8.5f, 13.5f, 14.2f, 5.2f);
+
+        // 笔尖
+        using (var tip = new SolidBrush(accent))
+            g.FillPolygon(tip, new[]
+            {
+                new PointF(14.5f, 4.5f),
+                new PointF(15.5f, 6.2f),
+                new PointF(13.4f, 5.8f),
+            });
+
+        // 笔尾小块，增加识别度
+        using (var eraser = new SolidBrush(Color.FromArgb(255, 170, 80)))
+            g.FillEllipse(eraser, 7.6f, 12.6f, 2.2f, 2.2f);
+    }
+
+    /// <summary>配置：简洁齿轮（保留备用）。</summary>
     private static void DrawConfig(Graphics g)
     {
         var accent = Color.FromArgb(0, 120, 215);

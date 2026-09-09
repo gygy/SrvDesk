@@ -267,13 +267,14 @@ internal sealed class CommonSoftwareDialog : Form
 
         _installWingetBtn.Text = "一键安装 winget";
         _installWingetBtn.Font = UiFit.UiFont;
-        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", 30, padding: 22);
+        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", UiFit.ControlHeight(), padding: 22);
         _installWingetBtn.FlatStyle = FlatStyle.Flat;
         _installWingetBtn.BackColor = AppTheme.Primary;
         _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
         _installWingetBtn.Cursor = Cursors.Hand;
         _installWingetBtn.FlatAppearance.BorderSize = 0;
         _installWingetBtn.Visible = false;
+        UiFit.EnableCenteredFlatText(_installWingetBtn);
         _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
         _askBeforeInstall.Text = "安装前确认";
@@ -338,7 +339,7 @@ internal sealed class CommonSoftwareDialog : Form
 
             if (_installWingetBtn.Visible)
             {
-                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, 30, padding: 22);
+                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, UiFit.ControlHeight(), padding: 22);
                 _installWingetBtn.Location = new Point(Math.Max(0, right - _installWingetBtn.Width), y);
                 right = _installWingetBtn.Left - gap;
             }
@@ -1278,12 +1279,12 @@ internal sealed class CommonSoftwareDialog : Form
 
         private static Button RowButton(string text, int x, int y)
         {
-            var font = new Font("Microsoft YaHei UI", 9F);
+            var font = UiFit.UiFont;
             var b = new Button
             {
                 Text = text,
                 Location = new Point(x, y),
-                Size = UiFit.ButtonSize(text, 28, font, minWidth: 72, padding: 20),
+                Size = UiFit.ButtonSize(text, UiFit.ControlHeight(font), font, minWidth: 72, padding: 20),
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = AppTheme.PrimaryDeep,
                 BackColor = AppTheme.SurfaceCard,
@@ -1291,10 +1292,13 @@ internal sealed class CommonSoftwareDialog : Form
                 Font = font,
                 TextAlign = ContentAlignment.MiddleCenter,
                 UseVisualStyleBackColor = false,
+                UseCompatibleTextRendering = false,
+                Padding = Padding.Empty,
             };
             b.FlatAppearance.BorderColor = AppTheme.Border;
-            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-            b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
+            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
+            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
+            UiFit.EnableCenteredFlatText(b);
             return b;
         }
     }

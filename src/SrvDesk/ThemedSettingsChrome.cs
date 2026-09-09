@@ -278,22 +278,25 @@ internal static class ThemedSettingsChrome
             BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
             ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             Font = font,
-            Size = UiFit.ButtonSize(text, 32, font, minWidth: 72, padding: 22),
+            Size = UiFit.ButtonSize(text, UiFit.ControlHeight(font), font, minWidth: 72, padding: 22),
             TextAlign = ContentAlignment.MiddleCenter,
             UseVisualStyleBackColor = false,
+            UseCompatibleTextRendering = false,
+            Padding = Padding.Empty,
         };
         if (primary)
         {
             b.FlatAppearance.BorderSize = 0;
-            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryDark;
-            b.MouseLeave += (_, _) => b.BackColor = AppTheme.Primary;
+            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryDark; b.Invalidate(); };
+            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.Primary; b.Invalidate(); };
         }
         else
         {
             b.FlatAppearance.BorderColor = AppTheme.Border;
-            b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-            b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
+            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
+            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
         }
+        UiFit.EnableCenteredFlatText(b);
         return b;
     }
 

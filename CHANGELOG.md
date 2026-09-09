@@ -4,6 +4,18 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.30] - 2026-09-09
+
+### Fixed
+
+- Flat buttons/combos no longer clip Chinese text (custom config toolbar, main command bar, script panel, common software rows, etc.)
+- Config-script dialog layout: tabs not overlapped by editor; window is freely resizable
+
+### Changed
+
+- Config-script entry icon: document + pencil
+- Help/detail panel reserves footer tip space so text is not clipped
+
 ## [1.0.29] - 2026-09-09
 
 ### Changed

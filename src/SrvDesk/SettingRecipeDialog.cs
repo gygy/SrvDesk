@@ -1,6 +1,6 @@
 namespace SrvDesk;
 
-/// <summary>单独窗口展示某优化项的开启/关闭配置脚本（可编辑、自动记住、导出）。</summary>
+/// <summary>单独窗口展示某优化项的开启/关闭配置脚本（可编辑、自动记住、导出）。可自由缩放。</summary>
 internal sealed class SettingRecipeDialog : Form
 {
     private readonly SettingActionRecipe? _recipe;
@@ -8,11 +8,16 @@ internal sealed class SettingRecipeDialog : Form
     private readonly ScriptSyntaxEditor _box = new();
     private readonly Button _tabOn = new();
     private readonly Button _tabOff = new();
+    private readonly Label _head = new();
+    private readonly Label _hint = new();
     private readonly Label _kind = new();
     private readonly Label _note = new();
+    private readonly Button _copy = new();
+    private readonly Button _export = new();
+    private readonly Button _reset = new();
+    private readonly Button _close = new();
     private readonly System.Windows.Forms.Timer _persistTimer = new() { Interval = 600 };
     private bool _showEnable = true;
-    private Button? _resetBtn;
 
     public static void ShowFor(IWin32Window? owner, string itemTitle, SettingHelpInfo help)
     {
@@ -26,48 +31,39 @@ internal sealed class SettingRecipeDialog : Form
         _recipe = SettingRecipeCatalog.Get(help);
 
         Text = "配置脚本 · " + itemTitle;
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        AppBrand.ApplyWindowIcon(this);
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
-        ClientSize = new Size(560, 420);
+        AutoScaleMode = AutoScaleMode.None;
+        ClientSize = new Size(640, 480);
+        MinimumSize = new Size(480, 360);
         BackColor = AppTheme.SurfaceCard;
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
+        Padding = new Padding(16);
 
-        var head = new Label
-        {
-            Text = itemTitle,
-            Location = new Point(16, 12),
-            Size = new Size(520, 24),
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
-            ForeColor = AppTheme.PrimaryDeep,
-            AutoEllipsis = true,
-        };
+        _head.Text = itemTitle;
+        _head.Font = UiFit.UiFontBold(10F);
+        _head.ForeColor = AppTheme.PrimaryDeep;
+        _head.AutoEllipsis = true;
+        _head.AutoSize = false;
 
-        var hint = new Label
-        {
-            Text = "可直接编辑；修改会自动记住。可复制或导出为文件。",
-            Location = new Point(16, 38),
-            Size = new Size(520, 20),
-            ForeColor = AppTheme.TextMute,
-            Font = new Font("Microsoft YaHei UI", 8.5F),
-        };
+        _hint.Text = "可直接编辑；修改会自动记住。可复制或导出为文件。";
+        _hint.ForeColor = AppTheme.TextMute;
+        _hint.Font = UiFit.UiFontSmall;
+        _hint.AutoSize = false;
 
         StyleTab(_tabOn, "开启（优化）");
         StyleTab(_tabOff, "关闭（恢复）");
-        _tabOn.Location = new Point(16, 66);
-        _tabOff.Location = new Point(16 + _tabOn.Width + 8, 66);
         _tabOn.Click += (_, _) => SetSide(true, flush: true);
         _tabOff.Click += (_, _) => SetSide(false, flush: true);
 
-        _kind.Location = new Point(_tabOff.Right + 12, 70);
         _kind.AutoSize = true;
         _kind.ForeColor = AppTheme.TextMute;
-        _kind.Font = new Font("Microsoft YaHei UI", 8.5F);
+        _kind.Font = UiFit.UiFontSmall;
 
-        _box.Location = new Point(16, 100);
-        _box.Size = new Size(528, 230);
         _box.UserScriptChanged += (_, _) =>
         {
             _persistTimer.Stop();
@@ -80,41 +76,18 @@ internal sealed class SettingRecipeDialog : Form
             RefreshNote();
         };
 
-        _note.Location = new Point(16, 336);
-        _note.Size = new Size(528, 36);
         _note.ForeColor = AppTheme.PrimaryDark;
-        _note.Font = new Font("Microsoft YaHei UI", 8.25F);
+        _note.Font = UiFit.UiFontScope;
+        _note.AutoSize = false;
 
-        var copy = ActionButton("复制到剪贴板", 16);
-        copy.Click += (_, _) =>
-        {
-            try
-            {
-                Clipboard.SetText(_box.PlainText);
-                copy.Text = "已复制";
-                UiFit.FitButton(copy, 30);
-                var t = new System.Windows.Forms.Timer { Interval = 1200 };
-                t.Tick += (_, _) =>
-                {
-                    copy.Text = "复制到剪贴板";
-                    UiFit.FitButton(copy, 30);
-                    t.Stop();
-                    t.Dispose();
-                };
-                t.Start();
-            }
-            catch
-            {
-                MessageBox.Show(this, "无法写入剪贴板。", AppBrand.ProductName,
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        };
+        StyleAction(_copy, "复制到剪贴板");
+        _copy.Click += (_, _) => CopyClipboard();
 
-        var export = ActionButton("导出", copy.Right + 8);
-        export.Click += (_, _) => ExportAs();
+        StyleAction(_export, "导出");
+        _export.Click += (_, _) => ExportAs();
 
-        _resetBtn = ActionButton("恢复默认", export.Right + 8);
-        _resetBtn.Click += (_, _) =>
+        StyleAction(_reset, "恢复默认");
+        _reset.Click += (_, _) =>
         {
             if (_recipe is null) return;
             _persistTimer.Stop();
@@ -123,34 +96,35 @@ internal sealed class SettingRecipeDialog : Form
             RefreshNote();
         };
 
-        var close = ActionButton("关闭", Math.Max(_resetBtn.Right + 8, ClientSize.Width - UiFit.ButtonWidth("关闭") - 16));
-        close.Click += (_, _) => Close();
+        StyleAction(_close, "关闭");
+        _close.Click += (_, _) => Close();
 
         FormClosing += (_, _) =>
         {
             _persistTimer.Stop();
             Persist();
         };
+        Resize += (_, _) => LayoutContent();
 
-        Controls.Add(head);
-        Controls.Add(hint);
+        Controls.Add(_head);
+        Controls.Add(_hint);
         Controls.Add(_tabOn);
         Controls.Add(_tabOff);
         Controls.Add(_kind);
         Controls.Add(_box);
         Controls.Add(_note);
-        Controls.Add(copy);
-        Controls.Add(export);
-        Controls.Add(_resetBtn);
-        Controls.Add(close);
+        Controls.Add(_copy);
+        Controls.Add(_export);
+        Controls.Add(_reset);
+        Controls.Add(_close);
 
         if (_recipe is null)
         {
             _tabOn.Enabled = false;
             _tabOff.Enabled = false;
-            copy.Enabled = false;
-            export.Enabled = false;
-            _resetBtn.Enabled = false;
+            _copy.Enabled = false;
+            _export.Enabled = false;
+            _reset.Enabled = false;
             _kind.Text = "";
             _box.SetScript(
                 "此项为组合操作（DISM / 多服务 / 右键菜单集成等），未单独收录可复制脚本。\r\n\r\n请直接在列表中切换开关，再点「应用到系统」。",
@@ -161,6 +135,85 @@ internal sealed class SettingRecipeDialog : Form
         {
             _kind.Text = _recipe.KindLabel;
             SetSide(true, flush: false);
+        }
+
+        LayoutContent();
+    }
+
+    private void LayoutContent()
+    {
+        const int pad = 16;
+        var w = Math.Max(320, ClientSize.Width - pad * 2);
+        var y = pad;
+
+        _head.SetBounds(pad, y, w, Math.Max(22, UiFit.LineHeight(_head.Font) + 4));
+        y = _head.Bottom + 4;
+
+        _hint.SetBounds(pad, y, w, Math.Max(18, UiFit.LineHeight(_hint.Font) + 2));
+        y = _hint.Bottom + 10;
+
+        _tabOn.Location = new Point(pad, y);
+        _tabOff.Location = new Point(pad + _tabOn.Width + 8, y);
+        _kind.Location = new Point(_tabOff.Right + 12, y + Math.Max(0, (_tabOn.Height - _kind.PreferredHeight) / 2));
+        // 编辑框必须在 Tab 实际底边之下，避免盖住文字
+        y = Math.Max(_tabOn.Bottom, _tabOff.Bottom) + 10;
+
+        var btnH = Math.Max(_copy.Height, UiFit.ControlHeight());
+        var noteH = string.IsNullOrEmpty(_note.Text)
+            ? 0
+            : Math.Max(UiFit.LineHeight(_note.Font) + 8,
+                TextRenderer.MeasureText(_note.Text, _note.Font, new Size(w, int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height + 6);
+        var bottomChrome = (noteH > 0 ? noteH + 8 : 0) + btnH + pad + 8;
+        var boxH = Math.Max(120, ClientSize.Height - y - bottomChrome);
+        _box.SetBounds(pad, y, w, boxH);
+        _box.BringToFront();
+        _tabOn.BringToFront();
+        _tabOff.BringToFront();
+        _kind.BringToFront();
+
+        y = _box.Bottom + 8;
+        if (noteH > 0)
+        {
+            _note.Visible = true;
+            _note.SetBounds(pad, y, w, noteH);
+            y = _note.Bottom + 8;
+        }
+        else
+        {
+            _note.Visible = false;
+            _note.Height = 0;
+        }
+
+        _copy.Location = new Point(pad, y);
+        _export.Location = new Point(_copy.Right + 8, y);
+        _reset.Location = new Point(_export.Right + 8, y);
+        _close.Location = new Point(Math.Max(_reset.Right + 8, pad + w - _close.Width), y);
+    }
+
+    private void CopyClipboard()
+    {
+        try
+        {
+            Clipboard.SetText(_box.PlainText);
+            _copy.Text = "已复制";
+            UiFit.FitButton(_copy);
+            LayoutContent();
+            var t = new System.Windows.Forms.Timer { Interval = 1200 };
+            t.Tick += (_, _) =>
+            {
+                _copy.Text = "复制到剪贴板";
+                UiFit.FitButton(_copy);
+                LayoutContent();
+                t.Stop();
+                t.Dispose();
+            };
+            t.Start();
+        }
+        catch
+        {
+            MessageBox.Show(this, "无法写入剪贴板。", AppBrand.ProductName,
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -182,6 +235,7 @@ internal sealed class SettingRecipeDialog : Form
             _box.SetScript(text, _recipe.Kind);
             RefreshNote();
         }
+        LayoutContent();
     }
 
     private void Persist()
@@ -197,10 +251,13 @@ internal sealed class SettingRecipeDialog : Form
 
     private void RefreshNote()
     {
-        if (_recipe is null) return;
+        if (_recipe is null)
+        {
+            _note.Text = "";
+            return;
+        }
         var customized = SettingScriptStore.HasOverride(_itemTitle, _showEnable);
-        if (_resetBtn is not null)
-            _resetBtn.Enabled = customized;
+        _reset.Enabled = customized;
         _note.Text = customized
             ? "已记住你的修改。可导出文件，或点「恢复默认」还原内置脚本。"
             : (_recipe.Note.Length > 0 ? _recipe.Note + " · 修改会自动记住。" : "修改会自动记住。");
@@ -249,12 +306,13 @@ internal sealed class SettingRecipeDialog : Form
     private static void StyleTab(Button b, string text)
     {
         b.Text = text;
-        b.Font = new Font("Microsoft YaHei UI", 9F);
-        b.Size = UiFit.ButtonSize(text, 28, b.Font, minWidth: 88, padding: 22);
+        b.Font = UiFit.UiFont;
+        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 88, padding: 22);
         b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
         PaintTab(b, selected: text.StartsWith("开启", StringComparison.Ordinal));
+        UiFit.EnableCenteredFlatText(b);
     }
 
     private static void PaintTab(Button b, bool selected)
@@ -271,22 +329,20 @@ internal sealed class SettingRecipeDialog : Form
             b.ForeColor = AppTheme.TextMain;
             b.FlatAppearance.BorderColor = AppTheme.Border;
         }
+        b.Invalidate();
     }
 
-    private Button ActionButton(string text, int x)
+    private static void StyleAction(Button b, string text)
     {
-        var b = new Button
-        {
-            Text = text,
-            Location = new Point(x, 378),
-            Size = UiFit.ButtonSize(text, 30, padding: 22),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White,
-            ForeColor = AppTheme.PrimaryDeep,
-            Cursor = Cursors.Hand,
-        };
+        b.Text = text;
+        b.Font = UiFit.UiFont;
+        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, padding: 22);
+        b.FlatStyle = FlatStyle.Flat;
+        b.BackColor = Color.White;
+        b.ForeColor = AppTheme.PrimaryDeep;
+        b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderColor = AppTheme.Primary;
-        return b;
+        UiFit.EnableCenteredFlatText(b);
     }
 
     protected override void Dispose(bool disposing)

@@ -297,15 +297,16 @@ internal sealed class AppSettingsDialog : Form
         var b = new Button
         {
             Text = text,
-            AutoSize = true,
+            AutoSize = false,
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand,
             ForeColor = AppTheme.Primary,
             BackColor = AppTheme.SurfaceCard,
             Margin = new Padding(0, 0, 8, 4),
-            Height = 28,
+            Size = UiFit.ButtonSize(text, UiFit.ControlHeight(), minWidth: 64, padding: 18),
         };
         b.FlatAppearance.BorderColor = AppTheme.Border;
+        UiFit.EnableCenteredFlatText(b);
         b.Click += (_, _) => click();
         return b;
     }

@@ -57,10 +57,17 @@ internal static class UiFit
     public static int LineHeight(Font? font = null)
     {
         var f = font ?? UiFont;
-        var h = TextRenderer.MeasureText("国Ag", f, new Size(1024, 256),
+        var h = TextRenderer.MeasureText("国Agyp", f, new Size(1024, 256),
             TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Height;
         return Math.Max(f.Height, Math.Max(14, h));
     }
+
+    /// <summary>
+    /// 按钮 / 下拉 / 单行输入的最小可视高度。
+    /// Flat + 雅黑在 26–28px 时常裁掉字脚；至少 LineHeight + 上下内边距。
+    /// </summary>
+    public static int ControlHeight(Font? font = null, int designMin = 30) =>
+        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(14));
 
     public static int TextWidth(string text, Font? font = null) =>
         TextRenderer.MeasureText(text ?? "", font ?? UiFont,
@@ -71,14 +78,64 @@ internal static class UiFit
     public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 24) =>
         Math.Max(UiScale.S(minWidth), TextWidth(text, font ?? UiFont) + UiScale.S(padding));
 
-    public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 24) =>
-        new(ButtonWidth(text, font, minWidth, padding), height);
+    public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 24)
+    {
+        var f = font ?? UiFont;
+        var h = Math.Max(height, ControlHeight(f));
+        return new(ButtonWidth(text, f, minWidth, padding), h);
+    }
 
-    /// <summary>把按钮收紧到刚好能完整显示文字（保留调用方指定的高度）。</summary>
+    /// <summary>把按钮收紧到刚好能完整显示文字（高度不低于 ControlHeight）。</summary>
     public static void FitButton(Button b, int? height = null, int minWidth = 72, int padding = 24)
     {
-        var h = height ?? (b.Height > 0 ? b.Height : 34);
+        var h = height ?? (b.Height > 0 ? b.Height : ControlHeight(b.Font));
         b.Size = ButtonSize(b.Text, h, b.Font, minWidth, padding);
+        b.TextAlign = ContentAlignment.MiddleCenter;
+        b.UseCompatibleTextRendering = false;
+        b.Padding = Padding.Empty;
+    }
+
+    /// <summary>下拉框高度与 ItemHeight，避免选中项文字被裁。</summary>
+    public static void FitCombo(ComboBox box, Font? font = null)
+    {
+        if (font is not null) box.Font = font;
+        var f = box.Font ?? UiFont;
+        box.IntegralHeight = false;
+        try { box.ItemHeight = Math.Max(18, LineHeight(f) + 2); } catch { /* DropDownList 外偶发 */ }
+        box.Height = ControlHeight(f, 28);
+    }
+
+    /// <summary>Flat 按钮用 TextRenderer 居中绘制，避免雅黑默认偏上/偏下裁字。仅在创建时挂一次。</summary>
+    public static void EnableCenteredFlatText(Button b)
+    {
+        b.TextAlign = ContentAlignment.MiddleCenter;
+        b.UseCompatibleTextRendering = false;
+        b.Padding = Padding.Empty;
+        b.Paint += (_, e) =>
+        {
+            if (b.FlatStyle != FlatStyle.Flat) return;
+            var g = e.Graphics;
+            var bg = b.Enabled ? b.BackColor : ControlPaint.LightLight(b.BackColor);
+            using (var brush = new SolidBrush(bg))
+                g.FillRectangle(brush, b.ClientRectangle);
+            if (b.FlatAppearance.BorderSize > 0)
+            {
+                using var pen = new Pen(b.FlatAppearance.BorderColor);
+                g.DrawRectangle(pen, 0, 0, b.Width - 1, b.Height - 1);
+            }
+            var color = b.Enabled ? b.ForeColor : SystemColors.GrayText;
+            TextRenderer.DrawText(
+                g,
+                b.Text,
+                b.Font,
+                b.ClientRectangle,
+                color,
+                TextFormatFlags.HorizontalCenter
+                | TextFormatFlags.VerticalCenter
+                | TextFormatFlags.EndEllipsis
+                | TextFormatFlags.NoPrefix
+                | TextFormatFlags.NoPadding);
+        };
     }
 }
 

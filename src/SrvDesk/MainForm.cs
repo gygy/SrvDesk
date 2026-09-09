@@ -1063,7 +1063,7 @@ internal sealed class MainForm : Form
 
     private void BuildCommandBar()
     {
-        _commandBar.Height = 48;
+        _commandBar.Height = UiFit.ControlHeight() + 20;
         _commandBar.BackColor = AppTheme.SurfaceCard;
         _commandBar.Padding = new Padding(12, 8, 12, 8);
         _commandBar.Paint += (_, e) =>
@@ -1082,7 +1082,8 @@ internal sealed class MainForm : Form
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("搜索", "Search")));
         _searchBox.Width = 200;
-        _searchBox.Height = 26;
+        _searchBox.Font = UiFit.UiFont;
+        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font, 28);
         _searchBox.Margin = new Padding(0, 2, 16, 0);
         _searchBox.BorderStyle = BorderStyle.FixedSingle;
         _searchBox.ForeColor = AppTheme.TextMain;
@@ -1098,8 +1099,8 @@ internal sealed class MainForm : Form
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("分类", "Filter")));
         _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _categoryFilter.IntegralHeight = false;
-        _categoryFilter.Height = 26;
+        _categoryFilter.Font = UiFit.UiFont;
+        UiFit.FitCombo(_categoryFilter);
         _categoryFilter.Margin = new Padding(0, 2, 0, 0);
         _categoryFilter.Items.AddRange([
             AppLang.L("全部", "All"),
@@ -1116,10 +1117,10 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(_categoryFilter);
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("预设", "Preset")));
-        _presetCombo.Height = 26;
+        _presetCombo.Font = UiFit.UiFont;
+        UiFit.FitCombo(_presetCombo);
         _presetCombo.Margin = new Padding(0, 2, 8, 0);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-        _presetCombo.IntegralHeight = false;
         foreach (var p in OptPresets.All)
             _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0)
@@ -1186,14 +1187,14 @@ internal sealed class MainForm : Form
 
     private Button BarQuickButton(string text, string tip, Action click)
     {
-        var font = new Font("Microsoft YaHei UI", 9F);
-        var textWidth = TextRenderer.MeasureText(text, font).Width;
+        var font = UiFit.UiFont;
+        var h = UiFit.ControlHeight(font);
         var b = new Button
         {
             Text = text,
             Font = font,
             AutoSize = false,
-            Size = new Size(Math.Max(72, textWidth + 20), 26),
+            Size = UiFit.ButtonSize(text, h, font, minWidth: 72, padding: 20),
             Margin = new Padding(0, 2, 8, 0),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
@@ -1201,24 +1202,12 @@ internal sealed class MainForm : Form
             Cursor = Cursors.Hand,
             TabStop = false,
             TextAlign = ContentAlignment.MiddleCenter,
+            UseCompatibleTextRendering = false,
+            Padding = Padding.Empty,
         };
         b.FlatAppearance.BorderColor = AppTheme.Border;
         b.FlatAppearance.BorderSize = 1;
-        // Flat + 雅黑默认常偏下：覆盖绘制，保证垂直居中
-        b.Paint += (_, e) =>
-        {
-            var g = e.Graphics;
-            g.Clear(b.BackColor);
-            using var border = new Pen(b.FlatAppearance.BorderColor);
-            g.DrawRectangle(border, 0, 0, b.Width - 1, b.Height - 1);
-            TextRenderer.DrawText(
-                g,
-                text,
-                b.Font,
-                b.ClientRectangle,
-                b.ForeColor,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-        };
+        UiFit.EnableCenteredFlatText(b);
         b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
         b.MouseLeave += (_, _) => { b.BackColor = Color.White; b.Invalidate(); };
         b.Click += (_, _) => click();
@@ -1911,7 +1900,7 @@ internal sealed class MainForm : Form
         // 批量页显示搜索/预设命令栏；嵌入页（服务优化等）收起，避免顶部空一截
         _commandFlow.Visible = batch;
         _commandBar.Visible = batch;
-        _commandBar.Height = batch ? 48 : 0;
+        _commandBar.Height = batch ? UiFit.ControlHeight() + 20 : 0;
 
         UpdateBottomActionEnablement(embeddedTitle);
 

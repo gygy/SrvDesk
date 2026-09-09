@@ -164,12 +164,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         StyleTab(_tabEnable, AppLang.L("开启", "On"), true);
         StyleTab(_tabDisable, AppLang.L("关闭", "Off"), false);
-        _tabEnable.Location = new Point(8, 28);
-        _tabDisable.Location = new Point(8 + _tabEnable.Width + 8, 28);
+        _tabEnable.Location = new Point(8, 30);
+        _tabDisable.Location = new Point(8 + _tabEnable.Width + 8, 30);
         _tabEnable.Click += (_, _) => SetRecipeSide(true);
         _tabDisable.Click += (_, _) => SetRecipeSide(false);
 
-        _recipeBox.Location = new Point(8, 58);
+        // 初始位置仅占位；真正顶边由 LayoutRecipe 按 Tab 底边计算，避免压住首行
+        _recipeBox.Location = new Point(8, 68);
         _recipeBox.Height = 220;
         _recipeBox.Width = 240;
         _recipeBox.ReadOnly = false;
@@ -196,6 +197,8 @@ internal sealed class HelpDetailPanel : BufferedPanel
             UpdateOverrideHint();
         };
 
+        // 提示改走面板 _footer，避免塞在脚本宿主底边被裁切
+        _recipeNote.Visible = false;
         _recipeNote.Font = UiFit.UiFontScope;
         _recipeNote.ForeColor = AppTheme.PrimaryDark;
         _recipeNote.BackColor = Color.Transparent;
@@ -227,11 +230,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         b.Text = text;
         b.Font = UiFit.UiFontSmall;
-        b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
+        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
         ApplyTabVisual(b, selected: primaryLook);
+        UiFit.EnableCenteredFlatText(b);
     }
 
     private static void ApplyTabVisual(Button b, bool selected)
@@ -254,12 +258,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         b.Text = text;
         b.Font = UiFit.UiFontSmall;
-        b.Size = UiFit.ButtonSize(text, 26, b.Font, minWidth: 56, padding: 20);
+        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.BackColor = Color.White;
         b.ForeColor = AppTheme.PrimaryDeep;
         b.FlatAppearance.BorderColor = AppTheme.Primary;
         b.Cursor = Cursors.Hand;
+        UiFit.EnableCenteredFlatText(b);
     }
 
     public void ShowEmbeddedGuide(string pageTitle)
@@ -565,26 +570,32 @@ internal sealed class HelpDetailPanel : BufferedPanel
         if (_recipe is null)
         {
             _recipeNote.Visible = false;
+            _footer.Text = "";
             return;
         }
 
+        // 提示放在面板 footer，单独量高排布，避免贴在脚本宿主底边被裁
+        _recipeNote.Visible = false;
         var customized = SettingScriptStore.HasOverride(_itemTitle, _showEnable);
         if (customized)
         {
-            _recipeNote.Text = "已保存你的修改（下次打开仍有效）。「导出」写出文件；「恢复默认」还原内置脚本。";
+            _footer.Text = AppLang.L(
+                "已保存你的修改（下次打开仍有效）。「导出」写出文件；「恢复默认」还原内置脚本。",
+                "Your edits are saved. Export writes a file; Reset restores the built-in script.");
             _btnReset.Enabled = true;
         }
         else if (_recipe.Note.Length > 0)
         {
-            _recipeNote.Text = _recipe.Note + " · 修改会自动记住。";
+            _footer.Text = _recipe.Note + AppLang.L(" · 修改会自动记住。", " · Edits are remembered.");
             _btnReset.Enabled = false;
         }
         else
         {
-            _recipeNote.Text = "可直接改字，修改会自动记住；「导出」写出文件。";
+            _footer.Text = AppLang.L(
+                "可直接改字，修改会自动记住；「导出」写出文件。",
+                "Edit freely; changes are remembered. Export writes a file.");
             _btnReset.Enabled = false;
         }
-        _recipeNote.Visible = true;
     }
 
     private static bool ScriptsEqual(string a, string b)
@@ -737,16 +748,25 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var y = _summary.Bottom + 8;
         if (_recipeHost.Visible)
         {
-            // 先排简要说明，再把剩余高度留给可编辑脚本区
+            // 先排简要说明；footer 提示预留高度后再把剩余高度留给脚本区
             _sections.Top = y;
             RelayoutSectionLabels(w);
             y = _sections.Bottom + 8;
 
+            var footerReserve = 0;
+            if (!string.IsNullOrEmpty(_footer.Text))
+            {
+                footerReserve = TextRenderer.MeasureText(
+                    _footer.Text, _footer.Font, new Size(w, int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height
+                    + UiFit.LineHeight(_footer.Font) + 20;
+            }
+
             _recipeHost.Top = y;
-            var avail = ClientSize.Height - y - 8;
-            if (avail < 200) avail = 200;
+            var avail = ClientSize.Height - y - footerReserve;
+            if (avail < 180) avail = 180;
             LayoutRecipe(w, avail);
-            y = _recipeHost.Bottom + 8;
+            y = _recipeHost.Bottom + 10;
         }
         else
         {
@@ -766,11 +786,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
             _footer.Visible = true;
             var footerH = TextRenderer.MeasureText(
                 _footer.Text, _footer.Font, new Size(w, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 6;
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 10;
             // 至少一行高，避免字号/测量偏差时只露出字顶
-            _footer.Height = Math.Max(footerH, UiFit.LineHeight(_footer.Font) + 6);
+            _footer.Height = Math.Max(footerH, UiFit.LineHeight(_footer.Font) + 10);
         }
-        AutoScrollMinSize = new Size(0, Math.Max(_footer.Bottom + 16, ClientSize.Height));
+        AutoScrollMinSize = new Size(0, Math.Max(_footer.Bottom + 20, ClientSize.Height));
     }
 
     /// <summary>按当前宽度重新测量并纵向排布说明块，避免换行高度变化后文字重叠。</summary>
@@ -821,16 +841,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeBox.Width = inner;
         _recipeBox.ReadOnly = false;
         _emptyRecipe.SetBounds(8, 28, inner, 60);
-        _recipeNote.Width = inner;
-        _recipeNote.MaximumSize = new Size(inner, 0);
-
-        if (_recipeNote.Visible && _recipeNote.Text.Length > 0)
-        {
-            var noteH = TextRenderer.MeasureText(
-                _recipeNote.Text, _recipeNote.Font, new Size(inner, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height + 4;
-            _recipeNote.Height = Math.Min(noteH, 72);
-        }
+        _recipeNote.Visible = false;
 
         if (_emptyRecipe.Visible)
         {
@@ -841,31 +852,36 @@ internal sealed class HelpDetailPanel : BufferedPanel
         // 类型标签跟在标题后，避免与长标题重叠
         _recipeKind.Location = new Point(_recipeCaption.Right + 8, 8);
 
-        const int tabsBottom = 58;
-        const int btnH = 26;
-        const int btnGap = 6;
-        var noteBlock = (_recipeNote.Visible && _recipeNote.Text.Length > 0) ? (_recipeNote.Height + 6) : 0;
-        var chrome = tabsBottom + btnGap + btnH + noteBlock + 10;
+        _tabEnable.Location = new Point(8, 30);
+        _tabDisable.Location = new Point(8 + _tabEnable.Width + 8, 30);
+        // 按实际 Tab 底边留空，避免压住脚本首行
+        var afterTabs = Math.Max(_tabEnable.Bottom, _tabDisable.Bottom) + 10;
+
+        const int btnGap = 8;
+        var btnH = Math.Max(_btnCopy.Height, 28);
+        var chrome = afterTabs + btnGap + btnH + 14;
         var boxH = hostHeight > 0
-            ? Math.Max(160, hostHeight - chrome)
+            ? Math.Max(100, hostHeight - chrome)
             : Math.Max(160, _recipeBox.Height);
         _recipeBox.Height = boxH;
-        _recipeBox.Location = new Point(8, tabsBottom);
+        _recipeBox.Location = new Point(8, afterTabs);
+        // 编辑框在 Tab 之下，避免 z-order 盖住按钮文字；Tab 保持可点
+        _recipeBox.SendToBack();
+        _tabEnable.BringToFront();
+        _tabDisable.BringToFront();
 
         var x = 8;
-        _btnCopy.Location = new Point(x, _recipeBox.Bottom + btnGap);
+        var by = _recipeBox.Bottom + btnGap;
+        _btnCopy.Location = new Point(x, by);
         x += _btnCopy.Width + 8;
-        _btnSave.Location = new Point(x, _recipeBox.Bottom + btnGap);
+        _btnSave.Location = new Point(x, by);
         x += _btnSave.Width + 8;
-        _btnReset.Location = new Point(x, _recipeBox.Bottom + btnGap);
-        if (_recipeNote.Visible)
-        {
-            _recipeNote.Location = new Point(8, _btnCopy.Bottom + 6);
-            _recipeHost.Height = hostHeight > 0 ? hostHeight : _recipeNote.Bottom + 10;
-        }
-        else
-        {
-            _recipeHost.Height = hostHeight > 0 ? hostHeight : _btnCopy.Bottom + 10;
-        }
+        _btnReset.Location = new Point(x, by);
+
+        var contentH = _btnCopy.Bottom + 12;
+        _recipeHost.Height = hostHeight > 0 ? Math.Max(hostHeight, contentH) : contentH;
+        // 若强制撑满导致按钮贴底，仍以内容为准多留一点
+        if (_btnCopy.Bottom + 12 > _recipeHost.Height)
+            _recipeHost.Height = _btnCopy.Bottom + 12;
     }
 }

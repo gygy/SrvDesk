@@ -96,23 +96,26 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 
     private Panel BuildTopBar()
     {
-        var bar = new Panel { Height = 40, BackColor = AppTheme.Surface };
+        var btnH = UiFit.ControlHeight();
+        var bar = new Panel { Height = btnH + 14, BackColor = AppTheme.Surface };
 
         var label = new Label
         {
             Text = "方案",
-            Location = new Point(0, 10),
+            Location = new Point(0, (bar.Height - 18) / 2),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
         };
 
         _packs.DropDownStyle = ComboBoxStyle.DropDownList;
-        _packs.SetBounds(40, 6, 220, 26);
+        _packs.Font = UiFit.UiFont;
+        UiFit.FitCombo(_packs);
+        _packs.SetBounds(40, (bar.Height - _packs.Height) / 2, 220, _packs.Height);
         _packs.SelectedIndexChanged += (_, _) => OnPackSelected();
 
-        _btnNewPack.Location = new Point(272, 5);
-        _btnRenamePack.Location = new Point(272 + _btnNewPack.Width + 6, 5);
-        _btnDeletePack.Location = new Point(_btnRenamePack.Right + 6, 5);
+        _btnNewPack.Location = new Point(272, (bar.Height - _btnNewPack.Height) / 2);
+        _btnRenamePack.Location = new Point(272 + _btnNewPack.Width + 6, (bar.Height - _btnRenamePack.Height) / 2);
+        _btnDeletePack.Location = new Point(_btnRenamePack.Right + 6, (bar.Height - _btnDeletePack.Height) / 2);
 
         bar.Controls.Add(label);
         bar.Controls.Add(_packs);
@@ -124,14 +127,15 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
 
     private FlowLayoutPanel BuildItemTools()
     {
+        var btnH = UiFit.ControlHeight();
         var tools = new FlowLayoutPanel
         {
-            Height = 40,
+            Height = btnH + 14,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
             BackColor = Color.Transparent,
-            Padding = new Padding(0, 0, 0, 6),
+            Padding = new Padding(0, 2, 0, 6),
         };
         UiBuffer.ConfigureNoScrollRow(tools);
 
@@ -146,9 +150,9 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
     private Button CompactBtn(string text, string tip, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Height = 28;
-        b.AutoSize = true;
-        b.MinimumSize = new Size(64, 28);
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), minWidth: 64, padding: 20);
+        b.AutoSize = false;
+        b.MinimumSize = new Size(64, b.Height);
         b.Click += (_, _) => click();
         _tip.SetToolTip(b, tip);
         return b;
@@ -157,7 +161,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
     private Button ToolButton(string text, string tip, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.Height = 28;
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), minWidth: 64, padding: 20);
         b.Margin = new Padding(0, 0, 8, 0);
         b.Click += (_, _) => click();
         _tip.SetToolTip(b, tip);
@@ -631,7 +635,7 @@ internal sealed class CustomPackItemEditDialog : Form
         var top = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 78,
+            Height = UiFit.ControlHeight() * 2 + 28,
             Padding = new Padding(12, 10, 12, 4),
             BackColor = AppTheme.Surface,
         };
@@ -645,6 +649,7 @@ internal sealed class CustomPackItemEditDialog : Form
         });
         _name.Location = new Point(52, 10);
         _name.Width = 280;
+        _name.Height = UiFit.ControlHeight(_name.Font, 28);
         _name.Text = name;
         top.Controls.Add(_name);
 
@@ -656,8 +661,6 @@ internal sealed class CustomPackItemEditDialog : Form
             ForeColor = AppTheme.TextHeader,
         });
         _kind.DropDownStyle = ComboBoxStyle.DropDownList;
-        _kind.Location = new Point(390, 10);
-        _kind.Width = 140;
         _kind.Items.AddRange(["注册表 (.reg)", "CMD (.cmd)", "PowerShell (.ps1)"]);
         _kind.SelectedIndex = kind switch
         {
@@ -666,15 +669,22 @@ internal sealed class CustomPackItemEditDialog : Form
             _ => 0,
         };
         _kind.SelectedIndexChanged += (_, _) => ApplyEditorKind();
+        UiFit.FitCombo(_kind);
+        _kind.SetBounds(390, 10, 140, _kind.Height);
         top.Controls.Add(_kind);
 
-        _btnPaste.Location = new Point(12, 42);
-        _btnPaste.Size = new Size(112, 28);
+        var editBtnH = UiFit.ControlHeight(_btnPaste.Font);
+        _btnPaste.Location = new Point(12, 10 + editBtnH + 8);
+        _btnPaste.Size = new Size(Math.Max(112, UiFit.ButtonWidth(_btnPaste.Text, _btnPaste.Font, 96, 20)), editBtnH);
+        _btnPaste.FlatStyle = FlatStyle.Flat;
+        UiFit.EnableCenteredFlatText(_btnPaste);
         _btnPaste.Click += (_, _) => PasteClipboard();
         top.Controls.Add(_btnPaste);
 
-        _btnDetect.Location = new Point(132, 42);
-        _btnDetect.Size = new Size(120, 28);
+        _btnDetect.Location = new Point(132, _btnPaste.Top);
+        _btnDetect.Size = new Size(Math.Max(120, UiFit.ButtonWidth(_btnDetect.Text, _btnDetect.Font, 96, 20)), editBtnH);
+        _btnDetect.FlatStyle = FlatStyle.Flat;
+        UiFit.EnableCenteredFlatText(_btnDetect);
         _btnDetect.Click += (_, _) =>
         {
             var d = CustomPackStore.DetectKind(_editor.Text);
