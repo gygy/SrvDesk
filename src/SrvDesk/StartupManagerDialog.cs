@@ -37,11 +37,12 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _list.Dock = DockStyle.Fill;
         _list.BackColor = AppTheme.SurfaceCard;
         _list.ForeColor = AppTheme.TextMain;
-        _list.Columns.Add("名称", 180);
-        _list.Columns.Add("状态", 70);
-        _list.Columns.Add("范围", 110);
-        _list.Columns.Add("类型", 110);
-        _list.Columns.Add("命令", 360);
+        _list.Columns.Add("名称", 160);
+        _list.Columns.Add("状态", 60);
+        _list.Columns.Add(AppLang.L("建议", "Advice"), 90);
+        _list.Columns.Add("范围", 100);
+        _list.Columns.Add("类型", 100);
+        _list.Columns.Add("命令", 320);
         _list.SelectedIndexChanged += (_, _) => UpdateDetail();
         _list.DoubleClick += (_, _) => ToggleSelected();
         // 用官方扩展样式双缓冲，避免反射 DoubleBuffered 导致表头右侧残影/文字被压扁
@@ -63,7 +64,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         {
             if (_items.Count == 0) RefreshList();
         };
-        UiBuffer.BindListViewColumnFit(_list, 4, 180);
+        UiBuffer.BindListViewColumnFit(_list, 5, 180);
     }
 
     public void RefreshFromSystem()
@@ -218,6 +219,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
 
             var row = new ListViewItem(item.Name) { Tag = item };
             row.SubItems.Add(item.Enabled ? "启用" : "禁用");
+            row.SubItems.Add(StartupAdviceHelper.Tag(item));
             row.SubItems.Add(item.Scope);
             row.SubItems.Add(item.KindText);
             row.SubItems.Add(item.Command);

@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Server health assistant loop: profile → health score → recommendations → change-plan dry-run → apply → history/rollback → optional inspection
+- Tools: Health overview, Server profile, Recommendation center, Ports & exposure, Scheduled tasks, Optimization history
+- Service dependency/risk explain + profile-protected services; startup advice tags; Features profile tips (SMB1 highlighted)
+- Presets: Home server / Docker host / NAS profile templates
+
 ## [1.0.31] - 2026-09-09
 
 ### Added

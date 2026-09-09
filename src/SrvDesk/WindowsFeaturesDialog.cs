@@ -59,10 +59,11 @@ internal sealed class WindowsFeaturesDialog : Form
         _list.Dock = DockStyle.Fill;
         _list.BackColor = AppTheme.SurfaceCard;
         UiBuffer.Enable(_list);
-        _list.Columns.Add("名称", 420);
-        _list.Columns.Add("类型", 100);
-        _list.Columns.Add("状态", 90);
-        _list.Columns.Add("DISM 状态", 160);
+        _list.Columns.Add("名称", 360);
+        _list.Columns.Add("类型", 90);
+        _list.Columns.Add("状态", 80);
+        _list.Columns.Add(AppLang.L("用途建议", "Profile tip"), 140);
+        _list.Columns.Add("DISM 状态", 140);
 
         var actions = new FlowLayoutPanel
         {
@@ -107,11 +108,35 @@ internal sealed class WindowsFeaturesDialog : Form
             "可选功能 / Capabilities",
             "DISM 可视化 · 禁用可选功能 / 卸载 Capability",
             body,
-            "危险组件会二次确认。完成后建议重启。",
+            "危险组件会二次确认。SMBv1 高危建议卸载。按服务器用途保留 IIS/Hyper-V/Containers。完成后建议重启。",
             () => BeginLoad());
 
         Shown += (_, _) => BeginLoad();
         UiBuffer.BindListViewColumnFit(_list, 0, 200);
+    }
+
+    private static string FeatureProfileTip(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "—";
+        if (name.IndexOf("SMB1", StringComparison.OrdinalIgnoreCase) >= 0)
+            return AppLang.L("建议卸载", "Remove");
+        if (name.IndexOf("Telnet", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("TFTP", StringComparison.OrdinalIgnoreCase) >= 0)
+            return AppLang.L("建议卸载", "Remove");
+        if (ServerProfile.Has(ServerRoleFlags.WebIis) &&
+            (name.IndexOf("IIS", StringComparison.OrdinalIgnoreCase) >= 0 ||
+             name.IndexOf("Web-Server", StringComparison.OrdinalIgnoreCase) >= 0))
+            return AppLang.L("用途·保留", "Keep (role)");
+        if (ServerProfile.Has(ServerRoleFlags.HyperV) &&
+            name.IndexOf("Hyper-V", StringComparison.OrdinalIgnoreCase) >= 0)
+            return AppLang.L("用途·保留", "Keep (role)");
+        if (ServerProfile.Has(ServerRoleFlags.Docker) &&
+            (name.IndexOf("Containers", StringComparison.OrdinalIgnoreCase) >= 0 ||
+             name.IndexOf("Microsoft-Windows-Subsystem-Linux", StringComparison.OrdinalIgnoreCase) >= 0))
+            return AppLang.L("用途·保留", "Keep (role)");
+        if (WindowsFeaturesHelper.IsCritical(name))
+            return AppLang.L("关键·慎动", "Critical");
+        return "—";
     }
 
     private void BeginLoad()
@@ -160,9 +185,13 @@ internal sealed class WindowsFeaturesDialog : Form
             var row = new ListViewItem(item.Name) { Tag = item };
             row.SubItems.Add(item.KindText);
             row.SubItems.Add(item.StateText);
+            row.SubItems.Add(FeatureProfileTip(item.Name));
             row.SubItems.Add(item.State);
             if (WindowsFeaturesHelper.IsCritical(item.Name))
                 row.ForeColor = Color.DarkOrange;
+            if (item.Name.IndexOf("SMB1", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                item.Name.IndexOf("SMB1Protocol", StringComparison.OrdinalIgnoreCase) >= 0)
+                row.ForeColor = Color.FromArgb(200, 60, 40);
             _list.Items.Add(row);
         }
         _list.EndUpdate();

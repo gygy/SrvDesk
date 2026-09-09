@@ -217,7 +217,7 @@ internal static class StartupAdviceHelper
             if (cmd.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0)
                 return AppLang.L("可关", "Optional");
         }
-        var path = ExtractPath(e.Command);
+        var path = ExtractPath(e.Command ?? "");
         if (!string.IsNullOrEmpty(path) && File.Exists(path))
         {
             try

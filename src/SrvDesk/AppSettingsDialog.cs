@@ -15,6 +15,11 @@ internal sealed class AppSettingsDialog : Form
         AutoSize = true,
         MaximumSize = new Size(480, 0),
     };
+    private readonly CheckBox _changePlan = new()
+    {
+        AutoSize = true,
+        MaximumSize = new Size(480, 0),
+    };
     private readonly CheckBox _debugLog = new() { AutoSize = true };
     private readonly CheckBox _softSkip = new()
     {
@@ -53,6 +58,7 @@ internal sealed class AppSettingsDialog : Form
         _hideIncompatible.Text = AppLang.L("启动时默认「隐藏不适用项」", "Hide incompatible items by default");
         _checkUpdate.Text = AppLang.L("启动时检查程序更新", "Check for updates at startup");
         _restorePoint.Text = AppLang.L("应用到系统前询问是否创建还原点", "Ask to create a restore point before applying");
+        _changePlan.Text = AppLang.L("应用到系统前显示变更计划（干跑确认）", "Show change plan (dry-run confirm) before apply");
         _debugLog.Text = AppLang.L("开启调试日志（debug.log）", "Enable debug log (debug.log)");
         _softSkip.Text = AppLang.L("环境不支持时记为「跳过」而非「失败」", "Treat unsupported environments as skip, not failure");
         _hint.Text = AppLang.L(
@@ -97,6 +103,7 @@ internal sealed class AppSettingsDialog : Form
         body.Controls.Add(Pad(_hideIncompatible));
         body.Controls.Add(Pad(_checkUpdate));
         body.Controls.Add(Pad(_restorePoint));
+        body.Controls.Add(Pad(_changePlan));
         body.Controls.Add(Section(AppLang.L("诊断", "Diagnostics")));
         body.Controls.Add(Pad(_debugLog));
         body.Controls.Add(Pad(_softSkip));
@@ -236,6 +243,7 @@ internal sealed class AppSettingsDialog : Form
         _hideIncompatible.Checked = p.HideIncompatibleByDefault;
         _checkUpdate.Checked = !p.DisableStartupUpdateCheck;
         _restorePoint.Checked = !p.DisableRestorePointPrompt;
+        _changePlan.Checked = !p.DisableChangePlanPrompt;
         _debugLog.Checked = p.EnableDebugLog;
         _softSkip.Checked = p.SoftSkipUnsupported;
         _loadedLanguage = AppLang.ToPrefsValue(AppLang.ParseMode(p.Language));
@@ -258,6 +266,7 @@ internal sealed class AppSettingsDialog : Form
         p.HideIncompatibleByDefault = _hideIncompatible.Checked;
         p.DisableStartupUpdateCheck = !_checkUpdate.Checked;
         p.DisableRestorePointPrompt = !_restorePoint.Checked;
+        p.DisableChangePlanPrompt = !_changePlan.Checked;
         p.EnableDebugLog = _debugLog.Checked;
         p.SoftSkipUnsupported = _softSkip.Checked;
         var newLang = _language.SelectedIndex switch

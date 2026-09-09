@@ -55,7 +55,58 @@ internal static class OptPresets
                 "Only Server-specific and account convenience items; leave most defaults alone."),
             Build = Minimal,
         },
+        new()
+        {
+            Id = "profile-home",
+            Title = AppLang.L("家庭服务器（用途模板）", "Home server (profile)"),
+            Description = AppLang.L(
+                "写入用途：RDP + 文件共享 + 家庭场景；开关接近 Server 桌面，优化等级=标准。",
+                "Sets profile: RDP + file share + home lab; toggles near Server desktop; level=Standard."),
+            Build = () =>
+            {
+                ApplyProfilePreset(ServerRoleFlags.RdpDesktop | ServerRoleFlags.FileShare | ServerRoleFlags.HomeLab | ServerRoleFlags.BrowserDownload,
+                    OptimizationLevel.Standard);
+                return ServerDesktop();
+            },
+        },
+        new()
+        {
+            Id = "profile-docker",
+            Title = AppLang.L("Docker 主机（用途模板）", "Docker host (profile)"),
+            Description = AppLang.L(
+                "写入用途：Docker + RDP；保留容器相关；优化等级=安全。",
+                "Sets profile: Docker + RDP; keep container-related; level=Safe."),
+            Build = () =>
+            {
+                ApplyProfilePreset(ServerRoleFlags.Docker | ServerRoleFlags.RdpDesktop | ServerRoleFlags.BrowserDownload,
+                    OptimizationLevel.Safe);
+                return RemoteWork();
+            },
+        },
+        new()
+        {
+            Id = "profile-nas",
+            Title = AppLang.L("NAS / 文件服（用途模板）", "NAS / file server (profile)"),
+            Description = AppLang.L(
+                "写入用途：文件共享；强调 SMB 安全（关 SMB1）；优化等级=标准。",
+                "Sets profile: file share; SMB safety (no SMB1); level=Standard."),
+            Build = () =>
+            {
+                ApplyProfilePreset(ServerRoleFlags.FileShare | ServerRoleFlags.HomeLab, OptimizationLevel.Standard);
+                var s = SecurityHardened();
+                return s;
+            },
+        },
     ];
+
+    private static void ApplyProfilePreset(ServerRoleFlags roles, OptimizationLevel level)
+    {
+        var data = ServerProfile.Load();
+        data.Roles = (int)roles;
+        data.OptimizationLevel = (int)level;
+        data.ProfileConfigured = true;
+        ServerProfile.Save(data);
+    }
 
     public static PresetInfo? Find(string id) =>
         All.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));

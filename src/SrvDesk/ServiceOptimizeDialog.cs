@@ -851,7 +851,9 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
             "{0}  ·  {1}  ·  {2}",
             RecommendLevelUi.Title(item.OptimizeLevel),
             item.AdviceTag,
-            item.AdviceNote);
+            item.AdviceNote)
+            + "\r\n"
+            + ServiceDependencyHelper.FormatExplain(item.ActualServiceName, item.Entry.Note, item.Recommend);
     }
 
     private void BackupCurrentState()
@@ -998,6 +1000,18 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         var errors = new List<string>();
         foreach (var row in rows)
         {
+            if (ServerProfile.MustKeepService(row.ActualServiceName))
+            {
+                errors.Add(row.ActualServiceName + ": " + AppLang.L("当前用途要求保留", "Required by server profile"));
+                continue;
+            }
+            var risk = ServiceRiskCatalog.GetRisk(row.ActualServiceName, row.Recommend);
+            if (risk >= OptimizeRisk.Critical ||
+                !OptimizationLevelUi.AllowsRisk(ServerProfile.Level, risk))
+            {
+                errors.Add(row.ActualServiceName + ": " + AppLang.L("当前优化等级不允许", "Blocked by optimization level"));
+                continue;
+            }
             try
             {
                 using (ApplyLog.PushContext(row.ActualServiceName))
@@ -1008,6 +1022,10 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
                 errors.Add($"{row.ActualServiceName}: {ex.Message}");
             }
         }
+
+        OptimizationHistory.Add(
+            AppLang.L("服务按建议", "Services apply advice"),
+            AppLang.Lf("选中 {0}，失败 {1}", "Selected {0}, failed {1}", rows.Count, errors.Count));
 
         RefreshList();
         if (errors.Count > 0)

@@ -26,6 +26,9 @@
   <Module file="$(InPath)\SrvDesk.exe">
     <!-- 配置 JSON：DataContract 成员名 -->
     <SkipType name="SrvDesk.UiPrefsData" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.ServerProfileData" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.OptimizationHistoryFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.OptimizationHistoryEntry" skipProperties="true" skipFields="true" skipMethods="true" />
     <SkipType name="SrvDesk.OptProfileFile" skipProperties="true" skipFields="true" skipMethods="true" />
     <SkipType name="SrvDesk.SettingEntry" skipProperties="true" skipFields="true" skipMethods="true" />
     <SkipType name="SrvDesk.SettingScriptStore/StoreFile" skipProperties="true" skipFields="true" skipMethods="true" />

@@ -1002,6 +1002,13 @@ internal sealed class MainForm : Form
             _hideIncompatible.Checked = true;
 
         ApplyLog.Write(AppLang.L("启动 ", "Start ") + _systemFacts.Summary);
+        try
+        {
+            if (!ServerProfile.Load().ProfileConfigured)
+                ServerRoleDetector.MergeDetectedIntoProfile(overwriteUser: false);
+            HealthInspectionService.StartIfEnabled(this);
+        }
+        catch { /* ignore */ }
         if (UiPrefs.EnableDebugLog)
             ApplyLog.Debug(AppLang.L("启动调试会话 · ", "Debug session · ") + _systemFacts.Summary);
         UseWaitCursor = false;

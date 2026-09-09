@@ -1,6 +1,10 @@
-# SrvDesk — Windows Server Desktop Optimizer
+# SrvDesk — Windows Server Optimization & Health Assistant
 
-Local optimizer for **Windows Server as a daily desktop**: registry / services / policy / DISM. Instant pages + batch toggles.
+Local **optimization & health assistant** for Windows Server 2019/2022/2025 (also works on desktop Windows):
+
+**Profile → health check → explainable advice → dry-run confirm → apply → verify/rollback → inspection.**
+
+Don’t disable services blindly — balance performance, stability, security, and compatibility.
 
 **Version:** 1.0.31 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
 
@@ -14,38 +18,16 @@ This public repo has **docs + license only** (no source). Get the binary from Re
 
 ## Quick start
 
-1. Run `SrvDesk.exe` as Administrator  
-2. **Preset → Server Desktop (recommended)** → load  
-3. Review left-side groups; click **Apply recommended**  
-4. Reboot if prompted  
+1. Run as Administrator  
+2. **Tools → Server profile** — roles + optimization level (Detect / Safe / Standard / Deep)  
+3. **Tools → Health overview** — score & issues  
+4. Review advice; **Apply** shows a change plan first  
+5. **Tools → History / rollback** for service snapshots or `rstrui`
 
-First launch shows a one-time notice. Details: **Help → Disclaimer / Privacy / License**.
+## Tools (health assistant)
 
-Header shows **IPv4, CPU, memory**.
+Health overview · Server profile · Recommendations · Ports & exposure · Scheduled tasks · History/rollback · plus existing cleanup, features, security center, shutdown timer, etc.
 
-## Sidebar
+## Design rule
 
-**Instant (apply immediately):** Startup items · DNS · Custom packs  
-
-**Batch (need Apply):** Server-only · Account policy · Explorer · Desktop · Remote/network · Privacy/experience · Performance/security · Power/background  
-
-Privacy and performance groups are split into foldable sections by scenario.
-
-## Tools (highlights)
-
-Common software (includes **AI**: Codex CLI/Desktop, Pi Agent) · hosts · junk cleanup (grouped, with progress) · Windows features · Edge · context menu · security center · restore defaults
-
-**Help → Check for updates** reads GitHub Releases, downloads `SrvDesk.exe`, replaces the running file and restarts. Startup check can be turned off in **File → Settings**.
-
-## CLI (admin)
-
-```text
-SrvDesk.exe --apply-preset server-desktop
-SrvDesk.exe --load-profile D:\profile.json
-SrvDesk.exe --export-profile D:\current.json
-```
-
-## License
-
-[MIT](LICENSE) · [Disclaimer](DISCLAIMER.md) · [Privacy](PRIVACY.md)  
-Issues: https://github.com/gygy/SrvDesk/issues
+> Not “disable more = faster”, but “change only what you are sure you don’t need”.

@@ -363,8 +363,6 @@ internal static class DiskMemoryNetworkInsights
         sb.AppendLine(AppLang.L("【内存】", "[Memory]"));
         try
         {
-            var gc = GC.GetGCMemoryInfo();
-            // 用 Win32 GlobalMemoryStatusEx 更准，这里用简易 WMI
             using var searcher = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize,FreePhysicalMemory FROM Win32_OperatingSystem");
             foreach (ManagementObject o in searcher.Get())
             {
