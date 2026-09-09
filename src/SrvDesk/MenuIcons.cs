@@ -71,8 +71,9 @@ internal static class MenuIcons
         [FileCand(Sys("cleanmgr.exe"))],
         DrawTrash);
 
-    public static Image ShutdownTimer => Get("shutdowntimer",
-        [FileCand(Sys("shutdown.exe")), FileCand(Sys("powercfg.cpl"))],
+    /// <summary>定时关机：自绘电源+倒计时环（不用系统 shutdown.exe 图标）。</summary>
+    public static Image ShutdownTimer => Get("shutdowntimer-v2",
+        Array.Empty<Cand>(),
         DrawShutdownTimer);
 
     public static Image DesktopMaintenance => Get("desktop",
@@ -504,14 +505,22 @@ internal static class MenuIcons
 
     private static void DrawShutdownTimer(Graphics g)
     {
-        using var b = new SolidBrush(Color.FromArgb(200, 80, 60));
-        g.FillEllipse(b, 1, 1, 14, 14);
-        using var p = new Pen(Color.White, 1.5f);
-        g.DrawLine(p, 8, 8, 8, 4);
-        g.DrawLine(p, 8, 8, 11, 10);
-        using var power = new Pen(Color.White, 1.4f);
-        g.DrawArc(power, 5, 5, 6, 6, 40, 280);
-        g.DrawLine(power, 8, 3, 8, 7);
+        // 深蓝底圆 + 暖色倒计时弧 + 白色电源键，16px 可读、不撞计划任务蓝钟
+        using (var face = new SolidBrush(Color.FromArgb(0, 90, 158)))
+            g.FillEllipse(face, 1, 1, 14, 14);
+
+        using (var ring = new Pen(Color.FromArgb(255, 176, 46), 2f)
+               { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawArc(ring, 2.2f, 2.2f, 11.6f, 11.6f, -80f, 220f);
+
+        using var power = new Pen(Color.White, 1.7f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round,
+        };
+        g.DrawArc(power, 4.5f, 5.2f, 7f, 7f, 48f, 264f);
+        g.DrawLine(power, 8f, 3.4f, 8f, 8.2f);
     }
 
     private static void DrawNetwork(Graphics g)
