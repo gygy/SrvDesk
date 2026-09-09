@@ -1,0 +1,78 @@
+﻿Name	Startup Type	Remark
+Agent Activation Runtime_5f643	Disabled	可以禁用，不影响系统使用
+Application Layer Gateway Service	Manual	使用系统防火墙保留
+AppX Deployment Service (AppXSVC)	Manual         (Trigger Start)	用微软商店和微软账户的保留
+Autodesk Desktop Licensing Service	Manual	AUTOCAD授权，不能关闭，否则无法打开CAD
+Background Intelligent Transfer Service	Disabled	更新补丁时打开
+BitLocker Drive Encryption Service	Disabled	硬盘加密时保留
+Block Level Backup Engine Service	Disabled	使用系统备份时保留
+Bluetooth Audio Gateway Service	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用
+Bluetooth Support Service	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用
+Bluetooth User Support Service_5f643	Disabled	与蓝牙有关，不需要的关闭。不影响无线鼠标使用
+Capability Access Manager Service	Manual	禁用无法打开隐私权限，点击各种隐私会闪退，语音通话无声音
+Client License Service (ClipSVC)	Manual         (Trigger Start)	保留
+CNG Key Isolation	Manual         (Trigger Start)	保留
+COM+ Event System	Automatic	保留
+COM+ System Application	Manual	保留
+CoreMessaging	Automatic	禁用后无法进入系统
+Credential Manager	Running	保留
+Cryptographic Services	Automatic	保留
+Data Usage	Disabled	网络数据使用统计，用不到的关掉
+Device Association Service	Manual         (Trigger Start)	禁用无法添加打印机
+Device Setup Manager	Manual	设备安装服务，保留
+DeviceAssociationBroker_5f643	Disabled	禁用不影响打印机使用
+DevicePicker_5f643	Manual	禁用无法使用打印机（估计）
+DevicesFlow_5f643	Manual	禁用无法使用打印机（估计）
+Diagnostic Execution Service	Disabled	诊断模式，不需要的关闭
+Diagnostic Policy Service	Disabled	诊断模式，不需要的关闭
+Diagnostic Service Host	Disabled	诊断模式，不需要的关闭
+Diagnostic System Host	Disabled	诊断模式，不需要的关闭
+Display Enhancement Service	Manual         (Trigger Start)	禁用后亮度无法调节
+DNS Client	Automatic     (Trigger Start)	保留
+Downloaded Maps Manager	Disabled	下载地图服务，用不着这个的可以关掉
+Encrypting File System (EFS)	Manual         (Trigger Start)	解密文件时需要
+Fax	Disabled	传真，一般人用不着
+FlexNet Licensing Service	Manual	AUTOCAD授权，不能关闭，否则无法打开CAD
+Foxit PDF Editor Update Service	Disabled	Foxit PDF服务，可以关掉
+GameDVR and Broadcast User Service_5f643	Disabled	游戏录制与广播，用不着的关掉
+Gateway Session Service	Automatic	VPN服务，没有安装这个的忽略
+Gateway Updater Service	Automatic	VPN服务，没有安装这个的忽略
+Geolocation Service	Disabled	地址服务，用不着这个的可以关掉
+Huawei APO service	Disabled	华为电脑专属，可以禁用，  不影响使用
+Huawei Hiview Windows Service	Disabled	华为电脑专属，可以禁用，  不影响使用
+Huawei LCD_Service	Disabled	华为电脑专属，可以禁用，  不影响使用
+Huawei PC Core Service	Manual	禁用后无法打开华为电脑管家
+Huawei PCManager Windows Service	Manual	禁用后无法打开华为电脑管家
+HV Host Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+HW OSD Service	Disabled	华为电脑专属，可以禁用，  不影响使用
+Hyper-V Data Exchange Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Guest Service Interface	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Guest Shutdown Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Heartbeat Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V PowerShell Direct Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Remote Desktop Virtualization Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Time Synchronization Service	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+Hyper-V Volume Shadow Copy Requestor	Disabled	HV虚拟机，一般人不用，    可以禁用或者保留
+IKE and AuthIP IPsec Keying Modules	Disabled	没啥用，直接禁用
+Intel(R) Audio Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Capability Licensing Service TCP IP Interface	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Content Protection HDCP Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Content Protection HECI Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Dynamic Application Loader Host Interface Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Dynamic Tuning service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) Graphics Command Center Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) HD Graphics Control Panel Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel(R) TPM Provisioning Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel? PROSet/Wireless Service	Disabled	本人电脑硬件驱动服务，      可以关闭
+Intel? SGX AESM	Disabled	本人电脑硬件驱动服务，      可以关闭
+IP Helper	Disabled	IP地址V4 to V6的，暂时用不着
+IPsec Policy Agent	Manual         (Trigger Start)	必须保留
+KtmRm for Distributed Transaction Coordinator	Manual         (Trigger Start)	必须保留
+Language Experience Service	Manual         (Trigger Start)	切换系统语言时保留
+Microsoft Account Sign-in Assistant	Running	使用微软账户要保留
+Microsoft Edge Elevation Service (MicrosoftEdgeElevationService)	Disabled	EDGE浏览器更新服务，        不需要时关闭
+Microsoft Edge Update Service (edgeupdate)	Disabled	EDGE浏览器更新服务，        不需要时关闭
+Microsoft Edge Update Service (edgeupdatem)	Disabled	EDGE浏览器更新服务，        不需要时关闭
+Microsoft Passport	Manual         (Trigger Start)	使用微软账户要保留
+Microsoft Passport Container	Manual         (Trigger Start)	使用微软账户要保留
+Nahimic service	Disabled	本人电脑硬件驱动服务，      可以关闭
