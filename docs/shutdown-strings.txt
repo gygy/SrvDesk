@@ -1,0 +1,21 @@
+﻿080404B0
+1.02.0058
+By: Waleed A. Aly
+Comments
+CompanyName
+eBrain
+Eng. Waleed A. Aly, PTS, Egypt.
+FileDescription
+FileVersion
+Freeware
+InternalName
+LegalCopyright
+OriginalFilename
+ProductName
+ProductVersion
+Shutdown Agent
+Shutdown Agent.exe
+StringFileInfo
+Translation
+VarFileInfo
+VS_VERSION_INFO
