@@ -16,7 +16,6 @@ internal sealed class HealthOverviewDialog : Form
         BackColor = AppTheme.Surface,
         Padding = new Padding(0, 4, 0, 0),
     };
-    private readonly Label _footerHint = new();
 
     public HealthOverviewDialog(MainForm? main = null)
     {
@@ -115,14 +114,6 @@ internal sealed class HealthOverviewDialog : Form
         Btn("设为推荐值", "Set recommended", false, ApplyRecommendedSelected);
         Btn("应用到系统…", "Apply to system…", true, ApplyToSystem);
 
-        _footerHint.AutoSize = true;
-        _footerHint.ForeColor = AppTheme.TextMute;
-        _footerHint.Margin = new Padding(8, 8, 0, 0);
-        _footerHint.Text = AppLang.L(
-            "开关：设推荐只改主界面勾选；点「应用到系统」才写入。服务：设推荐即改启动类型。",
-            "Toggles: Set recommended updates UI only; Apply writes. Services: Set recommended changes start type now.");
-        bar.Controls.Add(_footerHint);
-
         footer.Controls.Add(bar);
         return footer;
     }
@@ -141,7 +132,7 @@ internal sealed class HealthOverviewDialog : Form
         var total = groups.Sum(g => g.Findings.Count);
         _summary.Text = total == 0
             ? AppLang.L("未发现需优化项（已达推荐值）", "Nothing to optimize — matches recommendations")
-            : AppLang.Lf("待优化 {0} 项 · {1} 个标签页", "{0} items · {1} tabs", total, groups.Count);
+            : AppLang.Lf("待优化 {0} 项", "{0} items to optimize", total);
 
         _rows.Clear();
         _groups.Clear();
@@ -158,7 +149,6 @@ internal sealed class HealthOverviewDialog : Form
         }
         _scroll.ResumeLayout(true);
         LayoutGroups();
-        UpdateFooterHint();
     }
 
     private IReadOnlyList<TabOptimizeGroup> ApplySessionFilter(IReadOnlyList<TabOptimizeGroup> groups)
@@ -248,7 +238,6 @@ internal sealed class HealthOverviewDialog : Form
             var on = groupRows.Any(r => !r.Check.Checked);
             foreach (var r in groupRows)
                 r.Check.Checked = on;
-            UpdateFooterHint();
         };
         setGroup.Click += (_, _) =>
         {
@@ -366,7 +355,6 @@ internal sealed class HealthOverviewDialog : Form
             BackColor = Color.Transparent,
             FlatStyle = FlatStyle.Flat,
         };
-        check.CheckedChanged += (_, _) => UpdateFooterHint();
         wrap.Controls.Add(check);
 
         PlaceCells(
@@ -451,21 +439,6 @@ internal sealed class HealthOverviewDialog : Form
     {
         foreach (var r in _rows)
             r.Check.Checked = on;
-        UpdateFooterHint();
-    }
-
-    private void UpdateFooterHint()
-    {
-        var n = _rows.Count(r => r.Check.Checked);
-        if (_rows.Count == 0)
-        {
-            _footerHint.Text = AppLang.L("无需操作。", "Nothing to do.");
-            return;
-        }
-        _footerHint.Text = AppLang.Lf(
-            "已选 {0} / {1}。开关设推荐只改勾选；应用到系统才写入。服务设推荐即改启动类型。",
-            "Selected {0}/{1}. Toggles: Set updates UI; Apply writes. Services: Set changes start type.",
-            n, _rows.Count);
     }
 
     private void ApplyRecommendedSelected()
@@ -521,8 +494,6 @@ internal sealed class HealthOverviewDialog : Form
                     settings, services);
             }
         }
-        else
-            UpdateFooterHint();
     }
 
     private void ApplyToSystem()
