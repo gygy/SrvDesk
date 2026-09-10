@@ -21,9 +21,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolCommonSoftware { get; }
     public ToolStripMenuItem ToolCleanup { get; }
     public ToolStripMenuItem ToolShutdownTimer { get; }
-    public ToolStripMenuItem ToolHealthOverview { get; }
-    public ToolStripMenuItem ToolServerProfile { get; }
-    public ToolStripMenuItem ToolRecommendCenter { get; }
+    public ToolStripMenuItem ToolOptimizeAdvisor { get; }
     public ToolStripMenuItem ToolPortExposure { get; }
     public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
@@ -83,9 +81,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
         ToolCleanup = Item(AppLang.L("垃圾清理...", "Junk cleanup..."), MenuIcons.Cleanup);
         ToolShutdownTimer = Item(AppLang.L("定时关机...", "Shutdown timer..."), MenuIcons.ShutdownTimer);
-        ToolHealthOverview = Item(AppLang.L("健康总览...", "Health overview..."), MenuIcons.SystemInfo);
-        ToolServerProfile = Item(AppLang.L("服务器用途...", "Server profile..."), MenuIcons.Identity);
-        ToolRecommendCenter = Item(AppLang.L("优化建议中心...", "Recommendations..."), MenuIcons.Quick);
+        ToolOptimizeAdvisor = Item(AppLang.L("优化顾问...", "Optimization advisor..."), MenuIcons.SystemInfo);
         ToolPortExposure = Item(AppLang.L("端口暴露...", "Port exposure..."), MenuIcons.SecurityCenter);
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
@@ -99,7 +95,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
-            ToolHealthOverview, ToolServerProfile, ToolRecommendCenter, ToolPortExposure, ToolOptHistory,
+            ToolOptimizeAdvisor, ToolPortExposure, ToolOptHistory,
             new ToolStripSeparator(),
             ToolAutologon, ToolIdentity, ToolSystemInfo,
             new ToolStripSeparator(),

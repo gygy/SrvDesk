@@ -46,4 +46,4 @@
 
 - 壳与按钮：`ThemedSettingsChrome.cs`
 - 定时关机底栏（状态 vs 按钮）：`ShutdownTimerDialog.cs`
-- 健康总览：`HealthOverviewDialog.cs`
+- 优化顾问：`HealthOverviewDialog.cs`

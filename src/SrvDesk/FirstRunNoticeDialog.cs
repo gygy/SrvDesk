@@ -19,12 +19,12 @@ internal sealed class FirstRunNoticeDialog : Form
         var body = new Label
         {
             Text = AppLang.L(
-                "本程序是 Windows Server 优化与健康助手：先识别用途，再给建议，确认后执行，并可回滚。\r\n" +
+                "本程序是 Windows Server 优化助手：先识别用途，再给建议，确认后执行，并可回滚。\r\n" +
                 "请以管理员身份运行；重要环境请先备份或创建还原点。\r\n" +
-                "入口：工具 → 健康总览。完整条款见「帮助」。",
-                "SrvDesk is a Server optimization & health assistant: profile → advice → confirm → apply → rollback.\r\n" +
+                "入口：工具 → 优化顾问。完整条款见「帮助」。",
+                "SrvDesk is a Windows Server optimization assistant: profile → advice → confirm → apply → rollback.\r\n" +
                 "Run as Administrator; back up or create a restore point on important machines.\r\n" +
-                "Start at Tools → Health overview. See Help for legal terms."),
+                "Start at Tools → Optimization advisor. See Help for legal terms."),
             ForeColor = AppTheme.TextMain,
             AutoSize = false,
             Location = new Point(24, 22),

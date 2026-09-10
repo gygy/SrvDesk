@@ -1,6 +1,6 @@
 namespace SrvDesk;
 
-/// <summary>健康总览：评分、问题列表与资源摘要。</summary>
+/// <summary>优化顾问：评分、①–⑥诊断流程、问题列表与资源摘要。</summary>
 internal sealed class HealthOverviewDialog : Form
 {
     private readonly Label _score = new();
@@ -10,7 +10,7 @@ internal sealed class HealthOverviewDialog : Form
 
     public HealthOverviewDialog()
     {
-        Text = AppLang.L("健康总览", "Health overview");
+        Text = AppLang.L("优化顾问", "Optimization advisor");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -21,6 +21,17 @@ internal sealed class HealthOverviewDialog : Form
         BackColor = AppTheme.Surface;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
+        var workflow = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = UiScale.S(36),
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = AppTheme.PrimaryDark,
+            Font = UiFit.UiFontBold(9.5f),
+            Text = AppLang.L(
+                "①环境识别 → ②健康检查 → ③优化建议 → ④安全执行 → ⑤验证/回滚 → ⑥持续巡检",
+                "①Profile → ②Health → ③Advice → ④Apply → ⑤Verify/Rollback → ⑥Inspect"),
+        };
 
         var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(84), BackColor = AppTheme.SurfaceCard };
         _score.Font = UiFit.UiFontBold(28f);
@@ -82,6 +93,7 @@ internal sealed class HealthOverviewDialog : Form
         body.Controls.Add(_insights);
         body.Controls.Add(actions);
         body.Controls.Add(head);
+        body.Controls.Add(workflow);
         Controls.Add(body);
 
         Load += (_, _) => RefreshReport();

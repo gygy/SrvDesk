@@ -7,8 +7,8 @@ namespace SrvDesk;
 /// </summary>
 internal static class AppBrand
 {
-    public const string ProductNameZh = "Windows Server 优化与健康助手 SrvDesk";
-    public const string ProductNameEn = "SrvDesk — Windows Server Optimization & Health Assistant";
+    public const string ProductNameZh = "Windows Server 优化助手 SrvDesk";
+    public const string ProductNameEn = "SrvDesk — Windows Server Optimization Assistant";
     public static string ProductName => AppLang.L(ProductNameZh, ProductNameEn);
     public const string ShortName = "SrvDesk";
     public const string Author = "gygy";

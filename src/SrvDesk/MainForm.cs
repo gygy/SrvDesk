@@ -614,9 +614,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
-        _appMenu.ToolHealthOverview.Click += (_, _) => { using var d = new HealthOverviewDialog(); d.ShowDialog(this); };
-        _appMenu.ToolServerProfile.Click += (_, _) => { using var d = new ServerProfileDialog(); d.ShowDialog(this); };
-        _appMenu.ToolRecommendCenter.Click += (_, _) => { using var d = new RecommendCenterDialog(); d.ShowDialog(this); };
+        _appMenu.ToolOptimizeAdvisor.Click += (_, _) => { using var d = new HealthOverviewDialog(); d.ShowDialog(this); };
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();

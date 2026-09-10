@@ -1,6 +1,6 @@
-# SrvDesk — Windows Server Optimization & Health Assistant
+# SrvDesk — Windows Server Optimization Assistant
 
-Local **optimization & health assistant** for Windows Server 2019/2022/2025 (also works on desktop Windows):
+Local **optimization assistant** for Windows Server 2019/2022/2025 (also works on desktop Windows):
 
 **Profile → health check → explainable advice → dry-run confirm → apply → verify/rollback → inspection.**
 
@@ -19,14 +19,13 @@ This public repo has **docs + license only** (no source). Get the binary from Re
 ## Quick start
 
 1. Run as Administrator  
-2. **Tools → Server profile** — roles + optimization level (Detect / Safe / Standard / Deep)  
-3. **Tools → Health overview** — score & issues  
-4. Review advice; **Apply** shows a change plan first  
-5. **Tools → Rollback optimization** for service snapshots or `rstrui`
+2. **Tools → Optimization advisor** — numbered ①–⑥ flow, score & issues; set profile / advice inside  
+3. Review advice; **Apply** shows a change plan first  
+4. **Tools → Rollback optimization** for service snapshots or `rstrui`
 
-## Tools (health assistant)
+## Tools
 
-Health overview · Server profile · Recommendations · Port exposure · Rollback optimization · plus existing cleanup, features, security center, shutdown timer, etc.
+Optimization advisor · Port exposure · Rollback optimization · plus existing cleanup, features, security center, shutdown timer, etc.
 
 ## Design rule
 
