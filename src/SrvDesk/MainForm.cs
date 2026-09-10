@@ -2272,6 +2272,7 @@ internal sealed class MainForm : Form
                         RecommendedValue = row.RecommendedValueText,
                         Level = row.Help.Recommend,
                         Hint = hint,
+                        IsService = false,
                     });
                 }
             }
@@ -2290,13 +2291,16 @@ internal sealed class MainForm : Form
                     byTab[serviceTab] = list;
                 }
 
-                var recommendText = svc.Recommend switch
+                var targetKind = svc.Recommend switch
                 {
-                    ServiceRecommend.Disable => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Disabled),
-                    ServiceRecommend.Manual => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Manual),
-                    ServiceRecommend.Auto => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Automatic),
-                    _ => "—",
+                    ServiceRecommend.Disable => ServiceStartTypeKind.Disabled,
+                    ServiceRecommend.Manual => ServiceStartTypeKind.Manual,
+                    ServiceRecommend.Auto => ServiceStartTypeKind.Automatic,
+                    _ => ServiceStartTypeKind.Unknown,
                 };
+                var recommendText = targetKind == ServiceStartTypeKind.Unknown
+                    ? "—"
+                    : ServiceOptimizeHelper.StartTypeLabel(targetKind);
                 list.Add(new TabOptimizeFinding
                 {
                     TabTitle = serviceTab,
@@ -2306,6 +2310,9 @@ internal sealed class MainForm : Form
                     RecommendedValue = recommendText,
                     Level = svc.OptimizeLevel,
                     Hint = string.IsNullOrWhiteSpace(svc.AdviceNote) ? svc.AdviceTag : svc.AdviceNote,
+                    IsService = true,
+                    ServiceName = svc.ActualServiceName,
+                    ServiceTarget = targetKind,
                 });
             }
         }
@@ -2343,6 +2350,73 @@ internal sealed class MainForm : Form
 
         return result;
     }
+
+    /// <summary>
+    /// 优化顾问：把选中项设为推荐态。
+    /// 开关只改主界面勾选；服务立即写启动类型（与服务优化页一致）。
+    /// </summary>
+    internal (int settings, int services, List<string> errors) ApplyRecommendedFindings(
+        IReadOnlyList<TabOptimizeFinding> findings)
+    {
+        var settings = 0;
+        var services = 0;
+        var errors = new List<string>();
+        if (findings.Count == 0)
+            return (0, 0, errors);
+
+        var byTitle = new Dictionary<string, SettingRow>(StringComparer.Ordinal);
+        foreach (var row in AllRows)
+        {
+            if (!byTitle.ContainsKey(row.ItemText))
+                byTitle[row.ItemText] = row;
+        }
+
+        _binding = true;
+        try
+        {
+            foreach (var f in findings)
+            {
+                if (f.IsService)
+                {
+                    if (string.IsNullOrWhiteSpace(f.ServiceName)
+                        || f.ServiceTarget is ServiceStartTypeKind.Unknown or ServiceStartTypeKind.Missing)
+                        continue;
+                    try
+                    {
+                        ServiceOptimizeHelper.SetStartType(f.ServiceName, f.ServiceTarget);
+                        services++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add(f.ItemTitle + ": " + ex.Message);
+                    }
+                    continue;
+                }
+
+                if (!byTitle.TryGetValue(f.ItemTitle, out var row))
+                    continue;
+                if (row.Checked)
+                    continue;
+                row.Checked = true;
+                row.SyncCurrentValueFromState();
+                settings++;
+            }
+        }
+        finally
+        {
+            _binding = false;
+        }
+
+        if (settings > 0)
+            _uiDirty = true;
+
+        return (settings, services, errors);
+    }
+
+    /// <summary>优化顾问：走与底部「应用到系统」相同的干跑/写入流程。</summary>
+    internal bool ApplyToSystemFromAdvisor() =>
+        RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written."));
+
 
     private void LoadState(bool fullScan = false, bool forceUi = false)
     {

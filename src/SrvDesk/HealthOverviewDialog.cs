@@ -1,10 +1,12 @@
 namespace SrvDesk;
 
-/// <summary>优化顾问：按侧栏标签页归类的「未达推荐」诊断（可折叠）。</summary>
+/// <summary>优化顾问：按侧栏标签页归类的「未达推荐」诊断（可勾选 / 批量设推荐 / 应用到系统）。</summary>
 internal sealed class HealthOverviewDialog : Form
 {
     private readonly MainForm? _main;
     private readonly Label _summary = new();
+    private readonly List<FindingRowChrome> _rows = [];
+    private readonly List<GroupChrome> _groups = [];
     private readonly BufferedPanel _scroll = new(composited: false)
     {
         Dock = DockStyle.Fill,
@@ -12,6 +14,7 @@ internal sealed class HealthOverviewDialog : Form
         BackColor = AppTheme.Surface,
         Padding = new Padding(0, 4, 0, 0),
     };
+    private readonly Label _footerHint = new();
 
     public HealthOverviewDialog(MainForm? main = null)
     {
@@ -21,8 +24,8 @@ internal sealed class HealthOverviewDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(900, 660);
-        MinimumSize = new Size(720, 520);
+        ClientSize = new Size(960, 680);
+        MinimumSize = new Size(760, 520);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
 
@@ -51,38 +54,89 @@ internal sealed class HealthOverviewDialog : Form
         };
         var refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新诊断", "Refresh"), false);
         refresh.Margin = new Padding(0, 0, 8, 0);
-        refresh.Click += (_, _) => Reload();
+        refresh.Click += (_, _) => Reload(refreshFromSystem: true);
         var profile = ThemedSettingsChrome.CreateButton(AppLang.L("服务器用途…", "Profile…"), false);
         profile.Click += (_, _) =>
         {
             using var d = new ServerProfileDialog();
             d.ShowDialog(this);
-            Reload();
+            Reload(refreshFromSystem: true);
         };
         actions.Controls.Add(refresh);
         actions.Controls.Add(profile);
 
+        var footer = BuildFooter();
+
         body.Controls.Add(_scroll);
+        body.Controls.Add(footer);
         body.Controls.Add(actions);
         body.Controls.Add(head);
         Controls.Add(body);
 
-        Load += (_, _) => Reload();
+        Load += (_, _) => Reload(refreshFromSystem: true);
         Resize += (_, _) => LayoutGroups();
     }
 
-    private void Reload()
+    private Panel BuildFooter()
     {
-        var main = _main ?? Owner as MainForm;
+        var footer = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + 28,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+
+        var bar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = AppTheme.Surface,
+        };
+
+        Button Btn(string zh, string en, bool primary, Action a)
+        {
+            var b = ThemedSettingsChrome.CreateButton(AppLang.L(zh, en), primary);
+            b.Margin = new Padding(0, 0, 8, 0);
+            b.Click += (_, _) => a();
+            bar.Controls.Add(b);
+            return b;
+        }
+
+        Btn("全选", "Select all", false, () => SetAllChecked(true));
+        Btn("全不选", "Select none", false, () => SetAllChecked(false));
+        Btn("设为推荐值", "Set recommended", false, ApplyRecommendedSelected);
+        Btn("应用到系统…", "Apply to system…", true, ApplyToSystem);
+
+        _footerHint.AutoSize = true;
+        _footerHint.ForeColor = AppTheme.TextMute;
+        _footerHint.Margin = new Padding(8, 8, 0, 0);
+        _footerHint.Text = AppLang.L(
+            "开关：设推荐只改主界面勾选；点「应用到系统」才写入。服务：设推荐即改启动类型。",
+            "Toggles: Set recommended updates UI only; Apply writes. Services: Set recommended changes start type now.");
+        bar.Controls.Add(_footerHint);
+
+        footer.Controls.Add(bar);
+        return footer;
+    }
+
+    private MainForm? Main => _main ?? Owner as MainForm;
+
+    private void Reload(bool refreshFromSystem)
+    {
+        var main = Main;
         IReadOnlyList<TabOptimizeGroup> groups = Array.Empty<TabOptimizeGroup>();
         if (main is not null)
-            groups = main.CollectTabOptimizeFindings(refreshFromSystem: true);
+            groups = main.CollectTabOptimizeFindings(refreshFromSystem);
 
         var total = groups.Sum(g => g.Findings.Count);
         _summary.Text = total == 0
             ? AppLang.L("未发现需优化项（已达推荐值）", "Nothing to optimize — matches recommendations")
             : AppLang.Lf("待优化 {0} 项 · {1} 个标签页", "{0} items · {1} tabs", total, groups.Count);
 
+        _rows.Clear();
+        _groups.Clear();
         _scroll.SuspendLayout();
         _scroll.Controls.Clear();
         var y = 0;
@@ -96,6 +150,7 @@ internal sealed class HealthOverviewDialog : Form
         }
         _scroll.ResumeLayout(true);
         LayoutGroups();
+        UpdateFooterHint();
     }
 
     private void LayoutGroups()
@@ -115,15 +170,14 @@ internal sealed class HealthOverviewDialog : Form
     private Panel BuildCollapsibleGroup(TabOptimizeGroup group, int width)
     {
         const int headerH = 36;
-        var rowH = Math.Max(28, UiFit.LineHeight() + 10);
+        var rowH = Math.Max(30, UiFit.LineHeight() + 12);
         var findings = group.Findings;
+        var groupRows = new List<FindingRowChrome>();
 
         var section = new BufferedPanel
         {
             Width = width,
-            Height = headerH + findings.Count * rowH,
             BackColor = AppTheme.SurfaceCard,
-            Tag = null,
         };
 
         var head = new BufferedPanel
@@ -146,31 +200,53 @@ internal sealed class HealthOverviewDialog : Form
         {
             Text = AppLang.Lf("{0}（{1}）", "{0} ({1})", group.TabTitle, findings.Count),
             Location = new Point(UiScale.S(32), 0),
-            Size = new Size(width - UiScale.S(40), headerH),
+            Size = new Size(Math.Max(80, width - UiScale.S(220)), headerH),
             ForeColor = AppTheme.TextHeader,
             Font = UiFit.UiFontBold(),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
         };
+
+        var selectAll = MakeHeaderLink(AppLang.L("全选", "Select all"));
+        var setGroup = MakeHeaderLink(AppLang.L("本组设为推荐", "Set group recommended"));
+        void LayoutHeaderLinks()
+        {
+            var gap = UiScale.S(12);
+            var x = width - UiScale.S(12);
+            setGroup.Location = new Point(x - setGroup.Width, (headerH - setGroup.Height) / 2);
+            x = setGroup.Left - gap;
+            selectAll.Location = new Point(x - selectAll.Width, (headerH - selectAll.Height) / 2);
+            titleLabel.Width = Math.Max(80, selectAll.Left - titleLabel.Left - 8);
+        }
+
+        selectAll.Click += (_, _) =>
+        {
+            var on = groupRows.Any(r => !r.Check.Checked);
+            foreach (var r in groupRows)
+                r.Check.Checked = on;
+            UpdateFooterHint();
+        };
+        setGroup.Click += (_, _) =>
+        {
+            foreach (var r in groupRows)
+                r.Check.Checked = true;
+            ApplyRecommendedSelected();
+        };
+
         head.Controls.Add(arrow);
         head.Controls.Add(titleLabel);
+        head.Controls.Add(selectAll);
+        head.Controls.Add(setGroup);
+        LayoutHeaderLinks();
 
         var body = new BufferedPanel
         {
             Location = new Point(0, headerH),
-            Size = new Size(width, findings.Count * rowH),
+            Size = new Size(width, (findings.Count + 1) * rowH),
             BackColor = AppTheme.SurfaceCard,
         };
 
-        // 表头
-        var colHeader = BuildFindingRow(
-            AppLang.L("项目", "Item"),
-            AppLang.L("当前", "Current"),
-            AppLang.L("推荐", "Recommended"),
-            AppLang.L("强度", "Level"),
-            AppLang.L("说明", "Hint"),
-            0, rowH, width, AppTheme.PrimaryPale, header: true);
-        body.Controls.Add(colHeader);
+        body.Controls.Add(BuildHeaderRow(0, rowH, width));
 
         for (var i = 0; i < findings.Count; i++)
         {
@@ -179,28 +255,22 @@ internal sealed class HealthOverviewDialog : Form
             var title = string.IsNullOrWhiteSpace(f.SectionTitle) || f.SectionTitle == group.TabTitle
                 ? f.ItemTitle
                 : f.SectionTitle + " · " + f.ItemTitle;
-            body.Controls.Add(BuildFindingRow(
-                title,
-                f.CurrentValue,
-                f.RecommendedValue,
-                RecommendLevelUi.Title(f.Level),
-                f.Hint,
-                (i + 1) * rowH,
-                rowH,
-                width,
-                bg,
-                header: false,
-                level: f.Level));
+            var row = BuildFindingRow(f, title, (i + 1) * rowH, rowH, width, bg);
+            groupRows.Add(row);
+            _rows.Add(row);
+            body.Controls.Add(row.Wrap);
         }
 
-        body.Height = (findings.Count + 1) * rowH;
         section.Height = headerH + body.Height;
 
-        var chrome = new GroupChrome(section, head, body, arrow, titleLabel, headerH);
+        var chrome = new GroupChrome(section, head, body, arrow, titleLabel, selectAll, setGroup, headerH, LayoutHeaderLinks);
         section.Tag = chrome;
+        _groups.Add(chrome);
 
-        void Toggle(object? _, EventArgs __)
+        void Toggle(object? sender, EventArgs e)
         {
+            if (sender is LinkLabel)
+                return;
             chrome.Expanded = !chrome.Expanded;
             arrow.Text = chrome.Expanded ? "▼" : "▶";
             body.Visible = chrome.Expanded;
@@ -217,18 +287,45 @@ internal sealed class HealthOverviewDialog : Form
         return section;
     }
 
-    private static Control BuildFindingRow(
-        string item,
-        string current,
-        string recommend,
-        string levelText,
-        string hint,
+    private static LinkLabel MakeHeaderLink(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        LinkColor = AppTheme.PrimaryDark,
+        ActiveLinkColor = AppTheme.Primary,
+        VisitedLinkColor = AppTheme.PrimaryDark,
+        BackColor = Color.Transparent,
+    };
+
+    private static Control BuildHeaderRow(int y, int h, int width)
+    {
+        var wrap = new BufferedPanel
+        {
+            Location = new Point(0, y),
+            Size = new Size(width, h),
+            BackColor = AppTheme.PrimaryPale,
+        };
+        PlaceCells(
+            wrap, h, width,
+            checkSlot: true,
+            item: AppLang.L("项目", "Item"),
+            current: AppLang.L("当前", "Current"),
+            recommend: AppLang.L("推荐", "Recommended"),
+            level: AppLang.L("强度", "Level"),
+            hint: AppLang.L("说明", "Hint"),
+            action: AppLang.L("操作", "Action"),
+            header: true,
+            levelColor: AppTheme.TextHeader);
+        return wrap;
+    }
+
+    private FindingRowChrome BuildFindingRow(
+        TabOptimizeFinding finding,
+        string title,
         int y,
         int h,
         int width,
-        Color bg,
-        bool header,
-        RecommendLevel level = RecommendLevel.Suggested)
+        Color bg)
     {
         var wrap = new BufferedPanel
         {
@@ -237,12 +334,66 @@ internal sealed class HealthOverviewDialog : Form
             BackColor = bg,
         };
 
+        var check = new CheckBox
+        {
+            AutoSize = false,
+            Size = new Size(UiScale.S(18), UiScale.S(18)),
+            Location = new Point(UiScale.S(10), (h - UiScale.S(18)) / 2),
+            BackColor = Color.Transparent,
+            FlatStyle = FlatStyle.Flat,
+        };
+        check.CheckedChanged += (_, _) => UpdateFooterHint();
+        wrap.Controls.Add(check);
+
+        PlaceCells(
+            wrap, h, width,
+            checkSlot: true,
+            item: title,
+            current: finding.CurrentValue,
+            recommend: finding.RecommendedValue,
+            level: RecommendLevelUi.Title(finding.Level),
+            hint: finding.Hint,
+            action: "",
+            header: false,
+            levelColor: RecommendLevelUi.ForeColorOf(finding.Level));
+
+        var action = MakeHeaderLink(AppLang.L("设为推荐", "Set"));
+        action.Click += (_, _) =>
+        {
+            check.Checked = true;
+            ApplyRecommendedFindings(new[] { finding }, reload: true);
+        };
+        wrap.Controls.Add(action);
+
+        var chrome = new FindingRowChrome(finding, wrap, check, action);
+        wrap.Tag = chrome;
+        chrome.LayoutAction();
+        return chrome;
+    }
+
+    private static void PlaceCells(
+        Control wrap,
+        int h,
+        int width,
+        bool checkSlot,
+        string item,
+        string current,
+        string recommend,
+        string level,
+        string hint,
+        string action,
+        bool header,
+        Color levelColor)
+    {
         var pad = UiScale.S(10);
-        var wItem = Math.Max(160, (int)(width * 0.32));
-        var wCur = Math.Max(70, (int)(width * 0.12));
-        var wRec = Math.Max(70, (int)(width * 0.12));
-        var wLvl = Math.Max(72, (int)(width * 0.12));
-        var wHint = Math.Max(80, width - pad * 2 - wItem - wCur - wRec - wLvl);
+        var checkW = checkSlot ? UiScale.S(28) : 0;
+        var actionW = UiScale.S(72);
+        var avail = width - pad * 2 - checkW - actionW;
+        var wItem = Math.Max(140, (int)(avail * 0.34));
+        var wCur = Math.Max(64, (int)(avail * 0.12));
+        var wRec = Math.Max(64, (int)(avail * 0.12));
+        var wLvl = Math.Max(64, (int)(avail * 0.12));
+        var wHint = Math.Max(60, avail - wItem - wCur - wRec - wLvl);
 
         Label Cell(string text, int x, int w, Color fg, bool bold = false) => new()
         {
@@ -256,18 +407,142 @@ internal sealed class HealthOverviewDialog : Form
             AutoEllipsis = true,
         };
 
-        var x = pad;
+        var x = pad + checkW;
         wrap.Controls.Add(Cell(item, x, wItem, header ? AppTheme.TextHeader : AppTheme.TextMain, header));
         x += wItem;
         wrap.Controls.Add(Cell(current, x, wCur, header ? AppTheme.TextHeader : AppTheme.TextMute, header));
         x += wCur;
         wrap.Controls.Add(Cell(recommend, x, wRec, header ? AppTheme.TextHeader : AppTheme.PrimaryDark, header));
         x += wRec;
-        var lvlFg = header ? AppTheme.TextHeader : RecommendLevelUi.ForeColorOf(level);
-        wrap.Controls.Add(Cell(levelText, x, wLvl, lvlFg, header));
+        wrap.Controls.Add(Cell(level, x, wLvl, levelColor, header));
         x += wLvl;
         wrap.Controls.Add(Cell(hint, x, wHint, header ? AppTheme.TextHeader : AppTheme.TextMute, header));
-        return wrap;
+        if (header && !string.IsNullOrEmpty(action))
+        {
+            wrap.Controls.Add(Cell(action, width - pad - actionW, actionW, AppTheme.TextHeader, true));
+        }
+    }
+
+    private void SetAllChecked(bool on)
+    {
+        foreach (var r in _rows)
+            r.Check.Checked = on;
+        UpdateFooterHint();
+    }
+
+    private void UpdateFooterHint()
+    {
+        var n = _rows.Count(r => r.Check.Checked);
+        if (_rows.Count == 0)
+        {
+            _footerHint.Text = AppLang.L("无需操作。", "Nothing to do.");
+            return;
+        }
+        _footerHint.Text = AppLang.Lf(
+            "已选 {0} / {1}。开关设推荐只改勾选；应用到系统才写入。服务设推荐即改启动类型。",
+            "Selected {0}/{1}. Toggles: Set updates UI; Apply writes. Services: Set changes start type.",
+            n, _rows.Count);
+    }
+
+    private void ApplyRecommendedSelected()
+    {
+        var selected = _rows.Where(r => r.Check.Checked).Select(r => r.Finding).ToList();
+        if (selected.Count == 0)
+        {
+            MessageBox.Show(this,
+                AppLang.L("请先勾选要处理的项。", "Select items first."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        ApplyRecommendedFindings(selected, reload: true);
+    }
+
+    private void ApplyRecommendedFindings(IReadOnlyList<TabOptimizeFinding> findings, bool reload)
+    {
+        var main = Main;
+        if (main is null)
+        {
+            MessageBox.Show(this,
+                AppLang.L("无法关联主窗口，请从主程序打开优化顾问。", "No main window — open advisor from the app."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var (settings, services, errors) = main.ApplyRecommendedFindings(findings);
+        if (errors.Count > 0)
+        {
+            MessageBox.Show(this,
+                AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", errors),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        else if (settings + services == 0)
+        {
+            MessageBox.Show(this,
+                AppLang.L("没有可设置的项。", "Nothing to set."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        else
+        {
+            _summary.Text = AppLang.Lf(
+                "已设推荐：开关 {0} · 服务 {1}。开关请再点「应用到系统…」写入。",
+                "Set recommended: {0} toggle(s) · {1} service(s). Use Apply to write toggles.",
+                settings, services);
+        }
+
+        if (reload)
+            Reload(refreshFromSystem: false);
+        else
+            UpdateFooterHint();
+    }
+
+    private void ApplyToSystem()
+    {
+        var main = Main;
+        if (main is null)
+        {
+            MessageBox.Show(this,
+                AppLang.L("无法关联主窗口，请从主程序打开优化顾问。", "No main window — open advisor from the app."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // 若有勾选项且尚未设推荐，先设推荐再应用，减少两步遗漏
+        var selected = _rows.Where(r => r.Check.Checked).Select(r => r.Finding).ToList();
+        if (selected.Count > 0)
+            main.ApplyRecommendedFindings(selected);
+
+        var ok = main.ApplyToSystemFromAdvisor();
+        Reload(refreshFromSystem: true);
+        if (ok)
+        {
+            _summary.Text = AppLang.L(
+                "已请求应用到系统（详见主窗口状态栏）。",
+                "Apply requested (see main window status).");
+        }
+    }
+
+    private sealed class FindingRowChrome
+    {
+        public TabOptimizeFinding Finding { get; }
+        public Panel Wrap { get; }
+        public CheckBox Check { get; }
+        public LinkLabel Action { get; }
+
+        public FindingRowChrome(TabOptimizeFinding finding, Panel wrap, CheckBox check, LinkLabel action)
+        {
+            Finding = finding;
+            Wrap = wrap;
+            Check = check;
+            Action = action;
+        }
+
+        public void LayoutAction()
+        {
+            var pad = UiScale.S(10);
+            Action.Location = new Point(
+                Math.Max(pad, Wrap.Width - pad - Action.Width),
+                Math.Max(0, (Wrap.Height - Action.Height) / 2));
+        }
     }
 
     private sealed class GroupChrome
@@ -276,17 +551,32 @@ internal sealed class HealthOverviewDialog : Form
         private readonly Panel _head;
         private readonly Panel _body;
         private readonly Label _title;
+        private readonly LinkLabel _selectAll;
+        private readonly LinkLabel _setGroup;
+        private readonly Action _layoutLinks;
 
         public bool Expanded { get; set; } = true;
         public Label Arrow { get; }
 
-        public GroupChrome(Panel section, Panel head, Panel body, Label arrow, Label title, int headerH)
+        public GroupChrome(
+            Panel section,
+            Panel head,
+            Panel body,
+            Label arrow,
+            Label title,
+            LinkLabel selectAll,
+            LinkLabel setGroup,
+            int headerH,
+            Action layoutLinks)
         {
             _section = section;
             _head = head;
             _body = body;
             Arrow = arrow;
             _title = title;
+            _selectAll = selectAll;
+            _setGroup = setGroup;
+            _layoutLinks = layoutLinks;
             _ = headerH;
         }
 
@@ -295,9 +585,25 @@ internal sealed class HealthOverviewDialog : Form
             _section.Width = width;
             _head.Width = width;
             _body.Width = width;
-            _title.Width = Math.Max(80, width - UiScale.S(40));
             foreach (Control row in _body.Controls)
+            {
                 row.Width = width;
+                if (row.Tag is FindingRowChrome chrome)
+                    chrome.LayoutAction();
+                else
+                {
+                    foreach (Control child in row.Controls)
+                    {
+                        if (child is LinkLabel link && link.Text is "设为推荐" or "Set")
+                        {
+                            link.Location = new Point(
+                                Math.Max(UiScale.S(10), width - UiScale.S(10) - link.Width),
+                                Math.Max(0, (row.Height - link.Height) / 2));
+                        }
+                    }
+                }
+            }
+            _layoutLinks();
         }
     }
 }
