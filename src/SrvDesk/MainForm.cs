@@ -2415,25 +2415,61 @@ internal sealed class MainForm : Form
         return (settings, services, errors, resolvedKeys);
     }
 
-    /// <summary>优化顾问：走与底部「应用到系统」相同的干跑/写入流程。</summary>
-    /// <returns>ok=用户未取消；wrote=确实执行了写入（非仅检测、非 0 差量）。</returns>
-    internal (bool ok, bool wrote) ApplyToSystemFromAdvisor()
+    /// <summary>主界面勾选相对基线是否仍有待写入差量（供优化顾问判断）。</summary>
+    internal bool HasPendingToggleDiff()
     {
-        var ok = RunApply(
-            AppLang.L("正在写入系统…", "Writing to system…"),
-            AppLang.L("已写入本次改动。", "Changes written."));
-        if (!ok)
-            return (false, false);
-
-        var wrote = Optimizer.LastApplyActionCount > 0
-                    && ServerProfile.Level != OptimizationLevel.DetectOnly;
-        if (wrote)
+        try
         {
-            // 同步读回，避免顾问列表仍按写前状态展示；不依赖异步 LoadState 竞态
-            BindFromSystem(fullScan: false);
+            var target = CaptureState();
+            var baseline = _baselineState;
+            if (baseline is null)
+                baseline = Optimizer.Read(fullScan: false);
+            return ChangePlanBuilder.FromToggleDiff(target, baseline, ServerProfile.Level).Items.Count > 0;
+        }
+        catch
+        {
+            return _uiDirty;
+        }
+    }
+
+    /// <summary>优化顾问：走与底部「应用到系统」相同的干跑/写入流程。</summary>
+    /// <param name="hostDialog">顾问窗体；应用期间先隐藏，避免变更计划/还原点对话框被挡住。</param>
+    /// <returns>ok=用户未取消；wrote=确实执行了写入（非仅检测、非 0 差量）。</returns>
+    internal (bool ok, bool wrote) ApplyToSystemFromAdvisor(Form? hostDialog = null)
+    {
+        var hidden = false;
+        if (hostDialog is { IsDisposed: false, Visible: true })
+        {
+            hostDialog.Hide();
+            hidden = true;
         }
 
-        return (ok, wrote);
+        try
+        {
+            var ok = RunApply(
+                AppLang.L("正在写入系统…", "Writing to system…"),
+                AppLang.L("已写入本次改动。", "Changes written."));
+            if (!ok)
+                return (false, false);
+
+            var wrote = Optimizer.LastApplyActionCount > 0
+                        && ServerProfile.Level != OptimizationLevel.DetectOnly;
+            if (wrote)
+            {
+                // 同步读回，避免顾问列表仍按写前状态展示；不依赖异步 LoadState 竞态
+                BindFromSystem(fullScan: false);
+            }
+
+            return (ok, wrote);
+        }
+        finally
+        {
+            if (hidden && hostDialog is { IsDisposed: false })
+            {
+                hostDialog.Show();
+                hostDialog.Activate();
+            }
+        }
     }
 
     /// <summary>按侧栏分组查找开关行（与诊断列表同源）。</summary>

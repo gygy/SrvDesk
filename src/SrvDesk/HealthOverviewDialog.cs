@@ -486,13 +486,6 @@ internal sealed class HealthOverviewDialog : Form
         {
             // 不要从系统重绑：否则未写入时会把刚勾上的推荐冲掉，列表又涨回去
             Reload(refreshFromSystem: false);
-            if (settings + services > 0 || resolvedKeys.Count > 0)
-            {
-                _summary.Text = AppLang.Lf(
-                    "已设推荐：开关 {0} · 服务 {1}。待优化已同步减少；开关请再点「应用到系统…」写入。",
-                    "Set recommended: {0} toggle(s) · {1} service(s). List updated; Apply to write toggles.",
-                    settings, services);
-            }
         }
     }
 
@@ -509,14 +502,38 @@ internal sealed class HealthOverviewDialog : Form
 
         // 若有勾选项且尚未设推荐，先设推荐再应用
         var selected = _rows.Where(r => r.Check.Checked).Select(r => r.Finding).ToList();
+        var settings = 0;
+        var services = 0;
         if (selected.Count > 0)
         {
-            var (_, _, _, keys) = main.ApplyRecommendedFindings(selected);
-            foreach (var key in keys)
+            var r = main.ApplyRecommendedFindings(selected);
+            settings = r.settings;
+            services = r.services;
+            foreach (var key in r.resolvedKeys)
                 _sessionResolved.Add(key);
+            if (r.errors.Count > 0)
+            {
+                MessageBox.Show(this,
+                    AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", r.errors),
+                    Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        else if (!main.HasPendingToggleDiff())
+        {
+            MessageBox.Show(this,
+                AppLang.L("请先勾选要应用的项，或先点「设为推荐值」。", "Select items first, or Set recommended."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
         }
 
-        var (ok, wrote) = main.ApplyToSystemFromAdvisor();
+        // 仅服务：设推荐时已写入启动类型，无需再走开关变更计划
+        if (settings == 0 && services > 0 && !main.HasPendingToggleDiff())
+        {
+            Reload(refreshFromSystem: true);
+            return;
+        }
+
+        var (ok, wrote) = main.ApplyToSystemFromAdvisor(this);
         if (!ok)
             return;
 
@@ -525,17 +542,11 @@ internal sealed class HealthOverviewDialog : Form
             // 已同步读回系统：清空会话遮罩，按真实状态重建
             _sessionResolved.Clear();
             Reload(refreshFromSystem: false);
-            _summary.Text = AppLang.L(
-                "已写入系统，待优化列表已按当前状态更新。",
-                "Applied. Pending list refreshed from current state.");
         }
         else
         {
             // 仅检测 / 无差量：保留「已设推荐」遮罩，列表继续减少
             Reload(refreshFromSystem: false);
-            _summary.Text = AppLang.L(
-                "未写入新变更（仅检测或无差量）。已设推荐的项仍从待优化中隐藏；可点「刷新诊断」核对系统。",
-                "Nothing new written (detect-only or no diff). Recommended items stay hidden; Refresh to re-check system.");
         }
     }
 
