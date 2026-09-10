@@ -356,8 +356,6 @@ internal static class DiskMemoryNetworkInsights
                           AppLang.Lf("可用 {0:0.0}% / {1:0.0} GB", "free {0:0.0}% / {1:0.0} GB",
                               freePct, d.AvailableFreeSpace / 1024.0 / 1024 / 1024));
         }
-        sb.AppendLine(AppLang.L("提示：缓存不是内存泄漏；SSD 请保持 TRIM，勿对 SSD 做传统碎片整理。",
-            "Note: cache is not a leak; keep TRIM on SSD; avoid classic defrag on SSD."));
         sb.AppendLine();
 
         sb.AppendLine(AppLang.L("【内存】", "[Memory]"));
@@ -381,8 +379,6 @@ internal static class DiskMemoryNetworkInsights
         {
             sb.AppendLine("  —");
         }
-        sb.AppendLine(AppLang.L("  不做「一键释放内存」（清空缓存往往更慢）。",
-            "  No “one-click free RAM” (purging cache often hurts)."));
         sb.AppendLine();
 
         sb.AppendLine(AppLang.L("【网络】", "[Network]"));

@@ -1,17 +1,16 @@
 namespace SrvDesk;
 
-/// <summary>健康总览：评分、用途、工作流入口、洞察与建议。</summary>
+/// <summary>健康总览：评分、问题列表与资源摘要。</summary>
 internal sealed class HealthOverviewDialog : Form
 {
     private readonly Label _score = new();
     private readonly Label _dims = new();
-    private readonly Label _profile = new();
     private readonly ListView _issues = new();
     private readonly TextBox _insights = new();
 
     public HealthOverviewDialog()
     {
-        Text = AppLang.L("健康总览 · Server 优化与健康助手", "Health overview · Server health assistant");
+        Text = AppLang.L("健康总览", "Health overview");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -22,30 +21,16 @@ internal sealed class HealthOverviewDialog : Form
         BackColor = AppTheme.Surface;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var workflow = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = UiScale.S(36),
-            TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = AppTheme.PrimaryDark,
-            Font = UiFit.UiFontBold(9.5f),
-            Text = AppLang.L(
-                "①环境识别 → ②健康检查 → ③优化建议 → ④安全执行 → ⑤验证/回滚 → ⑥持续巡检",
-                "①Profile → ②Health → ③Advice → ④Apply → ⑤Verify/Rollback → ⑥Inspect"),
-        };
 
-        var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(110), BackColor = AppTheme.SurfaceCard };
+        var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(84), BackColor = AppTheme.SurfaceCard };
         _score.Font = UiFit.UiFontBold(28f);
         _score.ForeColor = AppTheme.Primary;
         _score.Location = new Point(16, 12);
         _score.AutoSize = true;
-        _dims.Location = new Point(16, 58);
+        _dims.Location = new Point(16, 52);
         _dims.AutoSize = true;
         _dims.ForeColor = AppTheme.TextMain;
-        _profile.Location = new Point(16, 82);
-        _profile.AutoSize = true;
-        _profile.ForeColor = AppTheme.TextMute;
-        head.Controls.AddRange([_score, _dims, _profile]);
+        head.Controls.AddRange([_score, _dims]);
 
         var actions = new FlowLayoutPanel
         {
@@ -86,7 +71,7 @@ internal sealed class HealthOverviewDialog : Form
         _issues.Columns.Add(AppLang.L("建议", "Hint"), 220);
 
         _insights.Dock = DockStyle.Bottom;
-        _insights.Height = UiScale.S(160);
+        _insights.Height = UiScale.S(140);
         _insights.Multiline = true;
         _insights.ScrollBars = ScrollBars.Vertical;
         _insights.ReadOnly = true;
@@ -97,7 +82,6 @@ internal sealed class HealthOverviewDialog : Form
         body.Controls.Add(_insights);
         body.Controls.Add(actions);
         body.Controls.Add(head);
-        body.Controls.Add(workflow);
         Controls.Add(body);
 
         Load += (_, _) => RefreshReport();
@@ -111,7 +95,6 @@ internal sealed class HealthOverviewDialog : Form
             "性能 {0} · 稳定 {1} · 安全 {2} · 网络 {3} · 存储 {4} · 系统 {5}",
             "Perf {0} · Stab {1} · Sec {2} · Net {3} · Stor {4} · Sys {5}",
             r.Performance, r.Stability, r.Security, r.Network, r.Storage, r.System);
-        _profile.Text = AppLang.L("用途：", "Profile: ") + r.ProfileSummary;
         _issues.Items.Clear();
         foreach (var i in r.Issues)
         {
@@ -212,14 +195,6 @@ internal sealed class PortExposureDialog : Form
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var tip = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 36,
-            Text = AppLang.L("关注 3389/445/22 等是否监听 0.0.0.0（全网卡）。",
-                "Watch 3389/445/22 listening on 0.0.0.0 (all interfaces)."),
-            ForeColor = AppTheme.TextMute,
-        };
         var list = new ListView
         {
             Dock = DockStyle.Fill,
@@ -249,7 +224,6 @@ internal sealed class PortExposureDialog : Form
             list.Items.Add(row);
         }
         body.Controls.Add(list);
-        body.Controls.Add(tip);
         Controls.Add(body);
     }
 }
@@ -270,14 +244,6 @@ internal sealed class ScheduledTaskDialog : Form
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var tip = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 40,
-            Text = AppLang.L("核心/安全任务禁止关闭；遥测类通常可禁用。不会一键全关。",
-                "Core/security tasks locked; telemetry often safe. No “disable all”."),
-            ForeColor = AppTheme.TextMute,
-        };
         _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
         _list.FullRowSelect = true;
@@ -302,7 +268,6 @@ internal sealed class ScheduledTaskDialog : Form
 
         body.Controls.Add(_list);
         body.Controls.Add(bar);
-        body.Controls.Add(tip);
         Controls.Add(body);
         Load += (_, _) => Reload();
     }
