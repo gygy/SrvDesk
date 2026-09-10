@@ -107,21 +107,11 @@ internal sealed class ServerProfileDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(440, 520);
+        ClientSize = new Size(440, 480);
         Font = UiFit.UiFont;
         BackColor = AppTheme.SurfaceCard;
 
-        var tip = new Label
-        {
-            Text = AppLang.L(
-                "先识别用途，再给建议。不要盲目关服务。\r\n可点「自动探测」合并本机已装角色。",
-                "Identify purpose first. Don’t disable services blindly.\r\nUse Detect to merge installed roles."),
-            Location = new Point(16, 12),
-            Size = new Size(400, 48),
-            ForeColor = AppTheme.TextMute,
-        };
-
-        var y = 68;
+        var y = 16;
         foreach (ServerRoleFlags f in Enum.GetValues(typeof(ServerRoleFlags)))
         {
             if (f == ServerRoleFlags.None) continue;
@@ -152,13 +142,13 @@ internal sealed class ServerProfileDialog : Form
         _level.SelectedIndex = (int)ServerProfile.Level;
         UiFit.FitCombo(_level);
 
-        _inspect.Text = AppLang.L("启用持续健康巡检（约每 6 小时写报告）", "Enable health inspection (~every 6h)");
+        _inspect.Text = AppLang.L("启用持续健康巡检（约每 6 小时）", "Enable health inspection (~every 6h)");
         _inspect.Location = new Point(20, y + 70);
         _inspect.AutoSize = true;
         _inspect.Checked = ServerProfile.Load().HealthInspectionEnabled;
 
         var detect = ThemedSettingsChrome.CreateButton(AppLang.L("自动探测", "Detect"), false);
-        detect.Location = new Point(20, 470);
+        detect.Location = new Point(20, 430);
         detect.Click += (_, _) =>
         {
             ServerRoleDetector.MergeDetectedIntoProfile();
@@ -166,7 +156,7 @@ internal sealed class ServerProfileDialog : Form
                 kv.Value.Checked = ServerProfile.Has(kv.Key);
         };
         var save = ThemedSettingsChrome.CreateButton(AppLang.L("保存", "Save"), true);
-        save.Location = new Point(320, 470);
+        save.Location = new Point(320, 430);
         save.Click += (_, _) =>
         {
             ServerRoleFlags roles = ServerRoleFlags.None;
@@ -184,7 +174,7 @@ internal sealed class ServerProfileDialog : Form
             Close();
         };
 
-        Controls.AddRange([tip, _level, _inspect, detect, save]);
+        Controls.AddRange([_level, _inspect, detect, save]);
         AcceptButton = save;
     }
 }

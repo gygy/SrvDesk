@@ -51,7 +51,7 @@ internal sealed class HealthOverviewDialog : Form
         AddBtn("优化建议…", "Advice…", () => { using var d = new RecommendCenterDialog(); d.ShowDialog(this); });
         AddBtn("端口暴露…", "Ports…", () => { using var d = new PortExposureDialog(); d.ShowDialog(this); });
         AddBtn("计划任务…", "Tasks…", () => { using var d = new ScheduledTaskDialog(); d.ShowDialog(this); });
-        AddBtn("优化历史…", "History…", () => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); });
+        AddBtn("回滚优化…", "Rollback…", () => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); });
         AddBtn("立即巡检", "Inspect now", () =>
         {
             var path = HealthInspectionService.RunOnce(silent: false);
@@ -322,7 +322,7 @@ internal sealed class OptimizationHistoryDialog : Form
 {
     public OptimizationHistoryDialog()
     {
-        Text = AppLang.L("优化历史 / 回滚入口", "Optimization history / rollback");
+        Text = AppLang.L("回滚优化", "Rollback optimization");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -331,14 +331,6 @@ internal sealed class OptimizationHistoryDialog : Form
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
-        var tip = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 40,
-            Text = AppLang.L("服务启动类型可通过快照还原；系统还原点请用系统 rstrui。",
-                "Service start types restore via snapshots; OS restore points via rstrui."),
-            ForeColor = AppTheme.TextMute,
-        };
         var list = new ListView
         {
             Dock = DockStyle.Fill,
@@ -374,7 +366,6 @@ internal sealed class OptimizationHistoryDialog : Form
         bar.Controls.AddRange([snap, rstrui]);
         body.Controls.Add(list);
         body.Controls.Add(bar);
-        body.Controls.Add(tip);
         Controls.Add(body);
     }
 }

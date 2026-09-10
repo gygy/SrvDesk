@@ -22,11 +22,11 @@ This public repo has **docs + license only** (no source). Get the binary from Re
 2. **Tools → Server profile** — roles + optimization level (Detect / Safe / Standard / Deep)  
 3. **Tools → Health overview** — score & issues  
 4. Review advice; **Apply** shows a change plan first  
-5. **Tools → History / rollback** for service snapshots or `rstrui`
+5. **Tools → Rollback optimization** for service snapshots or `rstrui`
 
 ## Tools (health assistant)
 
-Health overview · Server profile · Recommendations · Ports & exposure · Scheduled tasks · History/rollback · plus existing cleanup, features, security center, shutdown timer, etc.
+Health overview · Server profile · Recommendations · Ports & exposure · Rollback optimization · plus existing cleanup, features, security center, shutdown timer, etc.
 
 ## Design rule
 

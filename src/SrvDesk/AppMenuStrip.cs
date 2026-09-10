@@ -25,7 +25,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolServerProfile { get; }
     public ToolStripMenuItem ToolRecommendCenter { get; }
     public ToolStripMenuItem ToolPortExposure { get; }
-    public ToolStripMenuItem ToolScheduledTasks { get; }
     public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolPowerExtras { get; }
@@ -88,8 +87,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolServerProfile = Item(AppLang.L("服务器用途...", "Server profile..."), MenuIcons.Identity);
         ToolRecommendCenter = Item(AppLang.L("优化建议中心...", "Recommendations..."), MenuIcons.Quick);
         ToolPortExposure = Item(AppLang.L("端口与暴露面...", "Ports & exposure..."), MenuIcons.SecurityCenter);
-        ToolScheduledTasks = Item(AppLang.L("计划任务优化...", "Scheduled tasks..."), MenuIcons.TaskScheduler);
-        ToolOptHistory = Item(AppLang.L("优化历史 / 回滚...", "History / rollback..."), MenuIcons.Restore);
+        ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
         ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
@@ -101,7 +99,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
-            ToolHealthOverview, ToolServerProfile, ToolRecommendCenter, ToolPortExposure, ToolScheduledTasks, ToolOptHistory,
+            ToolHealthOverview, ToolServerProfile, ToolRecommendCenter, ToolPortExposure, ToolOptHistory,
             new ToolStripSeparator(),
             ToolAutologon, ToolIdentity, ToolSystemInfo,
             new ToolStripSeparator(),

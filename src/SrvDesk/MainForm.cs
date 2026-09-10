@@ -618,7 +618,6 @@ internal sealed class MainForm : Form
         _appMenu.ToolServerProfile.Click += (_, _) => { using var d = new ServerProfileDialog(); d.ShowDialog(this); };
         _appMenu.ToolRecommendCenter.Click += (_, _) => { using var d = new RecommendCenterDialog(); d.ShowDialog(this); };
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
-        _appMenu.ToolScheduledTasks.Click += (_, _) => { using var d = new ScheduledTaskDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
         _appMenu.ToolPowerExtras.Click += (_, _) =>
