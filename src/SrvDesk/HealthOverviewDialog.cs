@@ -1,55 +1,45 @@
 namespace SrvDesk;
 
-/// <summary>优化顾问：评分、①–⑥诊断流程、问题列表与资源摘要。</summary>
+/// <summary>优化顾问：按侧栏标签页归类的「未达推荐」诊断（可折叠）。</summary>
 internal sealed class HealthOverviewDialog : Form
 {
-    private readonly Label _score = new();
-    private readonly Label _dims = new();
-    private readonly ListView _issues = new();
-    private readonly TextBox _insights = new();
-
-    public HealthOverviewDialog()
+    private readonly MainForm? _main;
+    private readonly Label _summary = new();
+    private readonly BufferedPanel _scroll = new(composited: false)
     {
+        Dock = DockStyle.Fill,
+        AutoScroll = true,
+        BackColor = AppTheme.Surface,
+        Padding = new Padding(0, 4, 0, 0),
+    };
+
+    public HealthOverviewDialog(MainForm? main = null)
+    {
+        _main = main;
         Text = AppLang.L("优化顾问", "Optimization advisor");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(860, 640);
+        ClientSize = new Size(900, 660);
         MinimumSize = new Size(720, 520);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        // 打开瞬间避免 WS_EX_COMPOSITED 黑闪：本窗体不用 CreateBodyPanel 的 composited 壳
+
         var body = new BufferedPanel(composited: false)
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(12),
             BackColor = AppTheme.Surface,
         };
-        var workflow = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = UiScale.S(36),
-            TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = AppTheme.PrimaryDark,
-            BackColor = AppTheme.Surface,
-            Font = UiFit.UiFontBold(9.5f),
-            Text = AppLang.L(
-                "①环境识别 → ②健康检查 → ③优化建议 → ④安全执行 → ⑤验证/回滚 → ⑥持续巡检",
-                "①Profile → ②Health → ③Advice → ④Apply → ⑤Verify/Rollback → ⑥Inspect"),
-        };
 
-        var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(84), BackColor = AppTheme.SurfaceCard };
-        _score.Font = UiFit.UiFontBold(28f);
-        _score.ForeColor = AppTheme.Primary;
-        _score.Location = new Point(16, 12);
-        _score.AutoSize = true;
-        _score.BackColor = Color.Transparent;
-        _dims.Location = new Point(16, 52);
-        _dims.AutoSize = true;
-        _dims.ForeColor = AppTheme.TextMain;
-        _dims.BackColor = Color.Transparent;
-        head.Controls.AddRange([_score, _dims]);
+        var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(56), BackColor = AppTheme.SurfaceCard };
+        _summary.Font = UiFit.UiFontBold(14f);
+        _summary.ForeColor = AppTheme.Primary;
+        _summary.Location = new Point(16, 16);
+        _summary.AutoSize = true;
+        _summary.BackColor = Color.Transparent;
+        head.Controls.Add(_summary);
 
         var actions = new FlowLayoutPanel
         {
@@ -59,77 +49,256 @@ internal sealed class HealthOverviewDialog : Form
             WrapContents = false,
             BackColor = AppTheme.Surface,
         };
-        void AddBtn(string zh, string en, Action a)
+        var refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新诊断", "Refresh"), false);
+        refresh.Margin = new Padding(0, 0, 8, 0);
+        refresh.Click += (_, _) => Reload();
+        var profile = ThemedSettingsChrome.CreateButton(AppLang.L("服务器用途…", "Profile…"), false);
+        profile.Click += (_, _) =>
         {
-            var b = ThemedSettingsChrome.CreateButton(AppLang.L(zh, en), false);
-            b.Margin = new Padding(0, 0, 8, 0);
-            b.Click += (_, _) => a();
-            actions.Controls.Add(b);
-        }
-        AddBtn("刷新评分", "Refresh", RefreshReport);
-        AddBtn("服务器用途…", "Profile…", () => { using var d = new ServerProfileDialog(); d.ShowDialog(this); RefreshReport(); });
-        AddBtn("优化建议…", "Advice…", () => { using var d = new RecommendCenterDialog(); d.ShowDialog(this); });
-        AddBtn("端口暴露…", "Ports…", () => { using var d = new PortExposureDialog(); d.ShowDialog(this); });
-        AddBtn("计划任务…", "Tasks…", () => { using var d = new ScheduledTaskDialog(); d.ShowDialog(this); });
-        AddBtn("回滚优化…", "Rollback…", () => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); });
-        AddBtn("立即巡检", "Inspect now", () =>
-        {
-            var path = HealthInspectionService.RunOnce(silent: false);
-            MessageBox.Show(this, AppLang.L("报告已写入：", "Report written: ") + path, Text,
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-            RefreshReport();
-        });
+            using var d = new ServerProfileDialog();
+            d.ShowDialog(this);
+            Reload();
+        };
+        actions.Controls.Add(refresh);
+        actions.Controls.Add(profile);
 
-        _issues.Dock = DockStyle.Fill;
-        _issues.View = View.Details;
-        _issues.FullRowSelect = true;
-        _issues.BackColor = AppTheme.SurfaceCard;
-        _issues.Columns.Add(AppLang.L("风险", "Risk"), 50);
-        _issues.Columns.Add(AppLang.L("领域", "Area"), 70);
-        _issues.Columns.Add(AppLang.L("问题", "Issue"), 180);
-        _issues.Columns.Add(AppLang.L("详情", "Detail"), 220);
-        _issues.Columns.Add(AppLang.L("建议", "Hint"), 220);
-        _issues.HandleCreated += (_, _) => UiBuffer.EnableListView(_issues);
-
-        _insights.Multiline = true;
-        _insights.ScrollBars = ScrollBars.Vertical;
-        _insights.ReadOnly = true;
-        _insights.BackColor = AppTheme.SurfaceCard;
-
-        var issuesHost = ThemedSettingsChrome.CreateSoftBorderHost(_issues, DockStyle.Fill);
-        var insightsHost = ThemedSettingsChrome.CreateSoftBorderHost(
-            _insights, DockStyle.Bottom, height: UiScale.S(140));
-
-        body.Controls.Add(issuesHost);
-        body.Controls.Add(insightsHost);
+        body.Controls.Add(_scroll);
         body.Controls.Add(actions);
         body.Controls.Add(head);
-        body.Controls.Add(workflow);
         Controls.Add(body);
 
-        Load += (_, _) => RefreshReport();
+        Load += (_, _) => Reload();
+        Resize += (_, _) => LayoutGroups();
     }
 
-    private void RefreshReport()
+    private void Reload()
     {
-        var r = HealthScoreEngine.Evaluate();
-        _score.Text = AppLang.Lf("健康度  {0} / 100", "Health  {0} / 100", r.Total);
-        _dims.Text = AppLang.Lf(
-            "性能 {0} · 稳定 {1} · 安全 {2} · 网络 {3} · 存储 {4} · 系统 {5}",
-            "Perf {0} · Stab {1} · Sec {2} · Net {3} · Stor {4} · Sys {5}",
-            r.Performance, r.Stability, r.Security, r.Network, r.Storage, r.System);
-        _issues.Items.Clear();
-        foreach (var i in r.Issues)
+        var main = _main ?? Owner as MainForm;
+        IReadOnlyList<TabOptimizeGroup> groups = Array.Empty<TabOptimizeGroup>();
+        if (main is not null)
+            groups = main.CollectTabOptimizeFindings(refreshFromSystem: true);
+
+        var total = groups.Sum(g => g.Findings.Count);
+        _summary.Text = total == 0
+            ? AppLang.L("未发现需优化项（已达推荐值）", "Nothing to optimize — matches recommendations")
+            : AppLang.Lf("待优化 {0} 项 · {1} 个标签页", "{0} items · {1} tabs", total, groups.Count);
+
+        _scroll.SuspendLayout();
+        _scroll.Controls.Clear();
+        var y = 0;
+        var width = Math.Max(200, _scroll.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4);
+        foreach (var g in groups)
         {
-            var row = new ListViewItem(OptimizationLevelUi.RiskText(i.Risk));
-            row.SubItems.Add(i.Area);
-            row.SubItems.Add(i.Title);
-            row.SubItems.Add(i.Detail);
-            row.SubItems.Add(i.Hint);
-            row.ForeColor = OptimizationLevelUi.RiskColor(i.Risk);
-            _issues.Items.Add(row);
+            var panel = BuildCollapsibleGroup(g, width);
+            panel.Location = new Point(0, y);
+            _scroll.Controls.Add(panel);
+            y += panel.Height + UiScale.S(8);
         }
-        _insights.Text = DiskMemoryNetworkInsights.BuildReportText();
+        _scroll.ResumeLayout(true);
+        LayoutGroups();
+    }
+
+    private void LayoutGroups()
+    {
+        var width = Math.Max(200, _scroll.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4);
+        var y = 0;
+        foreach (Control c in _scroll.Controls)
+        {
+            c.Width = width;
+            if (c.Tag is GroupChrome chrome)
+                chrome.ApplyWidth(width);
+            c.Location = new Point(0, y);
+            y += c.Height + UiScale.S(8);
+        }
+    }
+
+    private Panel BuildCollapsibleGroup(TabOptimizeGroup group, int width)
+    {
+        const int headerH = 36;
+        var rowH = Math.Max(28, UiFit.LineHeight() + 10);
+        var findings = group.Findings;
+
+        var section = new BufferedPanel
+        {
+            Width = width,
+            Height = headerH + findings.Count * rowH,
+            BackColor = AppTheme.SurfaceCard,
+            Tag = null,
+        };
+
+        var head = new BufferedPanel
+        {
+            Location = new Point(0, 0),
+            Size = new Size(width, headerH),
+            BackColor = AppTheme.GroupBg,
+            Cursor = Cursors.Hand,
+        };
+        var arrow = new Label
+        {
+            Text = "▼",
+            Location = new Point(UiScale.S(12), UiScale.S(9)),
+            AutoSize = true,
+            ForeColor = AppTheme.PrimaryDark,
+            Font = new Font(UiFit.UiFontFamily, 8F),
+            BackColor = Color.Transparent,
+        };
+        var titleLabel = new Label
+        {
+            Text = AppLang.Lf("{0}（{1}）", "{0} ({1})", group.TabTitle, findings.Count),
+            Location = new Point(UiScale.S(32), 0),
+            Size = new Size(width - UiScale.S(40), headerH),
+            ForeColor = AppTheme.TextHeader,
+            Font = UiFit.UiFontBold(),
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = Color.Transparent,
+        };
+        head.Controls.Add(arrow);
+        head.Controls.Add(titleLabel);
+
+        var body = new BufferedPanel
+        {
+            Location = new Point(0, headerH),
+            Size = new Size(width, findings.Count * rowH),
+            BackColor = AppTheme.SurfaceCard,
+        };
+
+        // 表头
+        var colHeader = BuildFindingRow(
+            AppLang.L("项目", "Item"),
+            AppLang.L("当前", "Current"),
+            AppLang.L("推荐", "Recommended"),
+            AppLang.L("强度", "Level"),
+            AppLang.L("说明", "Hint"),
+            0, rowH, width, AppTheme.PrimaryPale, header: true);
+        body.Controls.Add(colHeader);
+
+        for (var i = 0; i < findings.Count; i++)
+        {
+            var f = findings[i];
+            var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
+            var title = string.IsNullOrWhiteSpace(f.SectionTitle) || f.SectionTitle == group.TabTitle
+                ? f.ItemTitle
+                : f.SectionTitle + " · " + f.ItemTitle;
+            body.Controls.Add(BuildFindingRow(
+                title,
+                f.CurrentValue,
+                f.RecommendedValue,
+                RecommendLevelUi.Title(f.Level),
+                f.Hint,
+                (i + 1) * rowH,
+                rowH,
+                width,
+                bg,
+                header: false,
+                level: f.Level));
+        }
+
+        body.Height = (findings.Count + 1) * rowH;
+        section.Height = headerH + body.Height;
+
+        var chrome = new GroupChrome(section, head, body, arrow, titleLabel, headerH);
+        section.Tag = chrome;
+
+        void Toggle(object? _, EventArgs __)
+        {
+            chrome.Expanded = !chrome.Expanded;
+            arrow.Text = chrome.Expanded ? "▼" : "▶";
+            body.Visible = chrome.Expanded;
+            section.Height = chrome.Expanded ? headerH + body.Height : headerH;
+            LayoutGroups();
+        }
+
+        head.Click += Toggle;
+        arrow.Click += Toggle;
+        titleLabel.Click += Toggle;
+
+        section.Controls.Add(body);
+        section.Controls.Add(head);
+        return section;
+    }
+
+    private static Control BuildFindingRow(
+        string item,
+        string current,
+        string recommend,
+        string levelText,
+        string hint,
+        int y,
+        int h,
+        int width,
+        Color bg,
+        bool header,
+        RecommendLevel level = RecommendLevel.Suggested)
+    {
+        var wrap = new BufferedPanel
+        {
+            Location = new Point(0, y),
+            Size = new Size(width, h),
+            BackColor = bg,
+        };
+
+        var pad = UiScale.S(10);
+        var wItem = Math.Max(160, (int)(width * 0.32));
+        var wCur = Math.Max(70, (int)(width * 0.12));
+        var wRec = Math.Max(70, (int)(width * 0.12));
+        var wLvl = Math.Max(72, (int)(width * 0.12));
+        var wHint = Math.Max(80, width - pad * 2 - wItem - wCur - wRec - wLvl);
+
+        Label Cell(string text, int x, int w, Color fg, bool bold = false) => new()
+        {
+            Text = text,
+            Location = new Point(x, 0),
+            Size = new Size(w, h),
+            ForeColor = fg,
+            Font = bold ? UiFit.UiFontBold(9f) : UiFit.UiFont,
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = Color.Transparent,
+            AutoEllipsis = true,
+        };
+
+        var x = pad;
+        wrap.Controls.Add(Cell(item, x, wItem, header ? AppTheme.TextHeader : AppTheme.TextMain, header));
+        x += wItem;
+        wrap.Controls.Add(Cell(current, x, wCur, header ? AppTheme.TextHeader : AppTheme.TextMute, header));
+        x += wCur;
+        wrap.Controls.Add(Cell(recommend, x, wRec, header ? AppTheme.TextHeader : AppTheme.PrimaryDark, header));
+        x += wRec;
+        var lvlFg = header ? AppTheme.TextHeader : RecommendLevelUi.ForeColorOf(level);
+        wrap.Controls.Add(Cell(levelText, x, wLvl, lvlFg, header));
+        x += wLvl;
+        wrap.Controls.Add(Cell(hint, x, wHint, header ? AppTheme.TextHeader : AppTheme.TextMute, header));
+        return wrap;
+    }
+
+    private sealed class GroupChrome
+    {
+        private readonly Panel _section;
+        private readonly Panel _head;
+        private readonly Panel _body;
+        private readonly Label _title;
+
+        public bool Expanded { get; set; } = true;
+        public Label Arrow { get; }
+
+        public GroupChrome(Panel section, Panel head, Panel body, Label arrow, Label title, int headerH)
+        {
+            _section = section;
+            _head = head;
+            _body = body;
+            Arrow = arrow;
+            _title = title;
+            _ = headerH;
+        }
+
+        public void ApplyWidth(int width)
+        {
+            _section.Width = width;
+            _head.Width = width;
+            _body.Width = width;
+            _title.Width = Math.Max(80, width - UiScale.S(40));
+            foreach (Control row in _body.Controls)
+                row.Width = width;
+        }
     }
 }
 

@@ -614,7 +614,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
-        _appMenu.ToolOptimizeAdvisor.Click += (_, _) => { using var d = new HealthOverviewDialog(); d.ShowDialog(this); };
+        _appMenu.ToolOptimizeAdvisor.Click += (_, _) => { using var d = new HealthOverviewDialog(this); d.ShowDialog(this); };
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
@@ -2231,6 +2231,119 @@ internal sealed class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// 按侧栏标签页归类：相对推荐值仍未优化的条目（仅需优化项）。
+    /// </summary>
+    internal IReadOnlyList<TabOptimizeGroup> CollectTabOptimizeFindings(bool refreshFromSystem)
+    {
+        if (refreshFromSystem)
+            BindFromSystem(fullScan: false);
+
+        var facts = _systemFacts;
+        var hide = _hideIncompatible.Checked;
+        var byTab = new Dictionary<string, List<TabOptimizeFinding>>(StringComparer.Ordinal);
+
+        foreach (var (tabTitle, sections) in _groups)
+        {
+            foreach (var (sectionTitle, rows) in sections)
+            {
+                foreach (var row in rows)
+                {
+                    if (!row.MatchesFilter("", facts, hide))
+                        continue;
+                    if (row.Checked)
+                        continue;
+
+                    if (!byTab.TryGetValue(tabTitle, out var list))
+                    {
+                        list = [];
+                        byTab[tabTitle] = list;
+                    }
+
+                    var hint = row.Help.WhenHint;
+                    if (string.IsNullOrWhiteSpace(hint))
+                        hint = row.Help.ListNote;
+                    list.Add(new TabOptimizeFinding
+                    {
+                        TabTitle = tabTitle,
+                        SectionTitle = sectionTitle,
+                        ItemTitle = row.ItemText,
+                        CurrentValue = row.CurrentValueText,
+                        RecommendedValue = row.RecommendedValueText,
+                        Level = row.Help.Recommend,
+                        Hint = hint,
+                    });
+                }
+            }
+        }
+
+        var serviceTab = AppLang.L("服务优化", "Service optimize");
+        try
+        {
+            foreach (var svc in ServiceOptimizeHelper.LoadApplicable(installedOnly: true))
+            {
+                if (!svc.CanOptimize)
+                    continue;
+                if (!byTab.TryGetValue(serviceTab, out var list))
+                {
+                    list = [];
+                    byTab[serviceTab] = list;
+                }
+
+                var recommendText = svc.Recommend switch
+                {
+                    ServiceRecommend.Disable => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Disabled),
+                    ServiceRecommend.Manual => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Manual),
+                    ServiceRecommend.Auto => ServiceOptimizeHelper.StartTypeLabel(ServiceStartTypeKind.Automatic),
+                    _ => "—",
+                };
+                list.Add(new TabOptimizeFinding
+                {
+                    TabTitle = serviceTab,
+                    SectionTitle = AppLang.L(svc.Entry.CategoryZh, svc.Entry.CategoryEn),
+                    ItemTitle = string.IsNullOrWhiteSpace(svc.DisplayName) ? svc.ActualServiceName : svc.DisplayName,
+                    CurrentValue = ServiceOptimizeHelper.StartTypeLabel(svc.StartType),
+                    RecommendedValue = recommendText,
+                    Level = svc.OptimizeLevel,
+                    Hint = string.IsNullOrWhiteSpace(svc.AdviceNote) ? svc.AdviceTag : svc.AdviceNote,
+                });
+            }
+        }
+        catch
+        {
+            /* 服务枚举失败时仍返回开关诊断 */
+        }
+
+        var result = new List<TabOptimizeGroup>();
+        foreach (var title in MenuItems)
+        {
+            if (!byTab.TryGetValue(title, out var findings) || findings.Count == 0)
+                continue;
+            findings.Sort((a, b) =>
+            {
+                var c = b.Level.CompareTo(a.Level);
+                return c != 0 ? c : string.Compare(a.ItemTitle, b.ItemTitle, StringComparison.CurrentCultureIgnoreCase);
+            });
+            result.Add(new TabOptimizeGroup { TabTitle = title, Findings = findings });
+        }
+
+        foreach (var kv in byTab)
+        {
+            if (result.Exists(g => g.TabTitle == kv.Key))
+                continue;
+            if (kv.Value.Count == 0)
+                continue;
+            kv.Value.Sort((a, b) =>
+            {
+                var c = b.Level.CompareTo(a.Level);
+                return c != 0 ? c : string.Compare(a.ItemTitle, b.ItemTitle, StringComparison.CurrentCultureIgnoreCase);
+            });
+            result.Add(new TabOptimizeGroup { TabTitle = kv.Key, Findings = kv.Value });
+        }
+
+        return result;
+    }
+
     private void LoadState(bool fullScan = false, bool forceUi = false)
     {
         if (fullScan && forceUi)
@@ -3265,6 +3378,29 @@ internal sealed class MainForm : Form
             }
 
             _current.ForeColor = Checked ? AppTheme.PrimaryDark : AppTheme.TextMute;
+        }
+
+        public string CurrentValueText
+        {
+            get
+            {
+                SyncCurrentValueFromState();
+                return _current.Text;
+            }
+        }
+
+        public string RecommendedValueText
+        {
+            get
+            {
+                if (HasChoice && _choice is not null
+                    && _optimizedIndex >= 0 && _optimizedIndex < _choice.Items.Count)
+                {
+                    return _choice.Items[_optimizedIndex]?.ToString()
+                        ?? AppLang.L("开启", "On");
+                }
+                return AppLang.L("开启", "On");
+            }
         }
 
         public bool MatchesFilter(string query, SystemFacts facts, bool hideIncompatibleDesktop)
