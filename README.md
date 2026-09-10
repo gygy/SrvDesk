@@ -4,7 +4,7 @@
 **先识别用途 → 健康检查 → 可解释建议 → 干跑确认 → 执行 → 验证/回滚 → 持续巡检**。  
 不盲目关闭服务，在性能、稳定、安全、兼容之间求平衡。
 
-当前版本：**1.0.31** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
+当前版本：**1.0.32** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
 
 [English](README_en.md)
 

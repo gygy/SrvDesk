@@ -11,6 +11,12 @@ All notable changes to SrvDesk are documented here.
 - Service dependency/risk explain + profile-protected services; startup advice tags; Features profile tips (SMB1 highlighted)
 - Presets: Home server / Docker host / NAS profile templates
 
+## [1.0.32] - 2026-09-11
+
+### Changed
+
+- Optimization advisor: only Strong/Must unset items; silent apply (no change-plan/restore prompts); removed group “Set recommended”; shorter header
+
 ## [1.0.31] - 2026-09-09
 
 ### Added

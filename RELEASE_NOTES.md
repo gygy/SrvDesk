@@ -1,19 +1,19 @@
-﻿# SrvDesk v1.0.31
+﻿# SrvDesk v1.0.32
 
 ## 中文
 
-- **工具 → 定时关机**：布局对齐 Shutdown Agent；支持关机 / 重启 / 注销 / 睡眠 / 休眠 / 锁定
-- 可按「之后」倒计时或「定时」时刻执行；强制结束进程；接近执行时托盘图标闪烁
-- 定时未取消时可关窗后台继续，托盘双击可再打开
-- 定时关机菜单图标改为电源键 + 倒计时弧（自绘）
+- **工具 → 优化顾问**：按本机真实状态诊断；仅列出未达推荐且「强烈推荐 / 必优化」的项
+- 「应用到系统」不再弹变更计划/还原点，勾选后（未勾则处理列表全部）立即写入并刷新
+- 去掉分组「本组设为推荐」；顶栏只保留简洁「待优化 N 项」
+- 设为推荐后列表同步减少；服务类项设推荐即写启动类型
 
 下载：单文件 `SrvDesk.exe`（轻度混淆），请以管理员身份运行。
 
 ## English
 
-- **Tools → Shutdown timer**: layout aligned with Shutdown Agent; shutdown / restart / log off / suspend / hibernate / lock
-- Countdown ("In") or clock time ("At"); force-close apps; tray icon blinks near execution
-- Timer can keep running in the tray after closing the dialog; double-click tray to reopen
-- New self-drawn menu icon (power + countdown arc)
+- **Tools → Optimization advisor**: diagnose from real local settings; only show unset items that are Strongly recommended / Must
+- **Apply to system** writes immediately (no change-plan / restore-point prompts) and refreshes; if nothing is checked, applies the whole list
+- Removed per-group “Set group recommended”; header shows a short pending count only
+- Setting recommended shrinks the list; service items write start type immediately
 
 Download `SrvDesk.exe` (lightly obfuscated) and run as Administrator.
