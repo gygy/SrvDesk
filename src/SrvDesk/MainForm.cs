@@ -2232,7 +2232,7 @@ internal sealed class MainForm : Form
     }
 
     /// <summary>
-    /// 按侧栏标签页归类：相对推荐值仍未优化的条目（仅需优化项）。
+    /// 按侧栏标签页归类：本机实际未达推荐，且为强烈推荐/必优化的条目。
     /// </summary>
     internal IReadOnlyList<TabOptimizeGroup> CollectTabOptimizeFindings(bool refreshFromSystem)
     {
@@ -2252,6 +2252,9 @@ internal sealed class MainForm : Form
                     if (!row.MatchesFilter("", facts, hide))
                         continue;
                     if (row.Checked)
+                        continue;
+                    // 顾问只列：本机未达推荐，且强烈推荐/必优化（体验提升大）
+                    if (row.Help.Recommend < RecommendLevel.Strong)
                         continue;
 
                     if (!byTab.TryGetValue(tabTitle, out var list))
@@ -2284,6 +2287,8 @@ internal sealed class MainForm : Form
             foreach (var svc in ServiceOptimizeHelper.LoadApplicable(installedOnly: true))
             {
                 if (!svc.CanOptimize)
+                    continue;
+                if (svc.OptimizeLevel < RecommendLevel.Strong)
                     continue;
                 if (!byTab.TryGetValue(serviceTab, out var list))
                 {
@@ -2415,60 +2420,77 @@ internal sealed class MainForm : Form
         return (settings, services, errors, resolvedKeys);
     }
 
-    /// <summary>主界面勾选相对基线是否仍有待写入差量（供优化顾问判断）。</summary>
-    internal bool HasPendingToggleDiff()
+    /// <summary>优化顾问：静默写入（无还原点/变更计划弹窗），按当前勾选与系统差量立即生效。</summary>
+    /// <returns>ok=未中止；wrote=确有写入；errors=单项失败信息。</returns>
+    internal (bool ok, bool wrote, List<string> errors) ApplyToSystemFromAdvisorSilent()
     {
+        var errors = new List<string>();
+        var savedStatus = _status.Text;
+        _apply.Enabled = false;
+        _restore.Enabled = false;
         try
         {
-            var target = CaptureState();
-            var baseline = _baselineState;
-            if (baseline is null)
-                baseline = Optimizer.Read(fullScan: false);
-            return ChangePlanBuilder.FromToggleDiff(target, baseline, ServerProfile.Level).Items.Count > 0;
-        }
-        catch
-        {
-            return _uiDirty;
-        }
-    }
-
-    /// <summary>优化顾问：走与底部「应用到系统」相同的干跑/写入流程。</summary>
-    /// <param name="hostDialog">顾问窗体；应用期间先隐藏，避免变更计划/还原点对话框被挡住。</param>
-    /// <returns>ok=用户未取消；wrote=确实执行了写入（非仅检测、非 0 差量）。</returns>
-    internal (bool ok, bool wrote) ApplyToSystemFromAdvisor(Form? hostDialog = null)
-    {
-        var hidden = false;
-        if (hostDialog is { IsDisposed: false, Visible: true })
-        {
-            hostDialog.Hide();
-            hidden = true;
-        }
-
-        try
-        {
-            var ok = RunApply(
-                AppLang.L("正在写入系统…", "Writing to system…"),
-                AppLang.L("已写入本次改动。", "Changes written."));
-            if (!ok)
-                return (false, false);
-
-            var wrote = Optimizer.LastApplyActionCount > 0
-                        && ServerProfile.Level != OptimizationLevel.DetectOnly;
-            if (wrote)
+            // 自动登录新勾选但缺账户：静默跳过该项，避免弹窗
+            var skipAutologon = false;
+            if (_autologon.Checked)
             {
-                // 同步读回，避免顾问列表仍按写前状态展示；不依赖异步 LoadState 竞态
-                BindFromSystem(fullScan: false);
+                var alreadyOn = _baselineState?.EnableAutologon == true;
+                if (!alreadyOn && !HasAutologonCredentials() && !TryHydrateAutologonFromSystem())
+                {
+                    skipAutologon = true;
+                    _autologon.Checked = false;
+                }
             }
 
-            return (ok, wrote);
+            SyncInvisibleRowsFromSystem();
+            var target = CaptureState();
+            if (skipAutologon && _baselineState is not null)
+                target.EnableAutologon = _baselineState.EnableAutologon;
+
+            var baseline = _baselineState;
+            if (baseline is null)
+            {
+                try { baseline = Optimizer.Read(fullScan: false); }
+                catch { /* keep null */ }
+            }
+
+            _status.Text = AppLang.L("正在写入系统…", "Writing to system…");
+            Application.DoEvents();
+
+            ApplyLog.BeginBatch(AppLang.L("优化顾问静默应用", "Advisor silent apply"));
+            errors.AddRange(Optimizer.Apply(target, baseline));
+            ApplyLog.WriteApply(AppLang.L("优化顾问应用到系统", "Advisor apply to system"), errors);
+            OptimizationHistory.Add(
+                AppLang.L("优化顾问", "Advisor"),
+                AppLang.Lf("尝试 {0} 项，错误 {1}", "Attempted {0}, errors {1}", Optimizer.LastApplyActionCount, errors.Count));
+
+            var wrote = Optimizer.LastApplyActionCount > 0;
+            if (wrote)
+            {
+                _uiDirty = false;
+                BindFromSystem(fullScan: false);
+                if (!_autologon.Checked) _autologonSettings = null;
+                RefreshAutologonDisplay();
+            }
+
+            _status.Text = wrote
+                ? AppLang.Lf("已写入 {0} 项。", "Wrote {0} item(s).", Optimizer.LastApplyActionCount)
+                : (errors.Count > 0
+                    ? AppLang.L("写入未完成。", "Write incomplete.")
+                    : AppLang.L("没有需要写入的更改。", "No changes to write."));
+            return (true, wrote, errors);
+        }
+        catch (Exception ex)
+        {
+            errors.Add(ex.Message);
+            _status.Text = AppLang.L("操作失败：", "Operation failed: ") + ex.Message;
+            return (false, false, errors);
         }
         finally
         {
-            if (hidden && hostDialog is { IsDisposed: false })
-            {
-                hostDialog.Show();
-                hostDialog.Activate();
-            }
+            UpdateBottomActionEnablement();
+            if (string.IsNullOrEmpty(_status.Text))
+                _status.Text = savedStatus;
         }
     }
 

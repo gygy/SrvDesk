@@ -1,6 +1,6 @@
 namespace SrvDesk;
 
-/// <summary>优化顾问：按侧栏标签页归类的「未达推荐」诊断（可勾选 / 批量设推荐 / 应用到系统）。</summary>
+/// <summary>优化顾问：按侧栏归类的「本机未达 + 强烈/必优化」诊断（可勾选 / 批量设推荐 / 静默应用到系统）。</summary>
 internal sealed class HealthOverviewDialog : Form
 {
     private readonly MainForm? _main;
@@ -112,7 +112,7 @@ internal sealed class HealthOverviewDialog : Form
         Btn("全选", "Select all", false, () => SetAllChecked(true));
         Btn("全不选", "Select none", false, () => SetAllChecked(false));
         Btn("设为推荐值", "Set recommended", false, ApplyRecommendedSelected);
-        Btn("应用到系统…", "Apply to system…", true, ApplyToSystem);
+        Btn("应用到系统", "Apply to system", true, ApplyToSystem);
 
         footer.Controls.Add(bar);
         return footer;
@@ -222,13 +222,9 @@ internal sealed class HealthOverviewDialog : Form
         };
 
         var selectAll = MakeHeaderLink(AppLang.L("全选", "Select all"));
-        var setGroup = MakeHeaderLink(AppLang.L("本组设为推荐", "Set group recommended"));
         void LayoutHeaderLinks()
         {
-            var gap = UiScale.S(12);
             var x = width - UiScale.S(12);
-            setGroup.Location = new Point(x - setGroup.Width, (headerH - setGroup.Height) / 2);
-            x = setGroup.Left - gap;
             selectAll.Location = new Point(x - selectAll.Width, (headerH - selectAll.Height) / 2);
             titleLabel.Width = Math.Max(80, selectAll.Left - titleLabel.Left - 8);
         }
@@ -239,17 +235,10 @@ internal sealed class HealthOverviewDialog : Form
             foreach (var r in groupRows)
                 r.Check.Checked = on;
         };
-        setGroup.Click += (_, _) =>
-        {
-            foreach (var r in groupRows)
-                r.Check.Checked = true;
-            ApplyRecommendedSelected();
-        };
 
         head.Controls.Add(arrow);
         head.Controls.Add(titleLabel);
         head.Controls.Add(selectAll);
-        head.Controls.Add(setGroup);
         LayoutHeaderLinks();
 
         var body = new BufferedPanel
@@ -276,7 +265,7 @@ internal sealed class HealthOverviewDialog : Form
 
         section.Height = headerH + body.Height;
 
-        var chrome = new GroupChrome(section, head, body, arrow, titleLabel, selectAll, setGroup, headerH, LayoutHeaderLinks);
+        var chrome = new GroupChrome(section, head, body, arrow, titleLabel, selectAll, headerH, LayoutHeaderLinks);
         section.Tag = chrome;
         _groups.Add(chrome);
 
@@ -500,53 +489,36 @@ internal sealed class HealthOverviewDialog : Form
             return;
         }
 
-        // 若有勾选项且尚未设推荐，先设推荐再应用
+        // 未勾选则处理列表中全部（已是本机未达 + 强烈/必优化）
         var selected = _rows.Where(r => r.Check.Checked).Select(r => r.Finding).ToList();
-        var settings = 0;
-        var services = 0;
-        if (selected.Count > 0)
+        if (selected.Count == 0)
+            selected = _rows.Select(r => r.Finding).ToList();
+        if (selected.Count == 0)
+            return;
+
+        UseWaitCursor = true;
+        try
         {
             var r = main.ApplyRecommendedFindings(selected);
-            settings = r.settings;
-            services = r.services;
             foreach (var key in r.resolvedKeys)
                 _sessionResolved.Add(key);
-            if (r.errors.Count > 0)
+
+            // 服务已在设推荐时写入；开关差量静默落盘（无还原点/变更计划弹窗）
+            var (ok, _, errors) = main.ApplyToSystemFromAdvisorSilent();
+            var allErrors = r.errors.Concat(errors).ToList();
+            if (!ok || allErrors.Count > 0)
             {
                 MessageBox.Show(this,
-                    AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", r.errors),
+                    AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", allErrors),
                     Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-        }
-        else if (!main.HasPendingToggleDiff())
-        {
-            MessageBox.Show(this,
-                AppLang.L("请先勾选要应用的项，或先点「设为推荐值」。", "Select items first, or Set recommended."),
-                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
 
-        // 仅服务：设推荐时已写入启动类型，无需再走开关变更计划
-        if (settings == 0 && services > 0 && !main.HasPendingToggleDiff())
-        {
-            Reload(refreshFromSystem: true);
-            return;
-        }
-
-        var (ok, wrote) = main.ApplyToSystemFromAdvisor(this);
-        if (!ok)
-            return;
-
-        if (wrote)
-        {
-            // 已同步读回系统：清空会话遮罩，按真实状态重建
             _sessionResolved.Clear();
-            Reload(refreshFromSystem: false);
+            Reload(refreshFromSystem: true);
         }
-        else
+        finally
         {
-            // 仅检测 / 无差量：保留「已设推荐」遮罩，列表继续减少
-            Reload(refreshFromSystem: false);
+            UseWaitCursor = false;
         }
     }
 
@@ -579,9 +551,6 @@ internal sealed class HealthOverviewDialog : Form
         private readonly Panel _section;
         private readonly Panel _head;
         private readonly Panel _body;
-        private readonly Label _title;
-        private readonly LinkLabel _selectAll;
-        private readonly LinkLabel _setGroup;
         private readonly Action _layoutLinks;
 
         public bool Expanded { get; set; } = true;
@@ -594,7 +563,6 @@ internal sealed class HealthOverviewDialog : Form
             Label arrow,
             Label title,
             LinkLabel selectAll,
-            LinkLabel setGroup,
             int headerH,
             Action layoutLinks)
         {
@@ -602,10 +570,9 @@ internal sealed class HealthOverviewDialog : Form
             _head = head;
             _body = body;
             Arrow = arrow;
-            _title = title;
-            _selectAll = selectAll;
-            _setGroup = setGroup;
             _layoutLinks = layoutLinks;
+            _ = title;
+            _ = selectAll;
             _ = headerH;
         }
 
