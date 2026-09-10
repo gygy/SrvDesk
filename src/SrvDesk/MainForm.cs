@@ -2355,21 +2355,15 @@ internal sealed class MainForm : Form
     /// 优化顾问：把选中项设为推荐态。
     /// 开关只改主界面勾选；服务立即写启动类型（与服务优化页一致）。
     /// </summary>
-    internal (int settings, int services, List<string> errors) ApplyRecommendedFindings(
+    internal (int settings, int services, List<string> errors, List<string> resolvedKeys) ApplyRecommendedFindings(
         IReadOnlyList<TabOptimizeFinding> findings)
     {
         var settings = 0;
         var services = 0;
         var errors = new List<string>();
+        var resolvedKeys = new List<string>();
         if (findings.Count == 0)
-            return (0, 0, errors);
-
-        var byTitle = new Dictionary<string, SettingRow>(StringComparer.Ordinal);
-        foreach (var row in AllRows)
-        {
-            if (!byTitle.ContainsKey(row.ItemText))
-                byTitle[row.ItemText] = row;
-        }
+            return (0, 0, errors, resolvedKeys);
 
         _binding = true;
         try
@@ -2385,6 +2379,7 @@ internal sealed class MainForm : Form
                     {
                         ServiceOptimizeHelper.SetStartType(f.ServiceName, f.ServiceTarget);
                         services++;
+                        resolvedKeys.Add(TabOptimizeFinding.KeyOf(f));
                     }
                     catch (Exception ex)
                     {
@@ -2393,13 +2388,20 @@ internal sealed class MainForm : Form
                     continue;
                 }
 
-                if (!byTitle.TryGetValue(f.ItemTitle, out var row))
+                var row = FindSettingRowByItemTitle(f.ItemTitle);
+                if (row is null)
+                {
+                    errors.Add(AppLang.Lf("未找到开关：{0}", "Toggle not found: {0}", f.ItemTitle));
                     continue;
-                if (row.Checked)
-                    continue;
-                row.Checked = true;
+                }
+
+                if (!row.Checked)
+                {
+                    row.Checked = true;
+                    settings++;
+                }
                 row.SyncCurrentValueFromState();
-                settings++;
+                resolvedKeys.Add(TabOptimizeFinding.KeyOf(f));
             }
         }
         finally
@@ -2410,12 +2412,46 @@ internal sealed class MainForm : Form
         if (settings > 0)
             _uiDirty = true;
 
-        return (settings, services, errors);
+        return (settings, services, errors, resolvedKeys);
     }
 
     /// <summary>优化顾问：走与底部「应用到系统」相同的干跑/写入流程。</summary>
-    internal bool ApplyToSystemFromAdvisor() =>
-        RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written."));
+    /// <returns>ok=用户未取消；wrote=确实执行了写入（非仅检测、非 0 差量）。</returns>
+    internal (bool ok, bool wrote) ApplyToSystemFromAdvisor()
+    {
+        var ok = RunApply(
+            AppLang.L("正在写入系统…", "Writing to system…"),
+            AppLang.L("已写入本次改动。", "Changes written."));
+        if (!ok)
+            return (false, false);
+
+        var wrote = Optimizer.LastApplyActionCount > 0
+                    && ServerProfile.Level != OptimizationLevel.DetectOnly;
+        if (wrote)
+        {
+            // 同步读回，避免顾问列表仍按写前状态展示；不依赖异步 LoadState 竞态
+            BindFromSystem(fullScan: false);
+        }
+
+        return (ok, wrote);
+    }
+
+    /// <summary>按侧栏分组查找开关行（与诊断列表同源）。</summary>
+    private SettingRow? FindSettingRowByItemTitle(string itemTitle)
+    {
+        foreach (var (_, sections) in _groups)
+        {
+            foreach (var (_, rows) in sections)
+            {
+                foreach (var row in rows)
+                {
+                    if (string.Equals(row.ItemText, itemTitle, StringComparison.Ordinal))
+                        return row;
+                }
+            }
+        }
+        return null;
+    }
 
 
     private void LoadState(bool fullScan = false, bool forceUi = false)

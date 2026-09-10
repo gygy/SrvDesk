@@ -19,6 +19,11 @@ internal sealed class TabOptimizeFinding
 
     /// <summary>服务推荐启动类型（仅 IsService）。</summary>
     public ServiceStartTypeKind ServiceTarget { get; set; } = ServiceStartTypeKind.Unknown;
+
+    public static string KeyOf(TabOptimizeFinding f) =>
+        f.IsService
+            ? "svc:" + f.ServiceName
+            : "set:" + f.TabTitle + "|" + f.ItemTitle;
 }
 
 /// <summary>按侧栏标签页归类的诊断组。</summary>

@@ -7,6 +7,8 @@ internal sealed class HealthOverviewDialog : Form
     private readonly Label _summary = new();
     private readonly List<FindingRowChrome> _rows = [];
     private readonly List<GroupChrome> _groups = [];
+    /// <summary>本会话已设为推荐/已处理的项，避免刷新时又跳回来。</summary>
+    private readonly HashSet<string> _sessionResolved = new(StringComparer.Ordinal);
     private readonly BufferedPanel _scroll = new(composited: false)
     {
         Dock = DockStyle.Fill,
@@ -54,7 +56,11 @@ internal sealed class HealthOverviewDialog : Form
         };
         var refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新诊断", "Refresh"), false);
         refresh.Margin = new Padding(0, 0, 8, 0);
-        refresh.Click += (_, _) => Reload(refreshFromSystem: true);
+        refresh.Click += (_, _) =>
+        {
+            _sessionResolved.Clear();
+            Reload(refreshFromSystem: true);
+        };
         var profile = ThemedSettingsChrome.CreateButton(AppLang.L("服务器用途…", "Profile…"), false);
         profile.Click += (_, _) =>
         {
@@ -130,6 +136,8 @@ internal sealed class HealthOverviewDialog : Form
         if (main is not null)
             groups = main.CollectTabOptimizeFindings(refreshFromSystem);
 
+        groups = ApplySessionFilter(groups);
+
         var total = groups.Sum(g => g.Findings.Count);
         _summary.Text = total == 0
             ? AppLang.L("未发现需优化项（已达推荐值）", "Nothing to optimize — matches recommendations")
@@ -151,6 +159,22 @@ internal sealed class HealthOverviewDialog : Form
         _scroll.ResumeLayout(true);
         LayoutGroups();
         UpdateFooterHint();
+    }
+
+    private IReadOnlyList<TabOptimizeGroup> ApplySessionFilter(IReadOnlyList<TabOptimizeGroup> groups)
+    {
+        if (_sessionResolved.Count == 0)
+            return groups;
+
+        var result = new List<TabOptimizeGroup>();
+        foreach (var g in groups)
+        {
+            var kept = g.Findings.Where(f => !_sessionResolved.Contains(TabOptimizeFinding.KeyOf(f))).ToList();
+            if (kept.Count == 0)
+                continue;
+            result.Add(new TabOptimizeGroup { TabTitle = g.TabTitle, Findings = kept });
+        }
+        return result;
     }
 
     private void LayoutGroups()
@@ -468,29 +492,35 @@ internal sealed class HealthOverviewDialog : Form
             return;
         }
 
-        var (settings, services, errors) = main.ApplyRecommendedFindings(findings);
+        var (settings, services, errors, resolvedKeys) = main.ApplyRecommendedFindings(findings);
+        foreach (var key in resolvedKeys)
+            _sessionResolved.Add(key);
+
         if (errors.Count > 0)
         {
             MessageBox.Show(this,
                 AppLang.L("部分失败：\r\n", "Some failed:\r\n") + string.Join("\r\n", errors),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
-        else if (settings + services == 0)
+        else if (settings + services == 0 && resolvedKeys.Count == 0)
         {
             MessageBox.Show(this,
                 AppLang.L("没有可设置的项。", "Nothing to set."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
-        else
-        {
-            _summary.Text = AppLang.Lf(
-                "已设推荐：开关 {0} · 服务 {1}。开关请再点「应用到系统…」写入。",
-                "Set recommended: {0} toggle(s) · {1} service(s). Use Apply to write toggles.",
-                settings, services);
-        }
 
         if (reload)
+        {
+            // 不要从系统重绑：否则未写入时会把刚勾上的推荐冲掉，列表又涨回去
             Reload(refreshFromSystem: false);
+            if (settings + services > 0 || resolvedKeys.Count > 0)
+            {
+                _summary.Text = AppLang.Lf(
+                    "已设推荐：开关 {0} · 服务 {1}。待优化已同步减少；开关请再点「应用到系统…」写入。",
+                    "Set recommended: {0} toggle(s) · {1} service(s). List updated; Apply to write toggles.",
+                    settings, services);
+            }
+        }
         else
             UpdateFooterHint();
     }
@@ -506,18 +536,35 @@ internal sealed class HealthOverviewDialog : Form
             return;
         }
 
-        // 若有勾选项且尚未设推荐，先设推荐再应用，减少两步遗漏
+        // 若有勾选项且尚未设推荐，先设推荐再应用
         var selected = _rows.Where(r => r.Check.Checked).Select(r => r.Finding).ToList();
         if (selected.Count > 0)
-            main.ApplyRecommendedFindings(selected);
-
-        var ok = main.ApplyToSystemFromAdvisor();
-        Reload(refreshFromSystem: true);
-        if (ok)
         {
+            var (_, _, _, keys) = main.ApplyRecommendedFindings(selected);
+            foreach (var key in keys)
+                _sessionResolved.Add(key);
+        }
+
+        var (ok, wrote) = main.ApplyToSystemFromAdvisor();
+        if (!ok)
+            return;
+
+        if (wrote)
+        {
+            // 已同步读回系统：清空会话遮罩，按真实状态重建
+            _sessionResolved.Clear();
+            Reload(refreshFromSystem: false);
             _summary.Text = AppLang.L(
-                "已请求应用到系统（详见主窗口状态栏）。",
-                "Apply requested (see main window status).");
+                "已写入系统，待优化列表已按当前状态更新。",
+                "Applied. Pending list refreshed from current state.");
+        }
+        else
+        {
+            // 仅检测 / 无差量：保留「已设推荐」遮罩，列表继续减少
+            Reload(refreshFromSystem: false);
+            _summary.Text = AppLang.L(
+                "未写入新变更（仅检测或无差量）。已设推荐的项仍从待优化中隐藏；可点「刷新诊断」核对系统。",
+                "Nothing new written (detect-only or no diff). Recommended items stay hidden; Refresh to re-check system.");
         }
     }
 
