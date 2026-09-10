@@ -383,6 +383,37 @@ internal static class ThemedSettingsChrome
         };
     }
 
+    /// <summary>
+    /// 浅色 1px 边框宿主：去掉 ListView/TextBox 默认黑边（Fixed3D/FixedSingle）。
+    /// </summary>
+    public static Panel CreateSoftBorderHost(Control inner, DockStyle dock = DockStyle.Fill, int? height = null)
+    {
+        switch (inner)
+        {
+            case ListView lv:
+                lv.BorderStyle = BorderStyle.None;
+                break;
+            case TextBox tb:
+                tb.BorderStyle = BorderStyle.None;
+                break;
+            case TreeView tv:
+                tv.BorderStyle = BorderStyle.None;
+                break;
+        }
+
+        inner.Dock = DockStyle.Fill;
+        var host = new BufferedPanel
+        {
+            Dock = dock,
+            Padding = new Padding(1),
+            BackColor = AppTheme.BorderLight,
+        };
+        if (height is int h)
+            host.Height = h;
+        host.Controls.Add(inner);
+        return host;
+    }
+
     public static FlowLayoutPanel CreateToggleStack()
     {
         var p = new BufferedFlowLayoutPanel

@@ -19,14 +19,20 @@ internal sealed class HealthOverviewDialog : Form
         MinimumSize = new Size(720, 520);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-
-        var body = ThemedSettingsChrome.CreateBodyPanel();
+        // 打开瞬间避免 WS_EX_COMPOSITED 黑闪：本窗体不用 CreateBodyPanel 的 composited 壳
+        var body = new BufferedPanel(composited: false)
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(12),
+            BackColor = AppTheme.Surface,
+        };
         var workflow = new Label
         {
             Dock = DockStyle.Top,
             Height = UiScale.S(36),
             TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = AppTheme.PrimaryDark,
+            BackColor = AppTheme.Surface,
             Font = UiFit.UiFontBold(9.5f),
             Text = AppLang.L(
                 "①环境识别 → ②健康检查 → ③优化建议 → ④安全执行 → ⑤验证/回滚 → ⑥持续巡检",
@@ -38,9 +44,11 @@ internal sealed class HealthOverviewDialog : Form
         _score.ForeColor = AppTheme.Primary;
         _score.Location = new Point(16, 12);
         _score.AutoSize = true;
+        _score.BackColor = Color.Transparent;
         _dims.Location = new Point(16, 52);
         _dims.AutoSize = true;
         _dims.ForeColor = AppTheme.TextMain;
+        _dims.BackColor = Color.Transparent;
         head.Controls.AddRange([_score, _dims]);
 
         var actions = new FlowLayoutPanel
@@ -49,6 +57,7 @@ internal sealed class HealthOverviewDialog : Form
             Height = UiFit.ControlHeight() + 12,
             Padding = new Padding(0, 8, 0, 4),
             WrapContents = false,
+            BackColor = AppTheme.Surface,
         };
         void AddBtn(string zh, string en, Action a)
         {
@@ -80,17 +89,19 @@ internal sealed class HealthOverviewDialog : Form
         _issues.Columns.Add(AppLang.L("问题", "Issue"), 180);
         _issues.Columns.Add(AppLang.L("详情", "Detail"), 220);
         _issues.Columns.Add(AppLang.L("建议", "Hint"), 220);
+        _issues.HandleCreated += (_, _) => UiBuffer.EnableListView(_issues);
 
-        _insights.Dock = DockStyle.Bottom;
-        _insights.Height = UiScale.S(140);
         _insights.Multiline = true;
         _insights.ScrollBars = ScrollBars.Vertical;
         _insights.ReadOnly = true;
         _insights.BackColor = AppTheme.SurfaceCard;
-        _insights.BorderStyle = BorderStyle.FixedSingle;
 
-        body.Controls.Add(_issues);
-        body.Controls.Add(_insights);
+        var issuesHost = ThemedSettingsChrome.CreateSoftBorderHost(_issues, DockStyle.Fill);
+        var insightsHost = ThemedSettingsChrome.CreateSoftBorderHost(
+            _insights, DockStyle.Bottom, height: UiScale.S(140));
+
+        body.Controls.Add(issuesHost);
+        body.Controls.Add(insightsHost);
         body.Controls.Add(actions);
         body.Controls.Add(head);
         body.Controls.Add(workflow);
