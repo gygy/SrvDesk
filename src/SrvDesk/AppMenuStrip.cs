@@ -86,7 +86,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolHealthOverview = Item(AppLang.L("健康总览...", "Health overview..."), MenuIcons.SystemInfo);
         ToolServerProfile = Item(AppLang.L("服务器用途...", "Server profile..."), MenuIcons.Identity);
         ToolRecommendCenter = Item(AppLang.L("优化建议中心...", "Recommendations..."), MenuIcons.Quick);
-        ToolPortExposure = Item(AppLang.L("端口与暴露面...", "Ports & exposure..."), MenuIcons.SecurityCenter);
+        ToolPortExposure = Item(AppLang.L("端口暴露...", "Port exposure..."), MenuIcons.SecurityCenter);
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
         ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);

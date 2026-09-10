@@ -26,7 +26,7 @@ This public repo has **docs + license only** (no source). Get the binary from Re
 
 ## Tools (health assistant)
 
-Health overview · Server profile · Recommendations · Ports & exposure · Rollback optimization · plus existing cleanup, features, security center, shutdown timer, etc.
+Health overview · Server profile · Recommendations · Port exposure · Rollback optimization · plus existing cleanup, features, security center, shutdown timer, etc.
 
 ## Design rule
 

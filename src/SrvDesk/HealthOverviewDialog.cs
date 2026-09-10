@@ -186,7 +186,7 @@ internal sealed class PortExposureDialog : Form
 {
     public PortExposureDialog()
     {
-        Text = AppLang.L("端口与暴露面", "Ports & exposure");
+        Text = AppLang.L("端口暴露", "Port exposure");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
