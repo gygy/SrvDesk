@@ -247,9 +247,9 @@ internal static class ServiceOptimizeCatalog
         // —— 性能 ——
         E("SysMain", "SysMain（超级抓取）", "SysMain (Superfetch)",
             "性能", "Performance", ServiceOsTarget.All,
-            ServiceRecommend.Disable, ServiceRecommend.Disable,
-            "【应禁用】超级抓取，建议禁",
-            "Disable SysMain/Superfetch."),
+            ServiceRecommend.Manual, ServiceRecommend.Manual,
+            "【按需】物理机默认可保留；虚拟机/SSD 可关",
+            "Optional: keep on physical PCs; OK to disable on VMs/SSDs."),
         E("PcaSvc", "程序兼容性助手", "Program Compatibility Assistant",
             "性能", "Performance", ServiceOsTarget.All,
             ServiceRecommend.Disable, ServiceRecommend.Disable,
@@ -267,9 +267,9 @@ internal static class ServiceOptimizeCatalog
             "P2P update delivery; set to manual if unused."),
         E("WSearch", "Windows Search", "Windows Search",
             "性能", "Performance", ServiceOsTarget.All,
-            ServiceRecommend.Disable, ServiceRecommend.Disable,
-            "【应禁用】占资源，可用 Everything",
-            "Heavy; Everything can replace it."),
+            ServiceRecommend.Manual, ServiceRecommend.Keep,
+            "【按需】桌面搜索建议保留；NAS/海量文件服务器再考虑关",
+            "Keep for desktop search; disable mainly on NAS/file servers."),
 
         // —— 安全相关（谨慎） ——
         E("RemoteRegistry", "远程注册表", "Remote Registry",

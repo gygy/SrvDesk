@@ -2011,7 +2011,7 @@ internal sealed class MainForm : Form
         var ordered = (SettingRow[])rows.Clone();
         Array.Sort(ordered, (a, b) =>
         {
-            var byLevel = b.Help.Recommend.CompareTo(a.Help.Recommend);
+            var byLevel = b.EffectiveRecommend.CompareTo(a.EffectiveRecommend);
             if (byLevel != 0)
                 return byLevel;
             return string.Compare(a.ItemText, b.ItemText, StringComparison.CurrentCultureIgnoreCase);
@@ -2253,8 +2253,9 @@ internal sealed class MainForm : Form
                         continue;
                     if (row.Checked)
                         continue;
-                    // 顾问只列：本机未达推荐，且强烈推荐/必优化（体验提升大）
-                    if (row.Help.Recommend < RecommendLevel.Strong)
+                    // 顾问只列：本机未达推荐，且有效强度 ≥ 推荐（强烈推荐/推荐）
+                    var level = row.EffectiveRecommend;
+                    if (level < RecommendRules.AdvisorMinLevel)
                         continue;
 
                     if (!byTab.TryGetValue(tabTitle, out var list))
@@ -2273,7 +2274,7 @@ internal sealed class MainForm : Form
                         ItemTitle = row.ItemText,
                         CurrentValue = row.CurrentValueText,
                         RecommendedValue = row.RecommendedValueText,
-                        Level = row.Help.Recommend,
+                        Level = level,
                         Hint = hint,
                         IsService = false,
                     });
@@ -2288,7 +2289,8 @@ internal sealed class MainForm : Form
             {
                 if (!svc.CanOptimize)
                     continue;
-                if (svc.OptimizeLevel < RecommendLevel.Strong)
+                var level = svc.OptimizeLevelFor(facts);
+                if (level < RecommendRules.AdvisorMinLevel)
                     continue;
                 if (!byTab.TryGetValue(serviceTab, out var list))
                 {
@@ -2313,7 +2315,7 @@ internal sealed class MainForm : Form
                     ItemTitle = string.IsNullOrWhiteSpace(svc.DisplayName) ? svc.ActualServiceName : svc.DisplayName,
                     CurrentValue = ServiceOptimizeHelper.StartTypeLabel(svc.StartType),
                     RecommendedValue = recommendText,
-                    Level = svc.OptimizeLevel,
+                    Level = level,
                     Hint = string.IsNullOrWhiteSpace(svc.AdviceNote) ? svc.AdviceTag : svc.AdviceNote,
                     IsService = true,
                     ServiceName = svc.ActualServiceName,
@@ -3363,6 +3365,7 @@ internal sealed class MainForm : Form
 
         public string ItemText { get; }
         public SettingHelpInfo Help { get; }
+        public RecommendLevel EffectiveRecommend => Help.EffectiveRecommend(_systemFacts);
         public Action<SettingRow>? OnCheckedChanged { get; set; }
         public bool HasChoice => _choice is not null;
 
@@ -3582,7 +3585,7 @@ internal sealed class MainForm : Form
                 || Help.ListNote.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.UiPlace.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || Help.Scope.FormatBadges().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || RecommendLevelUi.Title(Help.Recommend).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || RecommendLevelUi.Title(EffectiveRecommend).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _system.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
                 || _current.Text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
@@ -3653,7 +3656,7 @@ internal sealed class MainForm : Form
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, AppLang.L("查看说明与配置脚本\r\n", "View notes & config script\r\n") + tip);
             toolTip.SetToolTip(_script, AppLang.L("配置脚本：查看/编辑开启与关闭脚本", "Config script: view/edit on/off scripts"));
-            toolTip.SetToolTip(_level, RecommendLevelUi.Tip(Help.Recommend));
+            toolTip.SetToolTip(_level, RecommendLevelUi.Tip(EffectiveRecommend));
             toolTip.SetToolTip(_note,
                 (Help.WhenHint.Length > 0 ? AppLang.L("建议：", "When: ") + Help.WhenHint + "\r\n" : "") +
                 (Help.UiPlace.Length > 0 ? AppLang.L("对应：", "Where: ") + Help.UiPlace : Help.ListNote));
@@ -3764,7 +3767,7 @@ internal sealed class MainForm : Form
             using (var brush = new SolidBrush(bg))
                 g.FillRectangle(brush, label.ClientRectangle);
 
-            RecommendLevelUi.DrawStarsInBounds(g, Help.Recommend, label.ClientRectangle, paddingLeft: 2);
+            RecommendLevelUi.DrawStarsInBounds(g, EffectiveRecommend, label.ClientRectangle, paddingLeft: 2);
         }
     }
 }

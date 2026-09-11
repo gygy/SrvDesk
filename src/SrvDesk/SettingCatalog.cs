@@ -100,8 +100,10 @@ internal static class SettingCatalog
         L("禁用 SysMain（原 Superfetch）超级预读服务。", "Disable the SysMain (formerly Superfetch) prefetch service."),
         L("停止并禁用 SysMain 服务，减少 SSD 上不必要的预读。", "Stop and disable SysMain to cut unnecessary SSD prefetch."),
         L("降低磁盘占用与后台 I/O，SSD/虚拟机环境更安静。", "Lower disk use and background I/O; quieter on SSD/VMs."),
-        L("机械硬盘且内存较小可保留开启；SSD 桌面 Server 推荐禁用。", "Keep on for small-RAM HDDs; recommended off on SSD desktop Servers."),
-        L("服务停止后立即生效。", "Takes effect as soon as the service stops."));
+        L("机械硬盘且内存较小可保留；虚拟机可关；物理 SSD 个人用途按需（高级）。",
+            "Keep on small-RAM HDDs; OK off on VMs; optional on physical SSD desktops."),
+        L("服务停止后立即生效。", "Takes effect as soon as the service stops."),
+        recommend: RecommendLevel.Suggested);
 
     public static readonly SettingHelpInfo VisualBestPerf = H(
         L("关闭窗口动画、阴影等视觉效果，设为最佳性能。", "Turn off window animations/shadows and set visual effects for best performance."),
@@ -451,7 +453,8 @@ internal static class SettingCatalog
         L("立即生效（下次打开服务器管理器）。", "Takes effect immediately (next Server Manager open)."),
         new SettingScope(serverOnly: true, minServer: "2019+"),
         uiPlace: L("开机弹窗「立即尝试 WAC 并 Azure Arc」", "Boot popup: Try WAC and Azure Arc"),
-        whenHint: L("烦人就开", "Enable if it annoys you"));
+        whenHint: L("烦人就开", "Enable if it annoys you"),
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo DisableAzureArc = H(
         L("禁止 Azure Arc 托盘程序开机自启。", "Prevent Azure Arc tray app from starting at logon."),
@@ -779,21 +782,23 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo ExcludeMsrtFromWu = H(
         L("Windows 更新不含恶意软件删除工具。", "Exclude the Malicious Software Removal Tool from Windows Update."), L("MRT DontOfferThroughWUAU=1。", "MRT DontOfferThroughWUAU=1."), L("减少每月 MSRT 包。", "Fewer monthly MSRT packages."), L("需自行维护杀软。", "Maintain your own antivirus."), L("下次更新扫描生效。", "Applies on the next update scan."));
     public static readonly SettingHelpInfo DisableMeltdownSpectre = H(
-        L("关闭 Meltdown/Spectre 微码缓解。", "Disable Meltdown/Spectre mitigations."), L("FeatureSettingsOverride=3。", "FeatureSettingsOverride=3."), L("部分旧 CPU 可提升性能。", "May improve performance on some older CPUs."), L("降低侧信道防护，仅内网可信机建议。", "Weaker side-channel protection; trusted LAN hosts only."), L("需重启。", "Requires reboot."),
+        L("关闭 Meltdown/Spectre 微码缓解。", "Disable Meltdown/Spectre mitigations."), L("FeatureSettingsOverride=3。", "FeatureSettingsOverride=3."), L("部分旧 CPU 可提升性能。", "May improve performance on some older CPUs."),         L("降低侧信道防护，仅可信内网且知情同意；不作为常规优化。", "Weaker side-channel protection; trusted LAN only — not routine optimize."), L("需重启。", "Requires reboot."),
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableMemoryIntegrity = H(
-        L("关闭内存完整性（HVCI）。", "Disable Memory Integrity (HVCI)."), L("HypervisorEnforcedCodeIntegrity Enabled=0。", "HypervisorEnforcedCodeIntegrity Enabled=0."), L("减少虚拟化开销、兼容部分驱动。", "Less virtualization overhead; better for some drivers."), L("降低内核防护。", "Weaker kernel protection."), L("需重启。", "Requires reboot."), W10,
+        L("关闭内存完整性（HVCI）。", "Disable Memory Integrity (HVCI)."), L("HypervisorEnforcedCodeIntegrity Enabled=0。", "HypervisorEnforcedCodeIntegrity Enabled=0."), L("减少虚拟化开销、兼容部分驱动。", "Less virtualization overhead; better for some drivers."), L("降低内核防护；属高级安全兼容项，非性能一键优化。", "Weaker kernel protection; advanced compatibility — not one-click perf."), L("需重启。", "Requires reboot."), W10,
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableWdac = H(
-        L("关闭 WDAC 应用控制策略部署。", "Disable WDAC application control policy deployment."), L("ConfigCIPolicyEnable=0。", "ConfigCIPolicyEnable=0."), L("避免企业策略误拦程序。", "Avoid enterprise policies blocking apps by mistake."), L("有合规 WDAC 时勿开。", "Do not enable if you need compliance WDAC."), L("需重启。", "Requires reboot."), W10,
+        L("关闭 WDAC 应用控制策略部署。", "Disable WDAC application control policy deployment."), L("ConfigCIPolicyEnable=0。", "ConfigCIPolicyEnable=0."), L("避免企业策略误拦程序。", "Avoid enterprise policies blocking apps by mistake."), L("有合规 WDAC 时勿开；不作为常规优化。", "Do not enable if you need compliance WDAC; not routine optimize."), L("需重启。", "Requires reboot."), W10,
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableVbs = H(
-        L("强制关闭基于虚拟化的安全性。", "Force-disable Virtualization-based Security."), L("EnableVirtualizationBasedSecurity=0。", "EnableVirtualizationBasedSecurity=0."), L("减少 VBS 性能损耗。", "Less VBS performance cost."), L("Credential Guard/HVCI 将不可用。", "Credential Guard / HVCI will be unavailable."), L("需重启。", "Requires reboot."), W10,
+        L("强制关闭基于虚拟化的安全性。", "Force-disable Virtualization-based Security."), L("EnableVirtualizationBasedSecurity=0。", "EnableVirtualizationBasedSecurity=0."), L("减少 VBS 性能损耗。", "Less VBS performance cost."), L("Credential Guard/HVCI 将不可用；高级项，勿一键全开。", "Credential Guard / HVCI unavailable; advanced — not one-click."), L("需重启。", "Requires reboot."), W10,
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo EnableTcpBbr2 = H(
-        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC。", "Fails on unsupported OS and keeps CUBIC."), L("立即生效。", "Takes effect immediately."), W10);
+        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC；属高级网络项。", "Fails on unsupported OS and keeps CUBIC; advanced networking."), L("立即生效。", "Takes effect immediately."), W10,
+        recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo DisableSystemRestore = H(
-        L("禁用系统还原。", "Disable System Restore."), L("DisableSR=1。", "DisableSR=1."), L("节省还原点磁盘。", "Saves restore-point disk space."), L("将无法一键回滚系统。", "You cannot one-click roll back the OS."), L("立即生效。", "Takes effect immediately."));
+        L("禁用系统还原。", "Disable System Restore."), L("DisableSR=1。", "DisableSR=1."), L("节省还原点磁盘。", "Saves restore-point disk space."), L("将无法一键回滚系统；不推荐作常规优化。", "You cannot one-click roll back the OS; not routine optimize."), L("立即生效。", "Takes effect immediately."),
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo DisableCeip = H(
         L("关闭微软客户体验改善计划。", "Disable Microsoft Customer Experience Improvement Program."), L("CEIPEnable=0。", "CEIPEnable=0."), L("减少遥测。", "Less telemetry."), L("与关闭 DiagTrack 互补。", "Complements disabling DiagTrack."), L("立即生效。", "Takes effect immediately."));
     public static readonly SettingHelpInfo DisableDiagnosticPolicy = H(

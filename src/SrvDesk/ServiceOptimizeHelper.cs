@@ -61,21 +61,14 @@ internal sealed class ServiceOptimizeRow
         _ => 0,
     };
 
-    /// <summary>与桌面优化「推荐值」同一套五星等级：表示仍需优化的程度。</summary>
-    public RecommendLevel OptimizeLevel
+    /// <summary>与桌面优化「推荐值」同一套星级：按 OS/场景解析后的「仍需优化」强度。</summary>
+    public RecommendLevel OptimizeLevel => OptimizeLevelFor(null);
+
+    public RecommendLevel OptimizeLevelFor(SystemFacts? facts)
     {
-        get
-        {
-            if (!CanOptimize)
-                return RecommendLevel.Optional;
-            return Recommend switch
-            {
-                ServiceRecommend.Disable => RecommendLevel.Must,
-                ServiceRecommend.Manual => RecommendLevel.Strong,
-                ServiceRecommend.Auto => RecommendLevel.Suggested,
-                _ => RecommendLevel.Optional,
-            };
-        }
+        if (!CanOptimize)
+            return RecommendLevel.Optional;
+        return RecommendRules.ResolveService(ActualServiceName, Recommend, facts);
     }
 
     public bool MatchesRecommend

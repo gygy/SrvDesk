@@ -12,7 +12,7 @@ internal sealed class SettingHelpInfo
     public string UiPlace { get; }
     /// <summary>何时建议优化，列表「说明」列用。</summary>
     public string WhenHint { get; }
-    /// <summary>推荐强度（列表「推荐值」列）。</summary>
+    /// <summary>推荐强度（列表「推荐值」列）——目录基准值；展示/顾问请用 <see cref="EffectiveRecommend"/>。</summary>
     public RecommendLevel Recommend { get; }
 
     public SettingHelpInfo(
@@ -37,6 +37,10 @@ internal sealed class SettingHelpInfo
         Recommend = recommend;
     }
 
+    /// <summary>按本机 OS/场景解析后的有效推荐强度。</summary>
+    public RecommendLevel EffectiveRecommend(SystemFacts? facts) =>
+        RecommendRules.Resolve(this, facts);
+
     /// <summary>列表「说明」列：先短建议，再对应位置（窄列时建议仍可见）。</summary>
     public string ListNote
     {
@@ -50,16 +54,20 @@ internal sealed class SettingHelpInfo
         }
     }
 
-    public string FormatDetail() =>
-        Scope.FormatHelpSection() +
-        "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.Tip(Recommend) +
+    public string FormatDetail() => FormatDetail(null);
+
+    public string FormatDetail(SystemFacts? facts)
+    {
+        var level = EffectiveRecommend(facts);
+        return Scope.FormatHelpSection() +
+        "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.Tip(level) +
         (UiPlace.Length > 0 ? "\r\n" + AppLang.L("【对应】", "[Where] ") + UiPlace : "") +
         (WhenHint.Length > 0 ? "\r\n" + AppLang.L("【建议】", "[When] ") + WhenHint : "") +
         "\r\n" + AppLang.L("【作用】", "[What] ") + Purpose +
         "\r\n" + AppLang.L("【好处】", "[Benefit] ") + Benefit +
         "\r\n" + AppLang.L("【指引】", "[Guide] ") + Guide +
         "\r\n" + AppLang.L("【生效】", "[Effect] ") + Effect;
-
+    }
 
     private static string Compact(string text, int max)
     {

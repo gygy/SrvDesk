@@ -1,15 +1,15 @@
 namespace SrvDesk;
 
-/// <summary>优化推荐强度（列表「推荐值」列）。</summary>
+/// <summary>优化推荐强度（列表「推荐值」列 / 优化顾问）。</summary>
 internal enum RecommendLevel
 {
-    /// <summary>按需开启，默认不必开。</summary>
+    /// <summary>不推荐作常规优化（或仅按需），顾问默认不展示。</summary>
     Optional = 0,
-    /// <summary>多数桌面场景值得开。</summary>
+    /// <summary>高级：有收益但有副作用，不进一键/顾问核心。</summary>
     Suggested = 1,
-    /// <summary>Server 当桌面时强烈建议开。</summary>
+    /// <summary>推荐：有明确场景与收益。</summary>
     Strong = 2,
-    /// <summary>几乎必做，不开体验/可用性明显差。</summary>
+    /// <summary>强烈推荐：低风险、可逆、体验收益明显。</summary>
     Must = 3,
 }
 
@@ -31,19 +31,19 @@ internal static class RecommendLevelUi
 
     public static string Title(RecommendLevel level) => level switch
     {
-        RecommendLevel.Must => AppLang.L("必优化", "Must"),
-        RecommendLevel.Strong => AppLang.L("强烈推荐", "Strongly recommended"),
-        RecommendLevel.Suggested => AppLang.L("建议优化", "Suggested"),
-        _ => AppLang.L("可选", "Optional"),
+        RecommendLevel.Must => AppLang.L("强烈推荐", "Strongly recommended"),
+        RecommendLevel.Strong => AppLang.L("推荐", "Recommended"),
+        RecommendLevel.Suggested => AppLang.L("高级", "Advanced"),
+        _ => AppLang.L("不推荐", "Not recommended"),
     };
 
-    /// <summary>亮星数量：5=必优化，4=强烈，3=建议，1=可选。</summary>
+    /// <summary>亮星：5=强烈推荐，4=推荐，2=高级，0=不推荐。</summary>
     public static int StarsOn(RecommendLevel level) => level switch
     {
         RecommendLevel.Must => 5,
         RecommendLevel.Strong => 4,
-        RecommendLevel.Suggested => 3,
-        _ => 1,
+        RecommendLevel.Suggested => 2,
+        _ => 0,
     };
 
     public static int StarsBlockWidth => StarStep * 4 + StarSize;
@@ -62,22 +62,22 @@ internal static class RecommendLevelUi
         $"{Icon(level)} {Title(level)}（{StarsOn(level)}/5） · " + level switch
         {
             RecommendLevel.Must => AppLang.L(
-                "Server 当桌面几乎必做，否则基础体验会明显变差。",
-                "Almost required for Server-as-desktop; otherwise basic UX suffers."),
+                "低风险、可逆，体验收益明显；适合作为默认/顾问优化。",
+                "Low risk, reversible, clear UX gain — default/advisor optimize."),
             RecommendLevel.Strong => AppLang.L(
-                "个人/内网桌面建议开，改动面小、收益明确。",
-                "Recommended for personal/LAN desktops; small change, clear benefit."),
+                "有明确使用场景与收益；建议按本机用途开启。",
+                "Clear scenario and benefit; enable for your use case."),
             RecommendLevel.Suggested => AppLang.L(
-                "多数场景可开，按需取舍。",
-                "Fine for most scenarios; enable as you prefer."),
+                "高级项：可能有性能收益，但有副作用；勿一键全开。",
+                "Advanced: possible gains with side effects; not for one-click."),
             _ => AppLang.L(
-                "按需开启；有兼容性、安全或业务依赖时请谨慎。",
-                "Optional; be careful with compatibility, security, or business deps."),
+                "不推荐作常规优化（过时、收益小或降低安全/稳定性）。",
+                "Not for routine optimize (outdated, low gain, or hurts security/stability)."),
         };
 
     public static string LegendShort => AppLang.L(
-        "★★★★★ 必优化 · ★★★★☆ 强烈推荐 · ★★★☆☆ 建议优化 · ★☆☆☆☆ 可选",
-        "★★★★★ Must · ★★★★☆ Strong · ★★★☆☆ Suggested · ★☆☆☆☆ Optional");
+        "★★★★★ 强烈推荐 · ★★★★☆ 推荐 · ★★☆☆☆ 高级 · ☆☆☆☆☆ 不推荐",
+        "★★★★★ Strongly recommended · ★★★★☆ Recommended · ★★☆☆☆ Advanced · ☆☆☆☆☆ Not recommended");
 
     /// <summary>与列表「推荐值」列相同的五星着色绘制（几何星，比例固定）。</summary>
     public static void DrawStars(Graphics g, RecommendLevel level, int x, int y)

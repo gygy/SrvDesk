@@ -412,7 +412,9 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _sections.Controls.Clear();
         _sections.AutoSize = false;
 
-        var metaParts = new List<string> { RecommendLevelUi.Title(help.Recommend) };
+        var facts = SystemInfoHelper.Detect();
+        var level = help.EffectiveRecommend(facts);
+        var metaParts = new List<string> { RecommendLevelUi.Title(level) };
         if (help.Scope.HasBadge)
             metaParts.Add(help.Scope.FormatBadges());
         if (help.Effect.Length > 0)
@@ -420,7 +422,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         _sections.Controls.Add(new RecommendStarsRow
         {
-            Level = help.Recommend,
+            Level = level,
             TrailingText = string.Join(" · ", metaParts),
             Tag = "stars",
         });
