@@ -5,7 +5,6 @@ namespace SrvDesk;
 /// <summary>程序设置：界面偏好与调试日志（固定对话框，无滚动条）。</summary>
 internal sealed class AppSettingsDialog : Form
 {
-    private readonly CheckBox _showScript = new() { AutoSize = true };
     private readonly ComboBox _dock = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly ComboBox _language = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly CheckBox _hideIncompatible = new() { AutoSize = true };
@@ -54,7 +53,6 @@ internal sealed class AppSettingsDialog : Form
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
 
-        _showScript.Text = AppLang.L("启动时显示配置脚本面板", "Show config script panel at startup");
         _hideIncompatible.Text = AppLang.L("启动时默认「隐藏不适用项」", "Hide incompatible items by default");
         _checkUpdate.Text = AppLang.L("启动时检查程序更新", "Check for updates at startup");
         _restorePoint.Text = AppLang.L("应用到系统前询问是否创建还原点", "Ask to create a restore point before applying");
@@ -98,7 +96,6 @@ internal sealed class AppSettingsDialog : Form
         body.Controls.Add(Section(AppLang.L("界面", "Interface")));
         body.Controls.Add(Pad(LanguageRow()));
         body.Controls.Add(Pad(_langHint));
-        body.Controls.Add(Pad(_showScript));
         body.Controls.Add(Pad(DockRow()));
         body.Controls.Add(Pad(_hideIncompatible));
         body.Controls.Add(Pad(_checkUpdate));
@@ -209,6 +206,7 @@ internal sealed class AppSettingsDialog : Form
             Margin = new Padding(0, 6, 8, 0),
         });
         _dock.Items.AddRange([
+            AppLang.L("关闭", "Closed"),
             AppLang.L("右侧", "Right"),
             AppLang.L("底部", "Bottom"),
         ]);
@@ -238,8 +236,10 @@ internal sealed class AppSettingsDialog : Form
     private void LoadPrefs()
     {
         var p = UiPrefs.Load();
-        _showScript.Checked = p.ShowHelpPanel;
-        _dock.SelectedIndex = UiPrefs.GetDock(p) == ConfigScriptDock.Bottom ? 1 : 0;
+        // 0=关闭 1=右侧 2=底部（关闭即启动时不显示面板）
+        _dock.SelectedIndex = !p.ShowHelpPanel
+            ? 0
+            : UiPrefs.GetDock(p) == ConfigScriptDock.Bottom ? 2 : 1;
         _hideIncompatible.Checked = p.HideIncompatibleByDefault;
         _checkUpdate.Checked = !p.DisableStartupUpdateCheck;
         _restorePoint.Checked = !p.DisableRestorePointPrompt;
@@ -259,10 +259,18 @@ internal sealed class AppSettingsDialog : Form
     private bool Save()
     {
         var p = UiPrefs.Load();
-        p.ShowHelpPanel = _showScript.Checked;
-        p.HelpPanelDock = _dock.SelectedIndex == 1
-            ? (int)ConfigScriptDock.Bottom
-            : (int)ConfigScriptDock.Right;
+        if (_dock.SelectedIndex <= 0)
+        {
+            p.ShowHelpPanel = false;
+            // 保留上次停靠，下次从菜单打开时仍用原位置
+        }
+        else
+        {
+            p.ShowHelpPanel = true;
+            p.HelpPanelDock = _dock.SelectedIndex == 2
+                ? (int)ConfigScriptDock.Bottom
+                : (int)ConfigScriptDock.Right;
+        }
         p.HideIncompatibleByDefault = _hideIncompatible.Checked;
         p.DisableStartupUpdateCheck = !_checkUpdate.Checked;
         p.DisableRestorePointPrompt = !_restorePoint.Checked;

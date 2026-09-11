@@ -15,7 +15,8 @@ internal enum ConfigScriptDock
 [DataContract]
 internal sealed class UiPrefsData
 {
-    [DataMember] public bool ShowHelpPanel { get; set; } = true;
+    /// <summary>启动时是否显示配置脚本面板。默认关闭。</summary>
+    [DataMember] public bool ShowHelpPanel { get; set; }
     /// <summary>右侧时的宽度。</summary>
     [DataMember] public int HelpPanelWidth { get; set; } = 360;
     /// <summary>底部时的高度。</summary>
@@ -148,7 +149,7 @@ internal static class UiPrefs
 
     static UiPrefsData Defaults() => new()
     {
-        ShowHelpPanel = true,
+        ShowHelpPanel = false,
         HelpPanelWidth = DefaultHelpPanelWidth,
         HelpPanelHeight = DefaultHelpPanelHeight,
         HelpPanelDock = (int)ConfigScriptDock.Right,
