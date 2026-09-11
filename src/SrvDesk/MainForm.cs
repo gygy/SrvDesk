@@ -679,7 +679,7 @@ internal sealed class MainForm : Form
         _appMenu.ViewHelpPanel.CheckedChanged += (_, _) =>
         {
             SetConfigScriptPanelVisible(_appMenu.ViewHelpPanel.Checked);
-            UiPrefs.SetShowHelpPanel(_appMenu.ViewHelpPanel.Checked);
+            // 不写 ui-prefs：避免「视图」临时开关覆盖「配置脚本默认停靠」
             LayoutContent();
         };
 
@@ -699,11 +699,20 @@ internal sealed class MainForm : Form
         var prefs = UiPrefs.Load();
         _hideIncompatible.Checked = prefs.HideIncompatibleByDefault;
         _appMenu.ViewHideIncompatible.Checked = prefs.HideIncompatibleByDefault;
-        ApplyConfigScriptDock(UiPrefs.GetDock(prefs), fromUser: true);
-        if (_appMenu.ViewHelpPanel.Checked != prefs.ShowHelpPanel)
-            _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
+        var show = UiPrefs.IsDefaultPanelVisible(prefs);
+        if (show)
+            ApplyConfigScriptDock(UiPrefs.GetDock(prefs), fromUser: false);
         else
-            SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+        {
+            // 默认关闭：布局仍记住上次 Right/Bottom，但不改 prefs 中的 Hidden
+            _scriptDock = UiPrefs.GetDock(prefs);
+            _helpDetail.SetActiveDock(_scriptDock);
+        }
+
+        if (_appMenu.ViewHelpPanel.Checked != show)
+            _appMenu.ViewHelpPanel.Checked = show;
+        else
+            SetConfigScriptPanelVisible(show);
 
         _status.Text = prefs.EnableDebugLog
             ? AppLang.L("程序设置已保存 · 调试日志已开启（帮助 → 调试日志）", "Settings saved · debug log on (Help → Debug log)")
@@ -825,11 +834,11 @@ internal sealed class MainForm : Form
         _mainSplit.HandleCreated += (_, _) => BeginInvoke(() =>
         {
             ApplyConfigScriptDock(_scriptDock, fromUser: false);
-            SetConfigScriptPanelVisible(prefs.ShowHelpPanel);
+            SetConfigScriptPanelVisible(UiPrefs.IsDefaultPanelVisible(prefs));
         });
 
         // 先按偏好设好菜单勾选；实际布局等 HandleCreated
-        _appMenu.ViewHelpPanel.Checked = prefs.ShowHelpPanel;
+        _appMenu.ViewHelpPanel.Checked = UiPrefs.IsDefaultPanelVisible(prefs);
         _helpDetail.SetActiveDock(_scriptDock);
         _mainSplit.Orientation = _scriptDock == ConfigScriptDock.Bottom
             ? Orientation.Horizontal
@@ -1887,11 +1896,10 @@ internal sealed class MainForm : Form
         _selectedRow?.SetSelected(false);
         _selectedRow = row;
         row.SetSelected(true);
-        // 选中项时自动打开帮助面板，避免「一键脚本」藏在默认关闭的右侧栏里
-        if (!_appMenu.ViewHelpPanel.Checked)
-            _appMenu.ViewHelpPanel.Checked = true;
+        // 面板默认关闭；仅在已显示时刷新内容（勿自动勾选「视图 → 显示配置脚本」）
         _helpDetail.ShowSetting(row.ItemText, row.Help);
-        _helpDetail.FocusRecipe();
+        if (_appMenu.ViewHelpPanel.Checked)
+            _helpDetail.FocusRecipe();
     }
 
     private void ShowRecipeDialog(SettingRow row)

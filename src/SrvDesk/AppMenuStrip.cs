@@ -115,7 +115,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ViewHideIncompatible.CheckOnClick = true;
         ViewHelpPanel = Item(AppLang.L("显示配置脚本", "Show config script"), MenuIcons.ViewHelpPanel);
         ViewHelpPanel.CheckOnClick = true;
-        ViewHelpPanel.Checked = true;
+        ViewHelpPanel.Checked = false;
         ViewHelpPanel.ToolTipText = AppLang.L(
             "显示配置脚本面板：查看/编辑开启与关闭脚本（停靠位置在面板顶部切换）",
             "Show the config script panel to view/edit on/off scripts (dock position switches at the top of the panel)");

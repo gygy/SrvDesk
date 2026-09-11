@@ -4,25 +4,27 @@ using System.Text;
 
 namespace SrvDesk;
 
-/// <summary>配置脚本面板停靠位置。</summary>
+/// <summary>配置脚本面板停靠位置（含「关闭」= 启动时不显示）。</summary>
 internal enum ConfigScriptDock
 {
     Right = 0,
     Bottom = 1,
+    /// <summary>启动时不显示配置脚本面板。</summary>
+    Hidden = 2,
 }
 
 /// <summary>界面与调试偏好，保存在 exe 同目录 ui-prefs.json（不可写时回退 LocalAppData）。</summary>
 [DataContract]
 internal sealed class UiPrefsData
 {
-    /// <summary>启动时是否显示配置脚本面板。默认关闭。</summary>
+    /// <summary>兼容旧字段；以 <see cref="HelpPanelDock"/> 为准（Hidden=关闭）。</summary>
     [DataMember] public bool ShowHelpPanel { get; set; }
     /// <summary>右侧时的宽度。</summary>
     [DataMember] public int HelpPanelWidth { get; set; } = 360;
     /// <summary>底部时的高度。</summary>
     [DataMember] public int HelpPanelHeight { get; set; } = 280;
-    /// <summary>0=右侧 1=底部。</summary>
-    [DataMember] public int HelpPanelDock { get; set; } = (int)ConfigScriptDock.Right;
+    /// <summary>0=右侧 1=底部 2=关闭（默认）。</summary>
+    [DataMember] public int HelpPanelDock { get; set; } = (int)ConfigScriptDock.Hidden;
     /// <summary>启动时默认勾选「隐藏不适用项」。</summary>
     [DataMember] public bool HideIncompatibleByDefault { get; set; } = true;
     /// <summary>写入 debug.log（命令行、分支、软跳过原因等）。默认开启。</summary>
@@ -92,9 +94,8 @@ internal static class UiPrefs
 
     public static void SetShowHelpPanel(bool show)
     {
-        var data = Load();
-        data.ShowHelpPanel = show;
-        Save(data);
+        // 会话显隐不再改「默认停靠」；保留方法以免旧调用编译失败
+        _ = show;
     }
 
     public static void SetHelpPanelWidth(int width)
@@ -115,16 +116,32 @@ internal static class UiPrefs
     {
         var data = Load();
         data.HelpPanelDock = (int)dock;
+        data.ShowHelpPanel = dock != ConfigScriptDock.Hidden;
         Save(data);
     }
 
     public static bool EnableDebugLog => Load().EnableDebugLog;
     public static bool SoftSkipUnsupported => Load().SoftSkipUnsupported;
 
+    /// <summary>布局用停靠（Hidden 时按右侧处理，便于临时打开）。</summary>
     public static ConfigScriptDock GetDock(UiPrefsData data) =>
         data.HelpPanelDock == (int)ConfigScriptDock.Bottom
             ? ConfigScriptDock.Bottom
             : ConfigScriptDock.Right;
+
+    /// <summary>程序设置 / 启动：是否按默认显示配置脚本面板。</summary>
+    public static bool IsDefaultPanelVisible(UiPrefsData data) =>
+        data.HelpPanelDock == (int)ConfigScriptDock.Right
+        || data.HelpPanelDock == (int)ConfigScriptDock.Bottom;
+
+    /// <summary>程序设置下拉：关闭 / 右侧 / 底部。</summary>
+    public static ConfigScriptDock GetPreferredDock(UiPrefsData data) =>
+        data.HelpPanelDock switch
+        {
+            (int)ConfigScriptDock.Bottom => ConfigScriptDock.Bottom,
+            (int)ConfigScriptDock.Hidden => ConfigScriptDock.Hidden,
+            _ => ConfigScriptDock.Right,
+        };
 
     public static int ClampWidth(int width) =>
         Math.Max(MinHelpPanelWidth, Math.Min(MaxHelpPanelWidth, width));
@@ -136,8 +153,19 @@ internal static class UiPrefs
     {
         data.HelpPanelWidth = ClampWidth(data.HelpPanelWidth <= 0 ? DefaultHelpPanelWidth : data.HelpPanelWidth);
         data.HelpPanelHeight = ClampHeight(data.HelpPanelHeight <= 0 ? DefaultHelpPanelHeight : data.HelpPanelHeight);
-        if (data.HelpPanelDock != (int)ConfigScriptDock.Bottom)
-            data.HelpPanelDock = (int)ConfigScriptDock.Right;
+
+        // 旧版用 ShowHelpPanel=false 表示关闭，而 HelpPanelDock 仍可能是 Right/Bottom → 迁为 Hidden
+        if (!data.ShowHelpPanel
+            && data.HelpPanelDock != (int)ConfigScriptDock.Hidden)
+            data.HelpPanelDock = (int)ConfigScriptDock.Hidden;
+
+        if (data.HelpPanelDock != (int)ConfigScriptDock.Right
+            && data.HelpPanelDock != (int)ConfigScriptDock.Bottom
+            && data.HelpPanelDock != (int)ConfigScriptDock.Hidden)
+            data.HelpPanelDock = (int)ConfigScriptDock.Hidden;
+
+        data.ShowHelpPanel = IsDefaultPanelVisible(data);
+
         if (string.IsNullOrWhiteSpace(data.Language))
             data.Language = "auto";
         else
@@ -152,7 +180,7 @@ internal static class UiPrefs
         ShowHelpPanel = false,
         HelpPanelWidth = DefaultHelpPanelWidth,
         HelpPanelHeight = DefaultHelpPanelHeight,
-        HelpPanelDock = (int)ConfigScriptDock.Right,
+        HelpPanelDock = (int)ConfigScriptDock.Hidden,
         HideIncompatibleByDefault = true,
         EnableDebugLog = true,
         SoftSkipUnsupported = true,

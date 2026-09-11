@@ -236,10 +236,13 @@ internal sealed class AppSettingsDialog : Form
     private void LoadPrefs()
     {
         var p = UiPrefs.Load();
-        // 0=关闭 1=右侧 2=底部（关闭即启动时不显示面板）
-        _dock.SelectedIndex = !p.ShowHelpPanel
-            ? 0
-            : UiPrefs.GetDock(p) == ConfigScriptDock.Bottom ? 2 : 1;
+        // 0=关闭 1=右侧 2=底部（以 HelpPanelDock 为准，默认 Hidden）
+        _dock.SelectedIndex = UiPrefs.GetPreferredDock(p) switch
+        {
+            ConfigScriptDock.Hidden => 0,
+            ConfigScriptDock.Bottom => 2,
+            _ => 1,
+        };
         _hideIncompatible.Checked = p.HideIncompatibleByDefault;
         _checkUpdate.Checked = !p.DisableStartupUpdateCheck;
         _restorePoint.Checked = !p.DisableRestorePointPrompt;
@@ -260,17 +263,12 @@ internal sealed class AppSettingsDialog : Form
     {
         var p = UiPrefs.Load();
         if (_dock.SelectedIndex <= 0)
-        {
-            p.ShowHelpPanel = false;
-            // 保留上次停靠，下次从菜单打开时仍用原位置
-        }
+            p.HelpPanelDock = (int)ConfigScriptDock.Hidden;
+        else if (_dock.SelectedIndex == 2)
+            p.HelpPanelDock = (int)ConfigScriptDock.Bottom;
         else
-        {
-            p.ShowHelpPanel = true;
-            p.HelpPanelDock = _dock.SelectedIndex == 2
-                ? (int)ConfigScriptDock.Bottom
-                : (int)ConfigScriptDock.Right;
-        }
+            p.HelpPanelDock = (int)ConfigScriptDock.Right;
+        p.ShowHelpPanel = UiPrefs.IsDefaultPanelVisible(p);
         p.HideIncompatibleByDefault = _hideIncompatible.Checked;
         p.DisableStartupUpdateCheck = !_checkUpdate.Checked;
         p.DisableRestorePointPrompt = !_restorePoint.Checked;
