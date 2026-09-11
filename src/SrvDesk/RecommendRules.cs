@@ -43,6 +43,11 @@ internal static class RecommendRules
                 return RecommendLevel.Strong;
             if (ReferenceEquals(help, SettingCatalog.DisableIeEsc))
                 return RecommendLevel.Must;
+            // 账户策略：个人/桌面 Server 体验项 → 强烈推荐（顾问同步）
+            if (ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
+                || ReferenceEquals(help, SettingCatalog.DisableCad)
+                || ReferenceEquals(help, SettingCatalog.DisableShutdownReason))
+                return RecommendLevel.Must;
         }
 
         // —— 客户端隐私 / 体验：Win10/11 强推 ——

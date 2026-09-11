@@ -486,8 +486,9 @@ internal static class SettingCatalog
         L("本地账户密码不要求大小写+数字+符号组合。", "Local account passwords need not mix case/digits/symbols."),
         L("通过 secedit 将 PasswordComplexity 设为 0。", "Set PasswordComplexity=0 via secedit."),
         L("可设简单 PIN 式密码，个人 VM/内网更方便。", "Allows simple PIN-like passwords; handy for personal VMs/LAN."),
-        L("公网或合规环境必须保持复杂性；仅私人 lab 推荐。", "Keep complexity on public/compliance hosts; only for private labs."),
-        L("策略立即写入。", "Policy is written immediately."));
+        L("个人桌面 / 内网 lab 强烈推荐；公网或合规环境请保持复杂性。", "Strongly recommended for personal desktop / private labs; keep complexity on public/compliance hosts."),
+        L("策略立即写入。", "Policy is written immediately."),
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo PasswordNeverExpire = H(
         L("本地账户密码永不过期。", "Local account passwords never expire."),
@@ -507,17 +508,18 @@ internal static class SettingCatalog
         L("关闭「关机原因」与 Shutdown Event Tracker 弹窗。", "Disable shutdown reason / Shutdown Event Tracker prompts."),
         L("ShutdownReasonOn/UI 设为关闭。", "Turn off ShutdownReasonOn/UI."),
         L("关机/重启不再填原因问卷，个人桌面更省事。", "No reason questionnaire on shutdown/reboot; easier personal desktop."),
-        L("企业审计需要关机原因时勿开。", "Do not enable if enterprise audit needs shutdown reasons."),
+        L("个人桌面强烈推荐；企业审计需要关机原因时请保持开启。", "Strongly recommended for personal desktops; keep on if enterprise audit needs shutdown reasons."),
         L("立即生效。", "Takes effect immediately."),
-        ShutdownTracker);
+        ShutdownTracker,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo DisableCad = H(
         L("登录时不要求按 Ctrl+Alt+Del 安全 attention。", "Do not require Ctrl+Alt+Del secure attention at sign-in."),
         L("DisableCAD 设为 1，直接进入密码框。", "Set DisableCAD=1 to go straight to the password box."),
         L("减少一步按键；远程桌面登录略快。", "One less key chord; slightly faster RDP sign-in."),
-        L("降低防伪造登录界面能力；物理安全可控时可开。", "Weaker anti-spoof login protection; OK when physical access is controlled."),
-        L("立即生效。", "Takes effect immediately."));
-
+        L("个人桌面 / 可控物理环境强烈推荐；高安全场景可保持需按键。", "Strongly recommended for personal / controlled physical access; keep CAD required in high-security setups."),
+        L("立即生效。", "Takes effect immediately."),
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo EnableAutologon = H(
         L("开机后自动登录指定本地/域账户，无需输入密码。", "Auto-logon a chosen local/domain account without typing a password."),
         L("写入 Winlogon（AutoAdminLogon、DefaultUserName、DefaultDomainName），密码经 LsaStorePrivateData 存入 LSA，与 Sysinternals Autologon 相同。", "Writes Winlogon (AutoAdminLogon, DefaultUserName, DefaultDomainName); password stored via LsaStorePrivateData like Sysinternals Autologon."),
