@@ -61,6 +61,12 @@ internal static class CommonSoftwareCatalog
     [
         Item("winget", "Windows 包管理器 (winget)", "必备", "Microsoft.AppInstaller",
             ["App Installer", "Windows Package Manager"], "https://aka.ms/getwinget", essential: true),
+        Item("unigetui", "UniGetUI（包管理图形界面）", "必备", "Devolutions.UniGetUI",
+            ["UniGetUI", "WingetUI", "Windows Package Manager UI"],
+            "https://www.marticliment.com/unigetui/", essential: true,
+            offlineInstallArgs: "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
+            githubRepo: "Devolutions/UniGetUI",
+            installerLinkPattern: @"Devolutions\.UniGetUI\.win-x64.*\.exe|UniGetUI.*Installer.*\.exe|WingetUI\.Installer\.exe"),
         Item("winrar", "WinRAR官方简体中文注册版", "必备", "RARLab.WinRAR",
             ["WinRAR"], "https://www.rarlab.com/download.htm", essential: true,
             offlineInstallArgs: "/S",

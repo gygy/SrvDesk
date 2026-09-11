@@ -4,6 +4,17 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.41] - 2026-09-11
+
+### Added
+
+- Common software: UniGetUI (Devolutions.UniGetUI)
+
+### Fixed
+
+- Config script panel forced hidden at startup when dock default is Closed
+- Optimization advisor blank gap after Apply to system (scroll reset)
+
 ## [1.0.36] - 2026-09-11
 
 ### Changed
