@@ -1,0 +1,383 @@
+﻿SrvDesk 优化条目清单（界面中文原文）
+导出时间: 2026-09-11 22:13:15
+来源: MainForm 侧栏分组「项目」列原文；服务优化为 ServiceOptimizeCatalog 中文标题。
+
+============================================================
+【侧栏】性能及安全
+============================================================
+
+--- 常用开关 ---
+1. 关闭 IE 增强安全配置
+2. UAC 设置
+3. 电源计划
+
+--- 性能加速 ---
+4. 视觉效果
+5. 关闭 CPU 电源节流
+6. 显示处理器性能提升模式
+7. 启用 GPU 硬件加速计划
+8. 大系统缓存与 NTFS 缓冲优化
+9. 禁用程序兼容性助手 PCA
+10. CPU 资源分配
+11. 优化多媒体调度 (MMCSS)
+
+--- Windows 更新 ---
+12. 更新后重启策略
+13. Windows 更新下载方式
+14. Windows 更新不含驱动
+15. 暂停功能更新至 2035
+16. 延迟 Windows 更新至 2099
+17. 关闭更新传递优化（P2P）
+18. 更新不含恶意软件删除工具
+19. 关闭「尽快获取最新更新」
+
+--- 网络优化 ---
+20. TCP 参数优化（对齐 Win10）
+21. QoS 网速优化（零保留+入站TCP级别3）
+22. TCP 拥塞控制开启 BBR2
+23. 关闭多媒体网络节流
+24. 放开 WebDAV 文件大小限制
+
+--- 遥测与诊断 ---
+25. 关闭遥测与 DiagTrack
+26. 诊断数据设为最小（官方级别）
+27. 禁用诊断策略服务 DPS
+28. 关闭客户体验改善计划
+29. 关闭 Windows 错误报告
+
+--- 安全服务 ---
+30. 禁用 SMB 1.0 协议
+31. 禁用 Remote Registry 服务
+32. 禁用打印后台处理（无打印机）
+33. 数据执行保护 DEP（T）
+
+--- 进阶安全 ---
+34. 关闭 Meltdown/Spectre 缓解
+35. 关闭内存完整性 HVCI
+36. 关闭 WDAC 应用控制
+37. 强制关闭 VBS 虚拟化安全
+38. 禁用系统还原
+39. 禁止 BitLocker 自动加密
+
+--- 磁盘与文件 ---
+40. 启用 NTFS 长路径支持
+41. 关闭 NTFS 最后访问时间戳
+42. 关闭系统保留存储
+43. 关闭 LanmanServer 服务拆分
+44. 合并 svchost 进程
+
+--- 启动与维护 ---
+45. 禁用自动维护计划
+46. 硬件时钟使用 UTC（双系统）
+47. 关闭 HPET 高精度计时器
+48. 登录显示详细状态
+49. 启用 F8 高级启动菜单
+50. 蓝屏时自动重启
+
+--- 少用服务 ---
+51. 禁用 Xbox Live 服务
+52. 禁用传真服务
+53. 禁用媒体播放器网络共享
+54. 禁用 NTFS 分布式链接跟踪
+============================================================
+【侧栏】桌面外观
+============================================================
+
+--- 桌面图标 ---
+55. 显示桌面「此电脑」图标
+56. 显示控制面板与回收站图标
+57. 显示删除确认对话框
+
+--- 任务栏 ---
+58. 任务栏显示方式
+59. 使用小按钮任务栏
+60. 任务栏显示全部图标
+61. 任务栏右键结束任务
+62. 关闭资讯与兴趣
+
+--- 桌面服务 ---
+63. 启用主题服务（完整桌面外观）
+64. 启动音频服务
+65. 启用 Windows 搜索
+66. 使用深色模式
+67. 记事本默认自动换行
+68. 记事本显示状态栏
+
+--- 安全与锁屏 ---
+69. 关闭 SmartScreen 与打开文件警告
+70. 禁用锁屏界面
+71. 关闭 Windows 体验反馈提示
+
+--- 搜索模式 ---
+72. 搜索退回传统模式
+73. 禁用 SearchEngine 功能包
+
+--- 右键菜单 ---
+74. 右键菜单：取得所有权
+75. 右键菜单：在此处打开 CMD
+76. 右键菜单：复制到 / 移动到
+77. 右键菜单：快捷操作组
+============================================================
+【侧栏】资源管理器
+============================================================
+
+--- 常用显示 ---
+78. 显示已知文件扩展名
+79. 显示隐藏文件
+80. 标题栏显示完整路径
+81. 隐藏受保护的系统文件
+82. 资源管理器打开到「此电脑」
+83. 隐藏桌面「了解此图片」
+84. 去除本地磁盘重复显示
+85. 禁用磁盘空间不足警告
+86. 隐藏资源管理器主页与图库
+87. 关闭窗口贴靠建议
+
+--- 快速访问 ---
+88. 开始屏幕显示最近文件
+89. 显示快速访问常用文件夹
+90. 隐藏 office.com 云文件
+91. 显示空驱动器
+92. 始终显示图标从不缩略图
+93. 「运行」对话框不显示历史
+
+--- 文件夹选项 ---
+94. 始终显示菜单栏
+95. 隐藏文件夹合并冲突
+96. 加密/压缩文件用颜色标识
+97. 显示文件夹弹出说明
+98. 显示资源管理器状态栏
+99. 登录时不还原上次文件夹窗口
+100. 导航窗格展开到当前文件夹
+101. 不使用共享向导
+102. 盘符显示位置
+103. 分组依据
+104. 排序方式
+
+--- 快捷方式与布局 ---
+105. 隐藏快捷方式小箭头
+106. 快捷方式不加「快捷方式」后缀
+107. 去除快捷方式管理员盾牌
+108. 禁止跟踪损坏快捷方式
+109. 单独进程打开文件夹
+110. 资源管理器崩溃自动重启
+111. Win11 资源管理器布局
+112. Win10 经典右键菜单
+113. 禁止 OneDrive 同步
+
+--- 任务栏 ---
+114. 任务栏搜索
+115. 任务栏对齐
+116. 任务栏按钮合并
+117. 关闭任务栏小组件
+118. 隐藏任务栏聊天
+119. 隐藏任务栏 Copilot
+120. 显示任务视图按钮
+121. 任务栏时钟显示星期与秒
+============================================================
+【侧栏】远程与网络
+============================================================
+
+--- 远程与网络 ---
+122. 启用远程桌面（RDP）
+123. RDP 硬件图形加速
+124. RDP 提高远程帧率
+125. RDP 网络级身份验证 NLA
+126. 启用网络发现与文件共享
+127. 关闭 Server Manager 远程管理
+============================================================
+【侧栏】电源与后台
+============================================================
+
+--- 远程协助 ---
+128. 禁用远程协助
+
+--- 电源与休眠 ---
+129. 关闭休眠释放磁盘空间
+130. 关闭快速启动（稳定双系统）
+131. 弹出 USB 后彻底断电
+
+--- 后台与内存 ---
+132. 禁用 SysMain 超级预读
+133. 禁用内存压缩
+134. 禁用应用预启动
+135. 禁用内存页面合并
+136. 禁用微软 UCPD 驱动
+============================================================
+【侧栏】隐私与体验
+============================================================
+
+--- 广告与推荐 ---
+137. 关闭 Windows 提示与建议
+138. 关闭开始菜单推荐
+139. 关闭搜索要点/亮点
+140. 关闭广告标识符跟踪
+141. 关闭设置应用建议内容
+142. 关闭消费者体验推送
+143. 禁止静默安装建议应用
+144. 隐藏设置首页与 365 广告
+
+--- 搜索与助手 ---
+145. 禁止搜索云内容
+146. 关闭开始菜单 Bing 网络搜索
+147. 关闭搜索历史记录
+148. 关闭 Cortana
+149. 关闭 Copilot（系统+Edge）
+150. 关闭 Recall / Click to Do / 记事本画图 AI
+
+--- 隐私数据 ---
+151. 关闭应用启动跟踪
+152. 禁止网站读取语言列表
+153. 禁止定位服务
+154. 禁用活动历史记录
+155. 关闭剪贴板云同步
+156. 关闭墨迹与键入个性化
+157. 关闭 Office 遥测
+158. 关闭 .NET / PowerShell 遥测
+159. 更新后不自动重开应用
+160. 禁止外设配套应用自动安装
+
+--- 输入法与键盘 ---
+161. 微软拼音默认英文
+162. 关闭微软拼音云候选与输入见解
+163. 关闭拼音工具条与帮助按钮
+164. 禁用辅助功能键盘热键
+165. 优化键盘重复延迟
+
+--- 界面体验 ---
+166. 禁用窗口与任务栏动画
+167. 禁用透明效果
+168. 禁止应用在后台运行
+169. 禁用存储感知
+170. 禁用所有驱动器自动播放
+171. 禁止 Edge 预启动与后台
+172. 关闭游戏栏 / Game DVR
+
+--- 商店与预览 ---
+173. 禁用 Windows Insider 服务
+174. 禁止商店自动更新应用
+175. 禁用 Teredo 隧道
+============================================================
+【侧栏】Server专属
+============================================================
+
+--- Server专属 ---
+176. 登录时不自动启动服务器管理器
+177. 不再显示「立即尝试 WAC/Azure Arc」弹窗
+178. 禁止启动 Azure Arc 托盘
+179. 开启桌面媒体组件（DISM）
+180. 关闭 Server 冗余组件（DISM）
+181. Windows Installer 自动启动
+182. 启用 WIA（摄像头/扫描仪）
+============================================================
+【侧栏】账户策略
+============================================================
+
+--- 账户策略 ---
+183. 启用 Windows 自动登录（Autologon）
+184. 禁用密码复杂性要求
+185. 密码永不过期
+186. 无需 Ctrl+Alt+Del 登录
+187. 允许未登录时关机
+188. 关闭关机事件跟踪
+189. 取消登录粘滞键/筛选键提示
+
+============================================================
+【侧栏】其它开关（源码有定义、当前未挂侧栏分组）
+============================================================
+190. 显示项目复选框
+191. 显示常用文件夹
+
+============================================================
+【侧栏】服务优化（目录中文标题 · 服务名）
+============================================================
+说明: 运行时列表「项目」列多为系统服务显示名；下列为工具目录内中文标题原文。
+
+1. 连接的用户体验和遥测（DiagTrack）
+2. 设备管理 WAP 推送（dmwappushservice）
+3. 诊断策略服务（DPS）
+4. 诊断服务主机（WdiServiceHost）
+5. 诊断系统主机（WdiSystemHost）
+6. 诊断中心标准收集器（diagnosticshub.standardcollector.service）
+7. Windows 错误报告（WerSvc）
+8. SysMain（超级抓取）（SysMain）
+9. 程序兼容性助手（PcaSvc）
+10. 分布式链接跟踪客户端（TrkWks）
+11. 传递优化（DoSvc）
+12. Windows Search（WSearch）
+13. 远程注册表（RemoteRegistry）
+14. Windows 远程管理（WinRM）
+15. 路由和远程访问（RemoteAccess）
+16. Print Spooler（Spooler）
+17. 打印通知（PrintNotify）
+18. 传真（Fax）
+19. Windows Media Player 网络共享（WMPNetworkSvc）
+20. Windows Camera Frame Server（FrameServer）
+21. Xbox Live 身份验证（XblAuthManager）
+22. Xbox Live 游戏保存（XblGameSave）
+23. Xbox Live 网络服务（XboxNetApiSvc）
+24. Xbox Accessory Management（XboxGipSvc）
+25. 游戏栏录制（用户）（BcastDVRUserService）
+26. GameInput（GameInputSvc）
+27. Themes（Themes）
+28. Windows Audio（AudioSrv）
+29. Windows Audio Endpoint Builder（AudioEndpointBuilder）
+30. 触摸键盘和手写面板（TabletInputService）
+31. Windows Font Cache（FontCache）
+32. 下载的地图管理器（MapsBroker）
+33. 地理位置服务（lfsvc）
+34. Windows Biometric Service（WbioSrvc）
+35. Phone Service（PhoneSvc）
+36. 消息服务（用户）（MessagingService）
+37. 同步主机（用户）（OneSyncSvc）
+38. Windows 推送通知系统服务（WpnService）
+39. Windows 推送通知用户服务（WpnUserService）
+40. Windows Insider 服务（wisvc）
+41. 零售演示服务（RetailDemo）
+42. WalletService（WalletService）
+43. 家长控制（WpcMonSvc）
+44. AllJoyn Router（AJRouter）
+45. Internet Connection Sharing（SharedAccess）
+46. Windows Mobile 热点（icssvc）
+47. 付款和 NFC/SE 管理器（SEMgrSvc）
+48. 传感器服务（SensorService）
+49. 传感器监视服务（SensrSvc）
+50. Still Image Acquisition（StiSvc）
+51. Function Discovery Provider Host（fdPHost）
+52. Function Discovery Resource Publication（FDResPub）
+53. SSDP Discovery（SSDPSRV）
+54. UPnP Device Host（upnphost）
+55. Link-Layer Topology Discovery Mapper（lltdsvc）
+56. Remote Desktop Services（TermService）
+57. Remote Desktop Configuration（SessionEnv）
+58. Remote Desktop Services UserMode Port Redirector（UmRdpService）
+59. User Access Logging Service（UALSVC）
+60. File Server Resource Manager（SrmSvc）
+61. World Wide Web Publishing Service（W3SVC）
+62. Simple Mail Transfer Protocol（SMTPSVC）
+63. Microsoft FTP Service（FTPSVC）
+64. Windows Process Activation Service（Was）
+65. Netlogon（Netlogon）
+66. Active Directory Domain Services（NTDS）
+67. DNS Server（DNS）
+68. DHCP Server（DHCPServer）
+69. Server（文件共享）（LanmanServer）
+70. Workstation（LanmanWorkstation）
+71. Web Threat Defense Service（webthreatdefsvc）
+72. Web Threat Defense User Service（webthreatdefusersvc）
+73. 剪贴板用户服务（ClipboardUserService）
+74. Microsoft Account Sign-in Assistant（wlidsvc）
+75. Client License Service (ClipSVC)（ClipSVC）
+76. Microsoft Store Install Service（InstallService）
+77. Windows PushToInstall（PushToInstall）
+78. Connected Devices Platform Service（CDPSvc）
+79. Connected Devices Platform User Service（CDPUserSvc）
+
+============================================================
+【侧栏】即时页（条目随本机变化，无固定清单）
+============================================================
+- 登录启动项
+- DNS 设置
+- 自定义配置
+
+合计: 批量开关 191 项（含未挂分组 2 项）；服务目录 79 项。
