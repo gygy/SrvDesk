@@ -24,6 +24,8 @@ internal sealed class MainForm : Form
     private readonly SettingRow _powerThrottle = Row(AppLang.L("关闭 CPU 电源节流", "Disable CPU power throttling"), AppLang.L("开启", "On"), SettingCatalog.PowerThrottlingOff);
     private readonly SettingRow _boostMode = Row(AppLang.L("显示处理器性能提升模式", "Show processor boost mode"), AppLang.L("隐藏", "Hidden"), SettingCatalog.ShowProcessorBoostMode);
     private readonly SettingRow _hibernate = Row(AppLang.L("关闭休眠释放磁盘空间", "Disable hibernation"), AppLang.L("开启", "On"), SettingCatalog.DisableHibernate);
+    private readonly SettingRow _neverSleep = Row(AppLang.L("关闭关屏与睡眠超时", "Never sleep / screen off"), AppLang.L("开启", "On"), SettingCatalog.NeverSleepOrScreenOff);
+    private readonly SettingRow _diskPerf = Row(AppLang.L("任务管理器显示硬盘", "Show Disk in Task Manager"), AppLang.L("开启", "On"), SettingCatalog.EnableDiskPerfCounters);
     private readonly SettingRow _tcp = Row(AppLang.L("TCP 参数优化（对齐 Win10）", "TCP tweak (Win10-like)"), AppLang.L("默认", "Default"), SettingCatalog.TcpOptimized);
     private readonly SettingRow _qosSpeed = Row(AppLang.L("QoS 网速优化（零保留+入站TCP级别3）", "QoS speed (0 reserved + inbound L3)"), AppLang.L("系统默认", "System default"), SettingCatalog.QosSpeedOptimize);
     private readonly SettingRow _errorReport = Row(AppLang.L("关闭 Windows 错误报告", "Disable Windows Error Reporting"), AppLang.L("开启", "On"), SettingCatalog.DisableErrorReport);

@@ -137,6 +137,22 @@ internal static class SettingCatalog
         L("立即生效并删除休眠文件。", "Takes effect immediately and deletes the hibernation file."),
         SettingScope.DesktopExperience);
 
+    public static readonly SettingHelpInfo NeverSleepOrScreenOff = H(
+        L("关闭屏幕超时、睡眠与休眠超时（插电/电池均为永不）。", "Never turn off display / sleep / hibernate (AC and DC)."),
+        L("powercfg -change：monitor / standby / hibernate timeout 的 AC、DC 均设为 0。", "powercfg -change: monitor/standby/hibernate timeouts AC+DC set to 0."),
+        L("远程桌面与常开机器不会因闲置关屏或睡眠；任务不断线。", "RDP / always-on hosts won't blank or sleep on idle."),
+        L("台式/Server 桌面推荐开启；笔记本需省电时请关闭。", "Recommended on desktop/Server; leave off on laptops that need battery life."),
+        L("立即写入当前电源方案。", "Writes into the active power scheme immediately."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo EnableDiskPerfCounters = H(
+        L("开启磁盘性能计数器，任务管理器「性能」可显示硬盘。", "Enable disk performance counters so Task Manager shows Disk."),
+        L("diskperf -y（PartMgr\\EnableCounterForIoctl=1）。", "diskperf -y (PartMgr\\EnableCounterForIoctl=1)."),
+        L("任务管理器可看磁盘占用，便于排查 IO 卡顿。", "See disk usage in Task Manager to spot IO bottlenecks."),
+        L("强烈推荐开启；几乎无副作用。", "Strongly recommended; virtually no downside."),
+        L("立即生效；已打开的任务管理器需关闭后重开。", "Takes effect immediately; reopen Task Manager if already open."),
+        recommend: RecommendLevel.Must);
+
     public static readonly SettingHelpInfo TcpOptimized = H(
         L("调整 TCP 全局参数，对齐常见 Win10 桌面优化。", "Tune global TCP settings to common Win10 desktop optimizations."),
         L("设置 autotuninglevel、timestamps、ECN 等 netsh 参数。", "Set netsh parameters such as autotuninglevel, timestamps, and ECN."),
@@ -247,9 +263,10 @@ internal static class SettingCatalog
         L("启动 Windows Audio 音频服务。", "Start the Windows Audio services."),
         L("AudioSrv 与 AudioEndpointBuilder 设为自动并启动。", "Set AudioSrv and AudioEndpointBuilder to Automatic and start them."),
         L("Server 桌面可正常播放系统声音、提示音与媒体。", "Server desktops can play system sounds, beeps, and media."),
-        L("纯服务器无扬声器可关闭；当桌面用必须开启。", "OK off on headless servers; must on when used as a desktop."),
+        L("Server 桌面强烈推荐；纯服务器无扬声器可关。", "Strongly recommended on Server desktop; OK off on headless servers."),
         L("服务启动后立即生效。", "Takes effect once the services start."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo ShowFileExtensions = H(
         L("显示已知文件类型的扩展名。", "Show extensions for known file types."),

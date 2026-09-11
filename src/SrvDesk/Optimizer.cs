@@ -41,6 +41,10 @@ internal static class Optimizer
         /// <summary>在电源选项高级设置中显示「处理器性能提升模式」(PERFBOOSTMODE)。</summary>
         public bool ShowProcessorBoostMode;
         public bool DisableHibernate;
+        /// <summary>关屏/睡眠/休眠超时均为 0（永不）。</summary>
+        public bool NeverSleepOrScreenOff;
+        /// <summary>diskperf -y：任务管理器可显示硬盘。</summary>
+        public bool EnableDiskPerfCounters;
         public bool TcpOptimized;
         public bool QosSpeedOptimize;
 
@@ -282,6 +286,8 @@ internal static class Optimizer
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
             ShowProcessorBoostMode = DwordEquals(Hive.HkLm, ProcessorBoostModeKey, "Attributes", 2),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
+            NeverSleepOrScreenOff = IsNeverSleepOrScreenOff(),
+            EnableDiskPerfCounters = IsDiskPerfEnabled(),
             TcpOptimized = IsTcpOptimized(),
             QosSpeedOptimize = IsQosSpeedOptimized(),
             DisableErrorReport = ServiceStartEquals("WerSvc", 4),
@@ -468,6 +474,8 @@ internal static class Optimizer
         Do(Ch(x => x.ShowProcessorBoostMode), "处理器提升模式可见", () =>
             SetDword(Hive.HkLm, ProcessorBoostModeKey, "Attributes", s.ShowProcessorBoostMode ? 2 : 1));
         Do(Ch(x => x.DisableHibernate), "休眠", () => SetHibernate(!s.DisableHibernate));
+        Do(Ch(x => x.NeverSleepOrScreenOff), "关屏与睡眠超时", () => SetNeverSleepOrScreenOff(s.NeverSleepOrScreenOff));
+        Do(Ch(x => x.EnableDiskPerfCounters), "任务管理器硬盘", () => SetDiskPerfEnabled(s.EnableDiskPerfCounters));
         Do(Ch(x => x.TcpOptimized), "TCP优化", () => SetTcpOptimized(s.TcpOptimized));
         Do(Ch(x => x.QosSpeedOptimize), "QoS网速", () => SetQosSpeedOptimized(s.QosSpeedOptimize));
         Do(Ch(x => x.DisableErrorReport), "错误报告", () => SetService("WerSvc", !s.DisableErrorReport, disableWhenOff: true));
@@ -948,6 +956,110 @@ internal static class Optimizer
                 enable
                     ? "本机不支持开启休眠（固件/虚拟机）：" + TrimOneLine(ex.Message)
                     : "本机无法关闭休眠文件（固件/虚拟机不支持）：" + TrimOneLine(ex.Message));
+        }
+    }
+
+    /// <summary>关屏/睡眠/休眠超时均为 0；关闭时恢复常见默认分钟数。</summary>
+    private static void SetNeverSleepOrScreenOff(bool never)
+    {
+        if (never)
+        {
+            Run("powercfg.exe", "-change -monitor-timeout-ac 0");
+            Run("powercfg.exe", "-change -monitor-timeout-dc 0");
+            Run("powercfg.exe", "-change -standby-timeout-ac 0");
+            Run("powercfg.exe", "-change -standby-timeout-dc 0");
+            Run("powercfg.exe", "-change -hibernate-timeout-ac 0");
+            Run("powercfg.exe", "-change -hibernate-timeout-dc 0");
+            return;
+        }
+
+        // 关闭优化：恢复常见默认（分钟）
+        Run("powercfg.exe", "-change -monitor-timeout-ac 10");
+        Run("powercfg.exe", "-change -monitor-timeout-dc 5");
+        Run("powercfg.exe", "-change -standby-timeout-ac 30");
+        Run("powercfg.exe", "-change -standby-timeout-dc 15");
+        Run("powercfg.exe", "-change -hibernate-timeout-ac 0");
+        Run("powercfg.exe", "-change -hibernate-timeout-dc 180");
+    }
+
+    private static bool IsNeverSleepOrScreenOff()
+    {
+        try
+        {
+            return PowerTimeoutMinutesAcDcZero("monitor")
+                && PowerTimeoutMinutesAcDcZero("standby")
+                && PowerTimeoutMinutesAcDcZero("hibernate");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>用 powercfg /query 解析当前方案；AC/DC 索引均为 0 视为永不超时。</summary>
+    private static bool PowerTimeoutMinutesAcDcZero(string kind)
+    {
+        // VIDEOIDLE / STANDBYIDLE / HIBERNATEIDLE 的索引单位为秒
+        var (subgroup, setting) = kind switch
+        {
+            "monitor" => ("SUB_VIDEO", "VIDEOIDLE"),
+            "standby" => ("SUB_SLEEP", "STANDBYIDLE"),
+            _ => ("SUB_SLEEP", "HIBERNATEIDLE"),
+        };
+        var output = RunCapture("powercfg.exe", $"/query SCHEME_CURRENT {subgroup} {setting}");
+        var ac = ExtractPowerIndex(output, ac: true);
+        var dc = ExtractPowerIndex(output, ac: false);
+        return ac == 0 && dc == 0;
+    }
+
+    private static uint? ExtractPowerIndex(string output, bool ac)
+    {
+        var marker = ac
+            ? "Current AC Power Setting Index"
+            : "Current DC Power Setting Index";
+        // 中文系统：当前交流电源设置索引 / 当前直流电源设置索引
+        var markerZh = ac ? "当前交流电源设置索引" : "当前直流电源设置索引";
+        using var reader = new StringReader(output ?? "");
+        string? line;
+        while ((line = reader.ReadLine()) is not null)
+        {
+            if (line.IndexOf(marker, StringComparison.OrdinalIgnoreCase) < 0
+                && line.IndexOf(markerZh, StringComparison.Ordinal) < 0)
+                continue;
+            var hex = line;
+            var ix = hex.LastIndexOf("0x", StringComparison.OrdinalIgnoreCase);
+            if (ix >= 0)
+            {
+                var token = hex[(ix + 2)..].Trim();
+                if (uint.TryParse(token, System.Globalization.NumberStyles.HexNumber, null, out var v))
+                    return v;
+            }
+            // 偶发十进制
+            var digits = new string(hex.Where(char.IsDigit).ToArray());
+            if (uint.TryParse(digits, out var d))
+                return d;
+        }
+        return null;
+    }
+
+    private const string PartMgrKey = @"SYSTEM\CurrentControlSet\Services\PartMgr";
+
+    private static bool IsDiskPerfEnabled() =>
+        DwordEquals(Hive.HkLm, PartMgrKey, "EnableCounterForIoctl", 1);
+
+    private static void SetDiskPerfEnabled(bool enable)
+    {
+        try
+        {
+            Run("diskperf.exe", enable ? "-Y" : "-N");
+        }
+        catch
+        {
+            // 回退注册表（与 diskperf 效果一致）
+            if (enable)
+                SetDword(Hive.HkLm, PartMgrKey, "EnableCounterForIoctl", 1);
+            else
+                SetDword(Hive.HkLm, PartMgrKey, "EnableCounterForIoctl", 0);
         }
     }
 
