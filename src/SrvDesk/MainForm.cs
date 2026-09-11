@@ -614,7 +614,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
-        _appMenu.ToolOptimizeAdvisor.Click += (_, _) => { using var d = new HealthOverviewDialog(this); d.ShowDialog(this); };
+        _appMenu.ToolOptimizeAdvisor.Click += (_, _) => ShowOptimizeAdvisor();
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
@@ -1157,6 +1157,7 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(quickGap);
         _commandFlow.Controls.Add(BarQuickButton(AppLang.L("配置脚本", "Config script"), AppLang.L("显示或隐藏配置脚本面板（可查看/编辑）", "Show or hide config script panel"), ToggleConfigScriptPanel));
         _commandFlow.Controls.Add(BarQuickButton(AppLang.L("常用软件", "Apps"), AppLang.L("打开常用软件安装与更新", "Install or update common apps"), ShowCommonSoftware));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("优化顾问", "Advisor"), AppLang.L("按本机状态查看并应用强烈推荐/推荐项", "Review and apply strongly recommended items for this PC"), ShowOptimizeAdvisor));
 
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
@@ -1346,6 +1347,12 @@ internal sealed class MainForm : Form
     }
 
     private void ConfigureComputerIdentity() => PromptComputerIdentity();
+
+    private void ShowOptimizeAdvisor()
+    {
+        using var d = new HealthOverviewDialog(this);
+        d.ShowDialog(this);
+    }
 
     private CommonSoftwareDialog? _commonSoftwareDlg;
 
