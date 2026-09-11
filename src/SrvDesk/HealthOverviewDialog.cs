@@ -137,6 +137,10 @@ internal sealed class HealthOverviewDialog : Form
         _rows.Clear();
         _groups.Clear();
         _scroll.SuspendLayout();
+        // 重建前列复位滚动，否则旧 AutoScrollPosition 会把新内容顶出一大块空白
+        try { _scroll.AutoScrollPosition = Point.Empty; }
+        catch { /* ignore */ }
+        _scroll.AutoScrollMinSize = Size.Empty;
         _scroll.Controls.Clear();
         var y = 0;
         var width = Math.Max(200, _scroll.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4);
@@ -149,6 +153,20 @@ internal sealed class HealthOverviewDialog : Form
         }
         _scroll.ResumeLayout(true);
         LayoutGroups();
+        ResetScrollTop();
+    }
+
+    private void ResetScrollTop()
+    {
+        try
+        {
+            _scroll.AutoScrollPosition = new Point(0, 0);
+            if (_scroll.VerticalScroll.Visible)
+                _scroll.VerticalScroll.Value = _scroll.VerticalScroll.Minimum;
+            if (_scroll.HorizontalScroll.Visible)
+                _scroll.HorizontalScroll.Value = _scroll.HorizontalScroll.Minimum;
+        }
+        catch { /* ignore */ }
     }
 
     private IReadOnlyList<TabOptimizeGroup> ApplySessionFilter(IReadOnlyList<TabOptimizeGroup> groups)
@@ -179,6 +197,9 @@ internal sealed class HealthOverviewDialog : Form
             c.Location = new Point(0, y);
             y += c.Height + UiScale.S(8);
         }
+
+        var minH = Math.Max(0, y);
+        _scroll.AutoScrollMinSize = new Size(0, minH);
     }
 
     private Panel BuildCollapsibleGroup(TabOptimizeGroup group, int width)
@@ -278,6 +299,9 @@ internal sealed class HealthOverviewDialog : Form
             body.Visible = chrome.Expanded;
             section.Height = chrome.Expanded ? headerH + body.Height : headerH;
             LayoutGroups();
+            // 折叠后虚拟高度变小，避免残留滚动空白
+            if (!chrome.Expanded)
+                ResetScrollTop();
         }
 
         head.Click += Toggle;
