@@ -2232,7 +2232,7 @@ internal sealed class MainForm : Form
     }
 
     /// <summary>
-    /// 按侧栏标签页归类：本机实际未达推荐，且为强烈推荐/必优化的条目。
+    /// 按侧栏标签页归类：本机实际未达推荐，且有效强度为强烈推荐/推荐的条目。
     /// </summary>
     internal IReadOnlyList<TabOptimizeGroup> CollectTabOptimizeFindings(bool refreshFromSystem)
     {
@@ -3365,7 +3365,7 @@ internal sealed class MainForm : Form
 
         public string ItemText { get; }
         public SettingHelpInfo Help { get; }
-        public RecommendLevel EffectiveRecommend => Help.EffectiveRecommend(_systemFacts);
+        public RecommendLevel EffectiveRecommend => Help.EffectiveRecommend(SystemInfoHelper.Detect());
         public Action<SettingRow>? OnCheckedChanged { get; set; }
         public bool HasChoice => _choice is not null;
 

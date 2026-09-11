@@ -1,21 +1,26 @@
 ---
-description: 编译输出到 dist，交付 exe 必须经 Obfuscar 轻度混淆
+description: 编译输出到 dist：每次必须轻度混淆，并递增版本号
 alwaysApply: true
 ---
 
-# 编译输出到 dist + Obfuscar
+# 编译输出到 dist + Obfuscar + 升版本
 
-## 交付用 exe（默认）
+## 交付用 exe（默认，强制）
 
-凡要给用户用的 `dist\SrvDesk.exe`，**必须**走轻度混淆，不要只用 `dotnet build`：
+凡编译给用户验证或交付的 `dist\SrvDesk.exe`，**必须同时满足**：
+
+1. **轻度混淆**（Obfuscar）
+2. **补丁版本号 +1**（改 `SrvDesk.csproj` 的 Version / FileVersion / InformationalVersion）
 
 ```powershell
-.\scripts\publish.ps1 -NoBumpVersion
+.\scripts\publish.ps1
 ```
 
-- 需要升补丁版本时：去掉 `-NoBumpVersion`（脚本会改 csproj 版本）
-- 脚本内部：`dotnet publish` → **Obfuscar**（`scripts/obfuscar.xml`）→ 写入 `dist\`
+- 脚本默认：`dotnet publish` → **Obfuscar** → 写入 `dist\`，并 **自动 bump 补丁版本**
+- **禁止**默认加 `-NoBumpVersion`（仅用户明确说「不升版本」时才可加）
 - **禁止**默认加 `-SkipObfuscate`（仅调试排查混淆问题时才可临时使用，且勿当交付包）
+- **禁止**用 `WgHost.exe` 或其它临时程序名冒充交付包
+- **禁止**只跑 `dotnet build` 就把 `bin\` 里的未混淆 exe 当交付物
 
 ## dist 约定
 
@@ -23,6 +28,7 @@ alwaysApply: true
 - 不要只把结果留在 `src\SrvDesk\bin\` 或 `obj\`
 - `dist/` 已 gitignore，不要提交进去
 
-## 本地快速验证（非交付）
+## 本地快速验证（例外）
 
-仅自己改代码看效果时可用 `dotnet build -c Release`（CopyExeToDist 会拷到 dist），但**交付前务必再跑一遍 `publish.ps1`**。
+仅 Agent 自己改代码、用户未要求出包时，可用 `dotnet build -c Release` 做编译检查。  
+**一旦要给用户试 / 发布，必须再跑无参数的 `.\scripts\publish.ps1`。**

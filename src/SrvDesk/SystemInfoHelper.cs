@@ -53,7 +53,22 @@ internal sealed class SystemFacts
 
 internal static class SystemInfoHelper
 {
+    private static SystemFacts? _cached;
+    private static int _cachedAt;
+
     public static SystemFacts Detect()
+    {
+        var now = Environment.TickCount;
+        if (_cached is not null && unchecked(now - _cachedAt) < 60_000)
+            return _cached;
+        _cached = DetectCore();
+        _cachedAt = now;
+        return _cached;
+    }
+
+    public static void InvalidateCache() => _cached = null;
+
+    private static SystemFacts DetectCore()
     {
         using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using var key = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");

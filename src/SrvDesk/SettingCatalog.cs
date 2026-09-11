@@ -464,7 +464,8 @@ internal static class SettingCatalog
         L("下次登录生效。", "Takes effect on next logon."),
         Arc2019,
         uiPlace: L("托盘/开机启动里的 Azure Arc", "Azure Arc in tray / startup"),
-        whenHint: L("不用 Azure 建议开", "Recommended if you do not use Azure"));
+        whenHint: L("不用 Azure 建议开", "Recommended if you do not use Azure"),
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo EnableInstaller = H(
         L("Windows Installer 服务设为自动。", "Set the Windows Installer service to Automatic."),

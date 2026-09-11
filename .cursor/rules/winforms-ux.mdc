@@ -32,7 +32,7 @@ alwaysApply: false
 - 问题列表里的短「建议」列（可行动、一行内）
 - 真正阻塞操作时的确认框 / 状态栏一句失败原因
 - 用户主动打开的帮助/免责声明文档
-- 优化顾问按标签页折叠的诊断分组（本机未达 + 强烈/必优化；静默应用到系统）
+- 优化顾问按标签页折叠的诊断分组（本机未达 + 强烈推荐/推荐；OS 感知；静默应用到系统）
 
 判断标准：删掉这段字后，用户是否仍能完成当前页任务？若能 → **删掉**。
 
@@ -113,7 +113,7 @@ alwaysApply: false
 - [ ] `ApplyWindowIcon`；标题走 `AppLang`
 - [ ] ListView/工具条无异常滚动条或列裁切
 - [ ] **无流程条 / 无重复说明 / 无「提示：」科普注脚**
-- [ ] 交付 exe 仍走 `publish.ps1`（Obfuscar），见 compile-dist 规则
+- [ ] 交付 exe：`.\scripts\publish.ps1`（升版本 + Obfuscar），见 compile-dist 规则；勿 `-NoBumpVersion` / `-SkipObfuscate`
 
 ## 反例
 
