@@ -315,7 +315,7 @@ internal sealed class MainForm : Form
     private SettingRow[] AllRows =>
     [
         _cpu, _dep, _uac, _ie, _highPerf, _telemetry, _noUpdateReboot, _deliveryOpt, _wuNotify,
-        _sysMain, _visualPerf, _powerThrottle, _boostMode, _hibernate, _tcp, _qosSpeed, _errorReport,
+        _sysMain, _visualPerf, _powerThrottle, _boostMode, _hibernate, _neverSleep, _diskPerf, _tcp, _qosSpeed, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035, _wuPauseUx,
         _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
@@ -384,7 +384,7 @@ internal sealed class MainForm : Form
                 _meltdown, _hvci, _wdac, _vbs, _sysRestore, _noBitlockerAuto,
             ]),
             (AppLang.L("磁盘与文件", "Disk & files"), [
-                _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
+                _diskPerf, _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
             ]),
             (AppLang.L("启动与维护", "Boot & maintenance"), [
                 _autoMaint, _utc, _hpet, _loginVerbose, _f8, _autoReboot,
@@ -446,7 +446,7 @@ internal sealed class MainForm : Form
                 _ra,
             ]),
             (AppLang.L("电源与休眠", "Power & hibernation"), [
-                _hibernate, _fastStartup, _usbPowerOff,
+                _neverSleep, _hibernate, _fastStartup, _usbPowerOff,
             ]),
             (AppLang.L("后台与内存", "Background & memory"), [
                 _sysMain, _memComp, _prelaunch, _pageCombine, _ucpd,
@@ -2644,6 +2644,8 @@ internal sealed class MainForm : Form
         _powerThrottle.Checked = s.PowerThrottlingOff;
         _boostMode.Checked = s.ShowProcessorBoostMode;
         _hibernate.Checked = s.DisableHibernate;
+        _neverSleep.Checked = s.NeverSleepOrScreenOff;
+        _diskPerf.Checked = s.EnableDiskPerfCounters;
         _tcp.Checked = s.TcpOptimized;
         _qosSpeed.Checked = s.QosSpeedOptimize;
         _errorReport.Checked = s.DisableErrorReport;
@@ -2853,6 +2855,8 @@ internal sealed class MainForm : Form
         PowerThrottlingOff = _powerThrottle.Checked,
         ShowProcessorBoostMode = _boostMode.Checked,
         DisableHibernate = _hibernate.Checked,
+        NeverSleepOrScreenOff = _neverSleep.Checked,
+        EnableDiskPerfCounters = _diskPerf.Checked,
         TcpOptimized = _tcp.Checked,
         QosSpeedOptimize = _qosSpeed.Checked,
         DisableErrorReport = _errorReport.Checked,
@@ -3083,6 +3087,8 @@ internal sealed class MainForm : Form
 
         Sync(_sysMain, s.DisableSysMain);
         Sync(_hibernate, s.DisableHibernate);
+        Sync(_neverSleep, s.NeverSleepOrScreenOff);
+        Sync(_diskPerf, s.EnableDiskPerfCounters);
         Sync(_fastStartup, s.DisableFastStartup);
         Sync(_memComp, s.DisableMemoryCompression);
         Sync(_prelaunch, s.DisableAppPrelaunch);

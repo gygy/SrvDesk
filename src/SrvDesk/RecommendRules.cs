@@ -161,7 +161,8 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableSystemRestore)
         || ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
         || ReferenceEquals(help, SettingCatalog.DisableCad)
-        || ReferenceEquals(help, SettingCatalog.DisableShutdownReason);
+        || ReferenceEquals(help, SettingCatalog.DisableShutdownReason)
+        || ReferenceEquals(help, SettingCatalog.EnableDiskPerfCounters);
 
     private static bool IsAggressivePerf(SettingHelpInfo help) =>
         ReferenceEquals(help, SettingCatalog.EnableTcpBbr2)

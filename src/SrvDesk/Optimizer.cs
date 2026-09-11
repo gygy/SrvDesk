@@ -1030,14 +1030,18 @@ internal static class Optimizer
             var ix = hex.LastIndexOf("0x", StringComparison.OrdinalIgnoreCase);
             if (ix >= 0)
             {
-                var token = hex[(ix + 2)..].Trim();
+                var token = hex.Substring(ix + 2).Trim();
                 if (uint.TryParse(token, System.Globalization.NumberStyles.HexNumber, null, out var v))
                     return v;
             }
-            // 偶发十进制
-            var digits = new string(hex.Where(char.IsDigit).ToArray());
-            if (uint.TryParse(digits, out var d))
-                return d;
+            // 偶发十进制尾部
+            var colon = hex.LastIndexOf(':');
+            if (colon >= 0)
+            {
+                var tail = hex.Substring(colon + 1).Trim();
+                if (uint.TryParse(tail, out var d))
+                    return d;
+            }
         }
         return null;
     }

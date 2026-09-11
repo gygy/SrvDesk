@@ -90,6 +90,14 @@ internal static class SettingRecipeCatalog
             "powercfg.exe -h off",
             "powercfg.exe -h on"));
 
+        Add(SettingCatalog.NeverSleepOrScreenOff, ActionScript.Cmd(
+            "powercfg.exe -change -monitor-timeout-ac 0\r\npowercfg.exe -change -monitor-timeout-dc 0\r\npowercfg.exe -change -standby-timeout-ac 0\r\npowercfg.exe -change -standby-timeout-dc 0\r\npowercfg.exe -change -hibernate-timeout-ac 0\r\npowercfg.exe -change -hibernate-timeout-dc 0",
+            "powercfg.exe -change -monitor-timeout-ac 10\r\npowercfg.exe -change -monitor-timeout-dc 5\r\npowercfg.exe -change -standby-timeout-ac 30\r\npowercfg.exe -change -standby-timeout-dc 15\r\npowercfg.exe -change -hibernate-timeout-ac 0\r\npowercfg.exe -change -hibernate-timeout-dc 180"));
+
+        Add(SettingCatalog.EnableDiskPerfCounters, ActionScript.Cmd(
+            "diskperf.exe -Y",
+            "diskperf.exe -N"));
+
         Add(SettingCatalog.TcpOptimized, ActionScript.Cmd(
             "netsh.exe int tcp set global autotuninglevel=normal\r\nnetsh.exe int tcp set global timestamps=disabled\r\nnetsh.exe int tcp set global ecncapability=disabled",
             "netsh.exe int tcp set global autotuninglevel=normal\r\nnetsh.exe int tcp set global timestamps=enabled\r\nnetsh.exe int tcp set global ecncapability=default"));
