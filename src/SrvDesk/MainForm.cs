@@ -399,7 +399,7 @@ internal sealed class MainForm : Form
                 _tbAutohide, _taskbar, _allTrayIcons, _tbEndTask, _news,
             ]),
             (AppLang.L("桌面服务", "Desktop services"), [
-                _themes, _audio, _search, _darkMode, _notepadWrap, _notepadStatus,
+                _themes, _search, _darkMode, _notepadWrap, _notepadStatus,
             ]),
             (AppLang.L("安全与锁屏", "Security & lock screen"), [
                 _smartScreen, _noLockScreen, _feedback,
@@ -476,7 +476,7 @@ internal sealed class MainForm : Form
             (AppLang.L("Server专属", "Server only"), [
                 _svrMgr, _wacPrompt, _azure,
                 _mediaFeatures, _bloatFeatures,
-                _installer, _wia,
+                _audio, _installer, _wia,
             ]),
         ]));
         _groups.Add((AppLang.L("账户策略", "Account policy"), [
