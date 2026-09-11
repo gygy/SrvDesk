@@ -822,7 +822,15 @@ internal static class SettingCatalog
         L("强制关闭基于虚拟化的安全性。", "Force-disable Virtualization-based Security."), L("EnableVirtualizationBasedSecurity=0。", "EnableVirtualizationBasedSecurity=0."), L("减少 VBS 性能损耗。", "Less VBS performance cost."), L("Credential Guard/HVCI 将不可用；高级项，勿一键全开。", "Credential Guard / HVCI unavailable; advanced — not one-click."), L("需重启。", "Requires reboot."), W10,
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo EnableTcpBbr2 = H(
-        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC；属高级网络项。", "Fails on unsupported OS and keeps CUBIC; advanced networking."), L("立即生效。", "Takes effect immediately."), W10,
+        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC；与 CTCP 互斥，属高级网络项。", "Fails on unsupported OS and keeps CUBIC; mutually exclusive with CTCP; advanced."), L("立即生效。", "Takes effect immediately."), W10,
+        recommend: RecommendLevel.Suggested);
+    public static readonly SettingHelpInfo EnableTcpCtcp = H(
+        L("TCP 拥塞控制改用 CTCP（Compound TCP）。", "Use CTCP (Compound TCP) for congestion control."),
+        L("netsh int tcp set supplemental template=internet congestionprovider=ctcp。", "netsh int tcp set supplemental template=internet congestionprovider=ctcp."),
+        L("高带宽高延迟链路下吞吐往往优于默认 CUBIC；局域网/NAS 媒体访问体感可能更跟手。", "Often better throughput on high-BDP links than default CUBIC; LAN/NAS media may feel snappier."),
+        L("Wi‑Fi/不稳定链路请自行对比；与 BBR2 互斥（开启本项会覆盖 BBR2）。不支持时保持原算法。", "Benchmark on Wi‑Fi/unstable links; mutually exclusive with BBR2 (this overrides BBR2). Unsupported OS keeps previous provider."),
+        L("立即生效（当前 Internet 模板）。", "Takes effect immediately (Internet template)."),
+        W10,
         recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo DisableSystemRestore = H(
         L("禁用系统还原。", "Disable System Restore."),

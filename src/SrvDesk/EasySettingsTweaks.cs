@@ -155,8 +155,18 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", s.DisableWdac ? 0 : 1);
         if (Take("DisableVbs", x => x.DisableVbs))
             SetVbs(!s.DisableVbs);
-        if (Take("EnableTcpBbr2", x => x.EnableTcpBbr2))
-            SetTcpBbr2(s.EnableTcpBbr2);
+        var bbrChanged = Take("EnableTcpBbr2", x => x.EnableTcpBbr2);
+        var ctcpChanged = Take("EnableTcpCtcp", x => x.EnableTcpCtcp);
+        if (bbrChanged || ctcpChanged)
+        {
+            // CTCP 与 BBR2 互斥；两者皆关 → CUBIC
+            if (s.EnableTcpCtcp)
+                SetTcpCongestionProvider("ctcp");
+            else if (s.EnableTcpBbr2)
+                SetTcpCongestionProvider("bbr2");
+            else
+                SetTcpCongestionProvider("cubic");
+        }
         if (Take("DisableSystemRestore", x => x.DisableSystemRestore))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", s.DisableSystemRestore ? 1 : 0);
         if (Take("DisableCeip", x => x.DisableCeip))
@@ -234,6 +244,7 @@ internal static class EasySettingsTweaks
         s.DisableWdac = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeviceGuard", "ConfigCIPolicyEnable", 0);
         s.DisableVbs = DwordEquals(Hive.HkLm, DeviceGuard, "EnableVirtualizationBasedSecurity", 0);
         s.EnableTcpBbr2 = IsTcpBbr2On();
+        s.EnableTcpCtcp = IsTcpCtcpOn();
         s.DisableSystemRestore = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", 1);
         s.DisableCeip = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\SQMClient\Windows", "CEIPEnable", 0);
         s.DisableDiagnosticPolicy = ServiceDisabled("DPS");
@@ -482,23 +493,26 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkLm, DeviceGuard, "EnableVirtualizationBasedSecurity", 0);
     }
 
-    private static bool IsTcpBbr2On()
+    private static bool IsTcpBbr2On() =>
+        TcpCongestionProviderContains("bbr2");
+
+    private static bool IsTcpCtcpOn() =>
+        TcpCongestionProviderContains("ctcp");
+
+    private static bool TcpCongestionProviderContains(string token)
     {
         try
         {
             var output = RunCapture("netsh", "int tcp show supplemental");
-            return output.IndexOf("bbr2", StringComparison.OrdinalIgnoreCase) >= 0
-                || output.IndexOf("BBR2", StringComparison.OrdinalIgnoreCase) >= 0;
+            return output.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch { return false; }
     }
 
-    private static void SetTcpBbr2(bool enable)
+    private static void SetTcpCongestionProvider(string provider)
     {
-        if (enable)
-            Run("netsh", "int tcp set supplemental Template=Internet CongestionProvider=bbr2");
-        else
-            Run("netsh", "int tcp set supplemental Template=Internet CongestionProvider=cubic");
+        // 对齐：netsh int tcp set supplemental template=internet congestionprovider=…
+        Run("netsh", "int tcp set supplemental template=internet congestionprovider=" + provider);
     }
 
     private static (bool MemoryCompression, bool ApplicationPreLaunch, bool PageCombining)? _mmAgentCache;

@@ -166,6 +166,7 @@ internal static class RecommendRules
 
     private static bool IsAggressivePerf(SettingHelpInfo help) =>
         ReferenceEquals(help, SettingCatalog.EnableTcpBbr2)
+        || ReferenceEquals(help, SettingCatalog.EnableTcpCtcp)
         || ReferenceEquals(help, SettingCatalog.DisableHpet)
         || ReferenceEquals(help, SettingCatalog.MergeSvchostProcesses)
         || ReferenceEquals(help, SettingCatalog.DisableMemoryCompression)

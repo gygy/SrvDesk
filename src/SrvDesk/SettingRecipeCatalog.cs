@@ -644,6 +644,9 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.EnableTcpBbr2, ActionScript.Cmd(
             "netsh int tcp set supplemental template=internet CongestionProvider=bbr2",
             "netsh int tcp set supplemental template=internet CongestionProvider=cubic"));
+        Add(SettingCatalog.EnableTcpCtcp, ActionScript.Cmd(
+            "netsh int tcp set supplemental template=internet congestionprovider=ctcp",
+            "netsh int tcp set supplemental template=internet congestionprovider=cubic"));
         Add(SettingCatalog.DisableSystemRestore, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR", 1, 0));
         Add(SettingCatalog.DisableCeip, ActionScript.DwordToggle(false,

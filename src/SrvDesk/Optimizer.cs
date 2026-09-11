@@ -178,6 +178,8 @@ internal static class Optimizer
         public bool DisableWdac;
         public bool DisableVbs;
         public bool EnableTcpBbr2;
+        /// <summary>TCP 拥塞控制 = CTCP（与 BBR2 互斥）。</summary>
+        public bool EnableTcpCtcp;
         public bool DisableSystemRestore;
         public bool DisableCeip;
         public bool DisableDiagnosticPolicy;
@@ -686,6 +688,7 @@ internal static class Optimizer
             || b.DisableWdac != s.DisableWdac
             || b.DisableVbs != s.DisableVbs
             || b.EnableTcpBbr2 != s.EnableTcpBbr2
+            || b.EnableTcpCtcp != s.EnableTcpCtcp
             || b.DisableSystemRestore != s.DisableSystemRestore
             || b.DisableCeip != s.DisableCeip
             || b.DisableDiagnosticPolicy != s.DisableDiagnosticPolicy

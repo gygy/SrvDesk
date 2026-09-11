@@ -48,6 +48,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _wdac = Row(AppLang.L("关闭 WDAC 应用控制", "Disable WDAC"), AppLang.L("系统默认", "System default"), SettingCatalog.DisableWdac);
     private readonly SettingRow _vbs = Row(AppLang.L("强制关闭 VBS 虚拟化安全", "Force-disable VBS"), AppLang.L("由系统决定", "System decides"), SettingCatalog.DisableVbs);
     private readonly SettingRow _bbr2 = Row(AppLang.L("TCP 拥塞控制开启 BBR2", "Enable TCP BBR2"), AppLang.L("CUBIC 默认", "CUBIC default"), SettingCatalog.EnableTcpBbr2);
+    private readonly SettingRow _ctcp = Row(AppLang.L("TCP 拥塞控制改用 CTCP", "Enable TCP CTCP"), AppLang.L("CUBIC 默认", "CUBIC default"), SettingCatalog.EnableTcpCtcp);
     private readonly SettingRow _sysRestore = Row(AppLang.L("禁用系统还原", "Disable System Restore"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableSystemRestore);
     private readonly SettingRow _ceip = Row(AppLang.L("关闭客户体验改善计划", "Disable CEIP"), AppLang.L("启用", "Enabled"), SettingCatalog.DisableCeip);
     private readonly SettingRow _dps = Row(AppLang.L("禁用诊断策略服务 DPS", "Disable DPS"), AppLang.L("自动", "Automatic"), SettingCatalog.DisableDiagnosticPolicy);
@@ -318,7 +319,7 @@ internal sealed class MainForm : Form
         _sysMain, _visualPerf, _powerThrottle, _boostMode, _hibernate, _neverSleep, _diskPerf, _tcp, _qosSpeed, _errorReport,
         _longPaths, _fastStartup, _autoMaint, _noDriverWu, _smb1, _remoteReg, _spooler,
         _largeCache, _reservedStorage, _srvSplit, _gpuSched, _pca, _wuPause2035, _wuPauseUx,
-        _meltdown, _hvci, _wdac, _vbs, _bbr2, _sysRestore, _ceip, _dps,
+        _meltdown, _hvci, _wdac, _vbs, _bbr2, _ctcp, _sysRestore, _ceip, _dps,
         _memComp, _prelaunch, _pageCombine, _ucpd,
         _netThrottle, _mmcss, _keyboardLatency, _webDavLimit, _hpet, _ntfsStamp, _utc, _loginVerbose, _f8, _xbox, _fax, _wmpShare,
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
@@ -372,7 +373,7 @@ internal sealed class MainForm : Form
                 _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt, _noUpdateAsap,
             ]),
             (AppLang.L("网络优化", "Network"), [
-                _tcp, _qosSpeed, _bbr2, _netThrottle, _webDavLimit,
+                _tcp, _qosSpeed, _bbr2, _ctcp, _netThrottle, _webDavLimit,
             ]),
             (AppLang.L("遥测与诊断", "Telemetry & diagnostics"), [
                 _telemetry, _diagMinimal, _dps, _ceip, _errorReport,
@@ -500,6 +501,8 @@ internal sealed class MainForm : Form
             };
         }
 
+        AttachTcpCongestionMutex();
+
         WireAppMenu();
         WirePresetMenu();
         var header = BuildHeader();
@@ -594,6 +597,26 @@ internal sealed class MainForm : Form
         using var dlg = new AppUpdateDialog(info);
         dlg.Shown += async (_, _) => await dlg.StartDownloadAsync(confirm: false);
         dlg.ShowDialog(this);
+    }
+
+    private void AttachTcpCongestionMutex()
+    {
+        void Hook(SettingRow self, SettingRow other)
+        {
+            var prev = self.OnCheckedChanged;
+            self.OnCheckedChanged = r =>
+            {
+                prev?.Invoke(r);
+                if (_binding) return;
+                if (!self.Checked || !other.Checked) return;
+                _binding = true;
+                try { other.Checked = false; }
+                finally { _binding = false; }
+            };
+        }
+
+        Hook(_bbr2, _ctcp);
+        Hook(_ctcp, _bbr2);
     }
 
     private void WireAppMenu()
@@ -2713,6 +2736,7 @@ internal sealed class MainForm : Form
         _wdac.Checked = s.DisableWdac;
         _vbs.Checked = s.DisableVbs;
         _bbr2.Checked = s.EnableTcpBbr2;
+        _ctcp.Checked = s.EnableTcpCtcp;
         _sysRestore.Checked = s.DisableSystemRestore;
         _ceip.Checked = s.DisableCeip;
         _dps.Checked = s.DisableDiagnosticPolicy;
@@ -2879,6 +2903,7 @@ internal sealed class MainForm : Form
         DisableWdac = _wdac.Checked,
         DisableVbs = _vbs.Checked,
         EnableTcpBbr2 = _bbr2.Checked,
+        EnableTcpCtcp = _ctcp.Checked,
         DisableSystemRestore = _sysRestore.Checked,
         DisableCeip = _ceip.Checked,
         DisableDiagnosticPolicy = _dps.Checked,
