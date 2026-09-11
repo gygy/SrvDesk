@@ -796,6 +796,7 @@ internal sealed class MainForm : Form
         sidebar.Dock = DockStyle.Left;
 
         var prefs = UiPrefs.Load();
+        var showPanel = UiPrefs.IsDefaultPanelVisible(prefs);
         _scriptPanelSize = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
         _scriptPanelHeight = UiPrefs.ClampHeight(prefs.HelpPanelHeight);
         _scriptDock = UiPrefs.GetDock(prefs);
@@ -809,14 +810,13 @@ internal sealed class MainForm : Form
         _mainSplit.Panel2MinSize = 50;
         _mainSplit.Panel1.BackColor = AppTheme.Surface;
         _mainSplit.Panel2.BackColor = AppTheme.SurfaceCard;
+        // 默认收起：避免 HandleCreated 未触发时右侧脚本栏一直露着
+        _mainSplit.Panel2Collapsed = true;
 
         _contentHost.Dock = DockStyle.Fill;
         _helpDetail.Dock = DockStyle.Fill;
         _mainSplit.Panel1.Controls.Add(_contentHost);
         _mainSplit.Panel2.Controls.Add(_helpDetail);
-
-        _workArea.Controls.Add(_mainSplit);
-        _workArea.Controls.Add(sidebar);
 
         _saveSplitTimer = new System.Windows.Forms.Timer { Interval = 350 };
         _saveSplitTimer.Tick += (_, _) =>
@@ -831,18 +831,27 @@ internal sealed class MainForm : Form
             _saveSplitTimer.Start();
         };
 
-        _mainSplit.HandleCreated += (_, _) => BeginInvoke(() =>
+        void ApplyStartupScriptLayout()
         {
             ApplyConfigScriptDock(_scriptDock, fromUser: false);
-            SetConfigScriptPanelVisible(UiPrefs.IsDefaultPanelVisible(prefs));
-        });
+            SetConfigScriptPanelVisible(showPanel);
+        }
 
-        // 先按偏好设好菜单勾选；实际布局等 HandleCreated
-        _appMenu.ViewHelpPanel.Checked = UiPrefs.IsDefaultPanelVisible(prefs);
+        if (_mainSplit.IsHandleCreated)
+            BeginInvoke(ApplyStartupScriptLayout);
+        else
+            _mainSplit.HandleCreated += (_, _) => BeginInvoke(ApplyStartupScriptLayout);
+
+        _workArea.Controls.Add(_mainSplit);
+        _workArea.Controls.Add(sidebar);
+
+        // 菜单勾选与显隐立即对齐偏好（不依赖 HandleCreated）
+        _appMenu.ViewHelpPanel.Checked = showPanel;
         _helpDetail.SetActiveDock(_scriptDock);
         _mainSplit.Orientation = _scriptDock == ConfigScriptDock.Bottom
             ? Orientation.Horizontal
             : Orientation.Vertical;
+        SetConfigScriptPanelVisible(showPanel);
     }
 
     private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromUser)
@@ -856,7 +865,8 @@ internal sealed class MainForm : Form
             if (fromUser)
                 UiPrefs.SetHelpPanelDock(dock);
 
-            var visible = !_mainSplit.Panel2Collapsed && _appMenu.ViewHelpPanel.Checked;
+            // 仅以菜单勾选为准；勿用「当前是否已折叠」判断（启动时默认未折叠会误显示）
+            var visible = _appMenu.ViewHelpPanel.Checked;
             try
             {
                 _mainSplit.SuspendLayout();
@@ -866,9 +876,10 @@ internal sealed class MainForm : Form
                 _mainSplit.Orientation = dock == ConfigScriptDock.Bottom
                     ? Orientation.Horizontal
                     : Orientation.Vertical;
-                ApplyScriptPanelDistance();
+                if (visible)
+                    ApplyScriptPanelDistance();
                 // 布局完成后再抬高最小值，限制拖得过小
-                if (_mainSplit.Width > 200 && _mainSplit.Height > 200)
+                if (visible && _mainSplit.Width > 200 && _mainSplit.Height > 200)
                 {
                     _mainSplit.Panel1MinSize = dock == ConfigScriptDock.Bottom ? 120 : 280;
                     _mainSplit.Panel2MinSize = dock == ConfigScriptDock.Bottom
@@ -885,8 +896,7 @@ internal sealed class MainForm : Form
                 _mainSplit.ResumeLayout(true);
             }
 
-            if (!visible)
-                _mainSplit.Panel2Collapsed = true;
+            SetConfigScriptPanelVisible(visible);
 
             LayoutContent();
         }
