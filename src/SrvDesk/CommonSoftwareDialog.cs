@@ -484,13 +484,14 @@ internal sealed class CommonSoftwareDialog : Form
         System.Threading.Tasks.Task.Delay(12_000).ContinueWith(_ =>
         {
             if (done || gen != _statusLoadGen) return;
+            CommonSoftwareHelper.EnsureStatusCacheSkeleton(CommonSoftwareCatalog.All);
             Ui(() =>
             {
                 if (gen != _statusLoadGen) return;
                 RefreshAll();
-                _wingetHint.Text = (_wingetHint.Text ?? "").Contains("winget")
-                    ? _wingetHint.Text
-                    : "状态检测超时，已显示当前结果；可点刷新重试。";
+                if (!(_wingetHint.Text ?? "").StartsWith("已检测", StringComparison.Ordinal)
+                    && !(_wingetHint.Text ?? "").StartsWith("未检测", StringComparison.Ordinal))
+                    _wingetHint.Text = "状态检测较慢，已先显示结果；可点刷新重试。";
             });
         });
     }

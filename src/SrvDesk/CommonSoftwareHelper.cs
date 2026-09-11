@@ -563,6 +563,19 @@ internal static class CommonSoftwareHelper
             _statusCache = map;
     }
 
+    /// <summary>探测未完成时先放空缓存，避免 UI 线程对每一行再扫一遍注册表。</summary>
+    public static void EnsureStatusCacheSkeleton(IReadOnlyList<CommonSoftwareItem> items)
+    {
+        lock (StatusCacheLock)
+        {
+            if (_statusCache is not null) return;
+            var map = new Dictionary<string, CommonSoftwareStatus>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+                map[item.Id] = new CommonSoftwareStatus();
+            _statusCache = map;
+        }
+    }
+
     public static CommonSoftwareStatus Query(CommonSoftwareItem item)
     {
         lock (StatusCacheLock)
@@ -1803,7 +1816,7 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
         if (!string.IsNullOrWhiteSpace(_wingetVersionCache))
             return _wingetVersionCache!;
 
-        var version = RunCaptureWinget("--version").Trim();
+        var version = RunCaptureWinget("--version", timeoutMs: 8_000).Trim();
         if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase) && version.Length > 1)
             version = version.Substring(1).Trim();
         _wingetVersionCache = version;
@@ -3325,8 +3338,8 @@ if ($deps.Count -gt 0) {{
         }
     }
 
-    private static string RunCaptureWinget(string args) =>
-        RunCapture(ResolveWingetPath(), args, setWorkingDirForExe: true);
+    private static string RunCaptureWinget(string args, int timeoutMs = 180_000) =>
+        RunCapture(ResolveWingetPath(), args, setWorkingDirForExe: true, timeoutMs: timeoutMs);
 
     private static int RunStreaming(
         string file,
