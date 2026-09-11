@@ -2,7 +2,7 @@
 
 A local optimizer for **Windows Server 2019 / 2022 / 2025** (also works on Windows 10/11). It shows what can change, why, and the risk — then writes to the system only after you confirm.
 
-**Version:** 1.0.33 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
+**Version:** 1.0.36 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
 
 Full guide (中文): [README.md](README.md)
 

@@ -1,21 +1,13 @@
-﻿# SrvDesk v1.0.33
+﻿# SrvDesk v1.0.36
 
 ## 中文
 
-- 顶部命令栏「常用软件」旁新增 **优化顾问** 快捷入口
-- 推荐强度四级重标：强烈推荐 / 推荐 / 高级 / 不推荐；顾问只展示前两档
-- 按本机 OS（Win10/11、Server 2016–2025、Server Core、虚拟机）解析有效推荐
-- VBS/HVCI/Spectre 等安全缓解关闭项不再作为常规优化；SysMain / Windows Search 按场景调整
-- 首次说明补充杀软误报提示与 VirusTotal 链接；检查更新说明去掉 Markdown 噪声并正确分行
-
-下载：单文件 `SrvDesk.exe`（轻度混淆），请以管理员身份运行。
+- 多项优化改为 **强烈推荐**（列表与优化顾问同步），含：IE ESC、此电脑图标、RDP 及硬件加速/高帧率、任务栏时钟与全部托盘图标、快捷方式相关、右键复制移动/快捷操作组、禁用系统还原，以及账户策略中的密码复杂性 / Ctrl+Alt+Del / 关机事件跟踪等
+- 程序设置「配置脚本默认停靠」增加 **关闭**，新安装默认关闭（已并入原「启动时显示」）
+- 单文件 `SrvDesk.exe`，轻度混淆；请以管理员身份运行
 
 ## English
 
-- Command bar: **Optimization advisor** shortcut next to Common software
-- Four recommend tiers: Strongly recommended / Recommended / Advanced / Not recommended; advisor shows the first two only
-- OS-aware recommend rules (Win10/11, Server 2016–2025, Server Core, VM)
-- Security-mitigation toggles demoted; SysMain / Windows Search tuned by scenario
-- First-run note covers AV false positives + VirusTotal; update notes strip Markdown and wrap properly
-
-Download `SrvDesk.exe` (lightly obfuscated) and run as Administrator.
+- Many toggles raised to **Strongly recommended** (list + Optimization advisor), including IE ESC, This PC icon, RDP + GPU/high FPS, taskbar clock & all tray icons, shortcut tweaks, context-menu Copy/Move & Quick Ops, Disable System Restore, and account-policy items (password complexity / Ctrl+Alt+Del / shutdown tracker)
+- Settings: **Config script dock** adds **Closed** (default off for new installs)
+- Single-file `SrvDesk.exe`, lightly obfuscated; run as Administrator

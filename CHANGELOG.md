@@ -4,12 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
-### Added
+## [1.0.36] - 2026-09-11
 
-- Server health assistant loop: profile → health score → recommendations → change-plan dry-run → apply → history/rollback → optional inspection
-- Tools: Health overview, Server profile, Recommendation center, Ports & exposure, Scheduled tasks, Optimization history
-- Service dependency/risk explain + profile-protected services; startup advice tags; Features profile tips (SMB1 highlighted)
-- Presets: Home server / Docker host / NAS profile templates
+### Changed
+
+- Raised many toggles to Strongly recommended (list + advisor): IE ESC, This PC, RDP/GPU/FPS, taskbar clock & tray icons, shortcut/context-menu items, Disable System Restore, account-policy items
+- Config script dock: add Closed; default off for new installs (merged former “show at startup”)
 
 ## [1.0.33] - 2026-09-11
 

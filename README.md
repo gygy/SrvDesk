@@ -2,7 +2,7 @@
 
 给 **Windows Server 2019 / 2022 / 2025**（也可用于 Windows 10/11）做本机优化：能改哪些、为什么改、风险多大，确认后再写进系统。
 
-当前版本：**1.0.33** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
+当前版本：**1.0.36** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
 
 [English](README_en.md)
 
