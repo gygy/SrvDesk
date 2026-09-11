@@ -6,7 +6,7 @@ Local **optimization assistant** for Windows Server 2019/2022/2025 (also works o
 
 Don’t disable services blindly — balance performance, stability, security, and compatibility.
 
-**Version:** 1.0.32 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
+**Version:** 1.0.33 · [Download Releases](https://github.com/gygy/SrvDesk/releases) → `SrvDesk.exe`
 
 Full guide (中文, default): [README.md](README.md)
 

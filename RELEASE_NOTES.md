@@ -1,19 +1,21 @@
-﻿# SrvDesk v1.0.32
+﻿# SrvDesk v1.0.33
 
 ## 中文
 
-- **工具 → 优化顾问**：按本机真实状态诊断；仅列出未达推荐且「强烈推荐 / 必优化」的项
-- 「应用到系统」不再弹变更计划/还原点，勾选后（未勾则处理列表全部）立即写入并刷新
-- 去掉分组「本组设为推荐」；顶栏只保留简洁「待优化 N 项」
-- 设为推荐后列表同步减少；服务类项设推荐即写启动类型
+- 顶部命令栏「常用软件」旁新增 **优化顾问** 快捷入口
+- 推荐强度四级重标：强烈推荐 / 推荐 / 高级 / 不推荐；顾问只展示前两档
+- 按本机 OS（Win10/11、Server 2016–2025、Server Core、虚拟机）解析有效推荐
+- VBS/HVCI/Spectre 等安全缓解关闭项不再作为常规优化；SysMain / Windows Search 按场景调整
+- 首次说明补充杀软误报提示与 VirusTotal 链接；检查更新说明去掉 Markdown 噪声并正确分行
 
 下载：单文件 `SrvDesk.exe`（轻度混淆），请以管理员身份运行。
 
 ## English
 
-- **Tools → Optimization advisor**: diagnose from real local settings; only show unset items that are Strongly recommended / Must
-- **Apply to system** writes immediately (no change-plan / restore-point prompts) and refreshes; if nothing is checked, applies the whole list
-- Removed per-group “Set group recommended”; header shows a short pending count only
-- Setting recommended shrinks the list; service items write start type immediately
+- Command bar: **Optimization advisor** shortcut next to Common software
+- Four recommend tiers: Strongly recommended / Recommended / Advanced / Not recommended; advisor shows the first two only
+- OS-aware recommend rules (Win10/11, Server 2016–2025, Server Core, VM)
+- Security-mitigation toggles demoted; SysMain / Windows Search tuned by scenario
+- First-run note covers AV false positives + VirusTotal; update notes strip Markdown and wrap properly
 
 Download `SrvDesk.exe` (lightly obfuscated) and run as Administrator.
