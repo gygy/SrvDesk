@@ -59,6 +59,8 @@ internal sealed class AppUpdateDialog : Form
         _notes.BorderStyle = BorderStyle.FixedSingle;
         _notes.BackColor = AppTheme.SurfaceCard;
         _notes.ForeColor = AppTheme.TextMain;
+        _notes.WordWrap = true;
+        _notes.Font = UiFit.UiFont;
         _notes.Text = "点击「检查更新」查询 GitHub Releases。";
 
         _bar.Dock = DockStyle.Top;

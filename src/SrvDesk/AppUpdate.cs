@@ -247,9 +247,54 @@ internal static class AppUpdate
 
     private static string StripMd(string body)
     {
-        var t = body.Replace("\r\n", "\n").Trim();
-        if (t.Length > 800) t = t.Substring(0, 800) + "…";
-        return t;
+        if (string.IsNullOrWhiteSpace(body))
+            return "";
+
+        // GitHub body 多为 \n；TextBox 需要 \r\n 才会分行
+        var raw = body.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+        var sb = new StringBuilder(raw.Length + 32);
+        var lastBlank = false;
+        foreach (var line in raw.Split('\n'))
+        {
+            var t = line.TrimEnd();
+            if (t.Length == 0)
+            {
+                if (!lastBlank && sb.Length > 0)
+                {
+                    sb.Append("\r\n");
+                    lastBlank = true;
+                }
+                continue;
+            }
+
+            // 标题：# / ## / ### …
+            t = Regex.Replace(t, @"^\s{0,3}#{1,6}\s*", "");
+            // 引用
+            t = Regex.Replace(t, @"^\s{0,3}>\s?", "");
+            // 无序/有序列表
+            t = Regex.Replace(t, @"^\s{0,3}([-*+]|\d+\.)\s+", "• ");
+            // 粗体标记（保留文字）
+            t = t.Replace("**", "").Replace("__", "");
+            // 行内代码反引号
+            t = t.Replace("`", "");
+            // 链接 [文字](url) → 文字
+            t = Regex.Replace(t, @"\[([^\]]+)\]\([^)]+\)", "$1");
+            // 水平线整行丢掉
+            if (Regex.IsMatch(t, @"^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$"))
+                continue;
+
+            t = t.Trim();
+            if (t.Length == 0)
+                continue;
+            sb.Append(t);
+            sb.Append("\r\n");
+            lastBlank = false;
+        }
+
+        var text = sb.ToString().Trim();
+        if (text.Length > 4000)
+            text = text.Substring(0, 4000).TrimEnd() + "\r\n…";
+        return text;
     }
 
     private static string DownloadText(string url, TimeSpan timeout)
