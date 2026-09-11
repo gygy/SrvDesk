@@ -77,7 +77,8 @@ internal static class CommonSoftwareHelper
         _wingetVersionCache = null;
     }
 
-    /// <summary>打开常用软件时后台预热：写入加速设置并更新源索引，避免首次安装卡住。</summary>
+    /// <summary>打开常用软件时后台预热：写入加速设置并更新源索引，避免首次安装卡住。
+    /// 须在状态检测完成后再调用，避免与 Prefetch 抢 winget 导致界面一直「检测中」。</summary>
     public static void WarmUpInBackground()
     {
         if (_warmUpStarted) return;
@@ -88,8 +89,8 @@ internal static class CommonSoftwareHelper
             {
                 EnsureWingetSpeedSettings();
                 if (!IsWingetAvailable()) return;
-                // 安装时关闭自动源更新；此处后台刷一次索引
-                Run(ResolveWingetPath(), "source update --disable-interactivity", setWorkingDirForExe: true);
+                // 安装时关闭自动源更新；此处后台刷一次索引（短超时，失败可忽略）
+                Run(ResolveWingetPath(), "source update --disable-interactivity", setWorkingDirForExe: true, timeoutMs: 90_000);
             }
             catch
             {
@@ -201,7 +202,16 @@ internal static class CommonSoftwareHelper
             return;
 
         _wingetPath = null;
-        foreach (var candidate in DiscoverWingetCandidates())
+        // 先快路径：已知目录 / 便携，避免 where / PowerShell / WindowsApps 枚举拖死 UI
+        foreach (var candidate in DiscoverWingetCandidatesFast())
+        {
+            if (!ProbeWinget(candidate)) continue;
+            _wingetPath = candidate;
+            ApplyLog.Write("检测到 winget：" + candidate);
+            return;
+        }
+
+        foreach (var candidate in DiscoverWingetCandidatesSlow())
         {
             if (!ProbeWinget(candidate)) continue;
             _wingetPath = candidate;
@@ -210,7 +220,7 @@ internal static class CommonSoftwareHelper
         }
     }
 
-    private static IEnumerable<string> DiscoverWingetCandidates()
+    private static IEnumerable<string> DiscoverWingetCandidatesFast()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -222,25 +232,22 @@ internal static class CommonSoftwareHelper
 
         foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
         {
-            var path = Path.Combine(dir.Trim(), "winget.exe");
+            var trimmed = dir.Trim();
+            if (trimmed.Length == 0) continue;
+            // PATH 里的 WindowsApps 别名经常挂起，放到慢路径
+            if (trimmed.IndexOf(@"\WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
+            var path = Path.Combine(trimmed, "winget.exe");
             if (seen.Add(path))
                 yield return path;
         }
+    }
 
-        var whereHits = new List<string>();
-        try
-        {
-            var output = RunCapture("where.exe", "winget.exe");
-            foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                whereHits.Add(line.Trim().Trim('"'));
-        }
-        catch { /* ignore */ }
-
-        foreach (var path in whereHits)
-        {
-            if (seen.Add(path))
-                yield return path;
-        }
+    private static IEnumerable<string> DiscoverWingetCandidatesSlow()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in DiscoverWingetCandidatesFast())
+            seen.Add(p);
 
         var appx = TryGetAppxWingetPath();
         if (!string.IsNullOrWhiteSpace(appx) && seen.Add(appx!))
@@ -257,19 +264,53 @@ internal static class CommonSoftwareHelper
             "Microsoft", "WindowsApps", "winget.exe");
         if (seen.Add(alias))
             yield return alias;
+
+        // where.exe 最后：偶发很慢
+        var whereHits = new List<string>();
+        try
+        {
+            var output = RunCapture("where.exe", "winget.exe", timeoutMs: 8_000);
+            foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                whereHits.Add(line.Trim().Trim('"'));
+        }
+        catch { /* ignore */ }
+
+        foreach (var path in whereHits)
+        {
+            if (seen.Add(path))
+                yield return path;
+        }
     }
 
     private static string? TryGetAppxWingetPath()
     {
+        // 优先读注册表，避免 Get-AppxPackage 在部分 Server 上长时间无响应
+        try
+        {
+            using var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                .OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Applications");
+            if (key is not null)
+            {
+                foreach (var name in key.GetSubKeyNames())
+                {
+                    if (name.IndexOf("Microsoft.DesktopAppInstaller_", StringComparison.OrdinalIgnoreCase) < 0)
+                        continue;
+                    using var sub = key.OpenSubKey(name);
+                    var loc = sub?.GetValue("Path") as string
+                        ?? sub?.GetValue("InstallLocation") as string;
+                    if (string.IsNullOrWhiteSpace(loc)) continue;
+                    var path = Path.Combine(loc!, "winget.exe");
+                    if (File.Exists(path)) return path;
+                }
+            }
+        }
+        catch { /* ignore */ }
+
         try
         {
             var output = RunCapture("powershell.exe",
-                "-NoProfile -Command \"(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
-            if (output.Length == 0)
-            {
-                output = RunCapture("powershell.exe",
-                    "-NoProfile -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"").Trim();
-            }
+                "-NoProfile -Command \"(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty InstallLocation)\"",
+                timeoutMs: 12_000).Trim();
             if (output.Length == 0) return null;
             var path = Path.Combine(output, "winget.exe");
             return File.Exists(path) ? path : null;
@@ -288,6 +329,7 @@ internal static class CommonSoftwareHelper
         string[] dirs;
         try
         {
+            // 枚举 WindowsApps 很慢且易权限失败；限时并忽略异常
             dirs = Directory.GetDirectories(root, "Microsoft.DesktopAppInstaller_*");
         }
         catch
@@ -312,6 +354,19 @@ internal static class CommonSoftwareHelper
         if (!IsVcRuntime140Present())
             return false;
 
+        // WindowsApps 执行别名在损坏时会挂起，探测必须短超时并杀进程
+        if (IsWindowsAppsAliasPath(path))
+            return ProbeWingetCore(path, timeoutMs: 4_000);
+
+        return ProbeWingetCore(path, timeoutMs: 8_000);
+    }
+
+    private static bool IsWindowsAppsAliasPath(string path) =>
+        path.IndexOf(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase) >= 0
+        && path.IndexOf(@"\Microsoft.DesktopAppInstaller_", StringComparison.OrdinalIgnoreCase) < 0;
+
+    private static bool ProbeWingetCore(string path, int timeoutMs)
+    {
         var previousErrorMode = SetErrorMode(SemFailCriticalErrors | SemNoOpenFileErrorBox);
         try
         {
@@ -336,9 +391,16 @@ internal static class CommonSoftwareHelper
 
             using var p = Process.Start(psi);
             if (p is null) return false;
-            var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-            p.WaitForExit(15_000);
-            return p.ExitCode == 0 &&
+            var stdout = System.Threading.Tasks.Task.Run(() => SafeReadToEnd(p.StandardOutput));
+            var stderr = System.Threading.Tasks.Task.Run(() => SafeReadToEnd(p.StandardError));
+            if (!p.WaitForExit(timeoutMs))
+            {
+                TryKillProcess(p);
+                try { p.WaitForExit(2_000); } catch { /* ignore */ }
+            }
+            System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 2_000);
+            var output = TaskText(stdout) + TaskText(stderr);
+            return p.HasExited && p.ExitCode == 0 &&
                 (output.IndexOf('v') >= 0 ||
                  output.IndexOf("Windows Package Manager", StringComparison.OrdinalIgnoreCase) >= 0);
         }
@@ -350,6 +412,24 @@ internal static class CommonSoftwareHelper
         {
             SetErrorMode(previousErrorMode);
         }
+    }
+
+    private static string SafeReadToEnd(StreamReader reader)
+    {
+        try { return reader.ReadToEnd(); }
+        catch { return ""; }
+    }
+
+    private static string TaskText(System.Threading.Tasks.Task<string> task) =>
+        task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion ? task.Result : "";
+
+    private static void TryKillProcess(Process p)
+    {
+        try
+        {
+            if (!p.HasExited) p.Kill();
+        }
+        catch { /* ignore */ }
     }
 
     private static bool IsVcRuntime140Present()
@@ -420,6 +500,7 @@ internal static class CommonSoftwareHelper
         {
             if (item.IsWingetBootstrap)
             {
+                // 轻量探测即可；完整探测留给 IsWingetAvailable，避免打开窗口卡死
                 map[item.Id] = QueryWingetStatus();
                 continue;
             }
@@ -427,6 +508,8 @@ internal static class CommonSoftwareHelper
             map[item.Id] = new CommonSoftwareStatus();
         }
 
+        // 倒排：DisplayName → 命中项，避免「每个卸载项 × 全部软件」双重循环过慢
+        var pending = items.Where(i => !i.IsWingetBootstrap).ToList();
         foreach (var keyPath in UninstallKeyPaths())
         {
             using var baseKey = RegistryKey.OpenBaseKey(keyPath.Hive, RegistryView.Registry64);
@@ -440,10 +523,9 @@ internal static class CommonSoftwareHelper
                 var display = sub.GetValue("DisplayName") as string ?? "";
                 if (display.Length == 0) continue;
 
-                foreach (var item in items)
+                for (var i = pending.Count - 1; i >= 0; i--)
                 {
-                    if (item.IsWingetBootstrap) continue;
-                    if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
+                    var item = pending[i];
                     if (!Matches(display, item.DetectPatterns)) continue;
 
                     map[item.Id] = new CommonSoftwareStatus
@@ -453,23 +535,26 @@ internal static class CommonSoftwareHelper
                         UninstallCommand = sub.GetValue("QuietUninstallString") as string
                             ?? sub.GetValue("UninstallString") as string,
                     };
+                    pending.RemoveAt(i);
                 }
+
+                if (pending.Count == 0) break;
             }
+
+            if (pending.Count == 0) break;
         }
 
-        foreach (var item in items)
+        foreach (var item in pending.ToArray())
         {
-            if (item.IsWingetBootstrap) continue;
             if (string.IsNullOrWhiteSpace(item.AppxPackageName)) continue;
-            if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
             var appx = QueryAppxStatus(item.AppxPackageName);
-            if (appx.Installed) map[item.Id] = appx;
+            if (!appx.Installed) continue;
+            map[item.Id] = appx;
+            pending.Remove(item);
         }
 
-        foreach (var item in items)
+        foreach (var item in pending)
         {
-            if (item.IsWingetBootstrap) continue;
-            if (map.TryGetValue(item.Id, out var existing) && existing.Installed) continue;
             var byExe = QueryByExeNames(item);
             if (byExe.Installed) map[item.Id] = byExe;
         }
@@ -533,7 +618,8 @@ internal static class CommonSoftwareHelper
             var output = RunCapture("powershell.exe",
                 "-NoProfile -Command \"Get-AppxPackage -Name '" +
                 packageName.Replace("'", "''") +
-                "*' | Select-Object -First 1 -ExpandProperty Version\"");
+                "*' | Select-Object -First 1 -ExpandProperty Version\"",
+                timeoutMs: 12_000);
             output = output.Trim();
             if (output.Length == 0) return new CommonSoftwareStatus();
             return new CommonSoftwareStatus { Installed = true, Version = output };
@@ -798,7 +884,7 @@ internal static class CommonSoftwareHelper
 
             try
             {
-                var whereHit = RunCapture("where.exe", name)
+                var whereHit = RunCapture("where.exe", name, timeoutMs: 5_000)
                     .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(l => l.Trim().Trim('"'))
                     .FirstOrDefault(File.Exists);
@@ -1728,8 +1814,10 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
     {
         try
         {
+            // 避免 -AllUsers（需更高权限且更慢）；短超时
             var output = RunCapture("powershell.exe",
-                "-NoProfile -Command \"@(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name); @(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name)\"");
+                "-NoProfile -Command \"@(Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Select-Object -First 1 -ExpandProperty Name)\"",
+                timeoutMs: 10_000);
             return output.IndexOf("DesktopAppInstaller", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
@@ -3495,7 +3583,7 @@ if ($deps.Count -gt 0) {{
         return p.ExitCode;
     }
 
-    private static string RunCapture(string file, string args, bool setWorkingDirForExe = false)
+    private static string RunCapture(string file, string args, bool setWorkingDirForExe = false, int timeoutMs = 30_000)
     {
         var psi = new ProcessStartInfo
         {
@@ -3516,11 +3604,15 @@ if ($deps.Count -gt 0) {{
         }
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 " + file);
-        var stdout = System.Threading.Tasks.Task.Run(() => p.StandardOutput.ReadToEnd());
-        var stderr = System.Threading.Tasks.Task.Run(() => p.StandardError.ReadToEnd());
-        p.WaitForExit(120_000);
-        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 10_000);
-        return stdout.Result + stderr.Result;
+        var stdout = System.Threading.Tasks.Task.Run(() => SafeReadToEnd(p.StandardOutput));
+        var stderr = System.Threading.Tasks.Task.Run(() => SafeReadToEnd(p.StandardError));
+        if (!p.WaitForExit(Math.Max(1_000, timeoutMs)))
+        {
+            TryKillProcess(p);
+            try { p.WaitForExit(3_000); } catch { /* ignore */ }
+        }
+        System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 3_000);
+        return TaskText(stdout) + TaskText(stderr);
     }
 
     private const uint SemFailCriticalErrors = 0x0001;

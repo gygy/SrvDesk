@@ -168,7 +168,7 @@ internal sealed class CommonSoftwareDialog : Form
             BuildList();
             SetRowsPendingStatus();
             _wingetHint.Text = AppLang.L("正在检测软件状态…", "Detecting software status…");
-            CommonSoftwareHelper.WarmUpInBackground();
+            // 勿在此处 WarmUp（winget source update）；等状态刷完后再预热，否则会抢锁导致一直「检测中」
             ReloadStatusesAsync(forceRefresh: false);
         };
         _categoryMenu.SelectedIndexChanged += (_, _) =>
@@ -456,6 +456,8 @@ internal sealed class CommonSoftwareDialog : Form
         if (_rows.Count == 0) BuildList();
         SetRowsPendingStatus();
         _wingetHint.Text = "正在检测软件状态…";
+        var gen = ++_statusLoadGen;
+        var done = false;
         System.Threading.Tasks.Task.Run(() =>
         {
             try
@@ -466,10 +468,34 @@ internal sealed class CommonSoftwareDialog : Form
                 _ = CommonSoftwareHelper.IsWingetAvailable();
             }
             catch { /* ignore */ }
+            finally
+            {
+                done = true;
+                if (gen == _statusLoadGen)
+                    Ui(() =>
+                    {
+                        RefreshAll();
+                        CommonSoftwareHelper.WarmUpInBackground();
+                    });
+            }
+        });
 
-            Ui(RefreshAll);
+        // 看门狗：最长约 12s 必须结束「检测中」，避免个别探测挂死 UI
+        System.Threading.Tasks.Task.Delay(12_000).ContinueWith(_ =>
+        {
+            if (done || gen != _statusLoadGen) return;
+            Ui(() =>
+            {
+                if (gen != _statusLoadGen) return;
+                RefreshAll();
+                _wingetHint.Text = (_wingetHint.Text ?? "").Contains("winget")
+                    ? _wingetHint.Text
+                    : "状态检测超时，已显示当前结果；可点刷新重试。";
+            });
         });
     }
+
+    private int _statusLoadGen;
 
     private void RefreshAll()
     {
