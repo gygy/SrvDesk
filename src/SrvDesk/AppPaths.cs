@@ -100,6 +100,9 @@ internal static class AppPaths
         foreach (var file in Directory.EnumerateFiles(legacyRoot, "*", SearchOption.TopDirectoryOnly))
         {
             var name = Path.GetFileName(file);
+            // 首次说明标记：勿从旧目录迁回，否则用户删掉后下次启动又会出现
+            if (string.Equals(name, "first-run.ok", StringComparison.OrdinalIgnoreCase))
+                continue;
             var dest = Path.Combine(DataRoot, name);
             if (File.Exists(dest)) continue;
             try { File.Copy(file, dest, overwrite: false); } catch { /* ignore */ }
