@@ -32,6 +32,10 @@ internal static class RecommendRules
             return RecommendLevel.Suggested; // 高级：SSD 可选
         }
 
+        // —— 产品指定：强烈推荐（列表 + 优化顾问同步） ——
+        if (IsProductMust(help))
+            return RecommendLevel.Must;
+
         // —— Server 桌面体验：产品差异化强推 ——
         if (facts.IsServer && facts.HasDesktopExperience)
         {
@@ -136,8 +140,26 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableMemoryIntegrity)
         || ReferenceEquals(help, SettingCatalog.DisableWdac)
         || ReferenceEquals(help, SettingCatalog.DisableVbs)
-        || ReferenceEquals(help, SettingCatalog.DisableSystemRestore)
         || ReferenceEquals(help, SettingCatalog.DisableSmartScreenWarning);
+
+    /// <summary>产品明确要求「强烈推荐」的开关（覆盖目录基准与 OS 微调）。</summary>
+    private static bool IsProductMust(SettingHelpInfo help) =>
+        ReferenceEquals(help, SettingCatalog.DisableIeEsc)
+        || ReferenceEquals(help, SettingCatalog.ShowThisPcIcon)
+        || ReferenceEquals(help, SettingCatalog.EnableRdp)
+        || ReferenceEquals(help, SettingCatalog.RdpGpuAccel)
+        || ReferenceEquals(help, SettingCatalog.RdpHighRefresh)
+        || ReferenceEquals(help, SettingCatalog.TaskbarClockWeekdaySeconds)
+        || ReferenceEquals(help, SettingCatalog.RemoveAdminShield)
+        || ReferenceEquals(help, SettingCatalog.NoShortcutSuffix)
+        || ReferenceEquals(help, SettingCatalog.NoShortcutArrow)
+        || ReferenceEquals(help, SettingCatalog.ContextMenuCopyMoveTo)
+        || ReferenceEquals(help, SettingCatalog.ContextMenuQuickOps)
+        || ReferenceEquals(help, SettingCatalog.TaskbarAllIcons)
+        || ReferenceEquals(help, SettingCatalog.DisableSystemRestore)
+        || ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
+        || ReferenceEquals(help, SettingCatalog.DisableCad)
+        || ReferenceEquals(help, SettingCatalog.DisableShutdownReason);
 
     private static bool IsAggressivePerf(SettingHelpInfo help) =>
         ReferenceEquals(help, SettingCatalog.EnableTcpBbr2)

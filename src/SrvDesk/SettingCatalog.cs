@@ -214,10 +214,10 @@ internal static class SettingCatalog
         L("在桌面显示「此电脑」图标。", "Show the This PC icon on the desktop."),
         L("修改桌面图标隐藏列表，显示计算机 CLSID。", "Unhide the Computer CLSID in the desktop icon hide list."),
         L("快速进入磁盘分区，符合传统 Windows 桌面习惯。", "Quick access to drives; classic Windows desktop habit."),
-        L("喜欢简洁桌面可关闭；运维/开发桌面推荐开启。", "Turn off for a minimal desktop; recommended for ops/dev desktops."),
+        L("运维/开发桌面强烈推荐；喜欢简洁桌面可关闭。", "Strongly recommended for ops/dev desktops; turn off for a minimal desktop."),
         L("立即生效或刷新桌面。", "Takes effect immediately or after desktop refresh."),
         SettingScope.DesktopExperience,
-        recommend: RecommendLevel.Strong);
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo LaunchExplorerThisPc = H(
         L("打开资源管理器时默认进入「此电脑」。", "Open File Explorer to This PC by default."),
@@ -313,9 +313,10 @@ internal static class SettingCatalog
         L("桌面与资源管理器中快捷方式去掉小箭头 overlay。", "Remove the shortcut arrow overlay in desktop/Explorer."),
         L("Shell Icons 29 = %systemroot%\\system32\\imageres.dll,197（透明图标）。", "Shell Icons 29 = %systemroot%\\system32\\imageres.dll,197 (transparent icon)."),
         L("桌面更整洁；与常见「删除快捷方式箭头.reg」相同写法。", "Cleaner desktop; same as common remove-shortcut-arrow .reg."),
-        L("需区分快捷方式与原件时可关闭。", "Turn off if you need to tell shortcuts from originals."),
+        L("桌面体验强烈推荐；需区分快捷方式与原件时可关闭。", "Strongly recommended for desktop UX; turn off if you need to tell shortcuts from originals."),
         L("写入后会重启资源管理器；关闭时删除整个 Shell Icons 键（与「恢复快捷方式箭头.reg」一致）。", "Restarts Explorer after write; turning off deletes the Shell Icons key (same as restore-arrow .reg)."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo ExplorerFullPath = H(
         L("资源管理器窗口标题栏显示完整文件夹路径。", "Show the full folder path in Explorer window titles."),
@@ -329,17 +330,19 @@ internal static class SettingCatalog
         L("通知区域始终显示全部托盘图标。", "Always show all notification-area tray icons."),
         L("EnableAutoTray 设为 0，不自动折叠到溢出区。", "Set EnableAutoTray=0 so icons are not auto-hidden."),
         L("网络、音量、后台工具一眼可见，减少「找不到图标」。", "Network/volume/background tools stay visible."),
-        L("任务栏拥挤时可关闭恢复自动隐藏。", "Turn off to restore auto-hide if the taskbar is crowded."),
+        L("桌面运维强烈推荐；任务栏拥挤时可关闭恢复自动隐藏。", "Strongly recommended for desktop ops; turn off to restore auto-hide if crowded."),
         L("立即生效。", "Takes effect immediately."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo TaskbarClockWeekdaySeconds = H(
         L("任务栏右下角时钟显示星期，时间精确到秒。", "Taskbar clock shows weekday and seconds."),
         L("ShowSecondsInSystemClock=1，并将短日期格式设为 yyyy/MM/dd dddd。", "ShowSecondsInSystemClock=1 and short date yyyy/MM/dd dddd."),
         L("一眼看到星期几与秒级时间，适合排班、日志对照与远程桌面。", "See weekday and seconds at a glance; useful for shifts, logs, and RDP."),
-        L("任务栏略宽；不需要时可关闭恢复系统默认格式。", "Taskbar a bit wider; turn off to restore defaults."),
+        L("桌面/远程场景强烈推荐；不需要时可关闭恢复系统默认格式。", "Strongly recommended for desktop/RDP; turn off to restore defaults."),
         L("应用后自动重启资源管理器使托盘时钟立即刷新。", "Restarts Explorer so the tray clock refreshes immediately."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo DisableAnimations = H(
         L("关闭窗口最小化/任务栏等动画。", "Disable window minimize/taskbar animations."),
@@ -400,17 +403,19 @@ internal static class SettingCatalog
         L("RDP 会话启用 GPU 硬件加速与更好的图形管线。", "Enable GPU acceleration and a better graphics pipeline for RDP sessions."),
         L("Terminal Services UseAdvancedGraphics 策略。", "Terminal Services UseAdvancedGraphics policy."),
         L("远程看网页、视频、UI 动画更流畅。", "Smoother remote web/video/UI animation."),
-        L("无 GPU 或极老驱动可关；有显卡远程桌面推荐开启。", "Turn off with no GPU/very old drivers; recommended with a GPU for RDP."),
+        L("有显卡远程桌面强烈推荐；无 GPU 或极老驱动可关。", "Strongly recommended for RDP with a GPU; turn off with no GPU/very old drivers."),
         L("新 RDP 连接生效。", "Applies to new RDP connections."),
-        Rdp2019);
+        Rdp2019,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo RdpHighRefresh = H(
         L("提高远程桌面帧率上限（缩短 DWMFRAMEINTERVAL）。", "Raise RDP frame-rate cap (shorten DWMFRAMEINTERVAL)."),
         L("将帧间隔设为 15（约 60Hz 档）。", "Set frame interval to 15 (~60 Hz class)."),
         L("鼠标移动、滚动、视频观感更顺滑。", "Smoother mouse, scroll, and video feel."),
-        L("低带宽网络可能增带宽；内网/高带宽推荐开启。", "May use more bandwidth on slow links; recommended on LAN/high bandwidth."),
+        L("内网/高带宽远程强烈推荐；低带宽网络可能增带宽。", "Strongly recommended on LAN/high-bandwidth RDP; may use more bandwidth on slow links."),
         L("新 RDP 连接生效。", "Applies to new RDP connections."),
-        Rdp2019);
+        Rdp2019,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo RdpDisableNla = H(
         L("RDP 不要求网络级身份验证（NLA）。", "Do not require Network Level Authentication (NLA) for RDP."),
@@ -632,15 +637,18 @@ internal static class SettingCatalog
         L("快捷方式不显示管理员盾牌图标。", "Hide the admin shield overlay on shortcuts."),
         L("Shell Icons 77 = %systemroot%\\system32\\imageres.dll,197。", "Shell Icons 77 = %systemroot%\\system32\\imageres.dll,197."),
         L("界面更简洁。", "Cleaner UI."),
-        L("仅影响图标显示，不降低权限。", "Icon-only; does not lower privileges."),
+        L("桌面体验强烈推荐；仅影响图标显示，不降低权限。", "Strongly recommended for desktop UX; icon-only, does not lower privileges."),
         L("重启资源管理器后生效。", "Takes effect after Explorer restart."),
-        W10De);
+        W10De,
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo NoShortcutSuffix = H(
         L("新建快捷方式时不自动加「快捷方式」后缀。", "Do not append Shortcut suffix when creating shortcuts."),
         L("NamingTemplates\\ShortcutNameTemplate（已弃用会弄丢桌面图标的 Link 写法）。", "NamingTemplates\\ShortcutNameTemplate (avoids the old Link method that could drop desktop icons)."),
         L("文件名更干净。", "Cleaner file names."),
-        L("推荐开启。", "Recommended on."),
-        L("写入后会重启资源管理器。", "Restarts Explorer after write."), W10De);
+        L("强烈推荐开启。", "Strongly recommended on."),
+        L("写入后会重启资源管理器。", "Restarts Explorer after write."),
+        W10De,
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo Win11ExplorerStyle = H(
         L("使用 Win11 默认间距的资源管理器布局。", "Use Win11 default Explorer spacing (non-compact)."), L("UseCompactMode=0。", "UseCompactMode=0."), L("非紧凑模式。", "Non-compact mode."), L("关闭则使用紧凑模式。", "Turning off uses compact mode."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo Win10ClassicContextMenu = H(
@@ -800,8 +808,12 @@ internal static class SettingCatalog
         L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC；属高级网络项。", "Fails on unsupported OS and keeps CUBIC; advanced networking."), L("立即生效。", "Takes effect immediately."), W10,
         recommend: RecommendLevel.Suggested);
     public static readonly SettingHelpInfo DisableSystemRestore = H(
-        L("禁用系统还原。", "Disable System Restore."), L("DisableSR=1。", "DisableSR=1."), L("节省还原点磁盘。", "Saves restore-point disk space."), L("将无法一键回滚系统；不推荐作常规优化。", "You cannot one-click roll back the OS; not routine optimize."), L("立即生效。", "Takes effect immediately."),
-        recommend: RecommendLevel.Optional);
+        L("禁用系统还原。", "Disable System Restore."),
+        L("DisableSR=1。", "DisableSR=1."),
+        L("节省还原点磁盘。", "Saves restore-point disk space."),
+        L("个人桌面/磁盘紧张时强烈推荐；需要系统还原点回滚时请保持开启。", "Strongly recommended for personal desktops / low disk; keep on if you need restore-point rollback."),
+        L("立即生效。", "Takes effect immediately."),
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo DisableCeip = H(
         L("关闭微软客户体验改善计划。", "Disable Microsoft Customer Experience Improvement Program."), L("CEIPEnable=0。", "CEIPEnable=0."), L("减少遥测。", "Less telemetry."), L("与关闭 DiagTrack 互补。", "Complements disabling DiagTrack."), L("立即生效。", "Takes effect immediately."));
     public static readonly SettingHelpInfo DisableDiagnosticPolicy = H(
@@ -886,22 +898,22 @@ internal static class SettingCatalog
         L("右键菜单增加「复制到文件夹」「移动到文件夹」。", "Add Copy To Folder / Move To Folder to the context menu."),
         L("HKCR AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Copy To / Move To（系统自带 CLSID）。", "HKCR AllFilesystemObjects\\shellex\\ContextMenuHandlers\\Copy To / Move To (built-in CLSIDs)."),
         L("选中文件/文件夹后可一键复制或移动到指定目录，少开资源管理器窗口。", "Copy/move selected items to a chosen folder with fewer Explorer windows."),
-        L("桌面整理、批量归类时建议开启；不需要可关。", "Suggested for desktop cleanup/batch filing; turn off if unused."),
+        L("桌面整理强烈推荐；不需要可关。", "Strongly recommended for desktop cleanup; turn off if unused."),
         L("立即生效；若菜单未出现可刷新资源管理器。", "Takes effect immediately; refresh Explorer if the menu is missing."),
         W10De,
         uiPlace: L("资源管理器 → 文件/文件夹右键", "Explorer → file/folder right-click"),
         whenHint: L("需要快速复制/移动到其它目录时开启", "Enable for quick copy/move to another folder"),
-        recommend: RecommendLevel.Suggested);
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo ContextMenuQuickOps = H(
         L("桌面与文件夹空白处右键增加「快捷操作组」级联菜单。", "Add a Quick Ops cascade menu on desktop/folder background right-click."),
         L("HKCR Directory/LibraryFolder\\Background\\shell\\QwhMenu + Explorer CommandStore（对齐添加/删除快捷操作组 .reg）。", "HKCR Directory/LibraryFolder\\Background\\shell\\QwhMenu + Explorer CommandStore (same as quick-ops .reg)."),
         L("一键打开此电脑、控制面板、CMD、记事本、画图、注册表、重启资源管理器等。", "One-click This PC, Control Panel, CMD, Notepad, Paint, Registry, restart Explorer, etc."),
-        L("桌面运维常用可开；菜单偏多时可关。关闭仅删级联键（与删除 .reg 一致）。", "Handy for desktop ops; turn off if menus feel crowded. Off only deletes the cascade keys."),
+        L("桌面运维强烈推荐；菜单偏多时可关。关闭仅删级联键（与删除 .reg 一致）。", "Strongly recommended for desktop ops; turn off if menus feel crowded. Off only deletes the cascade keys."),
         L("立即生效；若未出现可刷新资源管理器。", "Takes effect immediately; refresh Explorer if it does not appear."),
         W10De,
         uiPlace: L("桌面 / 文件夹空白处右键", "Desktop / folder empty-area right-click"),
         whenHint: L("需要空白处快速入口时开启", "Enable for quick actions on empty area"),
-        recommend: RecommendLevel.Suggested);
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo DisableMediaPlayerSharing = H(
         L("禁用 Windows Media Player 网络共享。", "Disable Windows Media Player network sharing."), L("WMPNetworkSvc。", "WMPNetworkSvc."), L("减少共享端口。", "Fewer sharing ports."), L("不共享媒体库可开。", "Enable if you do not share media libraries."), L("服务停止后生效。", "Takes effect after the service stops."));
     public static readonly SettingHelpInfo DisableInsiderService = H(
