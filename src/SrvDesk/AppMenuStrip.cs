@@ -8,6 +8,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem FileSettings { get; }
     public ToolStripMenuItem FileExit { get; }
     public ToolStripMenuItem ToolAutologon { get; }
+    public ToolStripMenuItem ToolLocalUser { get; }
     public ToolStripMenuItem ToolIdentity { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
     public ToolStripMenuItem ToolHosts { get; }
@@ -69,6 +70,7 @@ internal sealed class AppMenuStrip : MenuStrip
 
         var tools = new ToolStripMenuItem(AppLang.L("工具(&T)", "Tools(&T)"));
         ToolAutologon = Item(AppLang.L("Autologon 配置...", "Autologon..."), MenuIcons.Autologon);
+        ToolLocalUser = Item(AppLang.L("快速添加本地用户...", "Add local user..."), MenuIcons.LocalUser);
         ToolIdentity = Item(AppLang.L("计算机名 / 工作组...", "Computer name / workgroup..."), MenuIcons.Identity);
         ToolSystemInfo = Item(AppLang.L("系统信息...", "System info..."), MenuIcons.SystemInfo);
         ToolHosts = Item(AppLang.L("编辑 hosts...", "Edit hosts..."), MenuIcons.Hosts);
@@ -99,7 +101,7 @@ internal sealed class AppMenuStrip : MenuStrip
         tools.DropDownItems.AddRange([
             ToolOptimizeAdvisor, ToolPortExposure, ToolOptHistory,
             new ToolStripSeparator(),
-            ToolAutologon, ToolIdentity, ToolSystemInfo,
+            ToolAutologon, ToolLocalUser, ToolIdentity, ToolSystemInfo,
             new ToolStripSeparator(),
             ToolHosts, ToolFlushDns,
             new ToolStripSeparator(),

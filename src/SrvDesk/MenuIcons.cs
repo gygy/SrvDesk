@@ -23,6 +23,10 @@ internal static class MenuIcons
         [FileCand(Sys("netplwiz.exe"))],
         DrawKey);
 
+    public static Image LocalUser => Get("localuser",
+        [FileCand(Sys("netplwiz.exe")), FileCand(Sys("shell32.dll"), 220)],
+        DrawKey);
+
     public static Image Identity => Get("identity",
         [FileCand(Sys("SystemPropertiesComputerName.exe")), FileCand(Sys("sysdm.cpl"))],
         DrawIdentity);
