@@ -208,6 +208,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _storageSense = Row(AppLang.L("禁用存储感知", "Disable Storage Sense"), AppLang.L("开启", "On"), SettingCatalog.DisableStorageSense);
     private readonly SettingRow _backgroundApps = Row(AppLang.L("禁止应用在后台运行", "Block background apps"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableBackgroundApps);
     private readonly SettingRow _searchHighlights = Row(AppLang.L("关闭搜索要点/亮点", "Disable search highlights"), AppLang.L("开启", "On"), SettingCatalog.DisableSearchHighlights);
+    private readonly SettingRow _searchBoxSuggest = Row(AppLang.L("去除搜索界面信息流", "Disable search box suggestions"), AppLang.L("显示建议", "Suggestions on"), SettingCatalog.DisableSearchBoxSuggestions);
     private readonly SettingRow _recommended = Row(AppLang.L("关闭开始菜单推荐", "Disable Start recommendations"), AppLang.L("开启", "On"), SettingCatalog.DisableRecommendedItems);
     private readonly SettingRow _adTracking = Row(AppLang.L("关闭广告标识符跟踪", "Disable advertising ID"), AppLang.L("开启", "On"), SettingCatalog.DisableAdTracking);
     private readonly SettingRow _searchHistory = Row(AppLang.L("关闭搜索历史记录", "Disable search history"), AppLang.L("开启", "On"), SettingCatalog.DisableSearchHistory);
@@ -363,7 +364,7 @@ internal sealed class MainForm : Form
         _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
         _driveLetters, _folderGroup, _folderSort,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
-        _searchHighlights, _recommended, _adTracking, _searchHistory, _stickyKeys,
+        _searchHighlights, _searchBoxSuggest, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
         _msPinyinEn, _msPinyinCloud, _msPinyinBar, _msrt,
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
@@ -491,7 +492,7 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add((AppLang.L("隐私与体验", "Privacy & UX"), [
             (AppLang.L("广告与推荐", "Ads & recommendations"), [
-                _tips, _recommended, _searchHighlights, _adTracking, _settingsSuggest, _consumer,
+                _tips, _recommended, _searchHighlights, _searchBoxSuggest, _adTracking, _settingsSuggest, _consumer,
                 _noSilentApps, _hideSettingsHome,
             ]),
             (AppLang.L("搜索与助手", "Search & assistants"), [
@@ -2767,6 +2768,7 @@ internal sealed class MainForm : Form
         _storageSense.Checked = s.DisableStorageSense;
         _backgroundApps.Checked = s.DisableBackgroundApps;
         _searchHighlights.Checked = s.DisableSearchHighlights;
+        _searchBoxSuggest.Checked = s.DisableSearchBoxSuggestions;
         _recommended.Checked = s.DisableRecommendedItems;
         _adTracking.Checked = s.DisableAdTracking;
         _searchHistory.Checked = s.DisableSearchHistory;
@@ -3122,6 +3124,7 @@ internal sealed class MainForm : Form
         DisableStorageSense = _storageSense.Checked,
         DisableBackgroundApps = _backgroundApps.Checked,
         DisableSearchHighlights = _searchHighlights.Checked,
+        DisableSearchBoxSuggestions = _searchBoxSuggest.Checked,
         DisableRecommendedItems = _recommended.Checked,
         DisableAdTracking = _adTracking.Checked,
         DisableSearchHistory = _searchHistory.Checked,

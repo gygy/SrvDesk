@@ -199,6 +199,7 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableSilentAppInstall)
         || ReferenceEquals(help, SettingCatalog.DisableAdTracking)
         || ReferenceEquals(help, SettingCatalog.DisableSearchHighlights)
+        || ReferenceEquals(help, SettingCatalog.DisableSearchBoxSuggestions)
         || ReferenceEquals(help, SettingCatalog.DisableTips)
         || ReferenceEquals(help, SettingCatalog.DisableWidgets)
         || ReferenceEquals(help, SettingCatalog.HideTaskbarChat)

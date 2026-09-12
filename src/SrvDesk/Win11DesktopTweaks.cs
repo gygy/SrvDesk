@@ -127,6 +127,14 @@ internal static class Win11DesktopTweaks
             Field("DisableSearchHighlights", x => x.DisableSearchHighlights);
             SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", s.DisableSearchHighlights ? 0 : 1);
         }
+        if (D(x => x.DisableSearchBoxSuggestions))
+        {
+            Field("DisableSearchBoxSuggestions", x => x.DisableSearchBoxSuggestions);
+            if (s.DisableSearchBoxSuggestions)
+                SetDword(Hive.HkCu, @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "DisableSearchBoxSuggestions", 1);
+            else
+                DeleteValue(Hive.HkCu, @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "DisableSearchBoxSuggestions");
+        }
         if (D(x => x.DisableRecommendedItems))
         {
             Field("DisableRecommendedItems", x => x.DisableRecommendedItems);
@@ -259,6 +267,9 @@ internal static class Win11DesktopTweaks
 
     public static bool IsDisableSearchHighlightsOn() =>
         DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", 0);
+
+    public static bool IsDisableSearchBoxSuggestionsOn() =>
+        DwordEquals(Hive.HkCu, @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "DisableSearchBoxSuggestions", 1);
 
     public static bool IsDisableRecommendedItemsOn() =>
         DwordEquals(Hive.HkCu, ExplorerAdvanced, "Start_ShowRecentRecommendations", 0);

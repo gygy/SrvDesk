@@ -531,6 +531,8 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarDa", 0, 1));
         Add(SettingCatalog.DisableSearchHighlights, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", 0, 1));
+        Add(SettingCatalog.DisableSearchBoxSuggestions, ActionScript.DwordOnDeleteOff(true,
+            @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "DisableSearchBoxSuggestions", 1));
         Add(SettingCatalog.DisableRecommendedItems, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced",
             "Start_ShowRecentRecommendations", 0, 1));

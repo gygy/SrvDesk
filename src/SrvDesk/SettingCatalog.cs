@@ -750,6 +750,15 @@ internal static class SettingCatalog
         L("关闭任务栏小组件/资讯。", "Disable taskbar Widgets / news."), L("TaskbarDa=0。", "TaskbarDa=0."), L("减少干扰与占用。", "Less distraction and resource use."), L("Win11 有效。", "Effective on Win11."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo DisableSearchHighlights = H(
         L("关闭搜索框动态亮点/推荐。", "Disable search-box highlights / recommendations."), L("IsDynamicSearchBoxEnabled=0。", "IsDynamicSearchBoxEnabled=0."), L("搜索更纯净。", "Cleaner search UI."), L("推荐开启。", "Recommended on."), L("立即或重启资源管理器。", "Immediate or after Explorer restart."), W10De);
+    public static readonly SettingHelpInfo DisableSearchBoxSuggestions = H(
+        L("去除搜索界面信息流与搜索框建议。", "Remove search UI feed and search-box suggestions."),
+        L("HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer DisableSearchBoxSuggestions=1。",
+            "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer DisableSearchBoxSuggestions=1."),
+        L("任务栏/开始搜索不再推新闻与建议内容。", "Taskbar/Start search no longer pushes news or suggestions."),
+        L("桌面强烈推荐开启。", "Strongly recommended on desktops."),
+        L("注销或重启资源管理器后完全生效。", "Fully applies after sign-out or Explorer restart."),
+        W10De,
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo DisableRecommendedItems = H(
         L("开始菜单不显示推荐项目。", "Hide recommended items on Start."), L("Start_ShowRecentRecommendations=0。", "Start_ShowRecentRecommendations=0."), L("减少开始菜单干扰。", "Less Start menu clutter."), L("个人桌面推荐。", "Recommended for personal desktops."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo DisableAdTracking = H(

@@ -690,6 +690,7 @@ internal static class Optimizer
             || b.TaskbarEndTask != s.TaskbarEndTask
             || b.DisableWidgets != s.DisableWidgets
             || b.DisableSearchHighlights != s.DisableSearchHighlights
+            || b.DisableSearchBoxSuggestions != s.DisableSearchBoxSuggestions
             || b.DisableRecommendedItems != s.DisableRecommendedItems
             || b.DisableAdTracking != s.DisableAdTracking
             || b.DisableSearchHistory != s.DisableSearchHistory
