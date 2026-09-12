@@ -1262,8 +1262,18 @@ internal static class Optimizer
             TryDelete(jfm);
         }
 
-        // SAM 兜底：与 secedit 互补
+        // SAM 兜底仅作补充；真正拦「添加用户」的是 secedit/secpol 的 PasswordComplexity
         ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
+
+        // 以 secpol 为准复核：SAM=0 但复杂性仍启用时，不能当成成功
+        if (disableComplexity && !ReadSecpolFlag("PasswordComplexity = 0"))
+        {
+            if (seceditError is not null)
+                throw new InvalidOperationException(
+                    "未能关闭「密码必须符合复杂性要求」。" + seceditError.Message);
+            throw new InvalidOperationException(
+                "未能关闭「密码必须符合复杂性要求」（secpol 仍为已启用）。请确认以管理员运行后重试。");
+        }
 
         if (seceditError is not null && !AccountPolicyLooksApplied(disableComplexity, neverExpire, disableHistory))
             throw seceditError;
@@ -1277,7 +1287,7 @@ internal static class Optimizer
         using var p = Process.Start(new ProcessStartInfo
         {
             FileName = "secedit.exe",
-            Arguments = $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY",
+            Arguments = $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY /overwrite",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -1303,18 +1313,52 @@ internal static class Optimizer
         if (neverExpire != flags.NeverExpire) return false;
         if (disableHistory != flags.HistoryOff) return false;
         if (disableComplexity) return flags.ComplexityOff;
-        return !ServerDesktopTweaks.IsSamPasswordComplexityOff();
+        // 恢复复杂性：secpol 必须不是 0
+        return !ReadSecpolFlag("PasswordComplexity = 0");
     }
 
     private static (bool ComplexityOff, bool NeverExpire, bool HistoryOff) ReadAccountPolicyFlags()
     {
         var neverExpire = ReadPasswordNeverExpireFromNetAccounts()
-            ?? ReadSecpolFlag("MaximumPasswordAge = 0");
+            ?? ReadSecpolFlag("MaximumPasswordAge = 0")
+            || ReadSecpolFlag("MaximumPasswordAge = -1");
         var historyOff = ReadPasswordHistoryOffFromNetAccounts()
             ?? ReadSecpolFlag("PasswordHistorySize = 0");
-        var complexityOff = ReadSecpolFlag("PasswordComplexity = 0")
-            || ServerDesktopTweaks.IsSamPasswordComplexityOff();
+        // 以 secpol 为准。旧逻辑用 SAM OR，会在 secpol 仍启用时误显示「已关闭」。
+        var complexity = TryReadSecpolInt("PasswordComplexity");
+        var complexityOff = complexity is int c
+            ? c == 0
+            : ServerDesktopTweaks.IsSamPasswordComplexityOff();
         return (complexityOff, neverExpire, historyOff);
+    }
+
+    private static int? TryReadSecpolInt(string key)
+    {
+        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-read.inf");
+        try
+        {
+            Run("secedit.exe", $"/export /cfg \"{cfg}\"");
+            if (!File.Exists(cfg)) return null;
+            var prefix = key + " = ";
+            foreach (var line in ReadInfLines(cfg))
+            {
+                var t = line.Trim();
+                if (!t.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                var rest = t.Substring(prefix.Length).Trim();
+                if (int.TryParse(rest, out var n))
+                    return n;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            TryDelete(cfg);
+        }
+
+        return null;
     }
 
     private static bool? ReadPasswordNeverExpireFromNetAccounts()
