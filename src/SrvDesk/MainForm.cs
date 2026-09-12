@@ -1434,7 +1434,31 @@ internal sealed class MainForm : Form
         _status.Text = AppLang.Lf("Autologon 已配置：{0}（应用到系统后下次重启生效）", "Autologon set for {0} (takes effect after Apply + reboot)", _autologonSettings!.Username);
     }
 
-    private void ConfigureComputerIdentity() => PromptComputerIdentity();
+    private void ShowAccountIdentity(AccountIdentityDialog.InitialTab initial = AccountIdentityDialog.InitialTab.LocalUser, bool optionalIdentity = false)
+    {
+        try
+        {
+            using var dlg = new AccountIdentityDialog(initial, optionalIdentity);
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            if (dlg.IdentityChanged)
+            {
+                var msg = dlg.RestartScheduled
+                    ? AppLang.L("计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。", "Computer name/workgroup changed. Restart in 60s (run shutdown /a to cancel).")
+                    : AppLang.L("计算机名/工作组已修改，请自行选择合适时间重启以完全生效。", "Computer name/workgroup changed. Restart when ready for full effect.");
+                _status.Text = msg;
+                MessageBox.Show(this, msg, AppLang.L("修改成功", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else if (dlg.UserCreated)
+            {
+                _status.Text = AppLang.L("已添加本地用户。", "Local user added.");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, AppLang.L("账户与计算机名", "Account / computer name"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
 
     private void ShowOptimizeAdvisor()
     {
@@ -3302,28 +3326,7 @@ internal sealed class MainForm : Form
     {
         if (!RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written.")))
             return;
-        // 改名请从「工具 → 计算机名 / 工作组」单独打开，不再每次追问
-    }
-
-    /// <summary>修改计算机名/工作组。optional=true 时提供明显的「跳过」。</summary>
-    private void PromptComputerIdentity(bool optional = false)
-    {
-        try
-        {
-            var info = ComputerIdentityHelper.Read();
-            using var dlg = new ComputerIdentityDialog(info, optional);
-            if (dlg.ShowDialog(this) != DialogResult.OK) return;
-
-            var msg = dlg.RestartScheduled
-                ? AppLang.L("计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。", "Computer name/workgroup changed. Restart in 60s (run shutdown /a to cancel).")
-                : AppLang.L("计算机名/工作组已修改，请自行选择合适时间重启以完全生效。", "Computer name/workgroup changed. Restart when ready for full effect.");
-            _status.Text = msg;
-            MessageBox.Show(this, msg, AppLang.L("修改成功", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, AppLang.L("计算机名", "Computer name"), MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
+        // 改名请从「工具 → 账户与计算机名」单独打开，不再每次追加
     }
 
     /// <summary>询问并尝试创建还原点。Cancel=中止应用；跳过/失败不挡写入。</summary>
