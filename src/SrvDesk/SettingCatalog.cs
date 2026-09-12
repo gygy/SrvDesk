@@ -613,7 +613,7 @@ internal static class SettingCatalog
         L("开机后自动登录指定本地/域账户，无需输入密码。", "Auto-logon a chosen local/domain account without typing a password."),
         L("写入 Winlogon（AutoAdminLogon、DefaultUserName、DefaultDomainName），密码经 LsaStorePrivateData 存入 LSA，与 Sysinternals Autologon 相同。", "Writes Winlogon (AutoAdminLogon, DefaultUserName, DefaultDomainName); password stored via LsaStorePrivateData like Sysinternals Autologon."),
         L("个人物理机、开发用 Server 桌面免输密码；重启/断电恢复后直达桌面。", "Passwordless personal/dev Server desktops; reboot/power-loss goes straight to desktop."),
-        L("开启后点击工具栏「Autologon 配置」填写账户；应用到系统时写入。关闭开关并应用可禁用。", "After enabling, use toolbar Autologon to set the account; written on Apply. Turn off and Apply to disable."),
+        L("开启后到左侧「账户与登录」填写账户；应用到系统时写入。关闭开关并应用可禁用。", "After enabling, set the account under Account & sign-in; written on Apply. Turn off and Apply to disable."),
         L("下次重启后生效；启动时按住 Shift 可临时跳过自动登录。", "Takes effect on next reboot; hold Shift at boot to skip once."),
         SettingScope.DesktopExperience);
 

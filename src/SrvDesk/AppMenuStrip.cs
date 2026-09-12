@@ -27,7 +27,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolWindowsFeatures { get; }
     public ToolStripMenuItem ToolSecurityCenter { get; }
     public ToolStripMenuItem ToolEdgeManage { get; }
-    public ToolStripMenuItem ToolContextMenu { get; }
     public ToolStripMenuItem ToolQuick { get; }
     public ToolStripMenuItem ToolRefresh { get; }
     public ToolStripMenuItem ToolRestoreDefaults { get; }
@@ -65,8 +64,6 @@ internal sealed class AppMenuStrip : MenuStrip
         ]);
 
         var tools = new ToolStripMenuItem(AppLang.L("工具(&T)", "Tools(&T)"));
-        ToolAutologon = Item(AppLang.L("Autologon 配置...", "Autologon..."), MenuIcons.Autologon);
-        ToolAccountIdentity = Item(AppLang.L("账户与计算机名...", "Account / computer name..."), MenuIcons.Identity);
         ToolSystemInfo = Item(AppLang.L("系统信息...", "System info..."), MenuIcons.SystemInfo);
         ToolHosts = Item(AppLang.L("编辑 hosts...", "Edit hosts..."), MenuIcons.Hosts);
         ToolFlushDns = Item(AppLang.L("刷新 DNS 缓存", "Flush DNS cache"), MenuIcons.FlushDns);
@@ -87,15 +84,13 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
         ToolSecurityCenter = Item(AppLang.L("安全中心管理...", "Security Center..."), MenuIcons.SecurityCenter);
         ToolEdgeManage = Item(AppLang.L("MSEdge 管理...", "MSEdge management..."), MenuIcons.EdgeManage);
-        ToolContextMenu = Item(AppLang.L("右键菜单...", "Context menu..."), MenuIcons.ContextMenu);
         ToolQuick = Item(AppLang.L("快速工具...", "Quick tools..."), MenuIcons.Quick);
         ToolRefresh = Item(AppLang.L("刷新当前状态", "Refresh status"), MenuIcons.Refresh, Keys.F5);
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
             ToolOptimizeAdvisor, ToolOptHistory,
-            ToolAutologon, ToolAccountIdentity,
-            ToolCommonSoftware, ToolContextMenu, ToolCleanup,
+            ToolCommonSoftware, ToolCleanup,
             ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
             ToolHosts,
             new ToolStripSeparator(),

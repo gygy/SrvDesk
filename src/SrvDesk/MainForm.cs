@@ -319,8 +319,10 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
+        AppLang.L("账户与登录", "Account & sign-in"),
         AppLang.L("登录启动项", "Startup apps"),
         AppLang.L("高级设置", "Advanced settings"),
+        AppLang.L("右键菜单", "Context menu"),
         AppLang.L("服务优化", "Service optimize"),
         AppLang.L("DNS 设置", "DNS settings"),
         AppLang.L("自定义配置", "Custom config"),
@@ -330,6 +332,7 @@ internal sealed class MainForm : Form
     [
         AppLang.L("Server专属", "Server only"),
         AppLang.L("账户策略", "Account policy"),
+        AppLang.L("账户与登录", "Account & sign-in"),
         AppLang.L("资源管理器", "File Explorer"),
         AppLang.L("桌面外观", "Desktop look"),
         AppLang.L("远程与网络", "Remote & network"),
@@ -338,6 +341,7 @@ internal sealed class MainForm : Form
         AppLang.L("登录启动项", "Startup apps"),
         AppLang.L("电源与后台", "Power & background"),
         AppLang.L("高级设置", "Advanced settings"),
+        AppLang.L("右键菜单", "Context menu"),
         AppLang.L("服务优化", "Service optimize"),
         AppLang.L("DNS 设置", "DNS settings"),
         AppLang.L("自定义配置", "Custom config"),
@@ -669,8 +673,6 @@ internal sealed class MainForm : Form
         _appMenu.FileExport.Click += (_, _) => ExportProfile();
         _appMenu.FileSettings.Click += (_, _) => ShowAppSettings();
         _appMenu.FileExit.Click += (_, _) => Close();
-        _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
-        _appMenu.ToolAccountIdentity.Click += (_, _) => ShowAccountIdentity();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
@@ -706,13 +708,6 @@ internal sealed class MainForm : Form
         {
             using var d = new EdgeManageDialog();
             d.ShowDialog(this);
-        };
-        _appMenu.ToolContextMenu.Click += (_, _) =>
-        {
-            using var d = new ContextMenuSettingsDialog();
-            d.ShowDialog(this);
-            // 对话框即时写入后，同步批量页所有相关开关，避免「应用到系统」覆盖
-            SyncContextMenuRowsFromSystem();
         };
         _appMenu.ToolQuick.Click += (_, _) => ShowQuickToolsDialog();
         _appMenu.ToolRefresh.Click += (_, _) => LoadState(fullScan: true, forceUi: true);
@@ -1431,35 +1426,54 @@ internal sealed class MainForm : Form
 
     private void ConfigureAutologon()
     {
-        if (!ConfigureAutologonDialog()) return;
-        _autologon.Checked = true;
-        _status.Text = AppLang.Lf("Autologon 已配置：{0}（应用到系统后下次重启生效）", "Autologon set for {0} (takes effect after Apply + reboot)", _autologonSettings!.Username);
+        ShowAccountIdentity(AccountIdentityDialog.InitialTab.Autologon);
     }
 
-    private void ShowAccountIdentity(AccountIdentityDialog.InitialTab initial = AccountIdentityDialog.InitialTab.LocalUser, bool optionalIdentity = false)
+    private void ShowAccountIdentity(AccountIdentityDialog.InitialTab initial = AccountIdentityDialog.InitialTab.LocalUser)
     {
-        try
-        {
-            using var dlg = new AccountIdentityDialog(initial, optionalIdentity);
-            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        var title = AppLang.L("账户与登录", "Account & sign-in");
+        var index = Array.IndexOf(MenuItems, title);
+        if (index < 0) return;
 
-            if (dlg.IdentityChanged)
-            {
-                var msg = dlg.RestartScheduled
-                    ? AppLang.L("计算机名/工作组已修改，系统将在 60 秒后重启（命令行执行 shutdown /a 可取消）。", "Computer name/workgroup changed. Restart in 60s (run shutdown /a to cancel).")
-                    : AppLang.L("计算机名/工作组已修改，请自行选择合适时间重启以完全生效。", "Computer name/workgroup changed. Restart when ready for full effect.");
-                _status.Text = msg;
-                MessageBox.Show(this, msg, AppLang.L("修改成功", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else if (dlg.UserCreated)
-            {
-                _status.Text = AppLang.L("已添加本地用户。", "Local user added.");
-            }
-        }
-        catch (Exception ex)
+        if (_menu.SelectedIndex != index)
+            _menu.SelectedIndex = index;
+        else
+            ShowGroup(index);
+
+        if (_pageCache.TryGetValue(title, out var page) && page is AccountIdentityDialog account)
+            account.SelectTab(initial);
+        else
         {
-            MessageBox.Show(this, ex.Message, AppLang.L("账户与计算机名", "Account / computer name"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            // 首次创建后 SelectTab 已在构造里做过；再确保一次
+            BeginInvoke(() =>
+            {
+                if (_pageCache.TryGetValue(title, out var created) && created is AccountIdentityDialog dlg)
+                    dlg.SelectTab(initial);
+            });
         }
+    }
+
+    private AccountIdentityDialog CreateAccountIdentityPage()
+    {
+        return new AccountIdentityDialog(
+            getAutologon: () => _autologonSettings,
+            saveAutologon: settings =>
+            {
+                _autologonSettings = settings;
+                _autologon.Checked = true;
+                RefreshAutologonDisplay();
+                _status.Text = AppLang.Lf(
+                    "Autologon 已配置：{0}（应用到系统后下次重启生效）",
+                    "Autologon set for {0} (takes effect after Apply + reboot)",
+                    settings.Username);
+            },
+            onAutologonCleared: () =>
+            {
+                _autologonSettings = null;
+                _autologon.Checked = false;
+                RefreshAutologonDisplay();
+                _status.Text = AppLang.L("已禁用自动登录。", "Autologon disabled.");
+            });
     }
 
     private void ShowOptimizeAdvisor()
@@ -1843,10 +1857,14 @@ internal sealed class MainForm : Form
 
     private Form CreateEmbeddedPage(string title)
     {
+        if (title == AppLang.L("账户与登录", "Account & sign-in"))
+            return CreateAccountIdentityPage();
         if (title == AppLang.L("登录启动项", "Startup apps"))
             return new StartupManagerDialog();
         if (title == AppLang.L("高级设置", "Advanced settings"))
             return new OtherSettingsDialog();
+        if (title == AppLang.L("右键菜单", "Context menu"))
+            return new ContextMenuSettingsDialog(SyncContextMenuRowsFromSystem);
         if (title == AppLang.L("服务优化", "Service optimize"))
         {
             var page = new ServiceOptimizeDialog();
@@ -3408,7 +3426,7 @@ internal sealed class MainForm : Form
     {
         if (!RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written.")))
             return;
-        // 改名请从「工具 → 账户与计算机名」单独打开，不再每次追加
+        // 改名请从左侧「账户与登录」单独操作，不再每次追加
     }
 
     /// <summary>询问并尝试创建还原点。Cancel=中止应用；跳过/失败不挡写入。</summary>
