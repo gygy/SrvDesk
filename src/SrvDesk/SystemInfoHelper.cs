@@ -26,7 +26,10 @@ internal sealed class SystemFacts
     public string ProductName { get; }
     public string DisplayVersion { get; }
     public string Build { get; }
+    /// <summary>日志/诊断用完整摘要（含 Build、虚拟机等）。</summary>
     public string Summary { get; }
+    /// <summary>界面用简洁版本，如「Windows Server 2022 · 21H2」。</summary>
+    public string CompactSummary { get; }
 
     public SystemFacts(
         bool isServer,
@@ -37,7 +40,8 @@ internal sealed class SystemFacts
         string productName,
         string displayVersion,
         string build,
-        string summary)
+        string summary,
+        string compactSummary)
     {
         IsServer = isServer;
         HasDesktopExperience = hasDesktopExperience;
@@ -48,6 +52,7 @@ internal sealed class SystemFacts
         DisplayVersion = displayVersion;
         Build = build;
         Summary = summary;
+        CompactSummary = compactSummary;
     }
 }
 
@@ -93,7 +98,32 @@ internal static class SystemInfoHelper
         if (isVm)
             summary += AppLang.L(" · 虚拟机", " · VM");
 
-        return new SystemFacts(isServer, hasDesktop, isVm, kind, buildNum, product, display, build, summary);
+        // 界面：只显示简洁 Windows 版本，不含工作组/计算机名/Build/虚拟机
+        var compact = CompactLabel(isServer, hasDesktop, kind, display);
+
+        return new SystemFacts(isServer, hasDesktop, isVm, kind, buildNum, product, display, build, summary, compact);
+    }
+
+    /// <summary>界面用短标签，如「Windows Server 2022 · 21H2」。</summary>
+    public static string CompactLabel(bool isServer, bool hasDesktop, WindowsOsKind kind, string displayVersion)
+    {
+        string name;
+        if (isServer)
+        {
+            name = kind == WindowsOsKind.ServerOther
+                ? "Windows Server"
+                : "Windows " + KindLabel(kind);
+            if (!hasDesktop)
+                name += " Core";
+        }
+        else
+        {
+            name = KindLabel(kind);
+        }
+
+        if (!string.IsNullOrWhiteSpace(displayVersion))
+            name += " · " + displayVersion.Trim();
+        return name;
     }
 
     public static string KindLabel(WindowsOsKind kind) => kind switch

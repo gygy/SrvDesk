@@ -72,13 +72,12 @@ alwaysApply: false
 
 ## 按钮（强制 · 防裁字 / 多显示器）
 
-- **必须** `ThemedSettingsChrome.CreateButton(text, primary)`（顶栏、底栏、工具条、对话框一律）
-  - `primary: true` = 主操作（一页一个主路径为宜）
-  - `primary: false` = 次要/取消
+- **必须** `ThemedSettingsChrome.CreateButton`（内部为 `FlatChromeButton` 自绘，避免默认 Flat 再画一遍裁切文字）
+- **底栏容器高度**随 `FitButton` 结果伸缩（禁止写死 `Height = 58` 裁掉字脚）
 - 禁止：
   - `new Button()` + 手写 `Size = new Size(文字宽+24, 36)` / `Height = 30` / `MeasureText` 裸量宽
   - 顶栏/底栏只改一处、另一处仍写死像素（曾导致副屏裁字）
-  - Flat 按钮不挂 `EnableCenteredFlatText`（雅黑默认偏上/偏下裁字脚）
+  - Flat 按钮依赖「Paint 事件盖字」却不关默认绘制（文字会被系统绘制盖住/裁切）
   - 用 `EndEllipsis` 当按钮文案策略（按钮应够宽完整显示，省略号看起来像「字被盖住」）
 - **高度**：一律 `UiFit.ControlHeight(font)` 或 `FitButton`（其内部会抬到 `ControlHeight`）；禁止 `UiScale.S(30)` / `36` 当按钮行高
 - **宽度**：`FitButton` / `ButtonSize`（已含字墨溢出与安全边）；禁止 `TextRenderer.MeasureText(... NoPadding).Width + 24`

@@ -23,7 +23,8 @@ description: >-
 
 1. 确认是 WinForms（不要套 Web frontend-design）
 2. 对照检查清单审计目标窗体
-3. 最小 diff 改为使用 `CreateButton`、`ControlHeight`、`FitButton`、`EnableCenteredFlatText`、`AppTheme`
+3. 最小 diff 改为使用 `CreateButton`（`FlatChromeButton`）、`ControlHeight`、`FitButton`、`AppTheme`；底栏高度随按钮伸缩
+
 4. **顶栏与底栏一起查**：禁止只修底栏、顶栏仍写死 `Height=30/36`
 5. 给用户试或交付时：按 `compile-dist` 跑 `.\scripts\publish.ps1`（**升版本 + 轻度混淆**，勿加 `-NoBumpVersion` / `-SkipObfuscate`）
 
@@ -38,8 +39,8 @@ description: >-
 - **术语堆砌进主界面**：LSA / secedit / .reg 细节放帮助面板，不放页顶长文
 - 常态占位的科普；仅缺依赖时给一句（如未装 wt.exe）
 - **按钮裁字（强制禁止）**：
-  - `new Button()` + `Size = (MeasureText+24, 36)` / 写死 `30`
-  - Flat 不挂 `EnableCenteredFlatText`
+  - `new Button()` + `Size = (MeasureText+24, 36)` / 写死 `30`；底栏写死 `Height = 58`
+  - Flat 依赖 Paint 盖字却不关默认绘制（须 `FlatChromeButton` / `CreateButton`）
   - 只用省略号掩盖宽度不够
   - `AutoScaleMode.None` 却不在换屏时 `FitButton` / `OnHostDpiChanged`
   - 只改底栏、不改顶栏工具条

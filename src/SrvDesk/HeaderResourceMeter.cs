@@ -5,15 +5,15 @@ using System.Runtime.InteropServices;
 
 namespace SrvDesk;
 
-/// <summary>顶栏右侧：本机 IP · CPU / 内存 / 系统盘占用（纯文字）。</summary>
+/// <summary>本机 IP · CPU / 内存 / 系统盘占用（纯文字）。默认浅色底栏样式。</summary>
 internal sealed class HeaderResourceMeter : Panel
 {
     private readonly Label _text = new()
     {
         AutoSize = false,
         Dock = DockStyle.Fill,
-        ForeColor = AppTheme.TextOnPrimarySoft,
-        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+        ForeColor = AppTheme.TextMute,
+        Font = UiFit.UiFont,
         TextAlign = ContentAlignment.MiddleRight,
         BackColor = Color.Transparent,
         Text = "…",
@@ -30,8 +30,8 @@ internal sealed class HeaderResourceMeter : Panel
 
     public HeaderResourceMeter()
     {
-        Width = 520;
-        Height = 48;
+        Width = 480;
+        Height = UiFit.ControlHeight(UiFit.UiFont);
         BackColor = Color.Transparent;
         DoubleBuffered = true;
 
@@ -47,6 +47,16 @@ internal sealed class HeaderResourceMeter : Panel
             _timer.Start();
         };
         Disposed += (_, _) => Cleanup();
+    }
+
+    /// <summary>按底栏高度垂直居中放置（右锚在动作按钮左侧）。</summary>
+    public void LayoutInBottomBar(Control host, int rightReserve)
+    {
+        if (host is null) return;
+        Height = Math.Max(UiScale.S(28), host.ClientSize.Height - 2);
+        Left = Math.Max(8, host.ClientSize.Width - Width - Math.Max(0, rightReserve));
+        Top = Math.Max(0, (host.ClientSize.Height - Height) / 2);
+        Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
     }
 
     private void TryCreateCpuCounter()
@@ -119,13 +129,16 @@ internal sealed class HeaderResourceMeter : Panel
         {
             var pad = 16;
             var need = TextRenderer.MeasureText(line, _text.Font).Width + pad;
-            var next = Math.Max(420, Math.Min(720, need));
+            var next = Math.Max(360, Math.Min(680, need));
             if (Math.Abs(Width - next) < 8) return;
 
             Width = next;
-            // 右锚定时宽度变大后必须左移，否则右侧文字会被窗体裁掉
             if (Parent is not null && (Anchor & AnchorStyles.Right) != 0)
-                Left = Math.Max(0, Parent.ClientSize.Width - Width - 28);
+            {
+                // 底栏：右侧为动作按钮预留；顶栏旧布局曾用 28 边距
+                var rightPad = Tag is int reserve ? reserve : 28;
+                Left = Math.Max(0, Parent.ClientSize.Width - Width - rightPad);
+            }
         }
         catch { /* ignore */ }
     }

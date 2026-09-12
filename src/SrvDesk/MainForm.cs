@@ -255,8 +255,7 @@ internal sealed class MainForm : Form
     private readonly AppMenuStrip _appMenu = new();
     private readonly Panel _commandBar = new();
     private readonly Panel _workArea = new();
-    private readonly Label _headerSubtitle = new();
-    private HeaderResourceMeter? _headerMeter;
+    private HeaderResourceMeter? _resourceMeter;
     private readonly ToolTip _toolTip = new() { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
     private readonly Panel _contentHost = new BufferedPanel(composited: true);
     private readonly Label _status = new();
@@ -561,7 +560,6 @@ internal sealed class MainForm : Form
 
         WireAppMenu();
         WirePresetMenu();
-        var header = BuildHeader();
         var sidebar = BuildSidebar();
         var bottom = BuildBottom();
         BuildCommandBar();
@@ -569,7 +567,6 @@ internal sealed class MainForm : Form
         BuildWorkArea(sidebar);
 
         _appMenu.Dock = DockStyle.Top;
-        header.Dock = DockStyle.Top;
         _commandBar.Dock = DockStyle.Top;
         _workArea.Dock = DockStyle.Fill;
         _bottomPanel.Dock = DockStyle.Bottom;
@@ -577,7 +574,6 @@ internal sealed class MainForm : Form
         Controls.Add(_workArea);
         Controls.Add(_bottomPanel);
         Controls.Add(_commandBar);
-        Controls.Add(header);
         Controls.Add(_appMenu);
 
         _menu.SelectedIndex = 0;
@@ -1055,40 +1051,26 @@ internal sealed class MainForm : Form
 
     private void InitializeRuntime()
     {
+        _defaultStatusText = _systemFacts.CompactSummary;
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
             _status.Text = AppLang.L("提示：当前进程未提升权限，部分系统级项可能写入失败（失败项会显示在状态栏）。", "Tip: not elevated — some system writes may fail (shown in status bar).");
-            _headerSubtitle.Text = _systemFacts.Summary;
         }
         else if (!_systemFacts.IsServer)
         {
             _status.ForeColor = AppTheme.ScopeServer;
-            _status.Text = AppLang.Lf("提示：当前不是 Windows Server（{0}）。部分「Server 专属」项可能无效。", "Tip: not Windows Server ({0}). Some Server-only items may not apply.", _systemFacts.Summary);
-            _headerSubtitle.Text = _systemFacts.Summary + AppLang.L(" · 非 Server 环境", " · Non-Server");
+            _status.Text = AppLang.Lf("提示：当前不是 Windows Server（{0}）。部分「Server 专属」项可能无效。", "Tip: not Windows Server ({0}). Some Server-only items may not apply.", _systemFacts.CompactSummary);
         }
         else if (!_systemFacts.HasDesktopExperience)
         {
             _status.ForeColor = AppTheme.ScopeServer;
             _status.Text = AppLang.L("提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。", "Tip: Server Core detected. Desktop-Experience items are hidden; uncheck the filter to show them.");
-            _headerSubtitle.Text = _systemFacts.Summary + " · Server Core";
             _hideIncompatible.Checked = true;
         }
         else
         {
-            _status.Text = _systemFacts.Summary + AppLang.L(" · 正在加载…", " · Loading…");
-            _headerSubtitle.Text = _systemFacts.Summary;
-            System.Threading.Tasks.Task.Run(() => ComputerIdentityHelper.Read().Summary)
-                .ContinueWith(t =>
-                {
-                    if (t.IsFaulted) return;
-                    BeginInvoke(() =>
-                    {
-                        var identity = t.Result;
-                        _status.Text = _systemFacts.Summary + " · " + identity;
-                        _headerSubtitle.Text = _systemFacts.Summary + " · " + identity;
-                    });
-                });
+            _status.Text = _defaultStatusText + AppLang.L(" · 正在加载…", " · Loading…");
         }
 
         // 程序设置：默认隐藏不适用项（Server Core 上面已强制勾选）
@@ -1298,27 +1280,10 @@ internal sealed class MainForm : Form
 
     private Button BarQuickButton(string text, string tip, Action click)
     {
-        var font = UiFit.UiFont;
-        var h = UiFit.ControlHeight(font);
-        var b = new Button
-        {
-            Text = text,
-            Font = font,
-            AutoSize = false,
-            Size = UiFit.ButtonSize(text, h, font, minWidth: 72, padding: 28),
-            Margin = new Padding(0, 2, 8, 0),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White,
-            ForeColor = AppTheme.TextMain,
-            Cursor = Cursors.Hand,
-            TabStop = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            UseCompatibleTextRendering = false,
-            Padding = Padding.Empty,
-        };
-        b.FlatAppearance.BorderColor = AppTheme.Border;
-        b.FlatAppearance.BorderSize = 1;
-        UiFit.EnableCenteredFlatText(b);
+        var b = ThemedSettingsChrome.CreateButton(text, false);
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), padding: 28);
+        b.Margin = new Padding(0, 2, 8, 0);
+        b.BackColor = Color.White;
         b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
         b.MouseLeave += (_, _) => { b.BackColor = Color.White; b.Invalidate(); };
         b.Click += (_, _) => click();
@@ -1804,63 +1769,6 @@ internal sealed class MainForm : Form
 
         _activeWrap.Height = Math.Max(y, 1);
     }
-
-    private Panel BuildHeader()
-    {
-        var header = new Panel { Height = 48, BackColor = AppTheme.PrimaryDeep };
-        header.Paint += (_, e) =>
-        {
-            var r = header.ClientRectangle;
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                r, AppTheme.HeaderBarTop, AppTheme.HeaderBarBottom, 90f);
-            e.Graphics.FillRectangle(brush, r);
-        };
-
-        var logo = new PictureBox
-        {
-            Size = new Size(32, 32),
-            Location = new Point(14, 8),
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.Transparent,
-        };
-        var logoImg = LoadLogo();
-        if (logoImg is not null) logo.Image = logoImg;
-
-        _headerMeter = new HeaderResourceMeter
-        {
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(header.Width - 532, 0),
-        };
-
-        // 蓝色顶栏左侧系统信息，右侧资源占用
-        _headerSubtitle.AutoSize = false;
-        _headerSubtitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _headerSubtitle.Location = new Point(54, 0);
-        _headerSubtitle.Height = 48;
-        _headerSubtitle.ForeColor = AppTheme.TextOnPrimarySoft;
-        _headerSubtitle.Font = UiFit.UiFont;
-        _headerSubtitle.TextAlign = ContentAlignment.MiddleLeft;
-        _headerSubtitle.BackColor = Color.Transparent;
-        _headerSubtitle.Text = AppLang.L("Windows Server 桌面优化", "Windows Server desktop tweaks");
-
-        header.Controls.Add(_headerSubtitle);
-        header.Controls.Add(_headerMeter);
-        header.Controls.Add(logo);
-        void LayoutHeader()
-        {
-            if (_headerMeter is null) return;
-            // 右侧多留一点边距，避免 IP/资源字被窗体边缘裁切
-            const int rightPad = 28;
-            _headerMeter.Left = Math.Max(200, header.ClientSize.Width - _headerMeter.Width - rightPad);
-            _headerSubtitle.Width = Math.Max(120, _headerMeter.Left - _headerSubtitle.Left - 12);
-        }
-        header.Resize += (_, _) => LayoutHeader();
-        _headerMeter.SizeChanged += (_, _) => LayoutHeader();
-        LayoutHeader();
-        return header;
-    }
-
-    private static Image? LoadLogo() => AppBrand.LoadLogoImage();
 
     private Panel BuildSidebar()
     {
@@ -2396,7 +2304,7 @@ internal sealed class MainForm : Form
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
-        _defaultStatusText = "";
+        _defaultStatusText = _systemFacts.CompactSummary;
         _status.Text = _defaultStatusText;
 
         var actions = new NoScrollFlowLayoutPanel
@@ -2431,17 +2339,35 @@ internal sealed class MainForm : Form
         _apply.FlatAppearance.BorderSize = 0;
         _apply.Click += (_, _) => OnApplyClicked();
 
+        _resourceMeter = new HeaderResourceMeter();
+        _resourceMeter.SizeChanged += (_, _) => LayoutBottomChrome();
+
         FitBottomActionButtons();
         actions.Controls.AddRange([_refreshBottom, _restore, _apply]);
         _bottomPanel.Controls.Add(actions);
+        _bottomPanel.Controls.Add(_resourceMeter);
         _bottomPanel.Controls.Add(_status);
         _bottomPanel.Controls.Add(rule);
-        _bottomPanel.Resize += (_, _) =>
-        {
-            var right = actions.Width + 24;
-            _status.Width = Math.Max(120, _bottomPanel.ClientSize.Width - right - 12);
-        };
+        _bottomPanel.Resize += (_, _) => LayoutBottomChrome();
+        LayoutBottomChrome();
         return _bottomPanel;
+    }
+
+    private void LayoutBottomChrome()
+    {
+        if (_bottomActions is null) return;
+        var actionsW = _bottomActions.Width;
+        var rightReserve = actionsW + UiScale.S(20);
+        if (_resourceMeter is not null)
+        {
+            _resourceMeter.Tag = rightReserve;
+            _resourceMeter.LayoutInBottomBar(_bottomPanel, rightReserve);
+        }
+
+        var meterLeft = _resourceMeter?.Left ?? (_bottomPanel.ClientSize.Width - rightReserve);
+        _status.Width = Math.Max(120, meterLeft - _status.Left - UiScale.S(12));
+        _status.Height = Math.Max(UiScale.S(28), _bottomPanel.ClientSize.Height - UiScale.S(4));
+        _status.Top = Math.Max(1, (_bottomPanel.ClientSize.Height - _status.Height) / 2);
     }
 
     private void StyleBottomActionButton(FlatChromeButton b, string text, bool primary, Color fore)
@@ -2487,6 +2413,7 @@ internal sealed class MainForm : Form
             var padY = Math.Max(6, (_bottomPanel.Height - 1 - h) / 2);
             _bottomActions.Padding = new Padding(0, padY, 14, padY);
         }
+        LayoutBottomChrome();
     }
 
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
@@ -2831,7 +2758,7 @@ internal sealed class MainForm : Form
                                 _status.Text.IndexOf(AppLang.L("已载入预设", "Loaded preset"), StringComparison.Ordinal) < 0 &&
                                 _status.Text.IndexOf(AppLang.L("已导入", "Imported"), StringComparison.Ordinal) < 0)
                             {
-                                _status.Text = _systemFacts.Summary +
+                                _status.Text = _systemFacts.CompactSummary +
                                     AppLang.L(" · 后台扫描完成（已保留你的勾选；点「刷新」可对齐系统）。", " · Background scan done (kept your toggles; Refresh to sync).");
                             }
                             return;
@@ -2849,7 +2776,7 @@ internal sealed class MainForm : Form
                         RefreshEmbeddedPageIfVisible();
                         if (fullScan && forceUi &&
                             !_status.Text.StartsWith(AppLang.L("读取当前配置失败", "Failed to read settings"), StringComparison.Ordinal))
-                            _status.Text = _systemFacts.Summary + AppLang.L(" · 状态已刷新。", " · Status refreshed.");
+                            _status.Text = _systemFacts.CompactSummary + AppLang.L(" · 状态已刷新。", " · Status refreshed.");
                     }
                 }));
             }

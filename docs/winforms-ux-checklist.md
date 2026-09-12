@@ -32,7 +32,8 @@
 - [ ] `ThemedSettingsChrome.CreateButton`（禁止裸 `new Button` + 手写宽高）
 - [ ] 高度用 `UiFit.ControlHeight` / `FitButton`，**禁止写死 30/36/40 条带塞按钮**
 - [ ] **禁止** `CreateButton` 后再 `_btn.Size = new Size(140, 34)` 压窄压矮
-- [ ] Flat 已 `EnableCenteredFlatText`；完整显示文案（不用省略号糊弄）
+- [ ] 按钮为 `FlatChromeButton`（`CreateButton`）；完整显示文案（不用省略号糊弄）
+- [ ] 底栏高度随 `FitButton` 伸缩（禁止写死 `Height = 58`）
 - [ ] **顶栏与底栏同一套规则**（不只修底栏）
 - [ ] 工具条容器够高，不裁按钮顶/字脚；动作条不盖住下方状态行
 - [ ] 换屏：Mount 壳或自有 `DpiChanged`/`Layout` 会重算
