@@ -133,7 +133,7 @@ internal sealed class LocalUserDialog : Form
             "快速添加本地用户",
             "本地账户 · Administrators",
             body,
-            "默认：不强制下次改密 · 不能改密 · 密码不过期 · 管理员。");
+            "");
 
         AcceptButton = ok;
         CancelButton = cancel;

@@ -244,25 +244,34 @@ internal static class ThemedSettingsChrome
                 refreshBtn.Location = new Point(x - refreshBtn.Width, 9);
         }
 
-        var label = new Label
+        // 空 hint：不画左侧说明，避免「默认：…」类重复注脚（见 winforms-ux）
+        if (!string.IsNullOrWhiteSpace(hint))
         {
-            Text = hint,
-            AutoSize = false,
-            Location = new Point(16, 8),
-            Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 36),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            ForeColor = AppTheme.TextMute,
-            Font = UiFit.UiFontSmall,
-            TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
-        };
+            var label = new Label
+            {
+                Text = hint.Trim(),
+                AutoSize = false,
+                Location = new Point(16, 8),
+                Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 36),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ForeColor = AppTheme.TextMute,
+                Font = UiFit.UiFontSmall,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true,
+            };
 
-        footer.Controls.Add(label);
-        footer.Resize += (_, _) =>
+            footer.Controls.Add(label);
+            footer.Resize += (_, _) =>
+            {
+                LayoutFooterButtons();
+                label.Width = Math.Max(80, footer.ClientSize.Width - 24 - RightButtonsWidth());
+            };
+        }
+        else
         {
-            LayoutFooterButtons();
-            label.Width = Math.Max(80, footer.ClientSize.Width - 24 - RightButtonsWidth());
-        };
+            footer.Resize += (_, _) => LayoutFooterButtons();
+        }
+
         LayoutFooterButtons();
         return footer;
     }
