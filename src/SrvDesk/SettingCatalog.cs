@@ -906,8 +906,13 @@ internal static class SettingCatalog
         L("强制关闭基于虚拟化的安全性。", "Force-disable Virtualization-based Security."), L("EnableVirtualizationBasedSecurity=0。", "EnableVirtualizationBasedSecurity=0."), L("减少 VBS 性能损耗。", "Less VBS performance cost."), L("Credential Guard/HVCI 将不可用；高级项，勿一键全开。", "Credential Guard / HVCI unavailable; advanced — not one-click."), L("需重启。", "Requires reboot."), W10,
         recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo EnableTcpBbr2 = H(
-        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."), L("netsh int tcp set supplemental CongestionProvider=bbr2。", "netsh int tcp set supplemental CongestionProvider=bbr2."), L("部分广域网吞吐更好。", "Better throughput on some WAN links."), L("旧系统或不支持时会失败并保持 CUBIC；与 CTCP 互斥，属高级网络项。", "Fails on unsupported OS and keeps CUBIC; mutually exclusive with CTCP; advanced."), L("立即生效。", "Takes effect immediately."), W10,
-        recommend: RecommendLevel.Suggested);
+        L("TCP 拥塞控制改用 BBR2。", "Use BBR2 for TCP congestion control."),
+        L("netsh int tcp set supplemental template=internet congestionprovider=bbr2。", "netsh int tcp set supplemental template=internet congestionprovider=bbr2."),
+        L("部分广域网吞吐更好。", "Better throughput on some WAN links."),
+        L("Server 2019/2022 等通常不支持（会跳过并保持原算法）；Win11 / 较新系统可用。与 CTCP 互斥。", "Usually unsupported on Server 2019/2022 (skipped, keeps current); OK on Win11 / newer. Mutually exclusive with CTCP."),
+        L("立即生效（支持时）。", "Takes effect immediately when supported."),
+        W10,
+        recommend: RecommendLevel.Optional);
     public static readonly SettingHelpInfo EnableTcpCtcp = H(
         L("TCP 拥塞控制改用 CTCP（Compound TCP）。", "Use CTCP (Compound TCP) for congestion control."),
         L("netsh int tcp set supplemental template=internet congestionprovider=ctcp。", "netsh int tcp set supplemental template=internet congestionprovider=ctcp."),

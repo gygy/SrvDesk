@@ -512,7 +512,39 @@ internal static class EasySettingsTweaks
     private static void SetTcpCongestionProvider(string provider)
     {
         // 对齐：netsh int tcp set supplemental template=internet congestionprovider=…
-        Run("netsh", "int tcp set supplemental template=internet congestionprovider=" + provider);
+        // Server 2019/2022 等帮助里只有 none|ctcp|dctcp|default，bbr2 会「参数错误」退出码 1。
+        var args = "int tcp set supplemental template=internet congestionprovider=" + provider;
+        try
+        {
+            Run("netsh", args);
+            ApplyLog.SystemChange(
+                "netsh int tcp supplemental",
+                "设置 TCP 拥塞算法",
+                "(previous)",
+                provider);
+        }
+        catch (Exception ex) when (UiPrefs.SoftSkipUnsupported && IsUnsupportedCongestionProvider(ex))
+        {
+            ApplyLog.SoftSkip(
+                "TCP " + provider.ToUpperInvariant(),
+                "本机 netsh 不支持该拥塞算法（常见于 Server 2019/2022，需更新系统或改用 CTCP）：" +
+                TrimOneLine(ex.Message));
+        }
+    }
+
+    private static bool IsUnsupportedCongestionProvider(Exception ex)
+    {
+        var m = ex.Message ?? "";
+        return m.IndexOf("退出码 1", StringComparison.Ordinal) >= 0
+            || m.IndexOf("参数错误", StringComparison.OrdinalIgnoreCase) >= 0
+            || m.IndexOf("parameter", StringComparison.OrdinalIgnoreCase) >= 0
+            || m.IndexOf("invalid", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static string TrimOneLine(string s)
+    {
+        s = (s ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
+        return s.Length > 160 ? s.Substring(0, 160) + "…" : s;
     }
 
     private static (bool MemoryCompression, bool ApplicationPreLaunch, bool PageCombining)? _mmAgentCache;
