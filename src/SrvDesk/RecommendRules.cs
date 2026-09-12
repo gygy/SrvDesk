@@ -162,7 +162,11 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
         || ReferenceEquals(help, SettingCatalog.DisableCad)
         || ReferenceEquals(help, SettingCatalog.DisableShutdownReason)
-        || ReferenceEquals(help, SettingCatalog.EnableDiskPerfCounters);
+        || ReferenceEquals(help, SettingCatalog.EnableDiskPerfCounters)
+        || ReferenceEquals(help, SettingCatalog.DisableAeroShake)
+        || ReferenceEquals(help, SettingCatalog.RestrictNullSessionShares)
+        || ReferenceEquals(help, SettingCatalog.RestrictAnonymousEnum)
+        || ReferenceEquals(help, SettingCatalog.DisableTelemetryScheduledTasks);
 
     private static bool IsAggressivePerf(SettingHelpInfo help) =>
         ReferenceEquals(help, SettingCatalog.EnableTcpBbr2)

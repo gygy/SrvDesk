@@ -782,7 +782,27 @@ internal sealed class ScheduledTaskDialog : Form
         var enable = ThemedSettingsChrome.CreateButton(AppLang.L("启用所选", "Enable selected"), false);
         enable.Margin = new Padding(8, 0, 0, 0);
         enable.Click += (_, _) => ToggleSelected(true);
-        bar.Controls.AddRange([refresh, disable, enable]);
+        var disableTelem = ThemedSettingsChrome.CreateButton(
+            AppLang.L("禁用遥测建议项", "Disable telemetry set"), false);
+        disableTelem.Margin = new Padding(8, 0, 0, 0);
+        disableTelem.Click += (_, _) =>
+        {
+            var n = 0;
+            foreach (var path in AtlasGapTweaks.TelemetryScheduledTasks)
+            {
+                try
+                {
+                    ScheduledTaskHelper.SetEnabled(path, false);
+                    n++;
+                }
+                catch { /* 任务可能不存在 */ }
+            }
+            MessageBox.Show(this,
+                AppLang.L($"已尝试禁用 {n} 个遥测相关任务。", $"Tried to disable {n} telemetry tasks."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Reload();
+        };
+        bar.Controls.AddRange([refresh, disable, enable, disableTelem]);
 
         body.Controls.Add(_list);
         body.Controls.Add(bar);

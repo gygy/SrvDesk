@@ -1030,6 +1030,57 @@ internal static class SettingRecipeCatalog
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\WindowsNotepad"),
                 ActionScript.Dword("DisableAIFeatures", 0)),
             "WSAIFabricSvc 由软件按需禁用。"));
+
+        Add(SettingCatalog.RestrictNullSessionShares, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Services\LanManServer\Parameters", "RestrictNullSessAccess", 1, 0));
+        Add(SettingCatalog.RestrictAnonymousEnum, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Control\Lsa", "RestrictAnonymous", 1, 0));
+        Add(SettingCatalog.DisableSmbBandwidthThrottling, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters", "DisableBandwidthThrottling", 1, 0));
+        Add(SettingCatalog.FasterShutdown, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Desktop"),
+                ActionScript.Sz("HungAppTimeout", "2000"),
+                ActionScript.Sz("WaitToKillAppTimeOut", "2000")) +
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control"),
+                ActionScript.Sz("WaitToKillServiceTimeout", "2000")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Desktop"),
+                ActionScript.Sz("HungAppTimeout", "5000"),
+                ActionScript.Sz("WaitToKillAppTimeOut", "5000")) +
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control"),
+                ActionScript.Sz("WaitToKillServiceTimeout", "5000"))));
+        Add(SettingCatalog.DisableStartupAppDelay, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "StartupDelayInMSec", 0, 200));
+        Add(SettingCatalog.InstantMenuShow, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Desktop"),
+                ActionScript.Sz("MenuShowDelay", "0")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Desktop"),
+                ActionScript.Sz("MenuShowDelay", "400"))));
+        Add(SettingCatalog.DisableAeroShake, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "DisallowShaking", 1, 0));
+        Add(SettingCatalog.DisableNetworkLocationWizard, ActionScript.Cmd(
+            "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Network\\NewNetworkWindowOff\" /f",
+            "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Network\\NewNetworkWindowOff\" /f"));
+        Add(SettingCatalog.DisableSettingSync, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync"),
+                ActionScript.Dword("DisableSettingSync", 2),
+                ActionScript.Dword("DisableSettingSyncUserOverride", 1),
+                ActionScript.Dword("DisableSyncOnPaidNetwork", 1),
+                ActionScript.Dword("DisableWindowsSettingSync", 2)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\SettingSync"),
+                ActionScript.Dword("SyncPolicy", 5)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync"),
+                ActionScript.DeleteValue("DisableSettingSync"),
+                ActionScript.DeleteValue("DisableSettingSyncUserOverride"),
+                ActionScript.DeleteValue("DisableSyncOnPaidNetwork"),
+                ActionScript.DeleteValue("DisableWindowsSettingSync"))));
+        Add(SettingCatalog.DisableFinishSetupSuggestions, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement", "ScoobeSystemSettingEnabled", 0, 1));
+        Add(SettingCatalog.ExplorerTransferDetails, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\OperationStatusManager", "EnthusiastMode", 1, 0));
+        Add(SettingCatalog.DisableTelemetryScheduledTasks, ActionScript.Cmd(
+            "schtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Application Experience\\PcaPatchDbTask\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Flighting\\FeatureConfig\\UsageDataReporting\" /DISABLE",
+            "schtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator\" /ENABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip\" /ENABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector\" /ENABLE"));
+
         Add(SettingCatalog.AlwaysShowMenus, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "AlwaysShowMenus", 1, 0,
             "导入后重启资源管理器。"));

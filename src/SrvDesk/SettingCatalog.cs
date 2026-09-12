@@ -1118,9 +1118,111 @@ internal static class SettingCatalog
         L("关闭 Recall、Click to Do，以及记事本/画图的生成式 AI。", "Disable Recall, Click to Do, and generative AI in Notepad/Paint."),
         L("WindowsAI DisableAIDataAnalysis / DisableClickToDo / AllowRecallEnablement；Notepad DisableAIFeatures；Paint 生成式策略。", "WindowsAI DisableAIDataAnalysis / DisableClickToDo / AllowRecallEnablement; Notepad DisableAIFeatures; Paint generative policies."),
         L("本工具「关闭 Copilot」管不到的 Win11 24H2+ AI 入口一并关掉。", "Also turns off Win11 24H2+ AI entries that Disable Copilot does not cover."),
-        L("没有这些功能的系统开着也无害。", "Harmless on systems without these features."),
+        L("没有这些功能的系统开着也无害；与 Atlas「关 Recall」同类，推荐开启。", "Harmless without these features; same idea as Atlas Disable Recall — recommended on."),
         L("立即写入；Recall 可选功能需重启后完全消失。", "Written immediately; Recall optional feature fully gone after reboot."),
         W10);
+
+    public static readonly SettingHelpInfo RestrictNullSessionShares = H(
+        L("限制匿名访问命名管道与共享（RestrictNullSessAccess）。", "Restrict anonymous access to named pipes and shares."),
+        L("LanManServer\\Parameters RestrictNullSessAccess=1。", "LanManServer\\Parameters RestrictNullSessAccess=1."),
+        L("降低空会话扫共享/管道的攻击面（STIG 常见项）。", "Smaller null-session attack surface (common STIG item)."),
+        L("家庭 NAS / 文件服推荐开启；依赖匿名共享的老应用勿开。", "Recommended for home NAS/file servers; skip if apps need anonymous shares."),
+        L("立即写入。", "Written immediately."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo RestrictAnonymousEnum = H(
+        L("限制匿名枚举共享（RestrictAnonymous）。", "Restrict anonymous enumeration of shares."),
+        L("Lsa RestrictAnonymous=1。", "Lsa RestrictAnonymous=1."),
+        L("匿名用户更难列出本机共享名。", "Harder for anonymous users to list share names."),
+        L("与上一项一起开更完整；域控/特殊兼容场景自行评估。", "Pair with null-session restrict; assess on DCs / legacy apps."),
+        L("立即写入。", "Written immediately."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableSmbBandwidthThrottling = H(
+        L("关闭 SMB 客户端带宽节流。", "Disable SMB client bandwidth throttling."),
+        L("LanmanWorkstation\\Parameters DisableBandwidthThrottling=1。", "LanmanWorkstation\\Parameters DisableBandwidthThrottling=1."),
+        L("高延迟链路上文件拷贝/媒体库吞吐可能更好（微软文件服调优建议）。", "May improve copy/media throughput on high-latency links (MS file-server tuning)."),
+        L("文件服/NAS 访问推荐开启；一般宽带可开可关。", "Recommended when talking to file servers/NAS."),
+        L("立即写入。", "Written immediately."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo FasterShutdown = H(
+        L("缩短关机时等待无响应程序/服务的时间。", "Shorten wait for hung apps/services on shutdown."),
+        L("HungAppTimeout / WaitToKillAppTimeOut / WaitToKillServiceTimeout = 2000。", "HungAppTimeout / WaitToKillAppTimeOut / WaitToKillServiceTimeout = 2000."),
+        L("关机更快；卡住的程序更快被结束。", "Faster shutdown; hung apps end sooner."),
+        L("台式/Server 桌面推荐；需要慢关以保存工作的场景保持关闭。", "Recommended on desktops/Servers; keep off if you need slow shutdown to save work."),
+        L("下次关机起生效。", "Applies on next shutdown."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableStartupAppDelay = H(
+        L("取消开机后启动项的人为延迟。", "Remove artificial startup-app delay after logon."),
+        L("Explorer\\Serialize StartupDelayInMSec=0。", "Explorer\\Serialize StartupDelayInMSec=0."),
+        L("登录后托盘/启动软件更快起来。", "Tray/startup apps appear sooner after logon."),
+        L("桌面推荐开启。", "Recommended on desktops."),
+        L("注销或重启后生效。", "Applies after sign-out or reboot."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo InstantMenuShow = H(
+        L("菜单悬停立即展开（MenuShowDelay=0）。", "Open menus instantly on hover (MenuShowDelay=0)."),
+        L("HKCU\\Control Panel\\Desktop MenuShowDelay=0。", "HKCU\\Control Panel\\Desktop MenuShowDelay=0."),
+        L("右键/菜单栏子菜单更跟手。", "Context/menu bar submenus feel snappier."),
+        L("桌面推荐开启。", "Recommended on desktops."),
+        L("重新登录后完全生效。", "Fully applies after re-login."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableAeroShake = H(
+        L("禁用「摇一摇窗口最小化其它窗口」（Aero Shake）。", "Disable Aero Shake (shake a window to minimize others)."),
+        L("Explorer\\Advanced DisallowShaking=1。", "Explorer\\Advanced DisallowShaking=1."),
+        L("少误触最小化整桌窗口。", "Fewer accidental minimize-all."),
+        L("桌面强烈推荐。", "Strongly recommended on desktops."),
+        L("立即写入。", "Written immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo DisableNetworkLocationWizard = H(
+        L("关闭「网络位置/是否可发现」弹窗向导。", "Disable the network location / discoverable wizard popup."),
+        L("创建 HKLM\\…\\Network\\NewNetworkWindowOff 键。", "Create HKLM\\…\\Network\\NewNetworkWindowOff key."),
+        L("插网线/新网络时少一个打扰弹窗。", "Fewer prompts on new networks."),
+        L("台式/Server 桌面推荐；需要每次确认网络配置文件时保持关闭。", "Recommended on desktop/Server; keep off if you want profile prompts."),
+        L("立即写入。", "Written immediately."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableSettingSync = H(
+        L("关闭设置同步（Windows 备份/漫游设置）。", "Disable Settings Sync (Windows Backup / roaming settings)."),
+        L("Policies\\SettingSync DisableSettingSync=2 等，并关掉各组同步。", "Policies\\SettingSync DisableSettingSync=2 etc., disable sync groups."),
+        L("设置与凭据不经微软账户漫游，隐私更好。", "Settings/credentials do not roam via Microsoft account."),
+        L("个人/内网桌面推荐；多机靠微软账号同步设置时勿开。", "Recommended for personal/LAN desktops; skip if you sync via MSA."),
+        L("立即写入。", "Written immediately."),
+        W10,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableFinishSetupSuggestions = H(
+        L("关闭「完成设备设置的建议方式」（SCOOBE）。", "Disable “suggested ways to finish setting up your device” (SCOOBE)."),
+        L("UserProfileEngagement ScoobeSystemSettingEnabled=0。", "UserProfileEngagement ScoobeSystemSettingEnabled=0."),
+        L("少被推微软账户/云功能。", "Fewer prompts to use MSA / cloud features."),
+        L("桌面推荐开启。", "Recommended on desktops."),
+        L("立即写入。", "Written immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo ExplorerTransferDetails = H(
+        L("文件复制/移动默认展开「更多详细信息」。", "Show More details by default on file transfers."),
+        L("OperationStatusManager EnthusiastMode=1。", "OperationStatusManager EnthusiastMode=1."),
+        L("拷贝对话框直接显示速度与剩余时间。", "Copy dialog shows speed and ETA without an extra click."),
+        L("桌面推荐开启。", "Recommended on desktops."),
+        L("立即写入。", "Written immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableTelemetryScheduledTasks = H(
+        L("禁用常见遥测/CEIP 计划任务（可选清单同源）。", "Disable common telemetry/CEIP scheduled tasks."),
+        L("禁用 Consolidator、UsbCeip、DiskDiagnosticDataCollector、PcaPatchDbTask、UsageDataReporting 等。", "Disable Consolidator, UsbCeip, DiskDiagnosticDataCollector, PcaPatchDbTask, UsageDataReporting, etc."),
+        L("少后台采集任务；细项可在「工具 → 计划任务优化」勾选。", "Fewer background collectors; fine-tune in Tools → Scheduled tasks."),
+        L("个人桌面推荐开启；企业需 CEIP 报表时保持关闭。", "Recommended on personal desktops; keep off if you need CEIP reports."),
+        L("立即对存在的任务生效；不存在的任务跳过。", "Applies immediately to tasks that exist; missing tasks skipped."),
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo AlwaysShowMenus = H(
         L("资源管理器始终显示菜单栏（文件/编辑/查看）。", "Always show the Explorer menu bar (File/Edit/View)."),

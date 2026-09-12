@@ -128,6 +128,18 @@ internal sealed class MainForm : Form
     private readonly SettingRow _noUpdateAsap = Row(AppLang.L("关闭「尽快获取最新更新」", "Disable 'Get the latest updates'"), AppLang.L("开启", "On"), SettingCatalog.DisableUpdateAsap);
     private readonly SettingRow _hideSettingsHome = Row(AppLang.L("隐藏设置首页与 365 广告", "Hide Settings home & 365 ads"), AppLang.L("显示", "Shown"), SettingCatalog.HideSettingsHomeAds);
     private readonly SettingRow _extraAi = Row(AppLang.L("关闭 Recall / Click to Do / 记事本画图 AI", "Disable Recall / Click to Do / AI"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableWin11ExtraAi);
+    private readonly SettingRow _nullSess = Row(AppLang.L("限制匿名访问命名管道与共享", "Restrict null session shares"), AppLang.L("允许", "Allowed"), SettingCatalog.RestrictNullSessionShares);
+    private readonly SettingRow _anonEnum = Row(AppLang.L("限制匿名枚举共享", "Restrict anonymous share enum"), AppLang.L("允许", "Allowed"), SettingCatalog.RestrictAnonymousEnum);
+    private readonly SettingRow _smbThrottle = Row(AppLang.L("关闭 SMB 带宽节流", "Disable SMB bandwidth throttling"), AppLang.L("节流", "Throttled"), SettingCatalog.DisableSmbBandwidthThrottling);
+    private readonly SettingRow _fastShutdown = Row(AppLang.L("缩短关机等待时间", "Faster shutdown"), AppLang.L("默认", "Default"), SettingCatalog.FasterShutdown);
+    private readonly SettingRow _startupDelay = Row(AppLang.L("取消开机启动项延迟", "Disable startup app delay"), AppLang.L("延迟", "Delayed"), SettingCatalog.DisableStartupAppDelay);
+    private readonly SettingRow _menuDelay = Row(AppLang.L("菜单悬停立即展开", "Instant menu show"), AppLang.L("默认延迟", "Default delay"), SettingCatalog.InstantMenuShow);
+    private readonly SettingRow _aeroShake = Row(AppLang.L("禁用 Aero Shake 摇窗最小化", "Disable Aero Shake"), AppLang.L("开启", "On"), SettingCatalog.DisableAeroShake);
+    private readonly SettingRow _netLocWizard = Row(AppLang.L("关闭网络位置向导弹窗", "Disable network location wizard"), AppLang.L("弹窗", "Prompt"), SettingCatalog.DisableNetworkLocationWizard);
+    private readonly SettingRow _settingSync = Row(AppLang.L("关闭设置同步（Windows 备份）", "Disable Settings Sync"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableSettingSync);
+    private readonly SettingRow _finishSetup = Row(AppLang.L("关闭「完成设备设置」建议", "Disable finish-setup suggestions"), AppLang.L("提示", "Prompt"), SettingCatalog.DisableFinishSetupSuggestions);
+    private readonly SettingRow _xferDetails = Row(AppLang.L("复制文件默认显示更多详细信息", "Transfer dialog: more details"), AppLang.L("精简", "Simple"), SettingCatalog.ExplorerTransferDetails);
+    private readonly SettingRow _telemTasks = Row(AppLang.L("禁用常见遥测计划任务", "Disable telemetry scheduled tasks"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableTelemetryScheduledTasks);
     private readonly SettingRow _alwaysMenu = Row(AppLang.L("始终显示菜单栏", "Always show menu bar"), AppLang.L("按 Alt 才显示", "Show with Alt"), SettingCatalog.AlwaysShowMenus);
     private readonly SettingRow _hideMerge = Row(AppLang.L("隐藏文件夹合并冲突", "Hide folder merge conflicts"), AppLang.L("每次确认", "Ask each time"), SettingCatalog.HideMergeConflicts);
     private readonly SettingRow _compColor = Row(AppLang.L("加密/压缩文件用颜色标识", "Color encrypted/compressed files"), AppLang.L("不着色", "No color"), SettingCatalog.ShowCompColor);
@@ -333,6 +345,8 @@ internal sealed class MainForm : Form
         _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
         _diagMinimal, _noSigninReopen, _noSilentApps, _hideHomeGallery, _noSnapAssist, _darkMode,
         _noBitlockerAuto, _noCompanionApps, _noUpdateAsap, _hideSettingsHome, _extraAi,
+        _nullSess, _anonEnum, _smbThrottle, _fastShutdown, _startupDelay, _menuDelay, _aeroShake,
+        _netLocWizard, _settingSync, _finishSetup, _xferDetails, _telemTasks,
         _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
         _driveLetters, _folderGroup, _folderSort,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
@@ -373,13 +387,13 @@ internal sealed class MainForm : Form
                 _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt, _noUpdateAsap,
             ]),
             (AppLang.L("网络优化", "Network"), [
-                _tcp, _qosSpeed, _bbr2, _ctcp, _netThrottle, _webDavLimit,
+                _tcp, _qosSpeed, _bbr2, _ctcp, _smbThrottle, _netThrottle, _webDavLimit,
             ]),
             (AppLang.L("遥测与诊断", "Telemetry & diagnostics"), [
-                _telemetry, _diagMinimal, _dps, _ceip, _errorReport,
+                _telemetry, _diagMinimal, _dps, _ceip, _errorReport, _telemTasks,
             ]),
             (AppLang.L("安全服务", "Security services"), [
-                _smb1, _remoteReg, _spooler, _dep,
+                _smb1, _nullSess, _anonEnum, _remoteReg, _spooler, _dep,
             ]),
             (AppLang.L("进阶安全", "Advanced security"), [
                 _meltdown, _hvci, _wdac, _vbs, _sysRestore, _noBitlockerAuto,
@@ -388,7 +402,7 @@ internal sealed class MainForm : Form
                 _diskPerf, _longPaths, _ntfsStamp, _reservedStorage, _srvSplit, _mergeSvchost,
             ]),
             (AppLang.L("启动与维护", "Boot & maintenance"), [
-                _autoMaint, _utc, _hpet, _loginVerbose, _f8, _autoReboot,
+                _fastShutdown, _startupDelay, _autoMaint, _utc, _hpet, _loginVerbose, _f8, _autoReboot,
             ]),
             (AppLang.L("少用服务", "Seldom-used services"), [
                 _xbox, _fax, _wmpShare, _trkWks,
@@ -417,7 +431,7 @@ internal sealed class MainForm : Form
         _groups.Add((AppLang.L("资源管理器", "File Explorer"), [
             (AppLang.L("常用显示", "Common views"), [
                 _fileExt, _hiddenFiles, _fullPath, _hideOs, _launchThisPc,
-                _hideSpotlight, _noDupDrives, _noLowDisk, _hideHomeGallery, _noSnapAssist,
+                _hideSpotlight, _noDupDrives, _noLowDisk, _hideHomeGallery, _noSnapAssist, _xferDetails,
             ]),
             (AppLang.L("快速访问", "Quick access"), [
                 _recentFiles, _frequent, _officeCloud, _emptyDrives, _iconsOnly, _noRunMru,
@@ -463,13 +477,14 @@ internal sealed class MainForm : Form
             ]),
             (AppLang.L("隐私数据", "Privacy data"), [
                 _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel, _cliTelemetry,
-                _noSigninReopen, _noCompanionApps,
+                _noSigninReopen, _noCompanionApps, _settingSync, _finishSetup,
             ]),
             (AppLang.L("输入法与键盘", "IME & keyboard"), [
                 _msPinyinEn, _msPinyinCloud, _msPinyinBar, _stickyKeys, _keyboardLatency,
             ]),
             (AppLang.L("界面体验", "UI experience"), [
                 _animations, _transparency, _backgroundApps, _storageSense, _autoplay, _edgePre, _gameDvr,
+                _menuDelay, _aeroShake, _netLocWizard,
             ]),
             (AppLang.L("商店与预览", "Store & Insider"), [
                 _insider, _storeUpd, _teredo,
@@ -634,6 +649,11 @@ internal sealed class MainForm : Form
         _appMenu.ToolCmd.Click += (_, _) => SystemToolLauncher.OpenCommandPrompt(this);
         _appMenu.ToolPowerShell.Click += (_, _) => SystemToolLauncher.OpenWindowsPowerShell(this);
         _appMenu.ToolTaskScheduler.Click += (_, _) => SystemToolLauncher.OpenTaskScheduler(this);
+        _appMenu.ToolScheduledTaskOptimize.Click += (_, _) =>
+        {
+            using var dlg = new ScheduledTaskDialog();
+            dlg.ShowDialog(this);
+        };
         _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
@@ -2816,6 +2836,18 @@ internal sealed class MainForm : Form
         _noUpdateAsap.Checked = s.DisableUpdateAsap;
         _hideSettingsHome.Checked = s.HideSettingsHomeAds;
         _extraAi.Checked = s.DisableWin11ExtraAi;
+        _nullSess.Checked = s.RestrictNullSessionShares;
+        _anonEnum.Checked = s.RestrictAnonymousEnum;
+        _smbThrottle.Checked = s.DisableSmbBandwidthThrottling;
+        _fastShutdown.Checked = s.FasterShutdown;
+        _startupDelay.Checked = s.DisableStartupAppDelay;
+        _menuDelay.Checked = s.InstantMenuShow;
+        _aeroShake.Checked = s.DisableAeroShake;
+        _netLocWizard.Checked = s.DisableNetworkLocationWizard;
+        _settingSync.Checked = s.DisableSettingSync;
+        _finishSetup.Checked = s.DisableFinishSetupSuggestions;
+        _xferDetails.Checked = s.ExplorerTransferDetails;
+        _telemTasks.Checked = s.DisableTelemetryScheduledTasks;
         _alwaysMenu.Checked = s.AlwaysShowMenus;
         _hideMerge.Checked = s.HideMergeConflicts;
         _compColor.Checked = s.ShowCompColor;
@@ -2983,6 +3015,18 @@ internal sealed class MainForm : Form
         DisableUpdateAsap = _noUpdateAsap.Checked,
         HideSettingsHomeAds = _hideSettingsHome.Checked,
         DisableWin11ExtraAi = _extraAi.Checked,
+        RestrictNullSessionShares = _nullSess.Checked,
+        RestrictAnonymousEnum = _anonEnum.Checked,
+        DisableSmbBandwidthThrottling = _smbThrottle.Checked,
+        FasterShutdown = _fastShutdown.Checked,
+        DisableStartupAppDelay = _startupDelay.Checked,
+        InstantMenuShow = _menuDelay.Checked,
+        DisableAeroShake = _aeroShake.Checked,
+        DisableNetworkLocationWizard = _netLocWizard.Checked,
+        DisableSettingSync = _settingSync.Checked,
+        DisableFinishSetupSuggestions = _finishSetup.Checked,
+        ExplorerTransferDetails = _xferDetails.Checked,
+        DisableTelemetryScheduledTasks = _telemTasks.Checked,
         AlwaysShowMenus = _alwaysMenu.Checked,
         HideMergeConflicts = _hideMerge.Checked,
         ShowCompColor = _compColor.Checked,

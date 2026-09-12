@@ -37,6 +37,7 @@ internal static class ScheduledTaskHelper
         "ProgramDataUpdater", "Microsoft Compatibility Appraiser", "Proxy", "QueueReporting",
         "MareBackup", "PcaPatchDbTask", "StartupAppTask", "MapsToastTask", "MapsUpdateTask",
         "FamilySafety", "Windows Error Reporting", "QueueReporting", "XblGameSave",
+        "UsageDataReporting", "Flighting", "UCPD velocity", "FeatureConfig",
     ];
 
     private static readonly string[] SecurityHints =
@@ -159,6 +160,36 @@ internal static class ScheduledTaskHelper
         if (p.ExitCode != 0)
             throw new InvalidOperationException((p.StandardError.ReadToEnd() + p.StandardOutput.ReadToEnd()).Trim());
         ApplyLog.Write((enabled ? "启用" : "禁用") + "计划任务：" + taskPath);
+    }
+
+    /// <summary>查询任务是否启用；任务不存在时返回 true（视为「未禁用」）。</summary>
+    public static bool IsEnabled(string taskPath)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "schtasks.exe",
+                Arguments = $"/Query /TN \"{taskPath}\" /FO LIST /V",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.GetEncoding(0),
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return true;
+            var text = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+            p.WaitForExit(12_000);
+            if (p.ExitCode != 0) return true;
+            if (text.IndexOf("Disabled", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            if (text.IndexOf("已禁用", StringComparison.Ordinal) >= 0) return false;
+            return true;
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private static ScheduledTaskBucket Classify(string path)
