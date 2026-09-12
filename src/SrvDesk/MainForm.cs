@@ -659,7 +659,6 @@ internal sealed class MainForm : Form
         _appMenu.ToolGroupPolicy.Click += (_, _) => ShowGroupPolicy();
         _appMenu.ToolCmd.Click += (_, _) => SystemToolLauncher.OpenCommandPrompt(this);
         _appMenu.ToolPowerShell.Click += (_, _) => SystemToolLauncher.OpenWindowsPowerShell(this);
-        _appMenu.ToolTaskScheduler.Click += (_, _) => SystemToolLauncher.OpenTaskScheduler(this);
         _appMenu.ToolScheduledTaskOptimize.Click += (_, _) =>
         {
             using var dlg = new ScheduledTaskDialog();

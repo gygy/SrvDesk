@@ -15,7 +15,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolGroupPolicy { get; }
     public ToolStripMenuItem ToolCmd { get; }
     public ToolStripMenuItem ToolPowerShell { get; }
-    public ToolStripMenuItem ToolTaskScheduler { get; }
     public ToolStripMenuItem ToolScheduledTaskOptimize { get; }
     public ToolStripMenuItem ToolComputerMgmt { get; }
     public ToolStripMenuItem ToolFlushDns { get; }
@@ -78,7 +77,6 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolGroupPolicy = Item(AppLang.L("组策略...", "Group Policy..."), MenuIcons.GroupPolicy);
         ToolCmd = Item(AppLang.L("命令提示符", "Command Prompt"), MenuIcons.Cmd);
         ToolPowerShell = Item("Windows PowerShell", MenuIcons.PowerShell);
-        ToolTaskScheduler = Item(AppLang.L("计划任务", "Task Scheduler"), MenuIcons.TaskScheduler);
         ToolScheduledTaskOptimize = Item(AppLang.L("计划任务优化...", "Scheduled tasks optimize..."), MenuIcons.TaskScheduler);
         ToolComputerMgmt = Item(AppLang.L("计算机管理", "Computer Management"), MenuIcons.ComputerMgmt);
         ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
@@ -105,7 +103,7 @@ internal sealed class AppMenuStrip : MenuStrip
             new ToolStripSeparator(),
             ToolHosts, ToolFlushDns,
             new ToolStripSeparator(),
-            ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolTaskScheduler, ToolScheduledTaskOptimize, ToolComputerMgmt,
+            ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolScheduledTaskOptimize, ToolComputerMgmt,
             new ToolStripSeparator(),
             ToolCommonSoftware, ToolCleanup, ToolSystemRepair, ToolShutdownTimer, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
             new ToolStripSeparator(),

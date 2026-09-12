@@ -773,7 +773,15 @@ internal sealed class ScheduledTaskDialog : Form
         _list.Columns.Add(AppLang.L("风险", "Risk"), 50);
         _list.Columns.Add(AppLang.L("建议", "Advice"), 220);
 
-        var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = UiFit.ControlHeight() + 12, Padding = new Padding(0, 8, 0, 0) };
+        var bar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + 12,
+            Padding = new Padding(0, 8, 0, 0),
+            WrapContents = false,
+            AutoScroll = false,
+        };
+        UiBuffer.ConfigureNoScrollRow(bar);
         var refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新", "Refresh"), false);
         refresh.Click += (_, _) => Reload();
         var disable = ThemedSettingsChrome.CreateButton(AppLang.L("禁用所选（仅允许项）", "Disable selected (allowed)"), true);
@@ -802,7 +810,11 @@ internal sealed class ScheduledTaskDialog : Form
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             Reload();
         };
-        bar.Controls.AddRange([refresh, disable, enable, disableTelem]);
+        var openSys = ThemedSettingsChrome.CreateButton(
+            AppLang.L("打开系统计划任务", "Open Task Scheduler"), false);
+        openSys.Margin = new Padding(16, 0, 0, 0);
+        openSys.Click += (_, _) => SystemToolLauncher.OpenTaskScheduler(this);
+        bar.Controls.AddRange([refresh, disable, enable, disableTelem, openSys]);
 
         body.Controls.Add(_list);
         body.Controls.Add(bar);
