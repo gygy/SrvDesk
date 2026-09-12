@@ -441,6 +441,60 @@ internal static class SettingCatalog
         L("安全性降低，仅内网可信环境短期使用；能开 NLA 则勿开。", "Weaker security—short-term trusted LAN only; keep NLA if possible."),
         L("新 RDP 连接生效。", "Applies to new RDP connections."));
 
+    public static readonly SettingHelpInfo RdpAvc444 = H(
+        L("优先 H.264/AVC 444 图形模式（RemoteFX 画质）。", "Prefer H.264/AVC 444 graphics mode (RemoteFX quality)."),
+        L("Policies\\Terminal Services AVC444ModePreferred=1。", "Policies\\Terminal Services AVC444ModePreferred=1."),
+        L("文字更清晰、帧率更高；对齐 r/sysadmin TurboRemoteFX。", "Sharper text and higher FPS; aligns with r/sysadmin TurboRemoteFX."),
+        L("内网/有 GPU 的 RDP 强烈推荐；极慢链路可能更吃带宽。", "Strongly recommended on LAN/GPU RDP; may use more bandwidth on slow links."),
+        L("新 RDP 连接生效；客户端需支持 AVC444。", "Applies to new RDP connections; client must support AVC444."),
+        Rdp2019,
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo RdpAvcHwEncode = H(
+        L("RDP 优先使用 H.264/AVC 硬件编码器。", "Prefer H.264/AVC hardware encoding for RDP."),
+        L("AVCHardwareEncodePreferred=1。", "AVCHardwareEncodePreferred=1."),
+        L("编码负载转到 GPU，减轻 CPU。", "Moves encode load to GPU; less CPU."),
+        L("有硬件编码器时推荐；个别卡/驱动反而更差可关。", "Recommended with HW encoders; turn off if a GPU/driver regresses."),
+        L("新 RDP 连接生效。", "Applies to new RDP connections."),
+        Rdp2019,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo RdpHwGraphicsFirst = H(
+        L("RDP 会话优先枚举硬件图形适配器。", "Enumerate hardware graphics adapters first for RDP."),
+        L("bEnumerateHWBeforeSW=1。", "bEnumerateHWBeforeSW=1."),
+        L("优先走 GPU 图形路径，少用软件光栅。", "Prefer GPU graphics path over software raster."),
+        L("有独立/核显远程桌面推荐开启。", "Recommended when the host has a GPU."),
+        L("新 RDP 连接生效。", "Applies to new RDP connections."),
+        Rdp2019,
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo RdpRemoteFxGraphics = H(
+        L("RemoteFX 自适应图形高质量包（压缩/画质/传输）。", "RemoteFX adaptive graphics high-quality pack."),
+        L("VirtualizedGraphics、VisualExperience、ImageQuality=高、MaxCompression=最低、SelectTransport=双向。",
+            "VirtualizedGraphics, VisualExperience, ImageQuality=high, MaxCompression=lowest, SelectTransport=both."),
+        L("远程 UI/视频更清晰；带宽占用上升。", "Clearer remote UI/video; higher bandwidth."),
+        L("内网高带宽 RDP 推荐；窄带环境请关闭。", "Recommended on LAN/high-bandwidth RDP; keep off on narrow links."),
+        L("新 RDP 连接生效。", "Applies to new RDP connections."),
+        Rdp2019,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo RdpLowLatency = H(
+        L("降低 RDP 交互延迟（InteractiveDelay + TermDD 流控）。", "Lower RDP interaction latency (InteractiveDelay + TermDD flow)."),
+        L("InteractiveDelay=0；TermDD 优先显示带宽；允许大 MTU。", "InteractiveDelay=0; TermDD prefers display bandwidth; allow large MTU."),
+        L("鼠标/键盘跟手感更好，少「粘滞」。", "Snappier mouse/keyboard; less sticky feel."),
+        L("内网桌面强烈推荐；极端窄带可关。", "Strongly recommended on LAN desktops; keep off on very narrow links."),
+        L("立即写入；新连接体感更明显。", "Written immediately; clearest on new connections."),
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo RdpDisableWddm = H(
+        L("RDP 禁用 WDDM、改用 XDDM 显示驱动（旧路径）。", "Disable WDDM for RDP; use legacy XDDM path."),
+        L("fEnableWddmDriver=0。", "fEnableWddmDriver=0."),
+        L("部分 NVIDIA 老方案远程 3D 更稳；现代 Win11/AMD 可能无益或更差。", "Helps some older NVIDIA remote-3D setups; may hurt modern Win11/AMD."),
+        L("高级项，默认勿开；出问题再试。", "Advanced—leave off by default; try only if troubleshooting."),
+        L("新 RDP 连接生效；可能需重启会话主机。", "Applies to new connections; session host restart may be needed."),
+        Rdp2019,
+        recommend: RecommendLevel.Optional);
+
     public static readonly SettingHelpInfo EnableNetworkDiscovery = H(
         L("启用网络发现与文件和打印机共享防火墙规则。", "Enable Network Discovery and File and Printer Sharing firewall rules."),
         L("启动 fdPHost/FDResPub 并放行相关防火墙组。", "Start fdPHost/FDResPub and allow related firewall groups."),

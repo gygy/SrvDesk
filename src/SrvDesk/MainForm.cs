@@ -221,6 +221,12 @@ internal sealed class MainForm : Form
         [AppLang.L("默认", "Default"), AppLang.L("提高", "Boost")], optimizedIndex: 1);
     private readonly SettingRow _rdpNla = Choice(AppLang.L("RDP 网络级身份验证 NLA", "RDP NLA"), AppLang.L("要求 NLA", "Require NLA"), SettingCatalog.RdpDisableNla,
         [AppLang.L("要求 NLA", "Require NLA"), AppLang.L("关闭 NLA", "Disable NLA")], optimizedIndex: 1);
+    private readonly SettingRow _rdpAvc444 = Row(AppLang.L("RDP 优先 AVC 444 图形模式", "RDP prefer AVC 444"), AppLang.L("系统默认", "System default"), SettingCatalog.RdpAvc444);
+    private readonly SettingRow _rdpAvcHw = Row(AppLang.L("RDP 优先 AVC 硬件编码", "RDP prefer AVC HW encode"), AppLang.L("系统默认", "System default"), SettingCatalog.RdpAvcHwEncode);
+    private readonly SettingRow _rdpHwFirst = Row(AppLang.L("RDP 优先硬件图形适配器", "RDP enumerate HW graphics first"), AppLang.L("系统默认", "System default"), SettingCatalog.RdpHwGraphicsFirst);
+    private readonly SettingRow _rdpRfxGfx = Row(AppLang.L("RemoteFX 高质量图形包", "RemoteFX high-quality graphics pack"), AppLang.L("系统默认", "System default"), SettingCatalog.RdpRemoteFxGraphics);
+    private readonly SettingRow _rdpLowLat = Row(AppLang.L("降低 RDP 交互延迟", "Lower RDP interaction latency"), AppLang.L("系统默认", "System default"), SettingCatalog.RdpLowLatency);
+    private readonly SettingRow _rdpNoWddm = Row(AppLang.L("RDP 改用 XDDM（禁用 WDDM）", "RDP use XDDM (disable WDDM)"), AppLang.L("WDDM 默认", "WDDM default"), SettingCatalog.RdpDisableWddm);
     private readonly SettingRow _netDiscovery = Row(AppLang.L("启用网络发现与文件共享", "Enable network discovery & sharing"), AppLang.L("关闭", "Off"), SettingCatalog.EnableNetworkDiscovery);
     private readonly SettingRow _smRemoting = Row(AppLang.L("关闭 Server Manager 远程管理", "Disable Server Manager remoting"), AppLang.L("开启", "On"), SettingCatalog.DisableSmRemoting);
 
@@ -362,7 +368,8 @@ internal sealed class MainForm : Form
         _msPinyinEn, _msPinyinCloud, _msPinyinBar, _msrt,
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
         _insider, _storeUpd,
-        _rdp, _rdpGpu, _rdpFps, _rdpNla, _netDiscovery, _smRemoting, _ra,
+        _rdp, _rdpGpu, _rdpFps, _rdpNla, _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
+        _netDiscovery, _smRemoting, _ra,
         _svrMgr, _wacPrompt, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
     ];
@@ -461,8 +468,13 @@ internal sealed class MainForm : Form
             ]),
         ]));
         _groups.Add((AppLang.L("远程与网络", "Remote & network"), [
-            (AppLang.L("远程与网络", "Remote & network"), [
+            (AppLang.L("远程桌面", "Remote Desktop"), [
                 _rdp, _rdpGpu, _rdpFps, _rdpNla,
+            ]),
+            (AppLang.L("RDP 图形增强（RemoteFX / AVC）", "RDP graphics (RemoteFX / AVC)"), [
+                _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
+            ]),
+            (AppLang.L("网络发现", "Network discovery"), [
                 _netDiscovery, _smRemoting,
             ]),
         ]));
@@ -2880,6 +2892,12 @@ internal sealed class MainForm : Form
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
         _rdpNla.Checked = s.RdpDisableNla;
+        _rdpAvc444.Checked = s.RdpAvc444;
+        _rdpAvcHw.Checked = s.RdpAvcHwEncode;
+        _rdpHwFirst.Checked = s.RdpHwGraphicsFirst;
+        _rdpRfxGfx.Checked = s.RdpRemoteFxGraphics;
+        _rdpLowLat.Checked = s.RdpLowLatency;
+        _rdpNoWddm.Checked = s.RdpDisableWddm;
         _netDiscovery.Checked = s.EnableNetworkDiscovery;
         _smRemoting.Checked = s.DisableSmRemoting;
         _svrMgr.Checked = s.SkipServerManager;
@@ -3112,6 +3130,12 @@ internal sealed class MainForm : Form
         RdpGpuAccel = _rdpGpu.Checked,
         RdpHighRefresh = _rdpFps.Checked,
         RdpDisableNla = _rdpNla.Checked,
+        RdpAvc444 = _rdpAvc444.Checked,
+        RdpAvcHwEncode = _rdpAvcHw.Checked,
+        RdpHwGraphicsFirst = _rdpHwFirst.Checked,
+        RdpRemoteFxGraphics = _rdpRfxGfx.Checked,
+        RdpLowLatency = _rdpLowLat.Checked,
+        RdpDisableWddm = _rdpNoWddm.Checked,
         EnableNetworkDiscovery = _netDiscovery.Checked,
         DisableSmRemoting = _smRemoting.Checked,
         SkipServerManager = _svrMgr.Checked,

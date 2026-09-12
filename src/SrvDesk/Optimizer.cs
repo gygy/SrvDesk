@@ -70,6 +70,13 @@ internal static class Optimizer
         public bool RdpGpuAccel;
         public bool RdpHighRefresh;
         public bool RdpDisableNla;
+        // RemoteFX / AVC 增强（Reddit TurboRemoteFX）
+        public bool RdpAvc444;
+        public bool RdpAvcHwEncode;
+        public bool RdpHwGraphicsFirst;
+        public bool RdpRemoteFxGraphics;
+        public bool RdpLowLatency;
+        public bool RdpDisableWddm;
         public bool EnableNetworkDiscovery;
         public bool DisableSmRemoting;
 
@@ -418,6 +425,7 @@ internal static class Optimizer
         SophiaGapTweaks.ReadInto(state);
         AtlasGapTweaks.ReadInto(state);
         WinUtilGapTweaks.ReadInto(state);
+        RemoteFxTweaks.ReadInto(state);
         ReadPowerPlanInto(state);
         FolderViewTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
@@ -655,6 +663,7 @@ internal static class Optimizer
         Do(SophiaGapTweaks.AnyChanged(baseline, s), "Sophia对齐项", () => SophiaGapTweaks.Apply(s, baseline));
         Do(AtlasGapTweaks.AnyChanged(baseline, s), "Atlas对齐项", () => AtlasGapTweaks.Apply(s, baseline));
         Do(WinUtilGapTweaks.AnyChanged(baseline, s), "WinUtil对齐项", () => WinUtilGapTweaks.Apply(s, baseline));
+        Do(RemoteFxTweaks.AnyChanged(baseline, s), "RemoteFX/AVC增强", () => RemoteFxTweaks.Apply(s, baseline));
         Do(FolderViewTweaks.AnyChanged(baseline, s), "文件夹选项", () => FolderViewTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;

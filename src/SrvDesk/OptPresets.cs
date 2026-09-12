@@ -160,6 +160,12 @@ internal static class OptPresets
         s.RdpGpuAccel = true;
         s.RdpHighRefresh = true;
         s.RdpDisableNla = false;
+        s.RdpAvc444 = true;
+        s.RdpAvcHwEncode = true;
+        s.RdpHwGraphicsFirst = true;
+        s.RdpRemoteFxGraphics = true;
+        s.RdpLowLatency = true;
+        s.RdpDisableWddm = false;
         s.HighPerfPower = true;
         s.DisableAnimations = true;
         s.VisualBestPerf = true;

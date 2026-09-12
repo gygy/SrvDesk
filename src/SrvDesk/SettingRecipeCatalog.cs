@@ -270,6 +270,50 @@ internal static class SettingRecipeCatalog
             @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp", "UserAuthentication", 0, 1,
             "关闭 NLA 降低安全性，仅内网调试建议。"));
 
+        Add(SettingCatalog.RdpAvc444, ActionScript.DwordOnDeleteOff(false,
+            @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "AVC444ModePreferred", 1));
+        Add(SettingCatalog.RdpAvcHwEncode, ActionScript.DwordOnDeleteOff(false,
+            @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "AVCHardwareEncodePreferred", 1));
+        Add(SettingCatalog.RdpHwGraphicsFirst, ActionScript.DwordOnDeleteOff(false,
+            @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "bEnumerateHWBeforeSW", 1));
+        Add(SettingCatalog.RdpRemoteFxGraphics, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.Dword("SelectTransport", 0),
+                ActionScript.Dword("fEnableVirtualizedGraphics", 1),
+                ActionScript.Dword("VGOptimization_CaptureFrameRate", 1),
+                ActionScript.Dword("VGOptimization_CompressionRatio", 1),
+                ActionScript.Dword("VisualExperiencePolicy", 1),
+                ActionScript.Dword("ImageQuality", 2),
+                ActionScript.Dword("MaxCompressionLevel", 0)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.DeleteValue("SelectTransport"),
+                ActionScript.DeleteValue("fEnableVirtualizedGraphics"),
+                ActionScript.DeleteValue("VGOptimization_CaptureFrameRate"),
+                ActionScript.DeleteValue("VGOptimization_CompressionRatio"),
+                ActionScript.DeleteValue("VisualExperiencePolicy"),
+                ActionScript.DeleteValue("ImageQuality"),
+                ActionScript.DeleteValue("MaxCompressionLevel"))));
+        Add(SettingCatalog.RdpLowLatency, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"),
+                ActionScript.Dword("InteractiveDelay", 0)) +
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Services\TermDD"),
+                ActionScript.Dword("FlowControlDisable", 1),
+                ActionScript.Dword("FlowControlDisplayBandwidth", 16),
+                ActionScript.Dword("FlowControlChannelBandwidth", 144),
+                ActionScript.Dword("FlowControlChargePostCompression", 0)) +
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters"),
+                ActionScript.Dword("DisableLargeMtu", 0)),
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"),
+                ActionScript.Dword("InteractiveDelay", 50)) +
+            ActionScript.Block(ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Services\TermDD"),
+                ActionScript.DeleteValue("FlowControlDisable"),
+                ActionScript.DeleteValue("FlowControlDisplayBandwidth"),
+                ActionScript.DeleteValue("FlowControlChannelBandwidth"),
+                ActionScript.DeleteValue("FlowControlChargePostCompression"))));
+        Add(SettingCatalog.RdpDisableWddm, ActionScript.DwordOnDeleteOff(false,
+            @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "fEnableWddmDriver", 0,
+            "NVIDIA 老方案可试；现代 Win11/AMD 慎用。"));
+
         Add(SettingCatalog.EnableNetworkDiscovery, ActionScript.Cmd(
             "sc config fdPHost start= auto\r\nsc start fdPHost\r\nsc config FDResPub start= auto\r\nsc start FDResPub\r\nnetsh advfirewall firewall set rule group=\"network discovery\" new enable=Yes\r\nnetsh advfirewall firewall set rule group=\"file and printer sharing\" new enable=Yes",
             "netsh advfirewall firewall set rule group=\"network discovery\" new enable=No\r\nnetsh advfirewall firewall set rule group=\"file and printer sharing\" new enable=No"));
