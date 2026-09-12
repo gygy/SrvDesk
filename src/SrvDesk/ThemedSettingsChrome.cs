@@ -302,7 +302,7 @@ internal static class ThemedSettingsChrome
     public static Button CreateButton(string text, bool primary)
     {
         var font = UiFit.UiFont;
-        var b = new Button
+        var b = new FlatChromeButton
         {
             Text = text,
             FlatStyle = FlatStyle.Flat,
@@ -326,10 +326,10 @@ internal static class ThemedSettingsChrome
         else
         {
             b.FlatAppearance.BorderColor = AppTheme.Border;
+            b.FlatAppearance.BorderSize = 1;
             b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
             b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
         }
-        UiFit.EnableCenteredFlatText(b);
         return b;
     }
 

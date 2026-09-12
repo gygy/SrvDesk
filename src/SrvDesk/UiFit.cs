@@ -74,8 +74,8 @@ internal static class UiFit
     /// 按钮 / 下拉 / 单行输入的最小可视高度。
     /// Flat + 雅黑在偏矮高度时常裁掉字脚；副屏 DPI 变化后更明显。
     /// </summary>
-    public static int ControlHeight(Font? font = null, int designMin = 32) =>
-        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(16));
+    public static int ControlHeight(Font? font = null, int designMin = 34) =>
+        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(20));
 
     public static int TextWidth(string text, Font? font = null) =>
         TextRenderer.MeasureText(text ?? "", font ?? UiFont, new Size(int.MaxValue, 256), MeasureFlags).Width;
@@ -141,6 +141,8 @@ internal static class UiFit
     /// <summary>Flat 按钮用 TextRenderer 居中绘制，避免雅黑默认偏上/偏下裁字。仅在创建时挂一次。</summary>
     public static void EnableCenteredFlatText(Button b)
     {
+        // FlatChromeButton 已在 OnPaint 自绘，勿再叠一层
+        if (b is FlatChromeButton) return;
         if (CenteredPaintHooked.TryGetValue(b, out _))
             return;
         try { CenteredPaintHooked.Add(b, new object()); }
@@ -148,36 +150,85 @@ internal static class UiFit
         b.TextAlign = ContentAlignment.MiddleCenter;
         b.UseCompatibleTextRendering = false;
         b.Padding = Padding.Empty;
-        b.Paint += (_, e) =>
+        b.Paint += (_, e) => PaintFlatButtonFace(b, e.Graphics);
+    }
+
+    /// <summary>自绘 Flat 按钮：背景 + 边框 + 居中文字（供 FlatChromeButton / Paint 共用）。</summary>
+    public static void PaintFlatButtonFace(Button b, Graphics g)
+    {
+        var bg = b.Enabled ? b.BackColor : ControlPaint.LightLight(b.BackColor);
+        using (var brush = new SolidBrush(bg))
+            g.FillRectangle(brush, b.ClientRectangle);
+        if (b.FlatAppearance.BorderSize > 0)
         {
-            if (b.FlatStyle != FlatStyle.Flat) return;
-            var g = e.Graphics;
-            var bg = b.Enabled ? b.BackColor : ControlPaint.LightLight(b.BackColor);
-            using (var brush = new SolidBrush(bg))
-                g.FillRectangle(brush, b.ClientRectangle);
-            if (b.FlatAppearance.BorderSize > 0)
-            {
-                using var pen = new Pen(b.FlatAppearance.BorderColor);
-                g.DrawRectangle(pen, 0, 0, b.Width - 1, b.Height - 1);
-            }
-            var color = b.Enabled ? b.ForeColor : SystemColors.GrayText;
-            // 略扩绘制区：避免边框像素吃掉字脚；不用省略号（按钮应够宽）
-            var rect = b.ClientRectangle;
-            if (rect.Width > 4 && rect.Height > 4)
-                rect = Rectangle.Inflate(rect, -1, 0);
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            TextRenderer.DrawText(
-                g,
-                b.Text,
-                b.Font,
-                rect,
-                color,
-                TextFormatFlags.HorizontalCenter
-                | TextFormatFlags.VerticalCenter
-                | TextFormatFlags.NoPrefix
-                | TextFormatFlags.GlyphOverhangPadding
-                | TextFormatFlags.PreserveGraphicsClipping);
-        };
+            using var pen = new Pen(b.FlatAppearance.BorderColor);
+            g.DrawRectangle(pen, 0, 0, b.Width - 1, b.Height - 1);
+        }
+
+        if (string.IsNullOrEmpty(b.Text)) return;
+
+        var color = b.Enabled ? b.ForeColor : SystemColors.GrayText;
+        var font = b.Font ?? UiFont;
+        const TextFormatFlags flags =
+            TextFormatFlags.HorizontalCenter
+            | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.NoPrefix
+            | TextFormatFlags.NoPadding
+            | TextFormatFlags.SingleLine;
+
+        // 内缩 2px，避免边框吃字；用 NoPadding + 实测高度垂直居中，纠正雅黑光学偏上
+        var bounds = Rectangle.Inflate(b.ClientRectangle, -2, -2);
+        if (bounds.Width < 4 || bounds.Height < 4) return;
+
+        var measured = TextRenderer.MeasureText(g, b.Text, font, new Size(bounds.Width, int.MaxValue), flags);
+        var y = bounds.Y + Math.Max(0, (bounds.Height - measured.Height) / 2);
+        // 雅黑在 GDI 下视觉偏上约 1px，略下移
+        y += Math.Max(1, UiScale.S(1));
+        if (y + measured.Height > bounds.Bottom)
+            y = Math.Max(bounds.Y, bounds.Bottom - measured.Height);
+
+        var textRect = new Rectangle(bounds.X, y, bounds.Width, measured.Height);
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        TextRenderer.DrawText(g, b.Text, font, textRect, color, flags);
+    }
+}
+
+/// <summary>
+/// 完全自绘的 Flat 按钮：避开 Button 默认绘制在 Paint 之后又画一遍裁切文字。
+/// </summary>
+internal class FlatChromeButton : Button
+{
+    public FlatChromeButton()
+    {
+        FlatStyle = FlatStyle.Flat;
+        UseCompatibleTextRendering = false;
+        TextAlign = ContentAlignment.MiddleCenter;
+        Padding = Padding.Empty;
+        AutoSize = false;
+        Cursor = Cursors.Hand;
+        SetStyle(
+            ControlStyles.UserPaint
+            | ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.OptimizedDoubleBuffer
+            | ControlStyles.ResizeRedraw
+            | ControlStyles.Selectable,
+            true);
+        SetStyle(ControlStyles.StandardClick | ControlStyles.StandardDoubleClick, true);
+        UpdateStyles();
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs pevent)
+    {
+        // 由 OnPaint 统一填底，避免闪烁与双重绘制
+    }
+
+    protected override void OnPaint(PaintEventArgs e) =>
+        UiFit.PaintFlatButtonFace(this, e.Graphics);
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Invalidate();
     }
 }
 

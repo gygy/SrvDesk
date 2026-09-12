@@ -267,8 +267,8 @@ internal sealed class MainForm : Form
     private bool _binding;
     /// <summary>异步 LoadState 代数，避免慢扫描覆盖更新的结果。</summary>
     private int _loadEpoch;
-    private readonly Button _apply = new();
-    private readonly Button _restore = new();
+    private readonly FlatChromeButton _apply = new();
+    private readonly FlatChromeButton _restore = new();
     private Button? _refreshBottom;
     private readonly List<(string Title, (string Section, SettingRow[] Rows)[] Sections)> _groups = [];
     private readonly ListBox _menu = new();
@@ -2388,7 +2388,6 @@ internal sealed class MainForm : Form
 
     private Panel BuildBottom()
     {
-        _bottomPanel.Height = 58;
         _bottomPanel.BackColor = AppTheme.SurfaceCard;
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
@@ -2408,7 +2407,7 @@ internal sealed class MainForm : Form
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
-            Padding = new Padding(0, 10, 14, 0),
+            Padding = new Padding(0, 8, 14, 8),
             BackColor = AppTheme.SurfaceCard,
         };
         UiBuffer.ConfigureNoScrollRow(actions);
@@ -2445,7 +2444,7 @@ internal sealed class MainForm : Form
         return _bottomPanel;
     }
 
-    private void StyleBottomActionButton(Button b, string text, bool primary, Color fore)
+    private void StyleBottomActionButton(FlatChromeButton b, string text, bool primary, Color fore)
     {
         b.Text = text;
         b.AutoSize = false;
@@ -2468,10 +2467,10 @@ internal sealed class MainForm : Form
         {
             b.BackColor = AppTheme.SurfaceCard;
             b.FlatAppearance.BorderColor = AppTheme.Border;
+            b.FlatAppearance.BorderSize = 1;
             b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
             b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
         }
-        UiFit.EnableCenteredFlatText(b);
     }
 
     private void FitBottomActionButtons()
@@ -2481,6 +2480,13 @@ internal sealed class MainForm : Form
             UiFit.FitButton(_refreshBottom, h, padding: 28);
         UiFit.FitButton(_restore, h, padding: 28);
         UiFit.FitButton(_apply, h, padding: 28);
+        // 底栏高度必须跟着按钮走，写死 58 会裁掉字脚
+        _bottomPanel.Height = Math.Max(UiScale.S(56), h + UiScale.S(24));
+        if (_bottomActions is not null)
+        {
+            var padY = Math.Max(6, (_bottomPanel.Height - 1 - h) / 2);
+            _bottomActions.Padding = new Padding(0, padY, 14, padY);
+        }
     }
 
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
