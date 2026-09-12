@@ -3514,15 +3514,12 @@ internal sealed class MainForm : Form
             }
 
             var level = ServerProfile.Level;
+            // 「仅检测」下点「应用到系统」不再只弹「关闭」干跑窗：本次按标准优化出变更计划供「确认执行」。
+            // 不改永久等级；要长期可写请到「服务器用途」调整。
             if (level == OptimizationLevel.DetectOnly)
             {
-                var dry = ChangePlanBuilder.FromToggleDiff(target, baseline, level);
-                dry.DryRunOnly = true;
-                using (var planDlg = new ChangePlanDialog(dry))
-                    planDlg.ShowDialog(this);
-                _status.Text = AppLang.L("当前为「仅检测」等级：未写入系统。可在「服务器用途」调整等级。",
-                    "Detect-only level: nothing written. Change level in Server profile.");
-                return true;
+                level = OptimizationLevel.Standard;
+                ApplyLog.Write("本次应用：永久等级为「仅检测」，临时按「标准优化」确认写入");
             }
 
             if (!UiPrefs.Load().DisableChangePlanPrompt)
