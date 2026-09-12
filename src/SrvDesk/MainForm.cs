@@ -1099,6 +1099,8 @@ internal sealed class MainForm : Form
         // 「设置操作」必须等于本机当前值：首帧同步读注册表/服务，再绑到开关/下拉。
         // 完整扫描（DISM 等慢项）仍后台补，且仅在用户未改开关时写回。
         BindFromSystem(fullScan: false);
+        if (_status.Text.IndexOf(AppLang.L("正在加载", "Loading"), StringComparison.Ordinal) >= 0)
+            _status.Text = _defaultStatusText;
         BeginInvoke(new Action(StartWarmupInstantPages));
         BeginInvoke(new Action(() => LoadState(fullScan: true, forceUi: false)));
     }

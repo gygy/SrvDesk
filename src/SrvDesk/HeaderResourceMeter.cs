@@ -5,18 +5,18 @@ using System.Runtime.InteropServices;
 
 namespace SrvDesk;
 
-/// <summary>本机 IP · CPU / 内存 / 系统盘占用（纯文字）。默认浅色底栏样式。</summary>
+/// <summary>本机 IP · CPU / 内存 / 系统盘占用（纯文字，单行不换行）。</summary>
 internal sealed class HeaderResourceMeter : Panel
 {
-    private readonly Label _text = new()
+    private readonly SingleLineLabel _text = new()
     {
-        AutoSize = false,
         Dock = DockStyle.Fill,
         ForeColor = AppTheme.TextMute,
         Font = UiFit.UiFont,
         TextAlign = ContentAlignment.MiddleRight,
         BackColor = Color.Transparent,
         Text = "…",
+        AutoEllipsis = false,
     };
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
     private PerformanceCounter? _cpu;
@@ -49,14 +49,14 @@ internal sealed class HeaderResourceMeter : Panel
         Disposed += (_, _) => Cleanup();
     }
 
-    /// <summary>按底栏高度垂直居中放置（右锚在动作按钮左侧）。</summary>
+    /// <summary>按底栏单行高度垂直居中（右锚在动作按钮左侧）。</summary>
     public void LayoutInBottomBar(Control host, int rightReserve)
     {
         if (host is null) return;
-        Height = Math.Max(UiScale.S(28), host.ClientSize.Height - 2);
+        Height = UiFit.ControlHeight(_text.Font);
         Left = Math.Max(8, host.ClientSize.Width - Width - Math.Max(0, rightReserve));
         Top = Math.Max(0, (host.ClientSize.Height - Height) / 2);
-        Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom;
+        Anchor = AnchorStyles.Top | AnchorStyles.Right;
     }
 
     private void TryCreateCpuCounter()
@@ -107,9 +107,9 @@ internal sealed class HeaderResourceMeter : Panel
             ? Math.Max(0, Math.Min(100, (int)Math.Round(freeGbMem * 100 / totalGb)))
             : Math.Max(0, 100 - (int)memLoad);
 
-        // IP 在 CPU/内存左侧
+        // IP 在 CPU/内存左侧（单行；间隔略收紧）
         var line =
-            $"IP {_ipText}    CPU 剩{cpuFree:0}%    内存 剩{freeGbMem:0.0}G({memFreePct}%)    {_systemDrive} 剩{freeGb:0.#}G";
+            $"IP {_ipText}  CPU 剩{cpuFree:0}%  内存 剩{freeGbMem:0.0}G({memFreePct}%)  {_systemDrive} 剩{freeGb:0.#}G";
         _text.Text = line;
         FitWidthToText(line);
 
@@ -127,16 +127,27 @@ internal sealed class HeaderResourceMeter : Panel
     {
         try
         {
-            var pad = 16;
-            var need = TextRenderer.MeasureText(line, _text.Font).Width + pad;
-            var next = Math.Max(360, Math.Min(680, need));
-            if (Math.Abs(Width - next) < 8) return;
+            const TextFormatFlags flags =
+                TextFormatFlags.NoPrefix
+                | TextFormatFlags.NoPadding
+                | TextFormatFlags.SingleLine;
+            var need = TextRenderer.MeasureText(line, _text.Font, new Size(int.MaxValue, int.MaxValue), flags).Width
+                       + UiScale.S(20);
+            // 必须够宽显示整行；过窄会触发默认 Label 折行
+            var next = Math.Max(UiScale.S(320), need);
+            if (Parent is not null)
+            {
+                var rightPad = Tag is int reserve ? reserve : UiScale.S(28);
+                var maxW = Math.Max(UiScale.S(200), Parent.ClientSize.Width - rightPad - UiScale.S(100));
+                next = Math.Min(next, maxW);
+            }
 
-            Width = next;
+            if (Math.Abs(Width - next) >= 2)
+                Width = next;
+
             if (Parent is not null && (Anchor & AnchorStyles.Right) != 0)
             {
-                // 底栏：右侧为动作按钮预留；顶栏旧布局曾用 28 边距
-                var rightPad = Tag is int reserve ? reserve : 28;
+                var rightPad = Tag is int reserve ? reserve : UiScale.S(28);
                 Left = Math.Max(0, Parent.ClientSize.Width - Width - rightPad);
             }
         }
