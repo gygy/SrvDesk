@@ -42,12 +42,13 @@ internal static class UiScale
     public static void Reset() => _factor = null;
 
     /// <summary>换屏后：清缩放缓存并重算窗体内 Flat 文字按钮，减轻裁字。</summary>
-    public static void OnHostDpiChanged(Control host)
+    public static void OnHostDpiChanged(Control? host)
     {
         Reset();
+        if (host is null) return;
         try
         {
-            if (host is not null && host.IsHandleCreated && host.DeviceDpi > 0)
+            if (host.IsHandleCreated && host.DeviceDpi > 0)
                 _factor = Math.Max(1f, host.DeviceDpi / 96f);
         }
         catch { /* ignore */ }

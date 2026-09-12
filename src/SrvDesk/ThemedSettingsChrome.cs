@@ -179,7 +179,7 @@ internal static class ThemedSettingsChrome
     {
         var footer = new Panel
         {
-            Height = 52,
+            Height = Math.Max(UiScale.S(52), UiFit.ControlHeight() + UiScale.S(20)),
             Dock = DockStyle.Bottom,
             BackColor = AppTheme.SurfaceCard,
         };
@@ -229,19 +229,34 @@ internal static class ThemedSettingsChrome
 
         void LayoutFooterButtons()
         {
+            var btnH = 0;
+            if (closeBtn is not null) btnH = Math.Max(btnH, closeBtn.Height);
+            if (applyBtn is not null) btnH = Math.Max(btnH, applyBtn.Height);
+            if (refreshBtn is not null) btnH = Math.Max(btnH, refreshBtn.Height);
+            if (btnH <= 0) btnH = UiFit.ControlHeight();
+            footer.Height = Math.Max(UiScale.S(52), btnH + UiScale.S(20));
+            var y = Math.Max(6, (footer.Height - btnH) / 2);
             var x = footer.ClientSize.Width - 16;
             if (closeBtn is not null)
             {
-                closeBtn.Location = new Point(x - closeBtn.Width, 9);
+                closeBtn.Location = new Point(x - closeBtn.Width, y);
                 x = closeBtn.Left - 8;
             }
             if (applyBtn is not null)
             {
-                applyBtn.Location = new Point(x - applyBtn.Width, 9);
+                applyBtn.Location = new Point(x - applyBtn.Width, y);
                 x = applyBtn.Left - 8;
             }
             if (refreshBtn is not null)
-                refreshBtn.Location = new Point(x - refreshBtn.Width, 9);
+                refreshBtn.Location = new Point(x - refreshBtn.Width, y);
+        }
+
+        void RefitFooterButtons()
+        {
+            if (closeBtn is not null) UiFit.FitButton(closeBtn);
+            if (applyBtn is not null) UiFit.FitButton(applyBtn);
+            if (refreshBtn is not null) UiFit.FitButton(refreshBtn);
+            LayoutFooterButtons();
         }
 
         // 空 hint：不画左侧说明，避免「默认：…」类重复注脚（见 winforms-ux）
@@ -252,7 +267,7 @@ internal static class ThemedSettingsChrome
                 Text = hint.Trim(),
                 AutoSize = false,
                 Location = new Point(16, 8),
-                Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), 36),
+                Size = new Size(Math.Max(120, form.ClientSize.Width - 24 - RightButtonsWidth()), Math.Max(36, UiFit.ControlHeight(UiFit.UiFontSmall))),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 ForeColor = AppTheme.TextMute,
                 Font = UiFit.UiFontSmall,
@@ -265,12 +280,20 @@ internal static class ThemedSettingsChrome
             {
                 LayoutFooterButtons();
                 label.Width = Math.Max(80, footer.ClientSize.Width - 24 - RightButtonsWidth());
+                label.Height = Math.Max(28, footer.Height - 16);
+                label.Top = Math.Max(4, (footer.Height - label.Height) / 2);
             };
         }
         else
         {
             footer.Resize += (_, _) => LayoutFooterButtons();
         }
+
+        form.DpiChanged += (_, _) =>
+        {
+            UiScale.OnHostDpiChanged(form);
+            RefitFooterButtons();
+        };
 
         LayoutFooterButtons();
         return footer;
