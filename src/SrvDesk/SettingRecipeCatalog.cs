@@ -50,7 +50,8 @@ internal static class SettingRecipeCatalog
 
         Add(SettingCatalog.HighPerfPower, ActionScript.Cmd(
             $"powercfg.exe /setactive {Optimizer.PowerPlanHighPerf}",
-            $"powercfg.exe /setactive {Optimizer.PowerPlanBalanced}"));
+            $"powercfg.exe /setactive {Optimizer.PowerPlanBalanced}",
+            note: "界面第三档「卓越性能」会先 duplicatescheme 再激活 Ultimate GUID。"));
 
         Add(SettingCatalog.DisableTelemetry, ActionScript.Mixed(
             ActionScript.WrapReg(ActionScript.Block(
@@ -1080,6 +1081,29 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.DisableTelemetryScheduledTasks, ActionScript.Cmd(
             "schtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Application Experience\\PcaPatchDbTask\" /DISABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Flighting\\FeatureConfig\\UsageDataReporting\" /DISABLE",
             "schtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator\" /ENABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip\" /ENABLE\r\nschtasks /Change /TN \"\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector\" /ENABLE"));
+
+        Add(SettingCatalog.ShowTrayBatteryPercent, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarShowBatteryPercentage", 1, 0));
+        Add(SettingCatalog.AlwaysShowScrollbars, ActionScript.DwordToggle(true,
+            @"Control Panel\Accessibility", "DynamicScrollbars", 0, 1));
+        Add(SettingCatalog.NumLockOnBoot, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Keyboard"),
+                ActionScript.Sz("InitialKeyboardIndicators", "2")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Keyboard"),
+                ActionScript.Sz("InitialKeyboardIndicators", "0"))));
+        Add(SettingCatalog.DisableMouseAcceleration, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Mouse"),
+                ActionScript.Sz("MouseSpeed", "0"),
+                ActionScript.Sz("MouseThreshold1", "0"),
+                ActionScript.Sz("MouseThreshold2", "0")),
+            ActionScript.Block(ActionScript.HkCu(@"Control Panel\Mouse"),
+                ActionScript.Sz("MouseSpeed", "1"),
+                ActionScript.Sz("MouseThreshold1", "6"),
+                ActionScript.Sz("MouseThreshold2", "10"))));
+        Add(SettingCatalog.DisableWpbt, ActionScript.DwordToggle(false,
+            @"SYSTEM\CurrentControlSet\Control\Session Manager", "DisableWpbtExecution", 1, 0));
+        Add(SettingCatalog.Win11StartMenuPreviousLayout, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_ShowClassicMode", 1, 0));
 
         Add(SettingCatalog.AlwaysShowMenus, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "AlwaysShowMenus", 1, 0,

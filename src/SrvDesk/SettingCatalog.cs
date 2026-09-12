@@ -57,10 +57,10 @@ internal static class SettingCatalog
         recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo HighPerfPower = H(
-        L("切换为「高性能」电源计划，避免 CPU 降频。", "Switch to High performance power plan to avoid CPU downclocking."),
-        L("激活 GUID 为高性能的 powercfg 计划，减少节能节流。", "Activate the High performance powercfg plan (GUID) to reduce power throttling."),
-        L("响应更快，适合常开远程桌面或跑负载。", "Snappier response; good for always-on RDP or sustained load."),
-        L("笔记本/需省电时可关闭恢复「平衡」；台式 Server 桌面建议开启。", "On laptops/power-saving, turn off to restore Balanced; recommended on desktop Servers."),
+        L("切换电源计划：平衡 / 高性能 / 卓越性能。", "Switch power plan: Balanced / High performance / Ultimate Performance."),
+        L("powercfg /setactive；卓越性能会先 duplicatescheme 内置 GUID。", "powercfg /setactive; Ultimate may duplicatescheme the built-in GUID first."),
+        L("高性能减少节能节流；卓越性能更激进，适合台式常开负载。", "High perf reduces throttling; Ultimate is more aggressive for always-on desktops."),
+        L("台式 Server 桌面建议「高性能」；笔记本/省电选「平衡」；「卓越性能」不推荐笔记本。", "Desktop Servers: High performance; laptops: Balanced; Ultimate not for notebooks."),
         L("立即生效。", "Takes effect immediately."),
         recommend: RecommendLevel.Strong);
 
@@ -1223,6 +1223,58 @@ internal static class SettingCatalog
         L("个人桌面推荐开启；企业需 CEIP 报表时保持关闭。", "Recommended on personal desktops; keep off if you need CEIP reports."),
         L("立即对存在的任务生效；不存在的任务跳过。", "Applies immediately to tasks that exist; missing tasks skipped."),
         recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo ShowTrayBatteryPercent = H(
+        L("托盘电量图标显示百分比。", "Show battery percentage on the tray icon."),
+        L("Explorer\\Advanced TaskbarShowBatteryPercentage=1（Win11）。", "Explorer\\Advanced TaskbarShowBatteryPercentage=1 (Win11)."),
+        L("一眼看到剩余电量，无需悬停。", "See remaining charge without hovering."),
+        L("笔记本推荐；台式机无电池时无效。", "Recommended on laptops; no effect on desktops without a battery."),
+        L("可能需重启资源管理器。", "May need Explorer restart."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo AlwaysShowScrollbars = H(
+        L("始终显示滚动条（关闭动态隐藏）。", "Always show scrollbars (disable dynamic hide)."),
+        L("Control Panel\\Accessibility DynamicScrollbars=0。", "Control Panel\\Accessibility DynamicScrollbars=0."),
+        L("滚动条常显，远程/触控板场景更好找。", "Scrollbars stay visible; easier on RDP/trackpads."),
+        L("桌面可选开启。", "Optional on desktops."),
+        L("新开窗口后生效。", "Applies to newly opened windows."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Suggested);
+
+    public static readonly SettingHelpInfo NumLockOnBoot = H(
+        L("开机/登录时默认开启 NumLock。", "NumLock on by default at boot/logon."),
+        L("InitialKeyboardIndicators=2（当前用户与 .DEFAULT）。", "InitialKeyboardIndicators=2 (current user and .DEFAULT)."),
+        L("数字小键盘一登录即可用。", "Numpad ready right after logon."),
+        L("台式键盘推荐；笔记本视布局可选。", "Recommended with desktop keyboards; optional on laptops."),
+        L("下次登录生效。", "Applies on next logon."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableMouseAcceleration = H(
+        L("关闭鼠标加速（Enhance pointer precision）。", "Disable mouse acceleration (Enhance pointer precision)."),
+        L("MouseSpeed / Threshold 置 0，并 SPI_SETMOUSE。", "MouseSpeed/Thresholds to 0 and SPI_SETMOUSE."),
+        L("指针移动更线性，适合精细操作。", "More linear pointer travel for precise work."),
+        L("游戏/CAD 常用；触控板用户可保持关闭本项。", "Common for gaming/CAD; trackpad users may leave off."),
+        L("立即生效。", "Takes effect immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Suggested);
+
+    public static readonly SettingHelpInfo DisableWpbt = H(
+        L("禁用 WPBT（厂商预启动驱动注入）。", "Disable WPBT (vendor pre-boot driver injection)."),
+        L("Session Manager DisableWpbtExecution=1。", "Session Manager DisableWpbtExecution=1."),
+        L("减少 OEM 预装驱动在启动阶段的注入。", "Fewer OEM drivers injected at boot."),
+        L("高级项；不确定厂商依赖时保持关闭。", "Advanced; keep off if unsure about vendor deps."),
+        L("重启后生效。", "Applies after reboot."),
+        recommend: RecommendLevel.Optional);
+
+    public static readonly SettingHelpInfo Win11StartMenuPreviousLayout = H(
+        L("Win11 开始菜单使用更接近旧版的布局。", "Use a more classic Start menu layout on Win11."),
+        L("Explorer\\Advanced Start_ShowClassicMode=1。", "Explorer\\Advanced Start_ShowClassicMode=1."),
+        L("开始菜单少推荐/少广告感。", "Start feels less recommendation/ad heavy."),
+        L("仅 Win11；桌面可选。", "Win11 only; optional on desktops."),
+        L("可能需重启资源管理器。", "May need Explorer restart."),
+        W10De,
+        recommend: RecommendLevel.Suggested);
 
     public static readonly SettingHelpInfo AlwaysShowMenus = H(
         L("资源管理器始终显示菜单栏（文件/编辑/查看）。", "Always show the Explorer menu bar (File/Edit/View)."),

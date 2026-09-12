@@ -11,7 +11,7 @@ internal sealed class MainForm : Form
         [AppLang.L("默认通知", "Default notify"), AppLang.L("从不通知", "Never notify")], optimizedIndex: 1);
     private readonly SettingRow _ie = Row(AppLang.L("关闭 IE 增强安全配置", "Disable IE ESC"), AppLang.L("开启", "On"), SettingCatalog.DisableIeEsc);
     private readonly SettingRow _highPerf = Choice(AppLang.L("电源计划", "Power plan"), AppLang.L("平衡", "Balanced"), SettingCatalog.HighPerfPower,
-        [AppLang.L("平衡", "Balanced"), AppLang.L("高性能", "High performance")], optimizedIndex: 1);
+        [AppLang.L("平衡", "Balanced"), AppLang.L("高性能", "High performance"), AppLang.L("卓越性能（笔记本不推荐）", "Ultimate (not for laptops)")], optimizedIndex: 1);
     private readonly SettingRow _telemetry = Row(AppLang.L("关闭遥测与 DiagTrack", "Disable telemetry & DiagTrack"), AppLang.L("开启", "On"), SettingCatalog.DisableTelemetry);
     private readonly SettingRow _noUpdateReboot = Choice(AppLang.L("更新后重启策略", "Post-update reboot"), AppLang.L("允许重启", "Allow reboot"), SettingCatalog.NoUpdateReboot,
         [AppLang.L("允许重启", "Allow reboot"), AppLang.L("不自动重启", "No auto-reboot")], optimizedIndex: 1);
@@ -140,6 +140,12 @@ internal sealed class MainForm : Form
     private readonly SettingRow _finishSetup = Row(AppLang.L("关闭「完成设备设置」建议", "Disable finish-setup suggestions"), AppLang.L("提示", "Prompt"), SettingCatalog.DisableFinishSetupSuggestions);
     private readonly SettingRow _xferDetails = Row(AppLang.L("复制文件默认显示更多详细信息", "Transfer dialog: more details"), AppLang.L("精简", "Simple"), SettingCatalog.ExplorerTransferDetails);
     private readonly SettingRow _telemTasks = Row(AppLang.L("禁用常见遥测计划任务", "Disable telemetry scheduled tasks"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableTelemetryScheduledTasks);
+    private readonly SettingRow _batteryPct = Row(AppLang.L("托盘电量显示百分比", "Tray battery percentage"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowTrayBatteryPercent);
+    private readonly SettingRow _alwaysScroll = Row(AppLang.L("始终显示滚动条", "Always show scrollbars"), AppLang.L("动态隐藏", "Dynamic hide"), SettingCatalog.AlwaysShowScrollbars);
+    private readonly SettingRow _numLock = Row(AppLang.L("开机默认开启 NumLock", "NumLock on at boot"), AppLang.L("系统默认", "System default"), SettingCatalog.NumLockOnBoot);
+    private readonly SettingRow _noMouseAccel = Row(AppLang.L("关闭鼠标加速", "Disable mouse acceleration"), AppLang.L("开启加速", "Acceleration on"), SettingCatalog.DisableMouseAcceleration);
+    private readonly SettingRow _noWpbt = Row(AppLang.L("禁用 WPBT 预启动注入", "Disable WPBT"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableWpbt);
+    private readonly SettingRow _startClassic = Row(AppLang.L("Win11 开始菜单旧布局", "Win11 Start previous layout"), AppLang.L("默认布局", "Default layout"), SettingCatalog.Win11StartMenuPreviousLayout);
     private readonly SettingRow _alwaysMenu = Row(AppLang.L("始终显示菜单栏", "Always show menu bar"), AppLang.L("按 Alt 才显示", "Show with Alt"), SettingCatalog.AlwaysShowMenus);
     private readonly SettingRow _hideMerge = Row(AppLang.L("隐藏文件夹合并冲突", "Hide folder merge conflicts"), AppLang.L("每次确认", "Ask each time"), SettingCatalog.HideMergeConflicts);
     private readonly SettingRow _compColor = Row(AppLang.L("加密/压缩文件用颜色标识", "Color encrypted/compressed files"), AppLang.L("不着色", "No color"), SettingCatalog.ShowCompColor);
@@ -347,6 +353,7 @@ internal sealed class MainForm : Form
         _noBitlockerAuto, _noCompanionApps, _noUpdateAsap, _hideSettingsHome, _extraAi,
         _nullSess, _anonEnum, _smbThrottle, _fastShutdown, _startupDelay, _menuDelay, _aeroShake,
         _netLocWizard, _settingSync, _finishSetup, _xferDetails, _telemTasks,
+        _batteryPct, _alwaysScroll, _numLock, _noMouseAccel, _noWpbt, _startClassic,
         _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
         _driveLetters, _folderGroup, _folderSort,
         _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
@@ -383,8 +390,11 @@ internal sealed class MainForm : Form
             (AppLang.L("性能加速", "Performance"), [
                 _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu, _mmcss,
             ]),
-            (AppLang.L("Windows 更新", "Windows Update"), [
-                _noUpdateReboot, _wuNotify, _noDriverWu, _wuPause2035, _wuPauseUx, _deliveryOpt, _msrt, _noUpdateAsap,
+            (AppLang.L("Windows 更新 · ① 稳妥控制", "Windows Update · 1 Steady"), [
+                _wuNotify, _noUpdateReboot, _noDriverWu, _deliveryOpt, _msrt,
+            ]),
+            (AppLang.L("Windows 更新 · ② 延迟暂停", "Windows Update · 2 Defer"), [
+                _wuPauseUx, _wuPause2035, _noUpdateAsap,
             ]),
             (AppLang.L("网络优化", "Network"), [
                 _tcp, _qosSpeed, _bbr2, _ctcp, _smbThrottle, _netThrottle, _webDavLimit,

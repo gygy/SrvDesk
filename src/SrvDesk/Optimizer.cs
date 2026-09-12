@@ -14,6 +14,8 @@ internal static class Optimizer
     internal const string AzureArcCommand = @"%windir%\AzureArcSetup\Systray\AzureArcSysTray.exe";
     internal const string PowerPlanHighPerf = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     internal const string PowerPlanBalanced = "381b4222-f694-41f0-9685-ff5bb260df2e";
+    /// <summary>卓越性能（需 powercfg -duplicatescheme 后才出现于本机）。</summary>
+    internal const string PowerPlanUltimate = "e9a42b02-d5df-448d-aa00-03f14749eb61";
     internal const string IntlKey = @"Control Panel\International";
     internal const string ShortDateWithWeekday = "yyyy/MM/dd dddd";
     internal const string ShortDateDefault = "yyyy/M/d";
@@ -31,6 +33,8 @@ internal static class Optimizer
         public bool DisableUac;
         public bool DisableIeEsc;
         public bool HighPerfPower;
+        /// <summary>卓越性能电源计划（与 HighPerfPower 互斥；笔记本通常不推荐）。</summary>
+        public bool UltimatePerfPower;
         public bool DisableTelemetry;
         public bool NoUpdateReboot;
         public bool DisableDeliveryOpt;
@@ -254,6 +258,13 @@ internal static class Optimizer
         public bool DisableFinishSetupSuggestions;
         public bool ExplorerTransferDetails;
         public bool DisableTelemetryScheduledTasks;
+        // WinUtil QoL
+        public bool ShowTrayBatteryPercent;
+        public bool AlwaysShowScrollbars;
+        public bool NumLockOnBoot;
+        public bool DisableMouseAcceleration;
+        public bool DisableWpbt;
+        public bool Win11StartMenuPreviousLayout;
         public bool AlwaysShowMenus;
         public bool HideMergeConflicts = true;
         public bool ShowCompColor = true;
@@ -291,7 +302,8 @@ internal static class Optimizer
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
             DisableUac = IsUacNeverNotify(),
             DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
-            HighPerfPower = IsActivePowerPlan(PowerPlanHighPerf),
+            HighPerfPower = false,
+            UltimatePerfPower = false,
             DisableTelemetry = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0),
             NoUpdateReboot = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1),
             DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
@@ -405,6 +417,8 @@ internal static class Optimizer
         CommunityTweaks.ReadInto(state);
         SophiaGapTweaks.ReadInto(state);
         AtlasGapTweaks.ReadInto(state);
+        WinUtilGapTweaks.ReadInto(state);
+        ReadPowerPlanInto(state);
         FolderViewTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
         state.EnableAutologon = auto.Enabled;
@@ -474,7 +488,7 @@ internal static class Optimizer
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscUser}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
         });
-        Do(Ch(x => x.HighPerfPower), "电源计划", () => SetPowerPlan(s.HighPerfPower ? PowerPlanHighPerf : PowerPlanBalanced));
+        Do(Ch(x => x.HighPerfPower) || Ch(x => x.UltimatePerfPower), "电源计划", () => ApplyPowerPlan(s));
         Do(Ch(x => x.DisableTelemetry), "遥测", () => SetTelemetry(!s.DisableTelemetry));
         Do(Ch(x => x.NoUpdateReboot), "更新重启", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", s.NoUpdateReboot ? 1 : 0));
@@ -640,6 +654,7 @@ internal static class Optimizer
         Do(CommunityTweaks.AnyChanged(baseline, s), "社区对齐项", () => CommunityTweaks.Apply(s, baseline));
         Do(SophiaGapTweaks.AnyChanged(baseline, s), "Sophia对齐项", () => SophiaGapTweaks.Apply(s, baseline));
         Do(AtlasGapTweaks.AnyChanged(baseline, s), "Atlas对齐项", () => AtlasGapTweaks.Apply(s, baseline));
+        Do(WinUtilGapTweaks.AnyChanged(baseline, s), "WinUtil对齐项", () => WinUtilGapTweaks.Apply(s, baseline));
         Do(FolderViewTweaks.AnyChanged(baseline, s), "文件夹选项", () => FolderViewTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
         return errors;
@@ -1328,6 +1343,52 @@ internal static class Optimizer
     }
 
     private static void SetPowerPlan(string guid) => Run("powercfg.exe", "/setactive " + guid);
+
+    private static void ReadPowerPlanInto(State s)
+    {
+        if (IsActivePowerPlan(PowerPlanUltimate))
+        {
+            s.UltimatePerfPower = true;
+            s.HighPerfPower = false;
+        }
+        else if (IsActivePowerPlan(PowerPlanHighPerf))
+        {
+            s.HighPerfPower = true;
+            s.UltimatePerfPower = false;
+        }
+        else
+        {
+            s.HighPerfPower = false;
+            s.UltimatePerfPower = false;
+        }
+    }
+
+    private static void ApplyPowerPlan(State s)
+    {
+        if (s.UltimatePerfPower)
+        {
+            EnsureUltimatePowerPlan();
+            SetPowerPlan(PowerPlanUltimate);
+            return;
+        }
+
+        SetPowerPlan(s.HighPerfPower ? PowerPlanHighPerf : PowerPlanBalanced);
+    }
+
+    private static void EnsureUltimatePowerPlan()
+    {
+        try
+        {
+            var listed = RunCapture("powercfg.exe", "/list");
+            if (listed.IndexOf(PowerPlanUltimate, StringComparison.OrdinalIgnoreCase) >= 0)
+                return;
+        }
+        catch { /* fall through to duplicate */ }
+
+        // 复制内置卓越性能方案（多数 SKU 默认不列出）
+        try { Run("powercfg.exe", "/duplicatescheme " + PowerPlanUltimate); }
+        catch (Exception ex) { ApplyLog.Debug("duplicatescheme Ultimate：" + ex.Message); }
+    }
 
     private static bool IsActivePowerPlan(string guid)
     {
