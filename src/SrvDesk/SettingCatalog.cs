@@ -573,7 +573,7 @@ internal static class SettingCatalog
 
     public static readonly SettingHelpInfo DisablePasswordComplexity = H(
         L("本地账户密码不要求大小写+数字+符号组合。", "Local account passwords need not mix case/digits/symbols."),
-        L("通过 secedit 将 PasswordComplexity 设为 0。", "Set PasswordComplexity=0 via secedit."),
+        L("通过 secedit 将 PasswordComplexity 设为 0，并放开最小密码长度（minpwlen=0）。", "Set PasswordComplexity=0 via secedit and MinimumPasswordLength=0."),
         L("可设简单 PIN 式密码，个人 VM/内网更方便。", "Allows simple PIN-like passwords; handy for personal VMs/LAN."),
         L("个人桌面 / 内网 lab 强烈推荐；公网或合规环境请保持复杂性。", "Strongly recommended for personal desktop / private labs; keep complexity on public/compliance hosts."),
         L("策略立即写入。", "Policy is written immediately."),

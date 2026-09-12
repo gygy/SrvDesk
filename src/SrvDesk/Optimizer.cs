@@ -1220,6 +1220,9 @@ internal static class Optimizer
         Run("net.exe", disableHistory
             ? "accounts /uniquepw:0"
             : "accounts /uniquepw:24");
+        // 关闭复杂度时一并放开最小长度，否则短密码仍会被拒（系统报错仍会提到复杂度/历史）
+        if (disableComplexity)
+            Run("net.exe", "accounts /minpwlen:0");
 
         // 复杂性 + 策略项：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
         var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.inf");
@@ -1236,6 +1239,7 @@ internal static class Optimizer
             "PasswordComplexity = " + (disableComplexity ? 0 : 1) + Environment.NewLine +
             "MaximumPasswordAge = " + (neverExpire ? 0 : 42) + Environment.NewLine +
             "PasswordHistorySize = " + (disableHistory ? 0 : 24) + Environment.NewLine +
+            (disableComplexity ? "MinimumPasswordLength = 0" + Environment.NewLine : "") +
             "[Version]" + Environment.NewLine +
             "signature=\"$CHICAGO$\"" + Environment.NewLine +
             "Revision=1" + Environment.NewLine;

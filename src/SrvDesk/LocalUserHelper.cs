@@ -105,9 +105,22 @@ internal static class LocalUserHelper
         catch (Exception ex)
         {
             ApplyLog.Write("创建本地用户失败：" + username + " → " + ex.Message);
-            return "创建失败：" + TrimMessage(ex);
+            var msg = "创建失败：" + TrimMessage(ex);
+            if (LooksLikePasswordPolicy(msg))
+            {
+                msg += "\r\n\r\n请确认：账户策略已关闭「密码复杂性」「强制密码历史」，并点「应用到系统」；"
+                    + "若仍失败，多半是「最小密码长度」仍大于 0（关闭复杂性时软件会一并设为 0）。"
+                    + "也可先换更长/更复杂的密码再试。";
+            }
+            return msg;
         }
     }
+
+    private static bool LooksLikePasswordPolicy(string msg) =>
+        msg.IndexOf("密码策略", StringComparison.Ordinal) >= 0
+        || msg.IndexOf("password policy", StringComparison.OrdinalIgnoreCase) >= 0
+        || msg.IndexOf("password does not meet", StringComparison.OrdinalIgnoreCase) >= 0
+        || msg.IndexOf("复杂性", StringComparison.Ordinal) >= 0;
 
     private static DirectoryEntry OpenMachine() =>
         new("WinNT://" + Environment.MachineName + ",computer");
