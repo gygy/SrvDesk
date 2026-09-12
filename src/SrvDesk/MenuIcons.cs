@@ -92,6 +92,10 @@ internal static class MenuIcons
         [FileCand(Sys("OptionalFeatures.exe")), FileCand(Sys("optionalfeatures.exe"))],
         DrawWin);
 
+    public static Image ServerRoles => Get("serverroles",
+        [FileCand(Sys("ServerManager.exe")), FileCand(Sys("OptionalFeatures.exe"))],
+        DrawWin);
+
     public static Image SecurityCenter => Get("securitycenter",
         [FileCand(Sys("wscui.cpl")), FileCand(Sys("SecurityHealthSystray.exe"))],
         DrawSecurityHealth);

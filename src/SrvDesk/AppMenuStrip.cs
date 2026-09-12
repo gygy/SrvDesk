@@ -25,6 +25,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
     public ToolStripMenuItem ToolWindowsFeatures { get; }
+    public ToolStripMenuItem ToolAddRemoveRoles { get; }
     public ToolStripMenuItem ToolSecurityCenter { get; }
     public ToolStripMenuItem ToolEdgeManage { get; }
     public ToolStripMenuItem ToolQuick { get; }
@@ -82,6 +83,12 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
+        ToolAddRemoveRoles = Item(
+            AppLang.L("添加 / 删除角色和功能...", "Add / Remove Roles and Features..."),
+            MenuIcons.ServerRoles);
+        ToolAddRemoveRoles.ToolTipText = AppLang.L(
+            "打开服务器管理器，在「管理」中添加或删除角色和功能（仅 Server）",
+            "Open Server Manager → Manage to add or remove roles and features (Server only)");
         ToolSecurityCenter = Item(AppLang.L("安全中心管理...", "Security Center..."), MenuIcons.SecurityCenter);
         ToolEdgeManage = Item(AppLang.L("MSEdge 管理...", "MSEdge management..."), MenuIcons.EdgeManage);
         ToolQuick = Item(AppLang.L("快速工具...", "Quick tools..."), MenuIcons.Quick);
@@ -91,7 +98,7 @@ internal sealed class AppMenuStrip : MenuStrip
         tools.DropDownItems.AddRange([
             ToolOptimizeAdvisor, ToolOptHistory,
             ToolCommonSoftware, ToolCleanup,
-            ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
+            ToolAddRemoveRoles, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
             ToolHosts,
             new ToolStripSeparator(),
             ToolShutdownTimer, ToolSystemRepair, ToolDesktopMaintenance,

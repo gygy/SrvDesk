@@ -707,6 +707,12 @@ internal sealed class MainForm : Form
             using var d = new WindowsFeaturesDialog();
             d.ShowDialog(this);
         };
+        _appMenu.ToolAddRemoveRoles.Click += (_, _) =>
+            ServerRolesLauncher.OpenFromMenu(this, () =>
+            {
+                using var d = new WindowsFeaturesDialog();
+                d.ShowDialog(this);
+            });
         _appMenu.ToolSecurityCenter.Click += (_, _) =>
         {
             using var d = new SecurityCenterDialog();
