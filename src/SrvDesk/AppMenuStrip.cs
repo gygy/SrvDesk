@@ -7,8 +7,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem FileExport { get; }
     public ToolStripMenuItem FileSettings { get; }
     public ToolStripMenuItem FileExit { get; }
-    public ToolStripMenuItem ToolAutologon { get; }
-    public ToolStripMenuItem ToolAccountIdentity { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
     public ToolStripMenuItem ToolHosts { get; }
     public ToolStripMenuItem ToolEventViewer { get; }

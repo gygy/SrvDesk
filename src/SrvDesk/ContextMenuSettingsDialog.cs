@@ -1,6 +1,6 @@
 namespace SrvDesk;
 
-internal sealed class ContextMenuSettingsDialog : Form
+internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
 {
     private readonly InstantToggleRow _takeOwn = new("取得所有权");
     private readonly InstantToggleRow _openCmd = new("在此处打开 CMD");
@@ -15,11 +15,14 @@ internal sealed class ContextMenuSettingsDialog : Form
     private readonly InstantToggleRow _notepad = new("用记事本编辑文件");
     private readonly InstantToggleRow _blockShare = new("屏蔽「授予访问权限」");
     private readonly Label _hint = new();
+    private readonly Action? _onChanged;
 
-    public ContextMenuSettingsDialog()
+    public ContextMenuSettingsDialog(Action? onChanged = null)
     {
-        Text = "右键菜单";
+        _onChanged = onChanged;
+        Text = AppLang.L("右键菜单", "Context menu");
         AppBrand.ApplyWindowIcon(this);
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
@@ -40,8 +43,10 @@ internal sealed class ContextMenuSettingsDialog : Form
         _hint.ForeColor = AppTheme.TextMute;
         _hint.Margin = new Padding(4, 8, 4, 4);
         _hint.Text = ContextMenuTweaks.TerminalAvailable()
-            ? "开关立即写入注册表。文件夹空白处与文件夹本身均可出现「在此处打开」项。"
-            : "未检测到 wt.exe：开启 Terminal 相关项前请先安装 Windows 终端。";
+            ? AppLang.L("开关立即写入注册表。文件夹空白处与文件夹本身均可出现「在此处打开」项。",
+                "Toggles write to the registry immediately. Open-here items appear on folder background and folder items.")
+            : AppLang.L("未检测到 wt.exe：开启 Terminal 相关项前请先安装 Windows 终端。",
+                "wt.exe not found: install Windows Terminal before enabling Terminal items.");
 
         body.Controls.Add(_hint);
         body.Controls.Add(other);
@@ -49,18 +54,24 @@ internal sealed class ContextMenuSettingsDialog : Form
         body.Controls.Add(terminal);
         body.Controls.Add(common);
 
-        ThemedSettingsChrome.MountModal(
+        ThemedSettingsChrome.MountEmbedded(
             this,
-            "右键菜单",
-            "常用 · 终端 · 编辑",
+            AppLang.L("右键菜单", "Context menu"),
+            AppLang.L("常用 · 终端 · 编辑", "Common · Terminal · Edit"),
             body,
-            "部分项需刷新资源管理器后可见。",
-            LoadValues);
+            "",
+            RefreshFromSystem);
 
-        Shown += (_, _) => LoadValues();
+        Load += (_, _) => RefreshFromSystem();
         Resize += (_, _) =>
             _hint.MaximumSize = new Size(Math.Max(280, ClientSize.Width - 80), 0);
     }
+
+    public bool SupportsApplyToSystem => false;
+    public void ApplyToSystem() { }
+    public bool ConsumeWarmLoadSkip() => false;
+
+    public void RefreshFromSystem() => LoadValues();
 
     private void LoadValues()
     {
@@ -78,8 +89,12 @@ internal sealed class ContextMenuSettingsDialog : Form
         Bind(_blockShare, ContextMenuTweaks.IsBlockAccessMenuOn(), ContextMenuTweaks.SetBlockAccessMenu);
     }
 
-    private static void Bind(InstantToggleRow row, bool on, Action<bool> apply)
+    private void Bind(InstantToggleRow row, bool on, Action<bool> apply)
     {
-        row.Bind(on, apply);
+        row.Bind(on, value =>
+        {
+            apply(value);
+            _onChanged?.Invoke();
+        });
     }
 }
