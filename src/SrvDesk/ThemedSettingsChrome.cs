@@ -287,11 +287,12 @@ internal static class ThemedSettingsChrome
             BackColor = primary ? AppTheme.Primary : AppTheme.SurfaceCard,
             ForeColor = primary ? AppTheme.TextOnPrimary : AppTheme.TextMain,
             Font = font,
-            Size = UiFit.ButtonSize(text, UiFit.ControlHeight(font), font, minWidth: 72, padding: 22),
+            Size = UiFit.ButtonSize(text, UiFit.ControlHeight(font), font, minWidth: 72, padding: 28),
             TextAlign = ContentAlignment.MiddleCenter,
             UseVisualStyleBackColor = false,
             UseCompatibleTextRendering = false,
             Padding = Padding.Empty,
+            AutoSize = false,
         };
         if (primary)
         {
@@ -514,6 +515,7 @@ internal static class ThemedSettingsChrome
         form.Controls.Add(footer);
         if (showHeader)
             form.Controls.Add(CreateHeader(title, subtitle));
+        WireDpiRefit(form);
     }
 
     public static void MountEmbedded(
@@ -531,5 +533,11 @@ internal static class ThemedSettingsChrome
         var footer = CreateFooter(form, footerHint, onRefresh, showClose: false, onApply: onApply);
         form.Controls.Add(body);
         form.Controls.Add(footer);
+        WireDpiRefit(form);
+    }
+
+    private static void WireDpiRefit(Form form)
+    {
+        form.DpiChanged += (_, _) => UiScale.OnHostDpiChanged(form);
     }
 }

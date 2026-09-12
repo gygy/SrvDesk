@@ -399,6 +399,12 @@ internal sealed class MainForm : Form
         AppBrand.ApplyWindowIcon(this);
         KeyPreview = true;
         MainMenuStrip = _appMenu;
+        DpiChanged += (_, _) =>
+        {
+            UiScale.OnHostDpiChanged(this);
+            FitBottomActionButtons();
+            try { _bottomPanel?.PerformLayout(); } catch { /* ignore */ }
+        };
 
         // 批量分组顺序与 MenuItems 中分组项一致；组内可再分可折叠分区
         _groups.Add((AppLang.L("性能及安全", "Performance & security"), [
@@ -2389,34 +2395,22 @@ internal sealed class MainForm : Form
         // 底部三键始终占位：刷新 / 恢复默认 / 应用到系统（按页启用）
         _refreshBottom = ToolButton(AppLang.L("刷新", "Refresh"), () => LoadState(fullScan: true, forceUi: true));
 
-        _restore.Text = AppLang.L("恢复默认", "Reset");
-        _restore.AutoSize = false;
-        _restore.Size = UiFit.ButtonSize(AppLang.L("恢复默认", "Reset"), 36, UiFit.UiFontBold(), padding: 28);
-        _restore.Margin = new Padding(8, 0, 0, 0);
-        _restore.FlatStyle = FlatStyle.Flat;
-        _restore.BackColor = AppTheme.SurfaceCard;
-        _restore.ForeColor = AppTheme.PrimaryDeep;
-        _restore.Font = UiFit.UiFontBold();
-        _restore.Cursor = Cursors.Hand;
-        _restore.FlatAppearance.BorderColor = AppTheme.Border;
+        StyleBottomActionButton(
+            _restore,
+            AppLang.L("恢复默认", "Reset"),
+            primary: false,
+            AppTheme.PrimaryDeep);
         _restore.Click += (_, _) => RestoreDefaults();
-        _restore.MouseEnter += (_, _) => _restore.BackColor = AppTheme.PrimaryPale;
-        _restore.MouseLeave += (_, _) => _restore.BackColor = AppTheme.SurfaceCard;
 
-        _apply.Text = AppLang.L("应用到系统", "Apply");
-        _apply.AutoSize = false;
-        _apply.Size = UiFit.ButtonSize(AppLang.L("应用到系统", "Apply"), 36, UiFit.UiFontBold(), padding: 28);
-        _apply.Margin = new Padding(8, 0, 0, 0);
-        _apply.FlatStyle = FlatStyle.Flat;
+        StyleBottomActionButton(
+            _apply,
+            AppLang.L("应用到系统", "Apply"),
+            primary: true,
+            AppTheme.TextOnPrimary);
         _apply.FlatAppearance.BorderSize = 0;
-        _apply.BackColor = AppTheme.Primary;
-        _apply.ForeColor = AppTheme.TextOnPrimary;
-        _apply.Font = UiFit.UiFontBold();
-        _apply.Cursor = Cursors.Hand;
         _apply.Click += (_, _) => OnApplyClicked();
-        _apply.MouseEnter += (_, _) => _apply.BackColor = AppTheme.PrimaryDark;
-        _apply.MouseLeave += (_, _) => _apply.BackColor = AppTheme.Primary;
 
+        FitBottomActionButtons();
         actions.Controls.AddRange([_refreshBottom, _restore, _apply]);
         _bottomPanel.Controls.Add(actions);
         _bottomPanel.Controls.Add(_status);
@@ -2427,6 +2421,44 @@ internal sealed class MainForm : Form
             _status.Width = Math.Max(120, _bottomPanel.ClientSize.Width - right - 12);
         };
         return _bottomPanel;
+    }
+
+    private void StyleBottomActionButton(Button b, string text, bool primary, Color fore)
+    {
+        b.Text = text;
+        b.AutoSize = false;
+        b.Margin = new Padding(8, 0, 0, 0);
+        b.FlatStyle = FlatStyle.Flat;
+        b.Font = UiFit.UiFontBold();
+        b.ForeColor = fore;
+        b.Cursor = Cursors.Hand;
+        b.UseCompatibleTextRendering = false;
+        b.Padding = Padding.Empty;
+        b.TextAlign = ContentAlignment.MiddleCenter;
+        if (primary)
+        {
+            b.BackColor = AppTheme.Primary;
+            b.FlatAppearance.BorderSize = 0;
+            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryDark; b.Invalidate(); };
+            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.Primary; b.Invalidate(); };
+        }
+        else
+        {
+            b.BackColor = AppTheme.SurfaceCard;
+            b.FlatAppearance.BorderColor = AppTheme.Border;
+            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
+            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
+        }
+        UiFit.EnableCenteredFlatText(b);
+    }
+
+    private void FitBottomActionButtons()
+    {
+        var h = UiFit.ControlHeight(UiFit.UiFontBold());
+        if (_refreshBottom is not null)
+            UiFit.FitButton(_refreshBottom, h, padding: 28);
+        UiFit.FitButton(_restore, h, padding: 28);
+        UiFit.FitButton(_apply, h, padding: 28);
     }
 
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
@@ -3608,23 +3640,9 @@ internal sealed class MainForm : Form
 
     private static Button ToolButton(string text, Action click)
     {
-        var font = new Font("Microsoft YaHei UI", 9F);
-        var textWidth = TextRenderer.MeasureText(text, font).Width;
-        var b = new Button
-        {
-            Text = text,
-            Font = font,
-            AutoSize = false,
-            Size = new Size(Math.Max(72, textWidth + 24), 36),
-            Margin = new Padding(8, 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = AppTheme.SurfaceCard,
-            ForeColor = AppTheme.TextMain,
-            Cursor = Cursors.Hand,
-        };
-        b.FlatAppearance.BorderColor = AppTheme.Border;
-        b.MouseEnter += (_, _) => b.BackColor = AppTheme.PrimaryPale;
-        b.MouseLeave += (_, _) => b.BackColor = AppTheme.SurfaceCard;
+        var b = ThemedSettingsChrome.CreateButton(text, false);
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), padding: 28);
+        b.Margin = new Padding(8, 0, 0, 0);
         b.Click += (_, _) => click();
         return b;
     }

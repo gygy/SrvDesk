@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace SrvDesk;
 
 /// <summary>按实际文字宽度计算控件尺寸，避免中文被裁成半个字。</summary>
@@ -7,6 +9,7 @@ internal static class UiFit
     private static Font? _uiSmall;
     private static Font? _uiScope;
     private static string? _family;
+    private static readonly ConditionalWeakTable<Button, object> CenteredPaintHooked = new();
 
     /// <summary>优先雅黑 UI；Server 精简环境可能缺失，依次回退。</summary>
     public static string UiFontFamily
@@ -54,45 +57,75 @@ internal static class UiFit
         | TextFormatFlags.NoPadding
         | TextFormatFlags.PreserveGraphicsClipping;
 
+    /// <summary>测量用：保留字墨溢出边距，避免雅黑/高 DPI 量偏窄。</summary>
+    private static readonly TextFormatFlags MeasureFlags =
+        TextFormatFlags.SingleLine
+        | TextFormatFlags.NoPrefix
+        | TextFormatFlags.GlyphOverhangPadding;
+
     public static int LineHeight(Font? font = null)
     {
         var f = font ?? UiFont;
-        var h = TextRenderer.MeasureText("国Agyp", f, new Size(1024, 256),
-            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Height;
+        var h = TextRenderer.MeasureText("国Agyp", f, new Size(1024, 256), MeasureFlags).Height;
         return Math.Max(f.Height, Math.Max(14, h));
     }
 
     /// <summary>
     /// 按钮 / 下拉 / 单行输入的最小可视高度。
-    /// Flat + 雅黑在 26–28px 时常裁掉字脚；至少 LineHeight + 上下内边距。
+    /// Flat + 雅黑在偏矮高度时常裁掉字脚；副屏 DPI 变化后更明显。
     /// </summary>
-    public static int ControlHeight(Font? font = null, int designMin = 30) =>
-        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(14));
+    public static int ControlHeight(Font? font = null, int designMin = 32) =>
+        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(16));
 
     public static int TextWidth(string text, Font? font = null) =>
-        TextRenderer.MeasureText(text ?? "", font ?? UiFont,
-            new Size(int.MaxValue, 256),
-            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+        TextRenderer.MeasureText(text ?? "", font ?? UiFont, new Size(int.MaxValue, 256), MeasureFlags).Width;
 
-    /// <summary>按钮宽度：文字宽 + 内边距，且不小于 minWidth。</summary>
-    public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 24) =>
-        Math.Max(UiScale.S(minWidth), TextWidth(text, font ?? UiFont) + UiScale.S(padding));
+    /// <summary>按钮宽度：文字宽 + 内边距 + 安全边，且不小于 minWidth。</summary>
+    public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 28)
+    {
+        var f = font ?? UiFont;
+        // LineHeight/3：ClearType / 副屏 DPI 下 Measure 仍可能略窄
+        var slack = Math.Max(UiScale.S(8), LineHeight(f) / 3);
+        return Math.Max(UiScale.S(minWidth), TextWidth(text, f) + UiScale.S(padding) + slack);
+    }
 
-    public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 24)
+    public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 28)
     {
         var f = font ?? UiFont;
         var h = Math.Max(height, ControlHeight(f));
         return new(ButtonWidth(text, f, minWidth, padding), h);
     }
 
-    /// <summary>把按钮收紧到刚好能完整显示文字（高度不低于 ControlHeight）。</summary>
-    public static void FitButton(Button b, int? height = null, int minWidth = 72, int padding = 24)
+    /// <summary>把按钮收到刚好能完整显示文字（高度不低于 ControlHeight）。</summary>
+    public static void FitButton(Button b, int? height = null, int minWidth = 72, int padding = 28)
     {
-        var h = height ?? (b.Height > 0 ? b.Height : ControlHeight(b.Font));
-        b.Size = ButtonSize(b.Text, h, b.Font, minWidth, padding);
+        if (b is null || string.IsNullOrEmpty(b.Text)) return;
+        var f = b.Font ?? UiFont;
+        var h = Math.Max(height ?? 0, ControlHeight(f));
+        b.Size = ButtonSize(b.Text, h, f, minWidth, padding);
         b.TextAlign = ContentAlignment.MiddleCenter;
         b.UseCompatibleTextRendering = false;
         b.Padding = Padding.Empty;
+        b.AutoSize = false;
+    }
+
+    /// <summary>DPI 变化后重算窗体内 Flat 文字按钮尺寸（跳过无文字/仅图标）。</summary>
+    public static void RefitFlatTextButtons(Control root)
+    {
+        if (root is null) return;
+        foreach (Control c in root.Controls)
+        {
+            if (c is Button b
+                && b.FlatStyle == FlatStyle.Flat
+                && !string.IsNullOrWhiteSpace(b.Text)
+                && b.Image is null
+                && b.BackgroundImage is null)
+            {
+                FitButton(b);
+            }
+            if (c.HasChildren)
+                RefitFlatTextButtons(c);
+        }
     }
 
     /// <summary>下拉框高度与 ItemHeight，避免选中项文字被裁。</summary>
@@ -102,12 +135,16 @@ internal static class UiFit
         var f = box.Font ?? UiFont;
         box.IntegralHeight = false;
         try { box.ItemHeight = Math.Max(18, LineHeight(f) + 2); } catch { /* DropDownList 外偶发 */ }
-        box.Height = ControlHeight(f, 28);
+        box.Height = ControlHeight(f, 30);
     }
 
     /// <summary>Flat 按钮用 TextRenderer 居中绘制，避免雅黑默认偏上/偏下裁字。仅在创建时挂一次。</summary>
     public static void EnableCenteredFlatText(Button b)
     {
+        if (CenteredPaintHooked.TryGetValue(b, out _))
+            return;
+        try { CenteredPaintHooked.Add(b, new object()); }
+        catch (ArgumentException) { return; }
         b.TextAlign = ContentAlignment.MiddleCenter;
         b.UseCompatibleTextRendering = false;
         b.Padding = Padding.Empty;
@@ -124,17 +161,22 @@ internal static class UiFit
                 g.DrawRectangle(pen, 0, 0, b.Width - 1, b.Height - 1);
             }
             var color = b.Enabled ? b.ForeColor : SystemColors.GrayText;
+            // 略扩绘制区：避免边框像素吃掉字脚；不用省略号（按钮应够宽）
+            var rect = b.ClientRectangle;
+            if (rect.Width > 4 && rect.Height > 4)
+                rect = Rectangle.Inflate(rect, -1, 0);
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             TextRenderer.DrawText(
                 g,
                 b.Text,
                 b.Font,
-                b.ClientRectangle,
+                rect,
                 color,
                 TextFormatFlags.HorizontalCenter
                 | TextFormatFlags.VerticalCenter
-                | TextFormatFlags.EndEllipsis
                 | TextFormatFlags.NoPrefix
-                | TextFormatFlags.NoPadding);
+                | TextFormatFlags.GlyphOverhangPadding
+                | TextFormatFlags.PreserveGraphicsClipping);
         };
     }
 }
