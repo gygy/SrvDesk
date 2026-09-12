@@ -20,6 +20,15 @@ internal sealed class WindowsFeaturesDialog : Form
         "仅 Capability（已安装）",
     ];
 
+    private static readonly (string Label, string[] Hints)[] QuickFeatureHints =
+    [
+        ("Hyper-V", ["Microsoft-Hyper-V", "Hyper-V"]),
+        ("WSL", ["Microsoft-Windows-Subsystem-Linux", "VirtualMachinePlatform"]),
+        ("Sandbox", ["Containers-DisposableClientVM"]),
+        ("OpenSSH", ["OpenSSH.Server", "OpenSSH.Client"]),
+        ("NFS", ["ServicesForNFS-ClientAndTools", "NFS-Administration", "ClientForNFS-Infrastructure"]),
+    ];
+
     public WindowsFeaturesDialog()
     {
         Text = "可选功能 / Capabilities";
@@ -48,6 +57,32 @@ internal sealed class WindowsFeaturesDialog : Form
         _filter.SelectedIndexChanged += (_, _) => RenderList();
         tools.Controls.Add(_search);
         tools.Controls.Add(_filter);
+
+        var quick = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0, 2, 0, 0),
+            AutoScroll = false,
+        };
+        UiBuffer.ConfigureNoScrollRow(quick);
+        quick.Controls.Add(new Label
+        {
+            Text = AppLang.L("快捷：", "Quick:"),
+            AutoSize = true,
+            Padding = new Padding(0, 8, 4, 0),
+            ForeColor = AppTheme.TextMute,
+        });
+        foreach (var (label, hints) in QuickFeatureHints)
+        {
+            var btn = ThemedSettingsChrome.CreateButton(label, false);
+            btn.Margin = new Padding(4, 0, 0, 0);
+            var capture = hints;
+            btn.Click += (_, _) => SelectQuickFeatures(capture);
+            quick.Controls.Add(btn);
+        }
 
         _list.View = View.Details;
         _list.FullRowSelect = true;
@@ -96,11 +131,13 @@ internal sealed class WindowsFeaturesDialog : Form
         body.Controls.Add(_list);
         body.Controls.Add(actions);
         body.Controls.Add(_status);
+        body.Controls.Add(quick);
         body.Controls.Add(tools);
         // Dock 顺序：后添加先占位。确保状态栏在动作栏下方。
         _status.BringToFront();
         actions.BringToFront();
         tools.BringToFront();
+        quick.BringToFront();
         _list.SendToBack();
 
         ThemedSettingsChrome.MountModal(
@@ -201,6 +238,35 @@ internal sealed class WindowsFeaturesDialog : Form
     {
         foreach (ListViewItem row in _list.Items)
             row.Checked = on;
+    }
+
+    private void SelectQuickFeatures(string[] hints)
+    {
+        if (_items.Count == 0)
+        {
+            MessageBox.Show(this,
+                AppLang.L("请等待 DISM 列表加载完成。", "Wait until the DISM list finishes loading."),
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        _filter.SelectedIndex = 2; // 全部
+        _search.Text = "";
+        RenderList();
+        var hit = 0;
+        foreach (ListViewItem row in _list.Items)
+        {
+            if (row.Tag is not WinFeatureItem item) continue;
+            var match = hints.Any(h => item.Name.IndexOf(h, StringComparison.OrdinalIgnoreCase) >= 0);
+            row.Checked = match;
+            if (match) hit++;
+        }
+
+        _status.Text = hit > 0
+            ? AppLang.L($"已勾选 {hit} 项快捷匹配，可点「启用 / 安装所选」。",
+                $"Checked {hit} quick match(es). Click Enable/Install.")
+            : AppLang.L("当前系统未找到匹配项（SKU/版本可能不含）。",
+                "No matches on this SKU/version.");
     }
 
     private void RunBatch(bool disable)

@@ -178,7 +178,9 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.LargeSystemCacheOptimize)
         || ReferenceEquals(help, SettingCatalog.QosSpeedOptimize)
         || ReferenceEquals(help, SettingCatalog.TcpOptimized)
-        || ReferenceEquals(help, SettingCatalog.OptimizeMultimediaScheduler);
+        || ReferenceEquals(help, SettingCatalog.OptimizeMultimediaScheduler)
+        || ReferenceEquals(help, SettingCatalog.DisableWpbt)
+        || ReferenceEquals(help, SettingCatalog.DisableMouseAcceleration);
 
     private static bool IsLegacyPerfTweak(SettingHelpInfo help) =>
         IsAggressivePerf(help)

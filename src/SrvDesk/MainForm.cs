@@ -495,6 +495,7 @@ internal sealed class MainForm : Form
             (AppLang.L("界面体验", "UI experience"), [
                 _animations, _transparency, _backgroundApps, _storageSense, _autoplay, _edgePre, _gameDvr,
                 _menuDelay, _aeroShake, _netLocWizard,
+                _batteryPct, _alwaysScroll, _numLock, _noMouseAccel, _noWpbt, _startClassic,
             ]),
             (AppLang.L("商店与预览", "Store & Insider"), [
                 _insider, _storeUpd, _teredo,
@@ -668,6 +669,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
+        _appMenu.ToolSystemRepair.Click += (_, _) => { using var d = new SystemRepairDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
         _appMenu.ToolOptimizeAdvisor.Click += (_, _) => ShowOptimizeAdvisor();
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
@@ -2687,7 +2689,7 @@ internal sealed class MainForm : Form
         _dep.Checked = s.Dep;
         _uac.Checked = s.DisableUac;
         _ie.Checked = s.DisableIeEsc;
-        _highPerf.Checked = s.HighPerfPower;
+        _highPerf.ChoiceIndex = s.UltimatePerfPower ? 2 : (s.HighPerfPower ? 1 : 0);
         _telemetry.Checked = s.DisableTelemetry;
         _noUpdateReboot.Checked = s.NoUpdateReboot;
         _deliveryOpt.Checked = s.DisableDeliveryOpt;
@@ -2858,6 +2860,12 @@ internal sealed class MainForm : Form
         _finishSetup.Checked = s.DisableFinishSetupSuggestions;
         _xferDetails.Checked = s.ExplorerTransferDetails;
         _telemTasks.Checked = s.DisableTelemetryScheduledTasks;
+        _batteryPct.Checked = s.ShowTrayBatteryPercent;
+        _alwaysScroll.Checked = s.AlwaysShowScrollbars;
+        _numLock.Checked = s.NumLockOnBoot;
+        _noMouseAccel.Checked = s.DisableMouseAcceleration;
+        _noWpbt.Checked = s.DisableWpbt;
+        _startClassic.Checked = s.Win11StartMenuPreviousLayout;
         _alwaysMenu.Checked = s.AlwaysShowMenus;
         _hideMerge.Checked = s.HideMergeConflicts;
         _compColor.Checked = s.ShowCompColor;
@@ -2911,7 +2919,8 @@ internal sealed class MainForm : Form
         Dep = _dep.Checked,
         DisableUac = _uac.Checked,
         DisableIeEsc = _ie.Checked,
-        HighPerfPower = _highPerf.Checked,
+        HighPerfPower = _highPerf.ChoiceIndex == 1,
+        UltimatePerfPower = _highPerf.ChoiceIndex == 2,
         DisableTelemetry = _telemetry.Checked,
         NoUpdateReboot = _noUpdateReboot.Checked,
         DisableDeliveryOpt = _deliveryOpt.Checked,
@@ -3037,6 +3046,12 @@ internal sealed class MainForm : Form
         DisableFinishSetupSuggestions = _finishSetup.Checked,
         ExplorerTransferDetails = _xferDetails.Checked,
         DisableTelemetryScheduledTasks = _telemTasks.Checked,
+        ShowTrayBatteryPercent = _batteryPct.Checked,
+        AlwaysShowScrollbars = _alwaysScroll.Checked,
+        NumLockOnBoot = _numLock.Checked,
+        DisableMouseAcceleration = _noMouseAccel.Checked,
+        DisableWpbt = _noWpbt.Checked,
+        Win11StartMenuPreviousLayout = _startClassic.Checked,
         AlwaysShowMenus = _alwaysMenu.Checked,
         HideMergeConflicts = _hideMerge.Checked,
         ShowCompColor = _compColor.Checked,
