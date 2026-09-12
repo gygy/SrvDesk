@@ -320,6 +320,7 @@ internal sealed class MainForm : Form
     private static readonly string[] EmbeddedPageTitles =
     [
         AppLang.L("登录启动项", "Startup apps"),
+        AppLang.L("高级设置", "Advanced settings"),
         AppLang.L("服务优化", "Service optimize"),
         AppLang.L("DNS 设置", "DNS settings"),
         AppLang.L("自定义配置", "Custom config"),
@@ -336,6 +337,7 @@ internal sealed class MainForm : Form
         AppLang.L("性能及安全", "Performance & security"),
         AppLang.L("登录启动项", "Startup apps"),
         AppLang.L("电源与后台", "Power & background"),
+        AppLang.L("高级设置", "Advanced settings"),
         AppLang.L("服务优化", "Service optimize"),
         AppLang.L("DNS 设置", "DNS settings"),
         AppLang.L("自定义配置", "Custom config"),
@@ -690,11 +692,6 @@ internal sealed class MainForm : Form
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
         _appMenu.ToolDesktopMaintenance.Click += (_, _) => ShowDesktopMaintenance();
-        _appMenu.ToolPowerExtras.Click += (_, _) =>
-        {
-            using var d = new OtherSettingsDialog();
-            d.ShowDialog(this);
-        };
         _appMenu.ToolWindowsFeatures.Click += (_, _) =>
         {
             using var d = new WindowsFeaturesDialog();
@@ -1848,6 +1845,8 @@ internal sealed class MainForm : Form
     {
         if (title == AppLang.L("登录启动项", "Startup apps"))
             return new StartupManagerDialog();
+        if (title == AppLang.L("高级设置", "Advanced settings"))
+            return new OtherSettingsDialog();
         if (title == AppLang.L("服务优化", "Service optimize"))
         {
             var page = new ServiceOptimizeDialog();

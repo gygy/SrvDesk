@@ -26,7 +26,6 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolPortExposure { get; }
     public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
-    public ToolStripMenuItem ToolPowerExtras { get; }
     public ToolStripMenuItem ToolWindowsFeatures { get; }
     public ToolStripMenuItem ToolSecurityCenter { get; }
     public ToolStripMenuItem ToolEdgeManage { get; }
@@ -87,7 +86,6 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolPortExposure = Item(AppLang.L("端口暴露...", "Port exposure..."), MenuIcons.SecurityCenter);
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
-        ToolPowerExtras = Item(AppLang.L("高级设置...", "Advanced settings..."), MenuIcons.Advanced);
         ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
         ToolSecurityCenter = Item(AppLang.L("安全中心管理...", "Security Center..."), MenuIcons.SecurityCenter);
         ToolEdgeManage = Item(AppLang.L("MSEdge 管理...", "MSEdge management..."), MenuIcons.EdgeManage);
@@ -105,7 +103,7 @@ internal sealed class AppMenuStrip : MenuStrip
             new ToolStripSeparator(),
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolScheduledTaskOptimize, ToolComputerMgmt,
             new ToolStripSeparator(),
-            ToolCommonSoftware, ToolCleanup, ToolSystemRepair, ToolShutdownTimer, ToolDesktopMaintenance, ToolPowerExtras, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
+            ToolCommonSoftware, ToolCleanup, ToolSystemRepair, ToolShutdownTimer, ToolDesktopMaintenance, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
             new ToolStripSeparator(),
             ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);
