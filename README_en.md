@@ -8,7 +8,7 @@ SrvDesk is a system optimization tool for **Windows 10, Windows 11, and Windows 
 
 Through system inspection, optimization advice, service management, component management, and performance tuning, it helps make Windows Server more suitable for personal desktop use, while also providing safe, stable, and recoverable optimization for Windows 10/11.
 
-**Version:** 1.0.66 · [Download Releases](https://github.com/gygy/SrvDesk/releases)
+**Version:** 1.0.75 · [Download Releases](https://github.com/gygy/SrvDesk/releases)
 
 ---
 

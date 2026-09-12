@@ -8,7 +8,7 @@ SrvDesk 是一款面向 **Windows 10、Windows 11 及 Windows Server 2019/2022/2
 
 通过系统检测、优化建议、服务管理、组件管理、性能调优等能力，让 Windows Server 更适合个人桌面使用，同时也为 Windows 10/11 提供安全、稳定、可恢复的系统优化能力。
 
-当前版本：**1.0.66** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
+当前版本：**1.0.75** · [Releases 下载](https://github.com/gygy/SrvDesk/releases)
 
 ---
 

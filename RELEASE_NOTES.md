@@ -1,15 +1,17 @@
-﻿# SrvDesk v1.0.66
+﻿# SrvDesk v1.0.75
 
 ## 中文
 
-- 重写公开 README（中文默认 / 英文），补充产品定位、核心能力与免责声明摘要
-- 左侧标签新增 **账户与登录**（添加本地用户 · 计算机名/工作组 · Autologon）与 **右键菜单**
-- 工具菜单去掉上述三项入口，改为侧栏嵌入页
+- 账户策略：修正密码复杂性读写（以 secpol 为准）；secedit 导出改键回写，避免退出码 1 误判
+- 应用到系统：修复长时间卡在「正在写入」（进程超时、应用后快速刷新）
+- 右键菜单等即时页：点「应用到系统」会提示已立即生效，不再静默无响应
+- 关闭强制密码历史；关复杂性时一并放开最小密码长度
 - 单文件 `SrvDesk.exe`，轻度混淆；请以管理员身份运行
 
 ## English
 
-- Refresh public README (Chinese default / English) with product positioning, core features, and short disclaimer
-- Side nav: **Account & sign-in** (local user · computer name/workgroup · Autologon) and **Context menu**
-- Removed those entries from the Tools menu; they are embedded pages now
+- Account policy: fix password-complexity read/write (trust secpol); export-edit-configure for secedit (exit code 1 no longer treated as hard fail)
+- Apply to system: fix long hang on “Writing…” (process timeout + fast refresh after apply)
+- Instant pages (e.g. context menu): Apply shows a clear tip instead of doing nothing
+- Disable password history; relaxing complexity also sets minimum length to 0
 - Single-file `SrvDesk.exe`, lightly obfuscated; run as Administrator
