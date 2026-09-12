@@ -18,8 +18,7 @@ internal sealed class AutologonDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        // 头部 + 说明 + 三字段 + 勾选/提示 + 确定 + 底栏，一次看全
-        ClientSize = new Size(500, 520);
+        ClientSize = new Size(500, 420);
         CancelButton = null;
 
         var body = new Panel
@@ -61,17 +60,7 @@ internal sealed class AutologonDialog : Form
             BackColor = AppTheme.Surface,
         };
 
-        var warn = new Label
-        {
-            Text = "实现方式与微软 Sysinternals Autologon 相同：密码存入 LSA 机密（非注册表明文）。\r\n仅建议在物理安全可控的个人 Server 桌面使用。",
-            AutoSize = false,
-            Width = 450,
-            Height = 48,
-            Margin = new Padding(0, 0, 0, 10),
-            ForeColor = AppTheme.ScopeServer,
-        };
-
-        _keepPassword.Text = "保留现有 LSA 密码（不修改密码时勾选）";
+        _keepPassword.Text = "保留现有密码（不改密码时勾选）";
         _keepPassword.AutoSize = true;
         _keepPassword.Margin = new Padding(0, 10, 0, 4);
         _keepPassword.ForeColor = AppTheme.TextMute;
@@ -79,15 +68,14 @@ internal sealed class AutologonDialog : Form
         _keepPassword.Enabled = editing;
 
         _hint.Text = editing
-            ? "留空密码并勾选「保留现有 LSA 密码」可只改用户名/域。"
-            : "启用自动登录必须填写密码。";
+            ? "不改密码可留空，并勾选下方「保留现有密码」。"
+            : "首次启用请填写密码。";
         _hint.AutoSize = false;
         _hint.Width = 450;
-        _hint.Height = 36;
+        _hint.Height = 28;
         _hint.Margin = new Padding(0, 0, 0, 0);
         _hint.ForeColor = AppTheme.TextMute;
 
-        stack.Controls.Add(warn);
         stack.Controls.Add(MakeField("域（本地账户可留空）", _domain, initial.Domain));
         stack.Controls.Add(MakeField("用户名", _user, initial.Username));
         stack.Controls.Add(MakeField("密码", _password, "", password: true));
@@ -100,9 +88,9 @@ internal sealed class AutologonDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "Windows 自动登录",
-            "Autologon · LSA 机密存储",
+            "Autologon",
             body,
-            "凭据由管理员权限写入，请勿在不可信环境启用。");
+            "");
 
         AcceptButton = ok;
     }
@@ -117,7 +105,7 @@ internal sealed class AutologonDialog : Form
 
         if (!_keepPassword.Checked && string.IsNullOrEmpty(_password.Text))
         {
-            MessageBox.Show("请填写密码，或勾选保留现有 LSA 密码。", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("请填写密码，或勾选保留现有密码。", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 

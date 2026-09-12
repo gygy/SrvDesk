@@ -3275,6 +3275,7 @@ internal sealed class MainForm : Form
         DisableServerBloatFeatures = _bloatFeatures.Checked,
         DisablePasswordComplexity = _pwd.Checked,
         PasswordNeverExpire = _pwdExpire.Checked,
+        DisablePasswordHistory = _pwdHistory.Checked,
         ShutdownWithoutLogon = _shutdownLogon.Checked,
         DisableShutdownReason = _shutdownReason.Checked,
         DisableCad = _noCad.Checked,

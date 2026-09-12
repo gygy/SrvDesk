@@ -212,8 +212,8 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
                 _keepPassword.Checked = status.HasStoredPassword;
 
             _autoHint.Text = editing
-                ? AppLang.L("留空密码并勾选「保留现有 LSA 密码」可只改用户名/域。", "Leave password blank and keep LSA password to change only user/domain.")
-                : AppLang.L("启用自动登录必须填写密码。", "Password required to enable Autologon.");
+                ? AppLang.L("不改密码可留空，并勾选下方「保留现有密码」。", "Leave password blank and keep existing password to change only user/domain.")
+                : AppLang.L("首次启用请填写密码。", "Enter a password to enable Autologon.");
 
             _info = ComputerIdentityHelper.Read();
             RebuildComputerPage();
@@ -245,18 +245,6 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
             BackColor = AppTheme.Surface,
         };
 
-        var warn = new Label
-        {
-            Text = AppLang.L(
-                "实现方式与微软 Sysinternals Autologon 相同：密码存入 LSA 机密（非注册表明文）。\r\n仅建议在物理安全可控的个人 Server 桌面使用。",
-                "Same as Sysinternals Autologon: password in LSA secrets (not plain registry).\r\nOnly for physically secured personal Server desktops."),
-            AutoSize = false,
-            Width = 640,
-            Height = 48,
-            Margin = new Padding(0, 0, 0, 10),
-            ForeColor = AppTheme.ScopeServer,
-        };
-
         _autoStatus.AutoSize = false;
         _autoStatus.Width = 640;
         _autoStatus.Height = 22;
@@ -264,18 +252,17 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         _autoStatus.ForeColor = AppTheme.TextHeader;
         _autoStatus.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
 
-        _keepPassword.Text = AppLang.L("保留现有 LSA 密码（不修改密码时勾选）", "Keep existing LSA password");
+        _keepPassword.Text = AppLang.L("保留现有密码（不改密码时勾选）", "Keep existing password");
         _keepPassword.AutoSize = true;
         _keepPassword.Margin = new Padding(0, 10, 0, 4);
         _keepPassword.ForeColor = AppTheme.TextMute;
 
         _autoHint.AutoSize = false;
         _autoHint.Width = 640;
-        _autoHint.Height = 36;
+        _autoHint.Height = 28;
         _autoHint.Margin = new Padding(0, 0, 0, 0);
         _autoHint.ForeColor = AppTheme.TextMute;
 
-        stack.Controls.Add(warn);
         stack.Controls.Add(_autoStatus);
         stack.Controls.Add(MakeField(AppLang.L("域（本地账户可留空）", "Domain (blank for local)"), _autoDomain, password: false));
         stack.Controls.Add(MakeField(AppLang.L("用户名", "Username"), _autoUser, password: false));
@@ -454,7 +441,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
 
         if (!_keepPassword.Checked && string.IsNullOrEmpty(_autoPassword.Text))
         {
-            MessageBox.Show(this, AppLang.L("请填写密码，或勾选保留现有 LSA 密码。", "Enter a password, or keep the existing LSA password."),
+            MessageBox.Show(this, AppLang.L("请填写密码，或勾选保留现有密码。", "Enter a password, or keep the existing password."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -470,8 +457,8 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         _autoPassword.Clear();
         RefreshFromSystem();
         MessageBox.Show(this,
-            AppLang.Lf("已保存 Autologon 配置：{0}\r\n请在账户策略勾选「启用 Autologon」并「应用到系统」后重启生效。",
-                "Autologon saved for {0}\r\nEnable Autologon in Account policy and Apply, then reboot.",
+            AppLang.Lf("已保存 Autologon：{0}\r\n勾选账户策略中的「启用 Autologon」并应用到系统后，下次重启生效。",
+                "Autologon saved for {0}\r\nEnable Autologon in Account policy and Apply; takes effect after reboot.",
                 settings.Username),
             Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }

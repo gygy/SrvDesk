@@ -165,6 +165,7 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.TaskbarAllIcons)
         || ReferenceEquals(help, SettingCatalog.DisableSystemRestore)
         || ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
+        || ReferenceEquals(help, SettingCatalog.DisablePasswordHistory)
         || ReferenceEquals(help, SettingCatalog.DisableCad)
         || ReferenceEquals(help, SettingCatalog.DisableShutdownReason)
         || ReferenceEquals(help, SettingCatalog.EnableDiskPerfCounters)

@@ -134,6 +134,7 @@ internal static class OptPresets
         s.DisableUac = false;
         s.DisableCad = false;
         s.DisablePasswordComplexity = false;
+        s.DisablePasswordHistory = false;
         s.RdpDisableNla = false;
         s.DisableSmb1 = true;
         s.DisableRemoteRegistry = true;

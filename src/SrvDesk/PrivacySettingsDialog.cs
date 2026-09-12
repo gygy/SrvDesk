@@ -38,15 +38,6 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         fw.Controls.Add(Btn("添加防火墙规则", EasySettingsTweaks.AddSearchFirewallRules));
         fw.Controls.Add(Btn("移除防火墙规则", EasySettingsTweaks.RemoveSearchFirewallRules));
         searchHost.Controls.Add(fw);
-        var warn = new Label
-        {
-            Text = "搜索框输入可能上传至微软。勾选上方项并添加防火墙规则可减少上传。",
-            AutoSize = true,
-            MaximumSize = new Size(700, 0),
-            ForeColor = AppTheme.TextMute,
-            Margin = new Padding(4, 8, 4, 4),
-        };
-        searchHost.Controls.Add(warn);
 
         var (svcCard, svcBody) = ThemedSettingsChrome.CreateSectionShell("Windows Search");
         svcBody.Controls.Add(Btn("停止并禁止 Windows Search", () =>
@@ -62,13 +53,6 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
 
         var (leftCard, leftBody) = ThemedSettingsChrome.CreateSectionShell("隐私（当前用户）");
         leftBody.Controls.Add(_history);
-        leftBody.Controls.Add(new Label
-        {
-            Text = "以下默认开启，隐私场景建议关闭：",
-            AutoSize = true,
-            ForeColor = AppTheme.TextMute,
-            Margin = new Padding(4, 4, 4, 4),
-        });
         leftBody.Controls.Add(_ad);
         leftBody.Controls.Add(_lang);
         leftBody.Controls.Add(_track);

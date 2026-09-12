@@ -25,7 +25,7 @@ internal sealed class AutologonStatus
     {
         if (!Enabled) return "未启用";
         var who = string.IsNullOrEmpty(Domain) ? Username : $"{Domain}\\{Username}";
-        var pwd = HasStoredPassword ? " · 密码已存 LSA" : " · 无密码";
+        var pwd = HasStoredPassword ? " · 密码已保存" : " · 无密码";
         return $"已启用 · {who}{pwd}";
     }
 }

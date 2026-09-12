@@ -42,13 +42,13 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _hint.MaximumSize = new Size(640, 0);
         _hint.ForeColor = AppTheme.TextMute;
         _hint.Margin = new Padding(4, 8, 4, 4);
-        _hint.Text = ContextMenuTweaks.TerminalAvailable()
-            ? AppLang.L("开关立即写入注册表。文件夹空白处与文件夹本身均可出现「在此处打开」项。",
-                "Toggles write to the registry immediately. Open-here items appear on folder background and folder items.")
-            : AppLang.L("未检测到 wt.exe：开启 Terminal 相关项前请先安装 Windows 终端。",
-                "wt.exe not found: install Windows Terminal before enabling Terminal items.");
+        if (!ContextMenuTweaks.TerminalAvailable())
+        {
+            _hint.Text = AppLang.L("未检测到 Windows 终端（wt.exe），相关项开启前请先安装。",
+                "Windows Terminal (wt.exe) not found — install it before enabling those items.");
+            body.Controls.Add(_hint);
+        }
 
-        body.Controls.Add(_hint);
         body.Controls.Add(other);
         body.Controls.Add(edit);
         body.Controls.Add(terminal);

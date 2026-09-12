@@ -77,9 +77,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             _widgets, _chat, _copilot,
             BuildAutohideRow(), _taskView, _seconds, BuildGlomRow(),
         ]);
-        var tools = BuildToolsSection();
 
-        body.Controls.Add(tools);
         body.Controls.Add(taskbar);
         body.Controls.Add(shortcuts);
         body.Controls.Add(quickAccess);
@@ -93,9 +91,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
                 "资源管理器即时生效 · 任务栏改完后点「应用到系统」",
                 "Explorer applies instantly · use Apply for taskbar changes"),
             body,
-            AppLang.L(
-                "任务栏搜索/对齐等需点「应用到系统」（会重启资源管理器）。",
-                "Taskbar search/alignment need Apply (restarts Explorer)."),
+            "",
             LoadValues,
             ApplyTaskbarToSystem);
 
@@ -199,20 +195,6 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             DesktopQuickActions.RestartExplorer();
         };
         return row;
-    }
-
-    private Panel BuildToolsSection()
-    {
-        var (card, host) = ThemedSettingsChrome.CreateSectionShell("快捷操作");
-        var tip = new Label
-        {
-            Text = "任务栏相关请先改开关，再点底部「应用到系统」。其它：菜单「工具 → 桌面维护」。",
-            AutoSize = true,
-            ForeColor = AppTheme.TextMute,
-            Margin = new Padding(0, 4, 0, 0),
-        };
-        host.Controls.Add(tip);
-        return card;
     }
 
     /// <summary>写入任务栏相关设置并重启资源管理器，使搜索隐藏/显示等立即可见。</summary>

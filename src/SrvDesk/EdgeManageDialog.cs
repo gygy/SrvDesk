@@ -77,7 +77,7 @@ internal sealed class EdgeManageDialog : Form
 
         var hint = new Label
         {
-            Text = "提示：卸载 WebView2 可能导致部分应用打不开。安装优先 winget，失败则下载官方包。",
+            Text = "卸载 WebView2 可能导致部分应用打不开。",
             AutoSize = false,
             ForeColor = AppTheme.TextMute,
         };

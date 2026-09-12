@@ -54,9 +54,9 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "登录启动项",
-            "登录时自动运行 · 注册表 Run 与启动文件夹",
+            "登录时自动运行",
             body,
-            "禁用使用 StartupApproved，不删除条目。删除不可恢复。",
+            "",
             RefreshList);
 
         _filter.SelectedIndex = 0;
@@ -118,7 +118,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         _detail.AutoEllipsis = true;
         _detail.ForeColor = AppTheme.TextMute;
         _detail.TextAlign = ContentAlignment.MiddleLeft;
-        _detail.Text = "双击切换启用/禁用。添加写入当前用户 Run；系统级项需管理员。";
+        _detail.Text = "双击切换启用/禁用。";
 
         bar.Controls.Add(filterLabel);
         bar.Controls.Add(_filter);
@@ -239,7 +239,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     {
         var item = Selected();
         _detail.Text = item is null
-            ? "双击切换启用/禁用。添加写入当前用户 Run；系统级项需管理员。"
+            ? "双击切换启用/禁用。"
             : $"{item.Name}  ·  {item.Scope}  ·  {(item.Enabled ? "启用" : "禁用")}  ·  {item.Command}";
     }
 
@@ -321,7 +321,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         };
         var hint = new Label
         {
-            Text = "写入当前用户注册表 Run，登录后自动运行。",
+            Text = "登录后自动运行。",
             Location = new Point(80, 82),
             AutoSize = true,
             ForeColor = AppTheme.TextMute,

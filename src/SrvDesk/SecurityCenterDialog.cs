@@ -44,17 +44,6 @@ internal sealed class SecurityCenterDialog : Form
         _summary.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
         stack.Controls.Add(_summary);
 
-        var hint = new Label
-        {
-            Text = "提示：禁用后实时防护与安全中心通知会关闭；仅建议在可信内网或个人实验环境使用。",
-            AutoSize = false,
-            Width = 420,
-            Height = 40,
-            ForeColor = AppTheme.TextMute,
-            Margin = new Padding(0, 4, 0, 12),
-        };
-        stack.Controls.Add(hint);
-
         var buttons = new FlowLayoutPanel
         {
             AutoSize = true,
