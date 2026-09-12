@@ -146,7 +146,8 @@ internal static class RecommendRules
 
     /// <summary>产品明确要求「强烈推荐」的开关（覆盖目录基准与 OS 微调）。</summary>
     private static bool IsProductMust(SettingHelpInfo help) =>
-        ReferenceEquals(help, SettingCatalog.DisableIeEsc)
+        ReferenceEquals(help, SettingCatalog.CpuProgramPriority)
+        || ReferenceEquals(help, SettingCatalog.DisableIeEsc)
         || ReferenceEquals(help, SettingCatalog.ShowThisPcIcon)
         || ReferenceEquals(help, SettingCatalog.EnableRdp)
         || ReferenceEquals(help, SettingCatalog.RdpGpuAccel)

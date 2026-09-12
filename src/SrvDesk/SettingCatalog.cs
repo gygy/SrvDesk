@@ -24,9 +24,10 @@ internal static class SettingCatalog
         L("让前台程序获得更多 CPU 时间片，桌面操作更跟手。", "Give foreground apps more CPU time so the desktop feels snappier."),
         L("调整 Win32PrioritySeparation，使 CPU 调度偏向交互式程序而非后台服务。", "Tune Win32PrioritySeparation so CPU scheduling favors interactive apps over background services."),
         L("Server 当桌面用时减少卡顿；适合开发、办公、远程桌面日常操作。", "Less stutter when Server is used as a desktop; good for coding, office, and daily RDP."),
-        L("推荐开启。若机器纯跑后台服务且不需本地交互，可保持关闭。", "Recommended on. Keep off if the machine only runs background services with no local UI."),
+        L("强烈推荐开启（程序优先）。若机器纯跑后台服务且不需本地交互，可保持关闭。", "Strongly recommended on (programs first). Keep off if the machine only runs background services with no local UI."),
         L("立即生效，不必重启。", "Takes effect immediately; no reboot needed."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo Dep = H(
         L("为旧版程序启用数据执行保护，降低特定内存攻击风险。", "Enable DEP for legacy apps to reduce certain memory-attack risks."),
