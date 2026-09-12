@@ -3538,7 +3538,10 @@ internal sealed class MainForm : Form
             }
 
             _uiDirty = false;
-            LoadState(fullScan: true, forceUi: true);
+            _status.Text = AppLang.L("正在刷新状态…", "Refreshing status…");
+            Application.DoEvents();
+            // 应用后用快速扫描即可；完整 DISM 扫描会长时间卡在「正在写入」
+            LoadState(fullScan: false, forceUi: true);
             if (!_autologon.Checked) _autologonSettings = null;
             RefreshAutologonDisplay();
             var changed = ApplyLog.LastBatchRealChangeCount;

@@ -1225,9 +1225,9 @@ internal static class Optimizer
             Run("net.exe", "accounts /minpwlen:0");
 
         // 复杂性 + 策略项：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
-        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.inf");
-        var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.sdb");
-        var jfm = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.jfm");
+        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-" + Guid.NewGuid().ToString("N") + ".inf");
+        var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-" + Guid.NewGuid().ToString("N") + ".sdb");
+        var jfm = Path.ChangeExtension(db, ".jfm");
         TryDelete(cfg);
         TryDelete(db);
         TryDelete(jfm);
@@ -1284,26 +1284,17 @@ internal static class Optimizer
 
     private static void RunSeceditConfigure(string db, string cfg)
     {
-        using var p = Process.Start(new ProcessStartInfo
-        {
-            FileName = "secedit.exe",
-            Arguments = $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY /overwrite",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.Default,
-            StandardErrorEncoding = Encoding.Default,
-        }) ?? throw new InvalidOperationException("无法启动 secedit.exe");
-        var stdout = p.StandardOutput.ReadToEnd();
-        var stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit(60_000);
-        if (p.ExitCode == 0) return;
+        // 不用 /overwrite：部分环境会长时间卡住；每次用独立 .sdb
+        var (exit, stdout, stderr) = RunProcess(
+            "secedit.exe",
+            $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY",
+            timeoutMs: 25_000);
+        if (exit == 0) return;
 
         var detail = (stderr + " " + stdout).Trim();
         if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";
         throw new InvalidOperationException(
-            "secedit.exe 退出码 " + p.ExitCode +
+            "secedit.exe 退出码 " + exit +
             (detail.Length > 0 ? "：" + detail : ""));
     }
 
@@ -1680,39 +1671,42 @@ internal static class Optimizer
     private static void Run(string fileName, string arguments)
     {
         ApplyLog.Debug("Run " + fileName + " " + arguments);
-        using var p = Process.Start(new ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        }) ?? throw new InvalidOperationException("无法启动 " + fileName);
-        var stdout = p.StandardOutput.ReadToEnd();
-        var stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit(60_000);
-        if (p.ExitCode == 0) return;
+        var (exit, stdout, stderr) = RunProcess(fileName, arguments, timeoutMs: 60_000);
+        if (exit == 0) return;
 
         // sc：已启动/已停止/依赖占用停止/服务不存在 等常见无害码
         var isSc = fileName.EndsWith("sc.exe", StringComparison.OrdinalIgnoreCase)
             || string.Equals(fileName, "sc", StringComparison.OrdinalIgnoreCase);
-        if (isSc && p.ExitCode is 1056 or 1051 or 1060 or 1062 or 1072)
+        if (isSc && exit is 1056 or 1051 or 1060 or 1062 or 1072)
         {
-            ApplyLog.Debug($"sc 无害退出码 {p.ExitCode}：{arguments}");
+            ApplyLog.Debug($"sc 无害退出码 {exit}：{arguments}");
             return;
         }
 
         var detail = (stderr + " " + stdout).Trim();
         if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";
         throw new InvalidOperationException(
-            $"{Path.GetFileName(fileName)} 退出码 {p.ExitCode}" +
+            $"{Path.GetFileName(fileName)} 退出码 {exit}" +
             (detail.Length > 0 ? "：" + detail : ""));
     }
 
     private static string RunCapture(string fileName, string arguments)
     {
-        using var p = Process.Start(new ProcessStartInfo
+        var (_, stdout, _) = RunProcess(fileName, arguments, timeoutMs: 60_000, stdoutEncoding: Encoding.Default);
+        return stdout;
+    }
+
+    /// <summary>
+    /// 并行排空 stdout/stderr，超时杀进程，避免重定向管道死锁导致界面一直「正在写入」。
+    /// </summary>
+    private static (int ExitCode, string StdOut, string StdErr) RunProcess(
+        string fileName,
+        string arguments,
+        int timeoutMs,
+        Encoding? stdoutEncoding = null)
+    {
+        using var p = new Process();
+        p.StartInfo = new ProcessStartInfo
         {
             FileName = fileName,
             Arguments = arguments,
@@ -1720,11 +1714,33 @@ internal static class Optimizer
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.Default,
-        }) ?? throw new InvalidOperationException("无法启动 " + fileName);
-        var output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit(60_000);
-        return output;
+            StandardOutputEncoding = stdoutEncoding ?? Encoding.Default,
+            StandardErrorEncoding = Encoding.Default,
+        };
+        if (!p.Start())
+            throw new InvalidOperationException("无法启动 " + fileName);
+
+        var stdoutTask = p.StandardOutput.ReadToEndAsync();
+        var stderrTask = p.StandardError.ReadToEndAsync();
+        if (!p.WaitForExit(timeoutMs))
+        {
+            try { p.Kill(); } catch { /* ignore */ }
+            try { p.WaitForExit(5_000); } catch { /* ignore */ }
+            throw new TimeoutException($"{Path.GetFileName(fileName)} 超过 {timeoutMs / 1000} 秒未结束，已终止。");
+        }
+
+        var stdout = stdoutTask.Status == TaskStatus.RanToCompletion ? stdoutTask.Result : "";
+        var stderr = stderrTask.Status == TaskStatus.RanToCompletion ? stderrTask.Result : "";
+        try
+        {
+            // 给异步读一点时间收尾
+            Task.WaitAll(new Task[] { stdoutTask, stderrTask }, 3_000);
+            stdout = stdoutTask.Result;
+            stderr = stderrTask.Result;
+        }
+        catch { /* 已有部分输出即可 */ }
+
+        return (p.ExitCode, stdout ?? "", stderr ?? "");
     }
 
     private static void TryDelete(string path)
