@@ -259,6 +259,14 @@ The goal is:
 
 ---
 
+## ✅ Cleanliness pledge
+
+**Guaranteed clean: no ads; no malware; no hidden side agendas — including every future update.**
+
+SrvDesk only inspects and tunes the local system. It does not bundle promotions, embed malicious code, or use the app as cover for unrelated activities.
+
+---
+
 ## 📌 Roadmap
 
 Continuing improvements:
