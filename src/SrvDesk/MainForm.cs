@@ -216,6 +216,7 @@ internal sealed class MainForm : Form
 
     private readonly SettingRow _rdp = Choice(AppLang.L("启用远程桌面（RDP）", "Enable Remote Desktop (RDP)"), AppLang.L("禁用", "Disabled"), SettingCatalog.EnableRdp,
         [AppLang.L("禁用", "Disabled"), AppLang.L("启用", "Enabled")], optimizedIndex: 1);
+    private readonly SettingRow _rdpMultiUser = Row(AppLang.L("多用户同时登录（RDP 会话主机）", "Multi-user RDP sessions"), AppLang.L("单会话限制", "Single session"), SettingCatalog.RdpMultiUserLogin);
     private readonly SettingRow _rdpGpu = Choice(AppLang.L("RDP 硬件图形加速", "RDP GPU acceleration"), AppLang.L("关闭", "Off"), SettingCatalog.RdpGpuAccel,
         [AppLang.L("关闭", "Off"), AppLang.L("开启", "On")], optimizedIndex: 1);
     private readonly SettingRow _rdpFps = Choice(AppLang.L("RDP 提高远程帧率", "RDP higher frame rate"), AppLang.L("默认", "Default"), SettingCatalog.RdpHighRefresh,
@@ -371,7 +372,7 @@ internal sealed class MainForm : Form
         _msPinyinEn, _msPinyinCloud, _msPinyinBar, _msrt,
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
         _insider, _storeUpd,
-        _rdp, _rdpGpu, _rdpFps, _rdpNla, _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
+        _rdp, _rdpMultiUser, _rdpGpu, _rdpFps, _rdpNla, _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
         _netDiscovery, _smRemoting, _ra,
         _svrMgr, _wacPrompt, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
         _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
@@ -472,7 +473,7 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add((AppLang.L("远程与网络", "Remote & network"), [
             (AppLang.L("远程桌面", "Remote Desktop"), [
-                _rdp, _rdpGpu, _rdpFps, _rdpNla,
+                _rdp, _rdpMultiUser, _rdpGpu, _rdpFps, _rdpNla,
             ]),
             (AppLang.L("RDP 图形增强（RemoteFX / AVC）", "RDP graphics (RemoteFX / AVC)"), [
                 _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
@@ -2994,6 +2995,7 @@ internal sealed class MainForm : Form
         _folderGroup.ChoiceIndex = s.FolderGroupByMode is >= 0 and <= 4 ? s.FolderGroupByMode : 0;
         _folderSort.ChoiceIndex = s.FolderSortByMode is >= 0 and <= 5 ? s.FolderSortByMode : 0;
         _rdp.Checked = s.EnableRdp;
+        _rdpMultiUser.Checked = s.RdpMultiUserLogin;
         _rdpGpu.Checked = s.RdpGpuAccel;
         _rdpFps.Checked = s.RdpHighRefresh;
         _rdpNla.Checked = s.RdpDisableNla;
@@ -3233,6 +3235,7 @@ internal sealed class MainForm : Form
         DisableSearchHistory = _searchHistory.Checked,
         DisableStickyKeys = _stickyKeys.Checked,
         EnableRdp = _rdp.Checked,
+        RdpMultiUserLogin = _rdpMultiUser.Checked,
         RdpGpuAccel = _rdpGpu.Checked,
         RdpHighRefresh = _rdpFps.Checked,
         RdpDisableNla = _rdpNla.Checked,
@@ -3319,6 +3322,7 @@ internal sealed class MainForm : Form
         Sync(_ucpd, s.DisableUcpdDriver);
         Sync(_ra, s.DisableRemoteAssistance);
         Sync(_rdp, s.EnableRdp);
+        Sync(_rdpMultiUser, s.RdpMultiUserLogin);
         Sync(_fileExt, s.ShowFileExtensions);
         Sync(_hiddenFiles, s.ShowHiddenFiles);
         Sync(_noArrow, s.NoShortcutArrow);

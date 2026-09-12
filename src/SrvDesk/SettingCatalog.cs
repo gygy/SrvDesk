@@ -417,6 +417,18 @@ internal static class SettingCatalog
         L("立即生效；防火墙规则同步应用。", "Takes effect immediately; firewall rules applied together."),
         recommend: RecommendLevel.Must);
 
+    public static readonly SettingHelpInfo RdpMultiUserLogin = H(
+        L("允许多用户同时登录远程桌面（同账号多会话）。", "Allow multiple concurrent RDP logons (multi-session per user)."),
+        L("开启 RDP；DISM 启用 RDS-RD-Server；fSingleSessionPerUser=0；MaxSessions=999999；fAllowConsoleLogout=0。",
+            "Enable RDP; DISM enable RDS-RD-Server; fSingleSessionPerUser=0; MaxSessions=999999; fAllowConsoleLogout=0."),
+        L("多人同时远程同一 Server；不强制踢掉已登录的控制台管理员。",
+            "Multiple people can remote the same Server; do not force-logoff the console admin."),
+        L("Server 多会话实验室可用；正式环境请确认 RDS CAL/授权。关闭时仅恢复单会话限制，不卸载 RDS、不关 RDP。",
+            "OK for Server multi-session labs; confirm RDS CALs in production. Off only restores single-session limits; does not remove RDS or disable RDP."),
+        L("注册表立即写入；RDS 角色可能需重启。", "Registry applies immediately; RDS role may need a reboot."),
+        SettingScope.ServerExclusive,
+        recommend: RecommendLevel.Suggested);
+
     public static readonly SettingHelpInfo RdpGpuAccel = H(
         L("RDP 会话启用 GPU 硬件加速与更好的图形管线。", "Enable GPU acceleration and a better graphics pipeline for RDP sessions."),
         L("Terminal Services UseAdvancedGraphics 策略。", "Terminal Services UseAdvancedGraphics policy."),

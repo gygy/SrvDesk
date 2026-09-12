@@ -157,6 +157,7 @@ internal static class OptPresets
     {
         var s = ServerDesktop();
         s.EnableRdp = true;
+        s.RdpMultiUserLogin = true;
         s.RdpGpuAccel = true;
         s.RdpHighRefresh = true;
         s.RdpDisableNla = false;

@@ -77,6 +77,8 @@ internal static class Optimizer
         public bool RdpRemoteFxGraphics;
         public bool RdpLowLatency;
         public bool RdpDisableWddm;
+        /// <summary>多用户同时登录（同账号多会话 + MaxSessions + RDS-RD-Server）。</summary>
+        public bool RdpMultiUserLogin;
         public bool EnableNetworkDiscovery;
         public bool DisableSmRemoting;
 
@@ -429,6 +431,7 @@ internal static class Optimizer
         AtlasGapTweaks.ReadInto(state);
         WinUtilGapTweaks.ReadInto(state);
         RemoteFxTweaks.ReadInto(state);
+        RdpMultiUserTweaks.ReadInto(state, fullScan);
         ReadPowerPlanInto(state);
         FolderViewTweaks.ReadInto(state);
         var auto = AutologonHelper.Read();
@@ -551,6 +554,7 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", s.NoLockScreen ? 1 : 0));
 
         Do(Ch(x => x.EnableRdp), "远程桌面", () => SetRdp(s.EnableRdp));
+        Do(Ch(x => x.RdpMultiUserLogin), "多用户同时登录", () => RdpMultiUserTweaks.Apply(s.RdpMultiUserLogin));
         Do(Ch(x => x.RdpGpuAccel), "RDP图形加速", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", s.RdpGpuAccel ? 1 : 0));
         Do(Ch(x => x.RdpHighRefresh), "RDP帧率", () =>

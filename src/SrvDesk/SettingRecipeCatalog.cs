@@ -260,6 +260,29 @@ internal static class SettingRecipeCatalog
                 ActionScript.Dword("fDenyTSConnections", 1))) +
             "\r\n--- 防火墙 ---\r\nnetsh advfirewall firewall set rule group=\"remote desktop\" new enable=No\r\n"));
 
+        Add(SettingCatalog.RdpMultiUserLogin, ActionScript.Mixed(
+            ActionScript.WrapReg(ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Terminal Server"),
+                ActionScript.Dword("fDenyTSConnections", 0),
+                ActionScript.Dword("fSingleSessionPerUser", 0),
+                ActionScript.Dword("MaxSessions", 999999)) +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.Dword("fAllowConsoleLogout", 0))) +
+            "\r\n--- DISM / 防火墙 ---\r\n" +
+            "dism.exe /online /Enable-Feature /FeatureName:RDS-RD-Server /All /NoRestart\r\n" +
+            "netsh advfirewall firewall set rule group=\"remote desktop\" new enable=Yes\r\n",
+            ActionScript.WrapReg(ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Terminal Server"),
+                ActionScript.Dword("fSingleSessionPerUser", 1)) +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SYSTEM\CurrentControlSet\Control\Terminal Server"),
+                ActionScript.DeleteValue("MaxSessions")) +
+            ActionScript.Block(
+                ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.DeleteValue("fAllowConsoleLogout"))),
+            "关闭仅恢复单会话限制；不卸载 RDS、不关闭 RDP。正式环境请确认 RDS CAL。"));
+
         Add(SettingCatalog.RdpGpuAccel, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", 1, 0));
 
