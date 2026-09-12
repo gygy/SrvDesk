@@ -117,13 +117,13 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         };
         UiBuffer.ConfigureNoScrollRow(tabs);
 
-        StyleTab(_tabAutologon, AppLang.L("Autologon 配置", "Autologon"), 24);
         StyleTab(_tabUser, AppLang.L("添加本地用户", "Add local user"), 24);
-        StyleTab(_tabComputer, AppLang.L("计算机名 / 工作组", "Computer name / workgroup"), 0);
+        StyleTab(_tabComputer, AppLang.L("计算机名 / 工作组", "Computer name / workgroup"), 24);
+        StyleTab(_tabAutologon, AppLang.L("Autologon 配置", "Autologon"), 0);
 
-        tabs.Controls.Add(_tabAutologon);
         tabs.Controls.Add(_tabUser);
         tabs.Controls.Add(_tabComputer);
+        tabs.Controls.Add(_tabAutologon);
 
         BuildAutologonPage();
         BuildUserPage();
