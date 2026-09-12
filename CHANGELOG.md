@@ -4,6 +4,17 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.66] - 2026-09-12
+
+### Added
+
+- Side nav pages: Account & sign-in (local user / computer name / Autologon), Context menu
+- Public README rewrite (zh default + en) with disclaimer summary
+
+### Changed
+
+- Moved Autologon / account-computer / context-menu tools into left embedded tabs
+
 ## [1.0.41] - 2026-09-11
 
 ### Added

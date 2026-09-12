@@ -1,15 +1,15 @@
-﻿# SrvDesk v1.0.41
+﻿# SrvDesk v1.0.66
 
 ## 中文
 
-- 常用软件新增 **UniGetUI**（`Devolutions.UniGetUI`，失败回退 GitHub 安装包）
-- 配置脚本默认停靠：**关闭**；启动时强制不显示面板（修复右侧仍展开的问题）
-- 优化顾问「应用到系统」后列表大块空白：重建后复位滚动位置
+- 重写公开 README（中文默认 / 英文），补充产品定位、核心能力与免责声明摘要
+- 左侧标签新增 **账户与登录**（添加本地用户 · 计算机名/工作组 · Autologon）与 **右键菜单**
+- 工具菜单去掉上述三项入口，改为侧栏嵌入页
 - 单文件 `SrvDesk.exe`，轻度混淆；请以管理员身份运行
 
 ## English
 
-- Common software: add **UniGetUI** (`Devolutions.UniGetUI`, GitHub installer fallback)
-- Config script dock default **Closed**; startup forces the panel hidden
-- Optimization advisor: fix large blank gap after Apply to system (reset scroll)
+- Refresh public README (Chinese default / English) with product positioning, core features, and short disclaimer
+- Side nav: **Account & sign-in** (local user · computer name/workgroup · Autologon) and **Context menu**
+- Removed those entries from the Tools menu; they are embedded pages now
 - Single-file `SrvDesk.exe`, lightly obfuscated; run as Administrator
