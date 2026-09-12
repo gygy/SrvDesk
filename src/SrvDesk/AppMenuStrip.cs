@@ -95,15 +95,17 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
-            ToolOptimizeAdvisor, ToolPortExposure, ToolOptHistory,
+            ToolOptimizeAdvisor, ToolOptHistory,
+            ToolAutologon, ToolAccountIdentity,
+            ToolCommonSoftware, ToolContextMenu, ToolCleanup,
+            ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
+            ToolHosts,
             new ToolStripSeparator(),
-            ToolAutologon, ToolAccountIdentity, ToolSystemInfo,
+            ToolShutdownTimer, ToolSystemRepair, ToolDesktopMaintenance,
             new ToolStripSeparator(),
-            ToolHosts, ToolFlushDns,
+            ToolSystemInfo, ToolPortExposure, ToolFlushDns,
             new ToolStripSeparator(),
             ToolEventViewer, ToolGroupPolicy, ToolCmd, ToolPowerShell, ToolScheduledTaskOptimize, ToolComputerMgmt,
-            new ToolStripSeparator(),
-            ToolCommonSoftware, ToolCleanup, ToolSystemRepair, ToolShutdownTimer, ToolDesktopMaintenance, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage, ToolContextMenu,
             new ToolStripSeparator(),
             ToolQuick, ToolRefresh, ToolRestoreDefaults,
         ]);
