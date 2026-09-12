@@ -665,12 +665,7 @@ internal sealed class MainForm : Form
         _appMenu.FileSettings.Click += (_, _) => ShowAppSettings();
         _appMenu.FileExit.Click += (_, _) => Close();
         _appMenu.ToolAutologon.Click += (_, _) => ConfigureAutologon();
-        _appMenu.ToolLocalUser.Click += (_, _) =>
-        {
-            using var d = new LocalUserDialog();
-            d.ShowDialog(this);
-        };
-        _appMenu.ToolIdentity.Click += (_, _) => ConfigureComputerIdentity();
+        _appMenu.ToolAccountIdentity.Click += (_, _) => ShowAccountIdentity();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
         _appMenu.ToolHosts.Click += (_, _) => ShowHostsEditor();
         _appMenu.ToolEventViewer.Click += (_, _) => OpenEventViewer();
