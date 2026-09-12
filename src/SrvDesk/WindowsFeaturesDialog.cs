@@ -40,18 +40,23 @@ internal sealed class WindowsFeaturesDialog : Form
         MinimumSize = new Size(720, 440);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
+        var btnH = UiFit.ControlHeight();
         var tools = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 40,
+            Height = btnH + UiScale.S(16),
             BackColor = AppTheme.Surface,
         };
-        _search.Width = 220;
-        _search.Location = new Point(0, 6);
+        _search.Width = UiScale.S(220);
+        _search.Font = UiFit.UiFont;
+        _search.Height = btnH;
+        _search.Location = new Point(0, Math.Max(4, (tools.Height - btnH) / 2));
         _search.TextChanged += (_, _) => RenderList();
         _filter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _filter.Location = new Point(232, 6);
-        _filter.Width = 200;
+        _filter.Font = UiFit.UiFont;
+        UiFit.FitCombo(_filter);
+        _filter.Location = new Point(_search.Right + UiScale.S(12), Math.Max(4, (tools.Height - _filter.Height) / 2));
+        _filter.Width = UiScale.S(220);
         foreach (var f in Filters) _filter.Items.Add(f);
         _filter.SelectedIndex = 0;
         _filter.SelectedIndexChanged += (_, _) => RenderList();
@@ -61,24 +66,27 @@ internal sealed class WindowsFeaturesDialog : Form
         var quick = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 40,
+            Height = btnH + UiScale.S(16),
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 2, 0, 0),
+            Padding = new Padding(0, Math.Max(4, (btnH + UiScale.S(16) - btnH) / 2), 0, 0),
             AutoScroll = false,
+            BackColor = AppTheme.Surface,
         };
         UiBuffer.ConfigureNoScrollRow(quick);
         quick.Controls.Add(new Label
         {
             Text = AppLang.L("快捷：", "Quick:"),
             AutoSize = true,
-            Padding = new Padding(0, 8, 4, 0),
+            Margin = new Padding(0, Math.Max(4, (btnH - UiFit.LineHeight()) / 2), UiScale.S(4), 0),
             ForeColor = AppTheme.TextMute,
+            Font = UiFit.UiFont,
         });
         foreach (var (label, hints) in QuickFeatureHints)
         {
             var btn = ThemedSettingsChrome.CreateButton(label, false);
-            btn.Margin = new Padding(4, 0, 0, 0);
+            UiFit.FitButton(btn, btnH, minWidth: 64, padding: 24);
+            btn.Margin = new Padding(UiScale.S(4), 0, 0, 0);
             var capture = hints;
             btn.Click += (_, _) => SelectQuickFeatures(capture);
             quick.Controls.Add(btn);
@@ -103,52 +111,76 @@ internal sealed class WindowsFeaturesDialog : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 48,
+            Height = btnH + UiScale.S(20),
             FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 8, 0, 0),
+            Padding = new Padding(0, UiScale.S(8), 0, UiScale.S(4)),
             WrapContents = false,
             AutoScroll = false,
+            BackColor = AppTheme.Surface,
         };
         UiBuffer.ConfigureNoScrollRow(actions);
-        _btnDisable.Size = new Size(140, 34);
+        UiFit.FitButton(_btnDisable, btnH, minWidth: 120, padding: 28);
         _btnDisable.Click += (_, _) => RunBatch(disable: true);
-        _btnEnable.Size = new Size(140, 34);
-        _btnEnable.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(_btnEnable, btnH, minWidth: 120, padding: 28);
+        _btnEnable.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         _btnEnable.Click += (_, _) => RunBatch(disable: false);
         var selectAll = ThemedSettingsChrome.CreateButton("全选可见", false);
-        selectAll.Margin = new Padding(16, 0, 0, 0);
+        UiFit.FitButton(selectAll, btnH, minWidth: 72, padding: 24);
+        selectAll.Margin = new Padding(UiScale.S(16), 0, 0, 0);
         selectAll.Click += (_, _) => SetVisibleChecked(true);
         var clear = ThemedSettingsChrome.CreateButton("全不选", false);
-        clear.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(clear, btnH, minWidth: 72, padding: 24);
+        clear.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         clear.Click += (_, _) => SetVisibleChecked(false);
         actions.Controls.AddRange([_btnDisable, _btnEnable, selectAll, clear]);
 
         _status.Dock = DockStyle.Bottom;
-        _status.Height = 28;
+        _status.Height = Math.Max(UiScale.S(28), UiFit.LineHeight() + UiScale.S(10));
         _status.ForeColor = AppTheme.TextMute;
+        _status.TextAlign = ContentAlignment.MiddleLeft;
+        _status.Padding = new Padding(0, 2, 0, 2);
         _status.Text = "正在读取 DISM 列表…";
 
+        // Dock：Fill 列表；Bottom 先动作再状态（状态贴底）；Top 先快捷再搜索（搜索贴顶）
         body.Controls.Add(_list);
         body.Controls.Add(actions);
         body.Controls.Add(_status);
+        _status.BringToFront();
         body.Controls.Add(quick);
         body.Controls.Add(tools);
-        // Dock 顺序：后添加先占位。确保状态栏在动作栏下方。
-        _status.BringToFront();
-        actions.BringToFront();
         tools.BringToFront();
-        quick.BringToFront();
-        _list.SendToBack();
 
         ThemedSettingsChrome.MountModal(
             this,
             "可选功能 / Capabilities",
             "DISM 可视化 · 禁用可选功能 / 卸载 Capability",
             body,
-            "危险组件会二次确认。SMBv1 高危建议卸载。按服务器用途保留 IIS/Hyper-V/Containers。完成后建议重启。",
+            "",
             () => BeginLoad());
 
         Shown += (_, _) => BeginLoad();
+        DpiChanged += (_, _) =>
+        {
+            UiScale.OnHostDpiChanged(this);
+            var h = UiFit.ControlHeight();
+            tools.Height = h + UiScale.S(16);
+            quick.Height = h + UiScale.S(16);
+            actions.Height = h + UiScale.S(20);
+            _status.Height = Math.Max(UiScale.S(28), UiFit.LineHeight() + UiScale.S(10));
+            _search.Height = h;
+            _search.Top = Math.Max(4, (tools.Height - h) / 2);
+            UiFit.FitCombo(_filter);
+            _filter.Top = Math.Max(4, (tools.Height - _filter.Height) / 2);
+            foreach (Control c in quick.Controls)
+            {
+                if (c is Button b)
+                    UiFit.FitButton(b, h, minWidth: 64, padding: 24);
+            }
+            UiFit.FitButton(_btnDisable, h, minWidth: 120, padding: 28);
+            UiFit.FitButton(_btnEnable, h, minWidth: 120, padding: 28);
+            UiFit.FitButton(selectAll, h, minWidth: 72, padding: 24);
+            UiFit.FitButton(clear, h, minWidth: 72, padding: 24);
+        };
         UiBuffer.BindListViewColumnFit(_list, 0, 200);
     }
 

@@ -8,6 +8,7 @@
 - [ ] 无与按钮重复的摘要横幅
 - [ ] 无「提示：」科普注脚（列表「建议」列可保留短句）
 - [ ] 无底栏左侧「默认：…」等复述勾选项的说明（`footerHint` 可空）
+- [ ] 无「危险组件会二次确认 / SMBv1 建议卸载 / 完成后建议重启」类操作脚注
 - [ ] 无「实现方式 / 仅建议 / 对齐某某」页顶长说明（如 Autologon·LSA 科普）
 - [ ] 无常态注册表/路径说教；缺依赖时才给短提示
 - [ ] 删掉后仍能完成当前页任务；语气短、可执行
@@ -29,15 +30,16 @@
 ## 按钮与顶/底栏（防裁字）
 
 - [ ] `ThemedSettingsChrome.CreateButton`（禁止裸 `new Button` + 手写宽高）
-- [ ] 高度用 `UiFit.ControlHeight` / `FitButton`，**禁止写死 30/36**
+- [ ] 高度用 `UiFit.ControlHeight` / `FitButton`，**禁止写死 30/36/40 条带塞按钮**
+- [ ] **禁止** `CreateButton` 后再 `_btn.Size = new Size(140, 34)` 压窄压矮
 - [ ] Flat 已 `EnableCenteredFlatText`；完整显示文案（不用省略号糊弄）
 - [ ] **顶栏与底栏同一套规则**（不只修底栏）
-- [ ] 工具条容器够高，不裁按钮顶/字脚
+- [ ] 工具条容器够高，不裁按钮顶/字脚；动作条不盖住下方状态行
 - [ ] 换屏：Mount 壳或自有 `DpiChanged`/`Layout` 会重算
 - [ ] 主按钮不超过一条主路径抢视线
 - [ ] 同排按钮同高，间距统一
 - [ ] 状态条 ≠ 第二主按钮（浅底边框 / Pale，非 PrimaryDeep 实心块）
-
+- [ ] `footerHint: ""`（无说教脚注）
 ## 列表与工具条
 
 - [ ] ListView `SurfaceCard` + 双缓冲（`UiBuffer`）

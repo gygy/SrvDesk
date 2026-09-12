@@ -43,6 +43,9 @@ description: >-
   - 只用省略号掩盖宽度不够
   - `AutoScaleMode.None` 却不在换屏时 `FitButton` / `OnHostDpiChanged`
   - 只改底栏、不改顶栏工具条
+  - `CreateButton` 后再 `_btn.Size = new Size(140, 34)`；`Height=40` 条带塞满高按钮（可选功能页教训）
+  - 动作条盖住下方「共 N 项」状态行
+- **footerHint 说教**：如 SMBv1/危险确认/完成后建议重启 —— 传 `""`，确认留在代码里
 
 ## 优化顾问
 
