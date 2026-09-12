@@ -40,7 +40,7 @@ internal static class NavMenuStyle
         };
     }
 
-    public static void DrawItem(DrawItemEventArgs e, string text, Font font, bool hover, bool separator = false)
+    public static void DrawItem(DrawItemEventArgs e, string text, Font font, bool hover, bool separator = false, int matchCount = -1)
     {
         if (e.Index < 0) return;
         var selected = (e.State & DrawItemState.Selected) != 0;
@@ -71,13 +71,48 @@ internal static class NavMenuStyle
             }
 
             e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            var fore = selected ? AppTheme.TextOnPrimary : AppTheme.TextMain;
+            var badge = matchCount >= 0 ? matchCount.ToString() : "";
+            var badgeW = 0;
+            if (badge.Length > 0)
+            {
+                var badgeSize = TextRenderer.MeasureText(e.Graphics, badge, use, Size.Empty,
+                    TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                badgeW = Math.Max(UiScale.S(18), badgeSize.Width + UiScale.S(8));
+            }
+
+            var textRightPad = badgeW > 0 ? badgeW + UiScale.S(14) : 20;
             TextRenderer.DrawText(
                 e.Graphics,
                 text,
                 use,
-                new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - 20, e.Bounds.Height),
-                selected ? AppTheme.TextOnPrimary : AppTheme.TextMain,
+                new Rectangle(e.Bounds.X + 16, e.Bounds.Y, e.Bounds.Width - textRightPad, e.Bounds.Height),
+                matchCount == 0 && !selected ? AppTheme.TextMute : fore,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+
+            if (badgeW > 0)
+            {
+                var badgeRect = new Rectangle(
+                    e.Bounds.Right - badgeW - UiScale.S(10),
+                    e.Bounds.Y + (e.Bounds.Height - UiScale.S(20)) / 2,
+                    badgeW,
+                    UiScale.S(20));
+                var badgeBack = selected
+                    ? Color.FromArgb(40, 255, 255, 255)
+                    : matchCount > 0 ? AppTheme.PrimaryPale : AppTheme.SurfaceCard;
+                var badgeFore = selected
+                    ? AppTheme.TextOnPrimary
+                    : matchCount > 0 ? AppTheme.PrimaryDark : AppTheme.TextMute;
+                using (var br = new SolidBrush(badgeBack))
+                    e.Graphics.FillRectangle(br, badgeRect);
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    badge,
+                    use,
+                    badgeRect,
+                    badgeFore,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            }
         }
         finally
         {

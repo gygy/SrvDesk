@@ -271,6 +271,8 @@ internal sealed class MainForm : Form
     private readonly List<(string Title, (string Section, SettingRow[] Rows)[] Sections)> _groups = [];
     private readonly ListBox _menu = new();
     private int _menuHover = -1;
+    /// <summary>侧栏各标签全局搜索匹配数；-1 表示不显示角标。</summary>
+    private int[] _menuMatchCounts = [];
     private SettingRow? _selectedRow;
     private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
     private readonly TextBox _searchBox = new();
@@ -1179,7 +1181,7 @@ internal sealed class MainForm : Form
         _commandFlow.Padding = new Padding(0);
         UiBuffer.ConfigureNoScrollRow(_commandFlow);
 
-        _commandFlow.Controls.Add(BarLabel(AppLang.L("搜索", "Search")));
+        _commandFlow.Controls.Add(BarLabel(AppLang.L("全局搜索", "Global search")));
         _searchBox.Width = 200;
         _searchBox.Font = UiFit.UiFont;
         _searchBox.Height = UiFit.ControlHeight(_searchBox.Font, 28);
@@ -1187,6 +1189,8 @@ internal sealed class MainForm : Form
         _searchBox.BorderStyle = BorderStyle.FixedSingle;
         _searchBox.ForeColor = AppTheme.TextMain;
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
+        _toolTip.SetToolTip(_searchBox,
+            AppLang.L("跨所有设置标签搜索；匹配数量显示在左侧标签上。", "Search across all setting tabs; match counts appear on the left nav."));
         _commandFlow.Controls.Add(_searchBox);
 
         _hideIncompatible.Text = AppLang.L("隐藏不适用项", "Hide incompatible");
@@ -1618,12 +1622,19 @@ internal sealed class MainForm : Form
 
     private void ApplySearchFilter()
     {
-        if (_activeSections.Length == 0 || _activeWrap is null) return;
-        const int headerH = 34;
-        var rowH = SettingListLayout.RowHeight;
         var query = _searchBox.Text;
         var hideDe = _hideIncompatible.Checked;
         var category = CurrentCategoryFilter();
+        UpdateGlobalMenuMatchCounts(query, category, hideDe);
+
+        if (_activeSections.Length == 0 || _activeWrap is null)
+        {
+            RefreshMenuMatchBadges();
+            return;
+        }
+
+        const int headerH = 34;
+        var rowH = SettingListLayout.RowHeight;
         var totalVisible = 0;
         foreach (var sec in _activeSections)
         {
@@ -1647,10 +1658,76 @@ internal sealed class MainForm : Form
         }
 
         RelayoutActiveSections();
-        if (totalVisible == 0 && (!string.IsNullOrWhiteSpace(query) || category != RowCategoryFilter.All))
+        RefreshMenuMatchBadges();
+
+        var searching = !string.IsNullOrWhiteSpace(query);
+        if (searching)
+        {
+            var global = SumMenuMatchCounts();
+            if (global == 0)
+                _status.Text = AppLang.L("全局无匹配项，请调整关键词。", "No global matches — adjust keywords.");
+            else if (totalVisible == 0)
+                _status.Text = AppLang.Lf("本页无匹配；其它标签共 {0} 项，见左侧数字。", "No matches on this page; {0} elsewhere — see left counts.", global);
+            else
+                _status.Text = AppLang.Lf("本页 {0} 项 · 全局 {1} 项", "This page {0} · global {1}", totalVisible, global);
+        }
+        else if (totalVisible == 0 && category != RowCategoryFilter.All)
             _status.Text = AppLang.L("无匹配项，请调整搜索或分类筛选。", "No matches — adjust search or filter.");
-        else if (_status.Text.StartsWith(AppLang.L("无匹配项", "No matches"), StringComparison.Ordinal))
+        else if (_status.Text.StartsWith(AppLang.L("无匹配项", "No matches"), StringComparison.Ordinal)
+                 || _status.Text.StartsWith(AppLang.L("全局无匹配项", "No global matches"), StringComparison.Ordinal)
+                 || _status.Text.StartsWith(AppLang.L("本页无匹配", "No matches on this page"), StringComparison.Ordinal)
+                 || _status.Text.StartsWith(AppLang.L("本页 ", "This page "), StringComparison.Ordinal))
             _status.Text = _defaultStatusText;
+    }
+
+    private void UpdateGlobalMenuMatchCounts(string query, RowCategoryFilter category, bool hideDe)
+    {
+        if (_menuMatchCounts.Length != MenuItems.Length)
+            _menuMatchCounts = new int[MenuItems.Length];
+
+        var searching = !string.IsNullOrWhiteSpace(query);
+        for (var i = 0; i < MenuItems.Length; i++)
+        {
+            if (!searching)
+            {
+                _menuMatchCounts[i] = -1;
+                continue;
+            }
+
+            var title = MenuItems[i];
+            var groupIndex = FindBatchGroupIndex(title);
+            if (groupIndex < 0)
+            {
+                _menuMatchCounts[i] = -1; // 嵌入页不参与设置项搜索
+                continue;
+            }
+
+            var n = 0;
+            foreach (var (_, rows) in _groups[groupIndex].Sections)
+            {
+                foreach (var row in rows)
+                {
+                    if (row.MatchesFilter(query, _systemFacts, hideDe) && row.MatchesCategory(category))
+                        n++;
+                }
+            }
+
+            _menuMatchCounts[i] = n;
+        }
+    }
+
+    private int SumMenuMatchCounts()
+    {
+        var sum = 0;
+        foreach (var n in _menuMatchCounts)
+            if (n > 0) sum += n;
+        return sum;
+    }
+
+    private void RefreshMenuMatchBadges()
+    {
+        if (_menu.IsHandleCreated)
+            _menu.Invalidate();
     }
 
     private void RelayoutActiveWrap() => RelayoutActiveSections();
@@ -2321,12 +2398,14 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
+        var badge = e.Index < _menuMatchCounts.Length ? _menuMatchCounts[e.Index] : -1;
         NavMenuStyle.DrawItem(
             e,
             MenuItems[e.Index],
             Font,
             e.Index == _menuHover,
-            separator: MenuItems[e.Index] == AppLang.L("性能及安全", "Performance & security"));
+            separator: MenuItems[e.Index] == AppLang.L("性能及安全", "Performance & security"),
+            matchCount: badge);
     }
 
     /// <param name="forceUi">
