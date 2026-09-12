@@ -50,6 +50,9 @@ internal sealed class CommonSoftwareItem
     public string LatestApiUrl { get; set; } = "";
 
     public bool IsWingetBootstrap => Id.Equals("winget", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Scoop 需用官方 install.ps1 引导，不能走常规 winget/EXE。</summary>
+    public bool IsScoopBootstrap => Id.Equals("scoop", StringComparison.OrdinalIgnoreCase);
 }
 
 internal static class CommonSoftwareCatalog
@@ -67,6 +70,8 @@ internal static class CommonSoftwareCatalog
             offlineInstallArgs: "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
             githubRepo: "Devolutions/UniGetUI",
             installerLinkPattern: @"Devolutions\.UniGetUI\.win-x64.*\.exe|UniGetUI.*Installer.*\.exe|WingetUI\.Installer\.exe"),
+        Item("scoop", "Scoop（命令行包管理）", "必备", "",
+            ["Scoop"], "https://scoop.sh/", essential: true),
         Item("winrar", "WinRAR官方简体中文注册版", "必备", "RARLab.WinRAR",
             ["WinRAR"], "https://www.rarlab.com/download.htm", essential: true,
             offlineInstallArgs: "/S",
@@ -188,6 +193,23 @@ internal static class CommonSoftwareCatalog
             offlineInstallArgs: "/qn /norestart",
             detectExeNames: ["Quicker.exe"],
             installerLinkPattern: @"Quicker\.x64\..*\.msi|Quicker\.x86\..*\.msi|Quicker.*Setup.*\.msi"),
+        Item("wps-office", "WPS Office 国际版", "工具", "Kingsoft.WPSOffice",
+            ["WPS Office", "WPS Writer", "Kingsoft Office"],
+            "https://www.wps.com/", essential: false,
+            offlineInstallArgs: "/S",
+            detectExeNames: ["wps.exe", "wpsoffice.exe"],
+            installerLinkPattern: @"WPSOffice_.*\.exe|wps_.*\.exe|wpsoffice.*\.exe"),
+        Item("microsoft-todo", "Microsoft To Do", "工具", "9NBLGGH5R558",
+            ["Microsoft To Do", "To Do"],
+            "https://to.do/", essential: false,
+            storeProductId: "9NBLGGH5R558",
+            appxPackageName: "Microsoft.Todos",
+            preferAppxSideload: true),
+        Item("filezilla", "FileZilla（FTP 客户端）", "工具", "",
+            ["FileZilla"], "https://filezilla-project.org/download.php?show_all=1", essential: false,
+            offlineInstallArgs: "/S",
+            detectExeNames: ["filezilla.exe"],
+            installerLinkPattern: @"FileZilla_\d[\d.]*_win64-setup\.exe"),
         Item("utools", "uTools（插件启动器）", "工具", "Yuanli.uTools",
             ["uTools"], "https://u.tools/", essential: false,
             offlineInstallArgs: "/S",

@@ -505,11 +505,17 @@ internal static class CommonSoftwareHelper
                 continue;
             }
 
+            if (item.IsScoopBootstrap)
+            {
+                map[item.Id] = QueryScoopStatus();
+                continue;
+            }
+
             map[item.Id] = new CommonSoftwareStatus();
         }
 
         // 倒排：DisplayName → 命中项，避免「每个卸载项 × 全部软件」双重循环过慢
-        var pending = items.Where(i => !i.IsWingetBootstrap).ToList();
+        var pending = items.Where(i => !i.IsWingetBootstrap && !i.IsScoopBootstrap).ToList();
         foreach (var keyPath in UninstallKeyPaths())
         {
             using var baseKey = RegistryKey.OpenBaseKey(keyPath.Hive, RegistryView.Registry64);
@@ -588,6 +594,9 @@ internal static class CommonSoftwareHelper
         if (item.IsWingetBootstrap)
             return QueryWingetStatus();
 
+        if (item.IsScoopBootstrap)
+            return QueryScoopStatus();
+
         if (!string.IsNullOrWhiteSpace(item.AppxPackageName))
         {
             var appx = QueryAppxStatus(item.AppxPackageName);
@@ -648,6 +657,8 @@ internal static class CommonSoftwareHelper
         ApplyLog.Write("常用软件安装：" + item.Title);
         if (item.IsWingetBootstrap)
             return InstallWinget(onProgress);
+        if (item.IsScoopBootstrap)
+            return InstallScoop(onProgress);
 
         Report(onProgress, "准备安装 " + item.Title, 2);
         var preferOffline = PreferOfflineNow(item);
@@ -1324,6 +1335,8 @@ Add-AppxPackage -Path '{mainEsc}' -DependencyPath $deps -ErrorAction Stop
         ApplyLog.Write("常用软件卸载：" + item.Title);
         if (item.IsWingetBootstrap)
             return "winget（应用安装程序）为系统组件，不建议在此卸载。请在「设置 → 应用」中操作。";
+        if (item.IsScoopBootstrap)
+            return UninstallScoop(onProgress);
 
         Report(onProgress, "准备卸载 " + item.Title, 5);
 
@@ -1665,6 +1678,8 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
     {
         if (item.IsWingetBootstrap)
             return "winget 自身请使用「修复安装」。";
+        if (item.IsScoopBootstrap)
+            return InstallScoop(onProgress);
         if (!IsWingetAvailable() || string.IsNullOrWhiteSpace(item.WingetId))
         {
             try
@@ -1725,7 +1740,7 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
     private static List<SoftwareUpdateInfo> ParseUpgradeList(string output, IReadOnlyList<CommonSoftwareItem> items)
     {
         var catalog = items
-            .Where(i => !i.IsWingetBootstrap && !string.IsNullOrWhiteSpace(i.WingetId))
+            .Where(i => !i.IsWingetBootstrap && !i.IsScoopBootstrap && !string.IsNullOrWhiteSpace(i.WingetId))
             .ToList();
         var found = new Dictionary<string, SoftwareUpdateInfo>(StringComparer.OrdinalIgnoreCase);
 
@@ -1809,6 +1824,152 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             Installed = true,
             Version = version.Length > 0 ? "v" + version : "已就绪",
         };
+    }
+
+    private static CommonSoftwareStatus QueryScoopStatus()
+    {
+        var shim = TryFindScoopShim();
+        if (string.IsNullOrWhiteSpace(shim))
+            return new CommonSoftwareStatus();
+
+        var version = "";
+        try
+        {
+            var output = RunCapture("powershell.exe",
+                "-NoProfile -Command \"if (Get-Command scoop -ErrorAction SilentlyContinue) { scoop --version 2>$null }\"",
+                timeoutMs: 8_000).Trim();
+            if (output.Length > 0)
+            {
+                var line = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .FirstOrDefault(l => l.Length > 0) ?? "";
+                if (line.Length > 0 && line.Length < 80)
+                    version = line;
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+
+        return new CommonSoftwareStatus
+        {
+            Installed = true,
+            Version = version.Length > 0 ? version : "已就绪",
+            UninstallCommand = "scoop:" + shim,
+        };
+    }
+
+    private static string? TryFindScoopShim()
+    {
+        var roots = new List<string>();
+        var scoopEnv = Environment.GetEnvironmentVariable("SCOOP");
+        if (!string.IsNullOrWhiteSpace(scoopEnv))
+            roots.Add(scoopEnv!);
+        roots.Add(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "scoop"));
+
+        foreach (var root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var shim = Path.Combine(root, "shims", "scoop.cmd");
+            if (File.Exists(shim)) return shim;
+            var ps1 = Path.Combine(root, "apps", "scoop", "current", "bin", "scoop.ps1");
+            if (File.Exists(ps1)) return ps1;
+        }
+
+        try
+        {
+            var whereHit = RunCapture("where.exe", "scoop.cmd", timeoutMs: 5_000)
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim().Trim('"'))
+                .FirstOrDefault(File.Exists);
+            if (!string.IsNullOrWhiteSpace(whereHit))
+                return whereHit;
+        }
+        catch
+        {
+            // ignore
+        }
+
+        return null;
+    }
+
+    private static string InstallScoop(Action<SoftwareInstallProgress>? onProgress)
+    {
+        if (QueryScoopStatus().Installed)
+        {
+            Report(onProgress, "Scoop 已可用", 100);
+            return "Scoop 已安装。";
+        }
+
+        Report(onProgress, "正在下载 Scoop 安装脚本…", 15);
+        ApplyLog.Write("安装 Scoop（官方 get.scoop.sh）");
+        const string script = @"
+$ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+$installer = Join-Path $env:TEMP 'srvdesk-scoop-install.ps1'
+Invoke-WebRequest -Uri 'https://get.scoop.sh' -OutFile $installer -UseBasicParsing
+& $installer
+";
+        Report(onProgress, "正在执行 Scoop 安装脚本…", 40);
+        var code = RunPowerShell(script, timeoutMs: 300_000);
+        InvalidateStatusCache();
+        if (code == 0 && QueryScoopStatus().Installed)
+        {
+            Report(onProgress, "安装完成", 100);
+            return "";
+        }
+
+        var detail = TrimOutput(LastPowerShellOutput, 200);
+        OpenDownloadPage(CommonSoftwareCatalog.Find("scoop") ?? new CommonSoftwareItem
+        {
+            DownloadUrl = "https://scoop.sh/",
+        });
+        return "Scoop 安装未成功" +
+               (detail.Length > 0 ? "：" + detail : "（退出码 " + code + "）") +
+               "。已打开官网，可手动执行：irm get.scoop.sh | iex";
+    }
+
+    private static string UninstallScoop(Action<SoftwareInstallProgress>? onProgress)
+    {
+        Report(onProgress, "正在卸载 Scoop…", 20);
+        var root = Environment.GetEnvironmentVariable("SCOOP");
+        if (string.IsNullOrWhiteSpace(root))
+            root = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "scoop");
+
+        if (!Directory.Exists(root))
+        {
+            Report(onProgress, "未检测到 Scoop", 100);
+            InvalidateStatusCache();
+            return "未检测到 Scoop 安装目录。";
+        }
+
+        try
+        {
+            // 尽量先走官方卸载，失败则直接删目录
+            RunPowerShell(@"
+$ErrorActionPreference = 'SilentlyContinue'
+if (Get-Command scoop -ErrorAction SilentlyContinue) {
+  scoop uninstall scoop 2>$null
+}
+", timeoutMs: 60_000);
+
+            Report(onProgress, "移除 Scoop 目录…", 60);
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+
+            RemoveUserPathEntry(Path.Combine(root, "shims"));
+            Report(onProgress, "卸载完成", 100);
+            InvalidateStatusCache();
+            return "";
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("Scoop 卸载失败：" + ex.Message);
+            return "Scoop 卸载失败：" + ex.Message;
+        }
     }
 
     private static string CachedWingetVersion()
