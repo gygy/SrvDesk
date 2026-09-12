@@ -252,9 +252,10 @@ internal sealed class CommonSoftwareDialog : Form
 
     private Panel BuildToolStrip()
     {
+        var btnH = UiFit.ControlHeight();
         var strip = new Panel
         {
-            Height = 48,
+            Height = Math.Max(UiScale.S(48), btnH + UiScale.S(18)),
             BackColor = AppTheme.Surface,
             Padding = new Padding(0, 0, 0, 0),
         };
@@ -267,7 +268,7 @@ internal sealed class CommonSoftwareDialog : Form
 
         _installWingetBtn.Text = "一键安装 winget";
         _installWingetBtn.Font = UiFit.UiFont;
-        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", UiFit.ControlHeight(), padding: 22);
+        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", btnH, padding: 28);
         _installWingetBtn.FlatStyle = FlatStyle.Flat;
         _installWingetBtn.BackColor = AppTheme.Primary;
         _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
@@ -289,7 +290,7 @@ internal sealed class CommonSoftwareDialog : Form
         var selectBtn = ThemedSettingsChrome.CreateButton("选择 ▾", false);
         selectBtn.Font = UiFit.UiFont;
         selectBtn.Padding = new Padding(0);
-        UiFit.FitButton(selectBtn, 30, minWidth: 72, padding: 20);
+        UiFit.FitButton(selectBtn, btnH, minWidth: 72, padding: 24);
         var selectMenu = new ContextMenuStrip();
         selectMenu.Items.Add("全选当前分类", null, (_, _) => SetAllSelected(true));
         selectMenu.Items.Add("全不选", null, (_, _) => SetAllSelected(false));
@@ -303,7 +304,7 @@ internal sealed class CommonSoftwareDialog : Form
 
         var customBtn = ThemedSettingsChrome.CreateButton("自定义…", false);
         customBtn.Font = UiFit.UiFont;
-        UiFit.FitButton(customBtn, 30, minWidth: 88, padding: 20);
+        UiFit.FitButton(customBtn, btnH, minWidth: 88, padding: 24);
         customBtn.Click += (_, _) => ManageCustomSoftware();
         _toolTip.SetToolTip(customBtn, "添加可用 winget 安装的软件");
 
@@ -312,13 +313,15 @@ internal sealed class CommonSoftwareDialog : Form
 
         void LayoutStrip()
         {
-            const int y = 9;
+            var h = UiFit.ControlHeight();
+            strip.Height = Math.Max(UiScale.S(48), h + UiScale.S(18));
+            var y = Math.Max(6, (strip.Height - h) / 2);
             const int gap = 10;
             // 右侧留足边距，避免「自定义…」贴边被裁
             var right = Math.Max(0, strip.ClientSize.Width - UiScale.S(14));
 
-            UiFit.FitButton(customBtn, 30, minWidth: 88, padding: 20);
-            UiFit.FitButton(selectBtn, 30, minWidth: 72, padding: 20);
+            UiFit.FitButton(customBtn, h, minWidth: 88, padding: 24);
+            UiFit.FitButton(selectBtn, h, minWidth: 72, padding: 24);
 
             customBtn.Location = new Point(right - customBtn.Width, y);
             right = customBtn.Left - gap;
@@ -330,21 +333,21 @@ internal sealed class CommonSoftwareDialog : Form
                 _askBeforeInstall.Text,
                 _askBeforeInstall.Font ?? UiFit.UiFont,
                 new Size(int.MaxValue, 32),
-                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            var askW = askTextW + UiScale.S(22);
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.GlyphOverhangPadding).Width;
+            var askW = askTextW + UiScale.S(28);
             var askH = Math.Max(22, UiFit.LineHeight(_askBeforeInstall.Font));
             _askBeforeInstall.Size = new Size(askW, askH);
-            _askBeforeInstall.Location = new Point(right - askW, y + (30 - askH) / 2);
+            _askBeforeInstall.Location = new Point(right - askW, y + (h - askH) / 2);
             right = _askBeforeInstall.Left - gap;
 
             if (_installWingetBtn.Visible)
             {
-                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, UiFit.ControlHeight(), padding: 22);
+                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, h, padding: 28);
                 _installWingetBtn.Location = new Point(Math.Max(0, right - _installWingetBtn.Width), y);
                 right = _installWingetBtn.Left - gap;
             }
 
-            _wingetHint.SetBounds(0, y, Math.Max(60, right), 30);
+            _wingetHint.SetBounds(0, y, Math.Max(60, right), h);
             // 保证右侧控件在提示文字之上，不被盖住
             customBtn.BringToFront();
             selectBtn.BringToFront();

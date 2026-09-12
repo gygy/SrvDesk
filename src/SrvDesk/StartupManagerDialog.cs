@@ -88,7 +88,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     private Panel BuildToolStrip()
     {
         // 两行：上行筛选/按钮，下行说明；说明绝不与按钮重叠
-        var btnH = UiScale.S(30);
+        var btnH = UiFit.ControlHeight();
         var row1 = btnH + UiScale.S(10);
         var bar = new Panel { Height = row1 + UiScale.S(28), BackColor = AppTheme.Surface };
 
@@ -143,7 +143,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
             var gap = UiScale.S(6);
             var pad = UiScale.S(4);
             foreach (var b in buttons)
-                UiFit.FitButton(b, btnH, minWidth: 64, padding: 16);
+                UiFit.FitButton(b, btnH, minWidth: 64, padding: 24);
 
             var x = bar.ClientSize.Width - pad;
             for (var i = buttons.Length - 1; i >= 0; i--)
@@ -182,7 +182,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     private Button ToolBtn(string text, Action click, int height)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        UiFit.FitButton(b, height, minWidth: 64, padding: 16);
+        UiFit.FitButton(b, height, minWidth: 64, padding: 24);
         b.Click += (_, _) => click();
         return b;
     }

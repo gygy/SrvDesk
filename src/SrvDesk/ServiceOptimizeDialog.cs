@@ -315,7 +315,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private Panel BuildToolStrip()
     {
         // 上行：说明/操作按钮；下行：筛选 —— 避免按钮盖住说明
-        var btnH = UiScale.S(30);
+        var btnH = UiFit.ControlHeight();
         var row1 = btnH + UiScale.S(10);
         var bar = new Panel { Height = row1 + UiScale.S(34), BackColor = AppTheme.Surface };
 
@@ -389,7 +389,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
             var gap = UiScale.S(6);
             var pad = UiScale.S(4);
             foreach (var b in buttons)
-                UiFit.FitButton(b, btnH, minWidth: 64, padding: 16);
+                UiFit.FitButton(b, btnH, minWidth: 64, padding: 24);
 
             var x = bar.ClientSize.Width - pad;
             for (var i = buttons.Length - 1; i >= 0; i--)
@@ -453,7 +453,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private Button ToolBtn(string text, Action click, int height, bool primary = false)
     {
         var b = ThemedSettingsChrome.CreateButton(text, primary);
-        UiFit.FitButton(b, height, minWidth: 64, padding: 16);
+        UiFit.FitButton(b, height, minWidth: 64, padding: 24);
         b.Click += (_, _) => click();
         return b;
     }

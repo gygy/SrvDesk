@@ -402,6 +402,7 @@ internal sealed class MainForm : Form
         DpiChanged += (_, _) =>
         {
             UiScale.OnHostDpiChanged(this);
+            FitTopCommandBar();
             FitBottomActionButtons();
             try { _bottomPanel?.PerformLayout(); } catch { /* ignore */ }
         };
@@ -1298,7 +1299,7 @@ internal sealed class MainForm : Form
             Text = text,
             Font = font,
             AutoSize = false,
-            Size = UiFit.ButtonSize(text, h, font, minWidth: 72, padding: 20),
+            Size = UiFit.ButtonSize(text, h, font, minWidth: 72, padding: 28),
             Margin = new Padding(0, 2, 8, 0),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
@@ -1317,6 +1318,21 @@ internal sealed class MainForm : Form
         b.Click += (_, _) => click();
         _toolTip.SetToolTip(b, tip);
         return b;
+    }
+
+    private void FitTopCommandBar()
+    {
+        var h = UiFit.ControlHeight();
+        if (_commandBar.Visible)
+            _commandBar.Height = h + UiScale.S(20);
+        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font, 28);
+        UiFit.FitCombo(_categoryFilter);
+        UiFit.FitCombo(_presetCombo);
+        foreach (Control c in _commandFlow.Controls)
+        {
+            if (c is Button b)
+                UiFit.FitButton(b, h, padding: 28);
+        }
     }
 
     /// <summary>快捷入口：显示/隐藏配置脚本面板（不停靠强制）。</summary>
