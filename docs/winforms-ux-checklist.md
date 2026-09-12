@@ -26,9 +26,14 @@
 - [ ] 正文 `UiFit.UiFont`，提示 `TextMute`
 - [ ] 固定像素经 `UiScale.S`
 
-## 按钮与底栏
+## 按钮与顶/底栏（防裁字）
 
-- [ ] `ThemedSettingsChrome.CreateButton`
+- [ ] `ThemedSettingsChrome.CreateButton`（禁止裸 `new Button` + 手写宽高）
+- [ ] 高度用 `UiFit.ControlHeight` / `FitButton`，**禁止写死 30/36**
+- [ ] Flat 已 `EnableCenteredFlatText`；完整显示文案（不用省略号糊弄）
+- [ ] **顶栏与底栏同一套规则**（不只修底栏）
+- [ ] 工具条容器够高，不裁按钮顶/字脚
+- [ ] 换屏：Mount 壳或自有 `DpiChanged`/`Layout` 会重算
 - [ ] 主按钮不超过一条主路径抢视线
 - [ ] 同排按钮同高，间距统一
 - [ ] 状态条 ≠ 第二主按钮（浅底边框 / Pale，非 PrimaryDeep 实心块）
@@ -47,6 +52,8 @@
 
 ## 参考实现
 
-- 壳与按钮：`ThemedSettingsChrome.cs`
+- 壳与按钮：`ThemedSettingsChrome.cs`（`CreateButton` / `CreateFooter` / DPI）
+- 尺寸与居中绘制：`UiFit.cs`、`UiScale.OnHostDpiChanged`
+- 主窗顶/底栏：`MainForm.FitTopCommandBar` / `FitBottomActionButtons`
 - 定时关机底栏（状态 vs 按钮）：`ShutdownTimerDialog.cs`
 - 优化顾问：`HealthOverviewDialog.cs`
