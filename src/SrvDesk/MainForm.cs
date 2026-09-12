@@ -2154,11 +2154,26 @@ internal sealed class MainForm : Form
         _restore.Visible = true;
         _restore.Enabled = _inBatchMode;
 
-        var canApplyEmbedded = !_inBatchMode
-            && _embeddedPage is IEmbeddedSettingsPage page
-            && page.SupportsApplyToSystem;
+        // 嵌入页也允许点「应用」：即时页会提示已写入；需批量写的页才真正 ApplyToSystem
+        var onEmbedded = !_inBatchMode && _embeddedPage is IEmbeddedSettingsPage;
         _apply.Visible = true;
-        _apply.Enabled = _inBatchMode || canApplyEmbedded;
+        _apply.Enabled = _inBatchMode || onEmbedded;
+
+        if (_toolTip is not null && _apply is not null)
+        {
+            if (_inBatchMode)
+            {
+                _toolTip.SetToolTip(_apply, AppLang.L("将当前勾选写入系统", "Write current toggles to the system"));
+            }
+            else if (_embeddedPage is IEmbeddedSettingsPage emb && emb.SupportsApplyToSystem)
+            {
+                _toolTip.SetToolTip(_apply, AppLang.L("将本页待写入项应用到系统", "Apply this page’s pending changes"));
+            }
+            else if (onEmbedded)
+            {
+                _toolTip.SetToolTip(_apply, AppLang.L("本页开关切换后已立即生效，一般无需再点", "Toggles on this page already apply instantly"));
+            }
+        }
     }
 
     private int ContentWidth() =>
@@ -3416,9 +3431,18 @@ internal sealed class MainForm : Form
 
     private void OnApplyClicked()
     {
-        if (!_inBatchMode && _embeddedPage is IEmbeddedSettingsPage page && page.SupportsApplyToSystem)
+        if (!_inBatchMode && _embeddedPage is IEmbeddedSettingsPage page)
         {
-            page.ApplyToSystem();
+            if (page.SupportsApplyToSystem)
+            {
+                page.ApplyToSystem();
+                _status.Text = AppLang.L("本页改动已应用到系统。", "This page’s changes were applied.");
+                return;
+            }
+
+            // 右键菜单 / DNS / 账户与登录等：开关即时写入，底部按钮勿静默无响应
+            page.RefreshFromSystem();
+            _status.Text = AppLang.L("本页开关已立即生效，无需再点「应用到系统」。", "Toggles on this page already apply instantly — no Apply needed.");
             return;
         }
 
