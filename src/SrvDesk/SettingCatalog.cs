@@ -586,6 +586,14 @@ internal static class SettingCatalog
         L("有安全合规要求时勿开；个人单机推荐。", "Do not enable under compliance rules; OK on personal single PCs."),
         L("策略立即写入。", "Policy is written immediately."));
 
+    public static readonly SettingHelpInfo DisablePasswordHistory = H(
+        L("关闭「强制密码历史记录」，改密时可重复使用旧密码。", "Turn off Enforce password history so old passwords can be reused."),
+        L("本地策略 → 安全选项/密码策略：PasswordHistorySize / net accounts /uniquepw 设为 0。", "Local Security Policy → Password Policy: PasswordHistorySize / net accounts /uniquepw = 0."),
+        L("个人桌面改密更省事，不会被「不能与最近 N 次相同」拦住。", "Easier personal password changes; no “must differ from last N” block."),
+        L("个人桌面强烈推荐关闭历史强制；合规/共享账户环境请保持开启。", "Strongly recommended off on personal desktops; keep on for compliance/shared accounts."),
+        L("策略立即写入。", "Policy is written immediately."),
+        recommend: RecommendLevel.Must);
+
     public static readonly SettingHelpInfo ShutdownWithoutLogon = H(
         L("登录界面允许直接关机（无需先登录）。", "Allow shutdown from the sign-in screen without logging on."),
         L("ShutdownWithoutLogon 策略启用。", "Enable the ShutdownWithoutLogon policy."),

@@ -192,6 +192,7 @@ internal static class OptPresets
         s.ShutdownWithoutLogon = true;
         s.DisablePasswordComplexity = true;
         s.PasswordNeverExpire = true;
+        s.DisablePasswordHistory = true;
         s.EnableThemes = true;
         s.EnableAudio = true;
         s.EnableInstaller = true;

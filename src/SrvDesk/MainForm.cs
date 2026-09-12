@@ -242,6 +242,7 @@ internal sealed class MainForm : Form
 
     private readonly SettingRow _pwd = Row(AppLang.L("禁用密码复杂性要求", "Disable password complexity"), AppLang.L("必须符合", "Required"), SettingCatalog.DisablePasswordComplexity);
     private readonly SettingRow _pwdExpire = Row(AppLang.L("密码永不过期", "Password never expires"), AppLang.L("42 天", "42 days"), SettingCatalog.PasswordNeverExpire);
+    private readonly SettingRow _pwdHistory = Row(AppLang.L("关闭强制密码历史", "Disable password history"), AppLang.L("24 次", "24 passwords"), SettingCatalog.DisablePasswordHistory);
     private readonly SettingRow _shutdownLogon = Row(AppLang.L("允许未登录时关机", "Shutdown without logon"), AppLang.L("不允许", "Not allowed"), SettingCatalog.ShutdownWithoutLogon);
     private readonly SettingRow _shutdownReason = Row(AppLang.L("关闭关机事件跟踪", "Disable shutdown reason UI"), AppLang.L("显示", "Shown"), SettingCatalog.DisableShutdownReason);
     private readonly SettingRow _noCad = Row(AppLang.L("无需 Ctrl+Alt+Del 登录", "No Ctrl+Alt+Del at logon"), AppLang.L("需要按键", "Require keys"), SettingCatalog.DisableCad);
@@ -381,7 +382,7 @@ internal sealed class MainForm : Form
         _rdp, _rdpMultiUser, _rdpGpu, _rdpFps, _rdpNla, _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
         _netDiscovery, _smRemoting, _ra,
         _svrMgr, _wacPrompt, _azure, _installer, _wia, _mediaFeatures, _bloatFeatures,
-        _pwd, _pwdExpire, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
+        _pwd, _pwdExpire, _pwdHistory, _shutdownLogon, _shutdownReason, _noCad, _autologon, _keyboardFilter
     ];
 
     public MainForm()
@@ -532,7 +533,7 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add((AppLang.L("账户策略", "Account policy"), [
             (AppLang.L("账户策略", "Account policy"), [
-                _autologon, _pwd, _pwdExpire, _noCad,
+                _autologon, _pwd, _pwdExpire, _pwdHistory, _noCad,
                 _shutdownLogon, _shutdownReason, _keyboardFilter,
             ]),
         ]));
@@ -3033,6 +3034,7 @@ internal sealed class MainForm : Form
         _bloatFeatures.Checked = s.DisableServerBloatFeatures;
         _pwd.Checked = s.DisablePasswordComplexity;
         _pwdExpire.Checked = s.PasswordNeverExpire;
+        _pwdHistory.Checked = s.DisablePasswordHistory;
         _shutdownLogon.Checked = s.ShutdownWithoutLogon;
         _shutdownReason.Checked = s.DisableShutdownReason;
         _noCad.Checked = s.DisableCad;

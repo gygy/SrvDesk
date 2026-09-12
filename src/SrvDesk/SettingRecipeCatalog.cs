@@ -387,6 +387,10 @@ internal static class SettingRecipeCatalog
             "net accounts /maxpwage:unlimited",
             "net accounts /maxpwage:42"));
 
+        Add(SettingCatalog.DisablePasswordHistory, ActionScript.Cmd(
+            "net accounts /uniquepw:0",
+            "net accounts /uniquepw:24"));
+
         Add(SettingCatalog.ShutdownWithoutLogon, ActionScript.DwordToggle(false,
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1, 0));
 

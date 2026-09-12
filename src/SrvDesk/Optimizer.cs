@@ -90,6 +90,8 @@ internal static class Optimizer
 
         public bool DisablePasswordComplexity;
         public bool PasswordNeverExpire;
+        /// <summary>关闭「强制密码历史」：PasswordHistorySize / uniquepw = 0。</summary>
+        public bool DisablePasswordHistory;
         public bool ShutdownWithoutLogon;
         public bool DisableShutdownReason;
         public bool DisableCad;
@@ -360,6 +362,7 @@ internal static class Optimizer
 
             DisablePasswordComplexity = account.ComplexityOff,
             PasswordNeverExpire = account.NeverExpire,
+            DisablePasswordHistory = account.HistoryOff,
             ShutdownWithoutLogon = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", 1),
             DisableShutdownReason = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", "ShutdownReasonOn", 0),
             DisableCad = DwordEquals(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableCAD", 1),
@@ -583,8 +586,9 @@ internal static class Optimizer
         Do(Ch(x => x.EnableInstaller), "Windows Installer", () => SetService("msiserver", s.EnableInstaller, disableWhenOff: false));
         Do(Ch(x => x.EnableWia), "WIA图像采集", () => SetService("stisvc", s.EnableWia, disableWhenOff: false));
 
-        Do(Ch(x => x.DisablePasswordComplexity) || Ch(x => x.PasswordNeverExpire), "账户策略", () =>
-            ApplyAccountPolicy(s.DisablePasswordComplexity, s.PasswordNeverExpire));
+        Do(Ch(x => x.DisablePasswordComplexity) || Ch(x => x.PasswordNeverExpire) || Ch(x => x.DisablePasswordHistory),
+            "账户策略", () =>
+            ApplyAccountPolicy(s.DisablePasswordComplexity, s.PasswordNeverExpire, s.DisablePasswordHistory));
 
         Do(Ch(x => x.ShutdownWithoutLogon), "未登录关机", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "ShutdownWithoutLogon", s.ShutdownWithoutLogon ? 1 : 0));
@@ -1207,14 +1211,17 @@ internal static class Optimizer
         }
     }
 
-    private static void ApplyAccountPolicy(bool disableComplexity, bool neverExpire)
+    private static void ApplyAccountPolicy(bool disableComplexity, bool neverExpire, bool disableHistory)
     {
-        // 密码最长使用期限：net accounts 比整份 secedit 回写可靠
+        // 密码最长使用期限 / 历史长度：net accounts 比整份 secedit 回写可靠
         Run("net.exe", neverExpire
             ? "accounts /maxpwage:unlimited"
             : "accounts /maxpwage:42");
+        Run("net.exe", disableHistory
+            ? "accounts /uniquepw:0"
+            : "accounts /uniquepw:24");
 
-        // 复杂性：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
+        // 复杂性 + 策略项：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
         var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.inf");
         var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.sdb");
         var jfm = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol.jfm");
@@ -1228,6 +1235,7 @@ internal static class Optimizer
             "[System Access]" + Environment.NewLine +
             "PasswordComplexity = " + (disableComplexity ? 0 : 1) + Environment.NewLine +
             "MaximumPasswordAge = " + (neverExpire ? 0 : 42) + Environment.NewLine +
+            "PasswordHistorySize = " + (disableHistory ? 0 : 24) + Environment.NewLine +
             "[Version]" + Environment.NewLine +
             "signature=\"$CHICAGO$\"" + Environment.NewLine +
             "Revision=1" + Environment.NewLine;
@@ -1253,7 +1261,7 @@ internal static class Optimizer
         // SAM 兜底：与 secedit 互补
         ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
 
-        if (seceditError is not null && !AccountPolicyLooksApplied(disableComplexity, neverExpire))
+        if (seceditError is not null && !AccountPolicyLooksApplied(disableComplexity, neverExpire, disableHistory))
             throw seceditError;
 
         if (seceditError is not null)
@@ -1285,21 +1293,24 @@ internal static class Optimizer
             (detail.Length > 0 ? "：" + detail : ""));
     }
 
-    private static bool AccountPolicyLooksApplied(bool disableComplexity, bool neverExpire)
+    private static bool AccountPolicyLooksApplied(bool disableComplexity, bool neverExpire, bool disableHistory)
     {
         var flags = ReadAccountPolicyFlags();
         if (neverExpire != flags.NeverExpire) return false;
+        if (disableHistory != flags.HistoryOff) return false;
         if (disableComplexity) return flags.ComplexityOff;
         return !ServerDesktopTweaks.IsSamPasswordComplexityOff();
     }
 
-    private static (bool ComplexityOff, bool NeverExpire) ReadAccountPolicyFlags()
+    private static (bool ComplexityOff, bool NeverExpire, bool HistoryOff) ReadAccountPolicyFlags()
     {
         var neverExpire = ReadPasswordNeverExpireFromNetAccounts()
             ?? ReadSecpolFlag("MaximumPasswordAge = 0");
+        var historyOff = ReadPasswordHistoryOffFromNetAccounts()
+            ?? ReadSecpolFlag("PasswordHistorySize = 0");
         var complexityOff = ReadSecpolFlag("PasswordComplexity = 0")
             || ServerDesktopTweaks.IsSamPasswordComplexityOff();
-        return (complexityOff, neverExpire);
+        return (complexityOff, neverExpire, historyOff);
     }
 
     private static bool? ReadPasswordNeverExpireFromNetAccounts()
@@ -1321,6 +1332,31 @@ internal static class Optimizer
                     return true;
                 if (Regex.IsMatch(line, @"\d+"))
                     return false;
+            }
+        }
+        catch { /* ignore */ }
+        return null;
+    }
+
+    /// <summary>true = 历史长度为 0（已关闭强制密码历史）。</summary>
+    private static bool? ReadPasswordHistoryOffFromNetAccounts()
+    {
+        try
+        {
+            var output = RunCapture("net.exe", "accounts");
+            foreach (var raw in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var line = raw.Trim();
+                if (!line.StartsWith("Length of password history", StringComparison.OrdinalIgnoreCase) &&
+                    !line.StartsWith("密码历史记录长度", StringComparison.Ordinal) &&
+                    !line.StartsWith("维护的密码历史", StringComparison.Ordinal) &&
+                    line.IndexOf("password history", StringComparison.OrdinalIgnoreCase) < 0 &&
+                    line.IndexOf("密码历史", StringComparison.Ordinal) < 0)
+                    continue;
+
+                var m = Regex.Match(line, @"(\d+)");
+                if (!m.Success) continue;
+                return int.Parse(m.Groups[1].Value) == 0;
             }
         }
         catch { /* ignore */ }
