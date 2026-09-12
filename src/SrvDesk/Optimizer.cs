@@ -149,6 +149,8 @@ internal static class Optimizer
         public bool TaskbarEndTask;
         public bool DisableWidgets;
         public bool DisableSearchHighlights;
+        /// <summary>Policies\\Windows\\Explorer DisableSearchBoxSuggestions=1：去除搜索框建议/信息流。</summary>
+        public bool DisableSearchBoxSuggestions;
         public bool DisableRecommendedItems;
         public bool DisableAdTracking;
         public bool DisableSearchHistory;
@@ -410,6 +412,7 @@ internal static class Optimizer
             TaskbarEndTask = Win11DesktopTweaks.IsTaskbarEndTaskOn(),
             DisableWidgets = Win11DesktopTweaks.IsDisableWidgetsOn(),
             DisableSearchHighlights = Win11DesktopTweaks.IsDisableSearchHighlightsOn(),
+            DisableSearchBoxSuggestions = Win11DesktopTweaks.IsDisableSearchBoxSuggestionsOn(),
             DisableRecommendedItems = Win11DesktopTweaks.IsDisableRecommendedItemsOn(),
             DisableAdTracking = Win11DesktopTweaks.IsDisableAdTrackingOn(),
             DisableSearchHistory = Win11DesktopTweaks.IsDisableSearchHistoryOn(),

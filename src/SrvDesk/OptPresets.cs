@@ -173,6 +173,8 @@ internal static class OptPresets
         s.PowerThrottlingOff = true;
         s.DisableSysMain = true;
         s.EnableNetworkDiscovery = true;
+        s.DisableSmbBandwidthThrottling = true;
+        s.DisableNetworkThrottling = true;
         return s;
     }
 

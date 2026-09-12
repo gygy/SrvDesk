@@ -174,6 +174,7 @@ internal static class Win11DesktopTweaks
             || b.TaskbarEndTask != s.TaskbarEndTask
             || b.DisableWidgets != s.DisableWidgets
             || b.DisableSearchHighlights != s.DisableSearchHighlights
+            || b.DisableSearchBoxSuggestions != s.DisableSearchBoxSuggestions
             || b.DisableRecommendedItems != s.DisableRecommendedItems;
     }
 
