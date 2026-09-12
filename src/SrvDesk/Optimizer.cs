@@ -1213,41 +1213,62 @@ internal static class Optimizer
 
     private static void ApplyAccountPolicy(bool disableComplexity, bool neverExpire, bool disableHistory)
     {
-        // 密码最长使用期限 / 历史长度：net accounts 比整份 secedit 回写可靠
+        // 期限 / 历史 / 最小长度：net accounts 优先
         Run("net.exe", neverExpire
             ? "accounts /maxpwage:unlimited"
             : "accounts /maxpwage:42");
         Run("net.exe", disableHistory
             ? "accounts /uniquepw:0"
             : "accounts /uniquepw:24");
-        // 关闭复杂度时一并放开最小长度，否则短密码仍会被拒（系统报错仍会提到复杂度/历史）
         if (disableComplexity)
             Run("net.exe", "accounts /minpwlen:0");
 
-        // 复杂性 + 策略项：写最小 Unicode INF + 临时库（勿把 export 全文当 UTF-8 回写，否则常退出码 1）
-        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-" + Guid.NewGuid().ToString("N") + ".inf");
-        var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-" + Guid.NewGuid().ToString("N") + ".sdb");
+        var id = Guid.NewGuid().ToString("N");
+        var exportPath = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-export-" + id + ".inf");
+        var cfg = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-cfg-" + id + ".inf");
+        var db = Path.Combine(Path.GetTempPath(), "SrvDesk-secpol-" + id + ".sdb");
         var jfm = Path.ChangeExtension(db, ".jfm");
+        TryDelete(exportPath);
         TryDelete(cfg);
         TryDelete(db);
         TryDelete(jfm);
 
-        var inf =
-            "[Unicode]" + Environment.NewLine +
-            "Unicode=yes" + Environment.NewLine +
-            "[System Access]" + Environment.NewLine +
-            "PasswordComplexity = " + (disableComplexity ? 0 : 1) + Environment.NewLine +
-            "MaximumPasswordAge = " + (neverExpire ? 0 : 42) + Environment.NewLine +
-            "PasswordHistorySize = " + (disableHistory ? 0 : 24) + Environment.NewLine +
-            (disableComplexity ? "MinimumPasswordLength = 0" + Environment.NewLine : "") +
-            "[Version]" + Environment.NewLine +
-            "signature=\"$CHICAGO$\"" + Environment.NewLine +
-            "Revision=1" + Environment.NewLine;
-        File.WriteAllText(cfg, inf, Encoding.Unicode);
-
         Exception? seceditError = null;
         try
         {
+            // 导出当前策略再改键：比最小 INF 可靠；secedit 常在 100% 后仍返回退出码 1
+            var (exportExit, _, exportErr) = RunProcess(
+                "secedit.exe",
+                $"/export /cfg \"{exportPath}\" /areas SECURITYPOLICY",
+                timeoutMs: 25_000);
+            if (exportExit is not (0 or 1) || !File.Exists(exportPath))
+            {
+                throw new InvalidOperationException(
+                    "secedit 导出失败（退出码 " + exportExit + "）" +
+                    (string.IsNullOrWhiteSpace(exportErr) ? "" : "：" + exportErr.Trim()));
+            }
+            var lines = File.Exists(exportPath)
+                ? ReadInfLines(exportPath).ToList()
+                : new List<string>();
+            if (lines.Count == 0)
+            {
+                lines.AddRange([
+                    "[Unicode]",
+                    "Unicode=yes",
+                    "[System Access]",
+                    "[Version]",
+                    "signature=\"$CHICAGO$\"",
+                    "Revision=1",
+                ]);
+            }
+
+            UpsertInfValue(lines, "PasswordComplexity", disableComplexity ? "0" : "1");
+            UpsertInfValue(lines, "MaximumPasswordAge", neverExpire ? "-1" : "42");
+            UpsertInfValue(lines, "PasswordHistorySize", disableHistory ? "0" : "24");
+            if (disableComplexity)
+                UpsertInfValue(lines, "MinimumPasswordLength", "0");
+
+            File.WriteAllLines(cfg, lines, Encoding.Unicode);
             RunSeceditConfigure(db, cfg);
         }
         catch (Exception ex)
@@ -1257,39 +1278,73 @@ internal static class Optimizer
         }
         finally
         {
+            TryDelete(exportPath);
             TryDelete(cfg);
             TryDelete(db);
             TryDelete(jfm);
         }
 
-        // SAM 兜底仅作补充；真正拦「添加用户」的是 secedit/secpol 的 PasswordComplexity
         ServerDesktopTweaks.ApplySamPasswordComplexity(disableComplexity);
 
-        // 以 secpol 为准复核：SAM=0 但复杂性仍启用时，不能当成成功
+        var applied = AccountPolicyLooksApplied(disableComplexity, neverExpire, disableHistory);
         if (disableComplexity && !ReadSecpolFlag("PasswordComplexity = 0"))
         {
-            if (seceditError is not null)
-                throw new InvalidOperationException(
-                    "未能关闭「密码必须符合复杂性要求」。" + seceditError.Message);
+            var hint = seceditError?.Message ?? "secpol 仍为已启用";
             throw new InvalidOperationException(
-                "未能关闭「密码必须符合复杂性要求」（secpol 仍为已启用）。请确认以管理员运行后重试。");
+                "未能关闭「密码必须符合复杂性要求」。" + hint +
+                "。可先关闭本机打开的「本地安全策略」(secpol.msc) 后再试。");
         }
 
-        if (seceditError is not null && !AccountPolicyLooksApplied(disableComplexity, neverExpire, disableHistory))
+        if (seceditError is not null && !applied)
             throw seceditError;
 
         if (seceditError is not null)
-            ApplyLog.Write("secedit 报错但账户策略已生效，继续。");
+            ApplyLog.Write("secedit 返回非零但账户策略已生效，继续。");
+    }
+
+    /// <summary>在 INF 中写入/替换键（优先落在 [System Access] 段）。</summary>
+    private static void UpsertInfValue(List<string> lines, string key, string value)
+    {
+        var prefix = key + " = ";
+        var assign = prefix + value;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var t = lines[i].Trim();
+            if (t.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                lines[i] = assign;
+                return;
+            }
+        }
+
+        var insertAt = -1;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (string.Equals(lines[i].Trim(), "[System Access]", StringComparison.OrdinalIgnoreCase))
+            {
+                insertAt = i + 1;
+                break;
+            }
+        }
+
+        if (insertAt < 0)
+        {
+            lines.Add("[System Access]");
+            lines.Add(assign);
+            return;
+        }
+
+        lines.Insert(insertAt, assign);
     }
 
     private static void RunSeceditConfigure(string db, string cfg)
     {
-        // 不用 /overwrite：部分环境会长时间卡住；每次用独立 .sdb
         var (exit, stdout, stderr) = RunProcess(
             "secedit.exe",
             $"/configure /db \"{db}\" /cfg \"{cfg}\" /areas SECURITYPOLICY",
             timeoutMs: 25_000);
-        if (exit == 0) return;
+        // 0=成功；1=常带警告但仍可能已写入（进度可到 100%），以事后复核为准
+        if (exit is 0 or 1) return;
 
         var detail = (stderr + " " + stdout).Trim();
         if (detail.Length > 240) detail = detail.Substring(0, 240) + "…";
