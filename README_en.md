@@ -14,7 +14,7 @@ Through system inspection, optimization advice, service management, component ma
 
 ## Download & run
 
-1. Open [Releases](https://github.com/gygy/SrvDesk/releases) and download **`SrvDesk.exe`** (single file, light obfuscation).
+1. Open [Releases](https://github.com/gygy/SrvDesk/releases) and download **`SrvDesk.exe`**.
 2. Right-click → **Run as administrator**.
 3. Disclaimer, privacy, and license are under the in-app **Help** menu.
 

@@ -14,7 +14,7 @@ SrvDesk 是一款面向 **Windows 10、Windows 11 及 Windows Server 2019/2022/2
 
 ## 下载与运行
 
-1. 打开 [Releases](https://github.com/gygy/SrvDesk/releases)，下载 **`SrvDesk.exe`**（单文件，轻度混淆）。
+1. 打开 [Releases](https://github.com/gygy/SrvDesk/releases)，下载 **`SrvDesk.exe`**。
 2. 右键 → **以管理员身份运行**。
 3. 免责声明、隐私说明、许可证在程序 **帮助** 菜单。
 
