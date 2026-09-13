@@ -19,11 +19,12 @@ internal sealed class AppUpdateDialog : Form
     {
         Text = "检查更新";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 420);
+        ClientSize = UiScale.Size(640, 520);
+        MinimumSize = UiScale.Size(580, 460);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.AutoScroll = false;
@@ -64,31 +65,45 @@ internal sealed class AppUpdateDialog : Form
         _notes.Text = "点击「检查更新」查询 GitHub Releases。";
 
         _bar.Dock = DockStyle.Top;
-        _bar.Height = 16;
+        _bar.Height = UiScale.S(16);
         _bar.Margin = new Padding(0, 8, 0, 4);
 
+        // 可换行，避免长 URL / 错误信息被底栏或按钮盖住
         _status.AutoSize = true;
         _status.ForeColor = AppTheme.TextMute;
         _status.Margin = new Padding(0, 0, 0, 8);
-        _status.Text = AppUpdate.ReleasesPage;
+        _status.Text = "就绪。";
+        void SyncStatusWrap()
+        {
+            var w = Math.Max(160, stack.ClientSize.Width - stack.Padding.Horizontal - 8);
+            if (_status.MaximumSize.Width != w)
+                _status.MaximumSize = new Size(w, 0);
+        }
+        stack.Resize += (_, _) => SyncStatusWrap();
+        stack.SizeChanged += (_, _) => SyncStatusWrap();
 
         var buttons = new FlowLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             AutoScroll = false,
-            Margin = new Padding(0),
+            Margin = new Padding(0, 4, 0, 0),
+            Padding = new Padding(0),
         };
         UiBuffer.ConfigureNoScrollRow(buttons);
         _check = ThemedSettingsChrome.CreateButton("检查更新", true);
+        UiFit.FitButton(_check);
         _check.Click += async (_, _) => await CheckAsync(autoApply: false);
         _apply = ThemedSettingsChrome.CreateButton("下载并更新", false);
+        UiFit.FitButton(_apply);
         _apply.Enabled = false;
-        _apply.Margin = new Padding(8, 0, 0, 0);
+        _apply.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         _apply.Click += async (_, _) => await DownloadAndApplyAsync(confirm: true);
         var open = ThemedSettingsChrome.CreateButton("打开发布页", false);
-        open.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(open);
+        open.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         open.Click += (_, _) =>
         {
             try
@@ -113,6 +128,7 @@ internal sealed class AppUpdateDialog : Form
         stack.Controls.Add(_status, 0, 4);
         stack.Controls.Add(buttons, 0, 5);
         body.Controls.Add(stack);
+        SyncStatusWrap();
 
         ThemedSettingsChrome.MountModal(
             this,

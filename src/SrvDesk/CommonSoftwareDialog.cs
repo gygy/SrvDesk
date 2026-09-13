@@ -189,9 +189,16 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void BuildProgressHost()
     {
+        // 文案行高随字体/DPI，避免进度条盖住「并行 … 安装中」下半截
+        var font = UiFit.UiFont;
+        var labelH = Math.Max(UiScale.S(26), UiFit.LineHeight(font) + UiScale.S(8));
+        var barH = UiScale.S(12);
+        var gap = UiScale.S(6);
+        var padY = UiScale.S(8);
+
         _progressHost.Dock = DockStyle.Bottom;
-        _progressHost.Height = 52;
-        _progressHost.Padding = new Padding(12, 6, 12, 6);
+        _progressHost.Height = labelH + gap + barH + padY * 2;
+        _progressHost.Padding = new Padding(UiScale.S(12), padY, UiScale.S(12), padY);
         _progressHost.BackColor = AppTheme.PrimaryPale;
         _progressHost.Visible = false;
         _progressHost.Paint += (_, e) =>
@@ -200,23 +207,24 @@ internal sealed class CommonSoftwareDialog : Form
             e.Graphics.DrawLine(pen, 0, 0, _progressHost.Width, 0);
         };
 
-        _progressLabel.Dock = DockStyle.Top;
-        _progressLabel.Height = 20;
+        _progressLabel.Dock = DockStyle.Fill;
         _progressLabel.ForeColor = AppTheme.PrimaryDeep;
-        _progressLabel.Font = new Font("Microsoft YaHei UI", 9F);
+        _progressLabel.Font = font;
         _progressLabel.TextAlign = ContentAlignment.MiddleLeft;
         _progressLabel.AutoEllipsis = true;
         _progressLabel.Text = "准备中…";
+        _progressLabel.Padding = new Padding(0, 0, 0, gap);
 
         _progressBar.Dock = DockStyle.Bottom;
-        _progressBar.Height = 14;
+        _progressBar.Height = barH;
         _progressBar.Style = ProgressBarStyle.Continuous;
         _progressBar.Minimum = 0;
         _progressBar.Maximum = 100;
         _progressBar.Value = 0;
 
-        _progressHost.Controls.Add(_progressBar);
+        // 先 Fill 再 Bottom：Bottom 先占底，Fill 吃剩余（含与进度条间距）
         _progressHost.Controls.Add(_progressLabel);
+        _progressHost.Controls.Add(_progressBar);
     }
 
     private static Button MkBtn(string text, Action click, bool primary)
