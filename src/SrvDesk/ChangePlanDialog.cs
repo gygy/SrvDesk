@@ -118,46 +118,54 @@ internal sealed class ServerProfileDialog : Form
             Padding = new Padding(UiScale.S(20), UiScale.S(16), UiScale.S(20), UiScale.S(8)),
         };
 
-        var y = 0;
+        var stack = ThemedSettingsChrome.CreateToggleStack();
+        stack.Dock = DockStyle.Top;
+        stack.AutoSize = true;
+        stack.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
         foreach (ServerRoleFlags f in Enum.GetValues(typeof(ServerRoleFlags)))
         {
             if (f == ServerRoleFlags.None) continue;
             var cb = new CheckBox
             {
                 Text = ServerProfile.RoleTitle(f),
-                Location = new Point(0, y),
-                AutoSize = true,
+                AutoSize = false,
+                Height = Math.Max(UiScale.S(28), UiFit.ControlHeight()),
                 Checked = ServerProfile.Has(f),
                 Font = UiFit.UiFont,
+                Margin = new Padding(0, 0, 0, UiScale.S(2)),
             };
             _boxes[f] = cb;
-            scroll.Controls.Add(cb);
-            y += Math.Max(UiScale.S(28), UiFit.ControlHeight());
+            stack.Controls.Add(cb);
         }
 
         var levelLbl = new Label
         {
             Text = AppLang.L("优化等级", "Optimization level"),
-            Location = new Point(0, y + UiScale.S(8)),
-            AutoSize = true,
+            AutoSize = false,
+            Height = Math.Max(UiScale.S(24), UiFit.ControlHeight(UiFit.UiFontSmall)),
             ForeColor = AppTheme.TextHeader,
             Font = UiFit.UiFont,
+            Margin = new Padding(0, UiScale.S(12), 0, UiScale.S(4)),
+            TextAlign = ContentAlignment.MiddleLeft,
         };
         _level.DropDownStyle = ComboBoxStyle.DropDownList;
-        _level.Location = new Point(0, y + UiScale.S(32));
-        _level.Width = UiScale.S(320);
         foreach (OptimizationLevel lv in Enum.GetValues(typeof(OptimizationLevel)))
             _level.Items.Add(OptimizationLevelUi.Title(lv));
         _level.SelectedIndex = (int)ServerProfile.Level;
         UiFit.FitCombo(_level);
+        _level.Margin = new Padding(0, 0, 0, UiScale.S(8));
 
         _inspect.Text = AppLang.L("启用持续健康巡检（约每 6 小时）", "Enable health inspection (~every 6h)");
-        _inspect.Location = new Point(0, _level.Bottom + UiScale.S(12));
-        _inspect.AutoSize = true;
+        _inspect.AutoSize = false;
+        _inspect.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight());
         _inspect.Checked = ServerProfile.Load().HealthInspectionEnabled;
         _inspect.Font = UiFit.UiFont;
+        _inspect.Margin = new Padding(0, UiScale.S(4), 0, 0);
 
-        scroll.Controls.AddRange([levelLbl, _level, _inspect]);
+        stack.Controls.AddRange([levelLbl, _level, _inspect]);
+        scroll.Controls.Add(stack);
+        scroll.Resize += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
 
         var bar = new FlowLayoutPanel
         {
@@ -201,5 +209,6 @@ internal sealed class ServerProfileDialog : Form
         Controls.Add(scroll);
         Controls.Add(bar);
         AcceptButton = save;
+        Load += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
     }
 }

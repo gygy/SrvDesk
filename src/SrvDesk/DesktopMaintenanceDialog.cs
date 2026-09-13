@@ -16,8 +16,7 @@ internal sealed class DesktopMaintenanceDialog : Form
         var rowH = Math.Max(UiScale.S(48), UiFit.ControlHeight() + UiScale.S(16));
         var grid = new TableLayoutPanel
         {
-            Dock = DockStyle.Top,
-            AutoSize = true,
+            Dock = DockStyle.Fill,
             ColumnCount = 2,
             Padding = new Padding(0, 0, 0, UiScale.S(8)),
         };

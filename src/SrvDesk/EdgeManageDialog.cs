@@ -18,46 +18,40 @@ internal sealed class EdgeManageDialog : Form
     private readonly Button _btnInWv;
     private readonly Button _btnInCore;
     private readonly Button _btnInMissing;
-    private readonly Panel _body;
     private bool _loading;
 
     public EdgeManageDialog()
     {
         Text = "MSEdge 管理";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         Font = UiFit.UiFont;
+        ClientSize = UiScale.Size(780, 520);
+        MinimumSize = UiScale.Size(700, 460);
 
-        _body = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(UiScale.S(16), UiScale.S(12), UiScale.S(16), UiScale.S(8)),
-            BackColor = AppTheme.Surface,
-            AutoScroll = true,
-        };
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.AutoScroll = true;
+        body.Padding = new Padding(UiScale.S(20), UiScale.S(14), UiScale.S(20), UiScale.S(10));
 
-        var rowH = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontBold()));
-        var stack = new List<(Control Control, int GapAfter)>();
-        void Add(Control c, int height, int gapAfter = 4)
-        {
-            c.Width = Math.Max(200, _body.ClientSize.Width - _body.Padding.Horizontal);
-            c.Height = height;
-            c.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _body.Controls.Add(c);
-            stack.Add((c, gapAfter));
-        }
+        // Dock Fill 吃 Padding；禁止 Location(0,y) 贴左缘
+        var stack = ThemedSettingsChrome.CreateToggleStack();
+        stack.Dock = DockStyle.Top;
+        stack.AutoSize = true;
+        stack.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
-        Add(MakeComponentRow("Microsoft Edge", _edgeStatus, _edgeVer, rowH), rowH, UiScale.S(2));
-        Add(MakeComponentRow("Edge WebView2", _wvStatus, _wvVer, rowH), rowH, UiScale.S(2));
-        Add(MakeComponentRow("Edge Core", _coreStatus, _coreVer, rowH), rowH, UiScale.S(10));
+        var rowH = Math.Max(UiScale.S(32), UiFit.ControlHeight(UiFit.UiFontBold()) + UiScale.S(4));
+        stack.Controls.Add(MakeComponentRow("Microsoft Edge", _edgeStatus, _edgeVer, rowH));
+        stack.Controls.Add(MakeComponentRow("Edge WebView2", _wvStatus, _wvVer, rowH));
+        stack.Controls.Add(MakeComponentRow("Edge Core", _coreStatus, _coreVer, rowH));
 
         _disableUpdate.Text = "禁用 Edge 更新（取消勾选即恢复更新）";
         _disableUpdate.AutoSize = false;
+        _disableUpdate.Height = rowH;
         _disableUpdate.Font = UiFit.UiFont;
         _disableUpdate.TextAlign = ContentAlignment.MiddleLeft;
+        _disableUpdate.Margin = new Padding(0, UiScale.S(10), 0, UiScale.S(4));
         _disableUpdate.CheckedChanged += (_, _) =>
         {
             if (_loading) return;
@@ -79,7 +73,7 @@ internal sealed class EdgeManageDialog : Form
                 RefreshStatus();
             }
         };
-        Add(_disableUpdate, rowH, UiScale.S(6));
+        stack.Controls.Add(_disableUpdate);
 
         var hint = new SingleLineLabel
         {
@@ -87,8 +81,10 @@ internal sealed class EdgeManageDialog : Form
             ForeColor = AppTheme.TextMute,
             Font = UiFit.UiFontSmall,
             TextAlign = ContentAlignment.MiddleLeft,
+            Height = Math.Max(UiScale.S(24), UiFit.ControlHeight(UiFit.UiFontSmall)),
+            Margin = new Padding(0, 0, 0, UiScale.S(10)),
         };
-        Add(hint, Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall)), UiScale.S(10));
+        stack.Controls.Add(hint);
 
         _btnUnEdge = MkBtn("卸载 Edge", () => UninstallOne(EdgeComponentKind.Edge));
         _btnUnWv = MkBtn("卸载 WebView2", () => UninstallOne(EdgeComponentKind.WebView2));
@@ -100,71 +96,26 @@ internal sealed class EdgeManageDialog : Form
         _btnInCore = MkBtn("恢复 Edge Core", () => InstallOne(EdgeComponentKind.EdgeCore));
         _btnInMissing = MkBtn("恢复缺失项", InstallMissing);
 
-        var unSection = MakeSection("卸载", _btnUnEdge, _btnUnWv, _btnUnCore, _btnUnAll);
-        Add(unSection, unSection.Height, UiScale.S(10));
-        var inSection = MakeSection("安装 / 恢复", _btnInEdge, _btnInWv, _btnInCore, _btnInMissing);
-        Add(inSection, inSection.Height, UiScale.S(4));
+        stack.Controls.Add(MakeSection("卸载", _btnUnEdge, _btnUnWv, _btnUnCore, _btnUnAll));
+        stack.Controls.Add(MakeSection("安装 / 恢复", _btnInEdge, _btnInWv, _btnInCore, _btnInMissing));
 
-        void RelayoutBody()
-        {
-            var w = Math.Max(200, _body.ClientSize.Width - _body.Padding.Horizontal);
-            foreach (var (c, _) in stack)
-                c.Width = w;
-            LayoutSectionButtons(unSection);
-            LayoutSectionButtons(inSection);
-
-            var y = 0;
-            foreach (var (c, gap) in stack)
-            {
-                c.Location = new Point(0, y);
-                y += c.Height + gap;
-            }
-        }
-
-        // 先按内容量宽高，再挂底栏，避免底栏盖住「安装 / 恢复」
-        RelayoutBody();
-        var footerReserve = UiScale.S(64);
-        var contentBottom = stack.Count == 0 ? 0 : stack[stack.Count - 1].Control.Bottom;
-        var contentW = MeasureContentWidth(unSection, inSection);
-        var clientW = Math.Max(UiScale.S(720), contentW + _body.Padding.Horizontal + UiScale.S(24));
-        var clientH = contentBottom + _body.Padding.Vertical + footerReserve + UiScale.S(16);
-        ClientSize = new Size(clientW, Math.Max(UiScale.S(480), clientH));
-        MinimumSize = Size;
-
-        _body.Resize += (_, _) => RelayoutBody();
+        body.Controls.Add(stack);
+        body.Resize += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
 
         ThemedSettingsChrome.MountModal(
             this,
             "MSEdge 管理",
             "",
-            _body,
+            body,
             "",
             showHeader: false,
             onRefresh: RefreshStatus);
 
         Load += (_, _) =>
         {
-            RelayoutBody();
-            // 若 DPI/底栏使内容仍溢出，再略增高（FixedDialog）
-            var need = stack[stack.Count - 1].Control.Bottom + _body.Padding.Vertical + footerReserve + UiScale.S(8);
-            if (ClientSize.Height < need)
-                ClientSize = new Size(ClientSize.Width, need);
+            ThemedSettingsChrome.StretchStackChildren(stack);
             RefreshStatus();
         };
-    }
-
-    private static int MeasureContentWidth(params Control[] sections)
-    {
-        var max = UiScale.S(640);
-        foreach (var section in sections)
-        {
-            foreach (Control c in section.Controls)
-            {
-                if (c is Button b)
-                    max = Math.Max(max, b.Right + UiScale.S(8));
-            }
-        }
-        return max;
     }
 
     private void RefreshStatus()
@@ -279,35 +230,54 @@ internal sealed class EdgeManageDialog : Form
 
     private static Label MakeStatus() => new()
     {
-        AutoSize = true,
+        AutoSize = false,
         Font = UiFit.UiFontBold(),
         ForeColor = Color.FromArgb(40, 140, 70),
+        TextAlign = ContentAlignment.MiddleLeft,
     };
 
     private static Label MakeVersion() => new()
     {
-        AutoSize = true,
+        AutoSize = false,
         Font = UiFit.UiFont,
         ForeColor = AppTheme.PrimaryDeep,
+        TextAlign = ContentAlignment.MiddleLeft,
     };
 
     private static Control MakeComponentRow(string title, Label status, Label version, int height)
     {
-        var panel = new Panel { Height = height };
+        var panel = new Panel
+        {
+            Height = height,
+            Margin = new Padding(0, 0, 0, UiScale.S(4)),
+        };
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 1,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
         var titleLbl = new SingleLineLabel
         {
             Text = title,
-            Location = new Point(0, 0),
-            Size = new Size(UiScale.S(150), height),
+            Dock = DockStyle.Fill,
             ForeColor = AppTheme.TextHeader,
             Font = UiFit.UiFont,
             TextAlign = ContentAlignment.MiddleLeft,
         };
-        status.Location = new Point(UiScale.S(160), Math.Max(0, (height - status.PreferredHeight) / 2));
-        version.Location = new Point(UiScale.S(240), Math.Max(0, (height - version.PreferredHeight) / 2));
-        panel.Controls.Add(titleLbl);
-        panel.Controls.Add(status);
-        panel.Controls.Add(version);
+        status.Dock = DockStyle.Fill;
+        version.Dock = DockStyle.Fill;
+        grid.Controls.Add(titleLbl, 0, 0);
+        grid.Controls.Add(status, 1, 0);
+        grid.Controls.Add(version, 2, 0);
+        panel.Controls.Add(grid);
         return panel;
     }
 
@@ -315,67 +285,49 @@ internal sealed class EdgeManageDialog : Form
     {
         var btnH = 0;
         foreach (var b in buttons)
-            btnH = Math.Max(btnH, b.Height);
-        if (btnH <= 0) btnH = UiFit.ControlHeight();
-
-        var captionH = Math.Max(UiScale.S(20), UiFit.ControlHeight(UiFit.UiFontSmall) - UiScale.S(4));
-        var gap = UiScale.S(8);
-        var wrap = new Panel
-        {
-            Height = captionH + btnH + UiScale.S(10),
-            Tag = buttons,
-        };
-        wrap.Controls.Add(new SingleLineLabel
-        {
-            Text = caption,
-            ForeColor = AppTheme.TextMute,
-            Font = UiFit.UiFontSmall,
-            Location = new Point(0, 0),
-            Size = new Size(UiScale.S(200), captionH),
-            TextAlign = ContentAlignment.MiddleLeft,
-        });
-
-        var x = 0;
-        var top = captionH + UiScale.S(2);
-        foreach (var b in buttons)
-        {
-            b.Location = new Point(x, top);
-            b.Margin = Padding.Empty;
-            wrap.Controls.Add(b);
-            x += b.Width + gap;
-        }
-        return wrap;
-    }
-
-    private static void LayoutSectionButtons(Control section)
-    {
-        if (section.Tag is not Button[] buttons || buttons.Length == 0) return;
-
-        var captionH = Math.Max(UiScale.S(20), UiFit.ControlHeight(UiFit.UiFontSmall) - UiScale.S(4));
-        var gap = UiScale.S(8);
-        var btnH = 0;
-        foreach (var b in buttons)
         {
             UiFit.FitButton(b, padding: 28);
             btnH = Math.Max(btnH, b.Height);
         }
+        if (btnH <= 0) btnH = UiFit.ControlHeight();
 
-        var avail = Math.Max(200, section.ClientSize.Width);
-        var x = 0;
-        var y = captionH + UiScale.S(2);
-        var rowH = btnH;
-        foreach (var b in buttons)
+        var captionH = Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall));
+        var wrap = new Panel
         {
-            if (x > 0 && x + b.Width > avail)
-            {
-                x = 0;
-                y += rowH + gap;
-            }
-            b.Location = new Point(x, y);
-            x += b.Width + gap;
+            Height = captionH + btnH + UiScale.S(14),
+            Margin = new Padding(0, 0, 0, UiScale.S(10)),
+        };
+
+        var captionLbl = new SingleLineLabel
+        {
+            Text = caption,
+            Dock = DockStyle.Top,
+            Height = captionH,
+            ForeColor = AppTheme.TextMute,
+            Font = UiFit.UiFontSmall,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = buttons.Length,
+            RowCount = 1,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
+        };
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        for (var i = 0; i < buttons.Length; i++)
+        {
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / buttons.Length));
+            buttons[i].Dock = DockStyle.Fill;
+            buttons[i].Margin = new Padding(i == 0 ? 0 : UiScale.S(6), 0, 0, 0);
+            grid.Controls.Add(buttons[i], i, 0);
         }
 
-        section.Height = y + rowH + UiScale.S(8);
+        wrap.Controls.Add(grid);
+        wrap.Controls.Add(captionLbl);
+        return wrap;
     }
 
     private static Button MkBtn(string text, Action click)

@@ -18,51 +18,41 @@ internal sealed class AutologonDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(500, 420);
+        ClientSize = UiScale.Size(520, 440);
         CancelButton = null;
 
-        var body = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(16, 8, 16, 4),
-            BackColor = AppTheme.Surface,
-            AutoScroll = false,
-        };
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.AutoScroll = false;
+        body.Padding = new Padding(UiScale.S(20), UiScale.S(12), UiScale.S(20), UiScale.S(8));
 
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 42,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             AutoScroll = false,
-            Padding = new Padding(0, 4, 0, 0),
+            Padding = new Padding(0, UiScale.S(6), 0, 0),
             BackColor = AppTheme.Surface,
         };
         UiBuffer.ConfigureNoScrollRow(buttons);
 
         var ok = ThemedSettingsChrome.CreateButton("确定", true);
-        ok.Height = 32;
-        ok.Margin = new Padding(6, 0, 0, 0);
+        UiFit.FitButton(ok, padding: 28);
+        ok.Margin = new Padding(UiScale.S(6), 0, 0, 0);
         ok.Click += (_, _) =>
         {
             if (TryAccept()) Close();
         };
         buttons.Controls.Add(ok);
 
-        var stack = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoScroll = false,
-            Padding = new Padding(0),
-            BackColor = AppTheme.Surface,
-        };
+        var stack = ThemedSettingsChrome.CreateToggleStack();
+        stack.Dock = DockStyle.Fill;
 
         _keepPassword.Text = "保留现有密码（不改密码时勾选）";
-        _keepPassword.AutoSize = true;
-        _keepPassword.Margin = new Padding(0, 10, 0, 4);
+        _keepPassword.AutoSize = false;
+        _keepPassword.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight());
+        _keepPassword.Margin = new Padding(0, UiScale.S(10), 0, UiScale.S(4));
         _keepPassword.ForeColor = AppTheme.TextMute;
         _keepPassword.Checked = editing && !initial.UpdatePassword;
         _keepPassword.Enabled = editing;
@@ -71,10 +61,10 @@ internal sealed class AutologonDialog : Form
             ? "不改密码可留空，并勾选下方「保留现有密码」。"
             : "首次启用请填写密码。";
         _hint.AutoSize = false;
-        _hint.Width = 450;
-        _hint.Height = 28;
-        _hint.Margin = new Padding(0, 0, 0, 0);
+        _hint.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontSmall));
+        _hint.Margin = Padding.Empty;
         _hint.ForeColor = AppTheme.TextMute;
+        _hint.TextAlign = ContentAlignment.MiddleLeft;
 
         stack.Controls.Add(MakeField("域（本地账户可留空）", _domain, initial.Domain));
         stack.Controls.Add(MakeField("用户名", _user, initial.Username));
@@ -84,15 +74,18 @@ internal sealed class AutologonDialog : Form
 
         body.Controls.Add(stack);
         body.Controls.Add(buttons);
+        body.Resize += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
 
         ThemedSettingsChrome.MountModal(
             this,
             "Windows 自动登录",
-            "Autologon",
+            "",
             body,
-            "");
+            "",
+            showHeader: false);
 
         AcceptButton = ok;
+        Load += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
     }
 
     private bool TryAccept()
@@ -122,24 +115,27 @@ internal sealed class AutologonDialog : Form
 
     private static Control MakeField(string label, TextBox box, string value, bool password = false)
     {
+        var h = UiFit.ControlHeight() + UiScale.S(28);
         var panel = new Panel
         {
-            Width = 450,
-            Height = 58,
-            Margin = new Padding(0, 0, 0, 8),
+            Height = h,
+            Margin = new Padding(0, 0, 0, UiScale.S(8)),
         };
-        panel.Controls.Add(new Label
+        var caption = new SingleLineLabel
         {
             Text = label,
-            AutoSize = true,
-            Location = new Point(0, 0),
+            Dock = DockStyle.Top,
+            Height = Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall)),
             ForeColor = AppTheme.TextHeader,
-        });
-        box.SetBounds(0, 24, 450, 28);
-        box.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            Font = UiFit.UiFont,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        box.Dock = DockStyle.Fill;
         box.Text = value;
+        box.Font = UiFit.UiFont;
         if (password) box.UseSystemPasswordChar = true;
         panel.Controls.Add(box);
+        panel.Controls.Add(caption);
         return panel;
     }
 }
