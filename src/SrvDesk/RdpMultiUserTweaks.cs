@@ -17,6 +17,7 @@ internal static class RdpMultiUserTweaks
     public static void ReadInto(Optimizer.State s, bool fullScan)
     {
         s.RdpMultiUserLogin = IsConfigured(fullScan);
+        s.RdpRestrictSingleSession = IsRestrictSingleSession();
     }
 
     public static void Apply(bool enable)
@@ -27,11 +28,40 @@ internal static class RdpMultiUserTweaks
             Disable();
     }
 
+    /// <summary>
+    /// 对应组策略「限制远程桌面服务用户到单独的远程桌面服务会话」。
+    /// 开启=1（限制单会话）；关闭=0（同账号可多会话）。
+    /// </summary>
+    public static void ApplyRestrictSingleSession(bool restrict)
+    {
+        var v = restrict ? 1 : 0;
+        SetDword(Hive.HkLm, TermPolicies, "fSingleSessionPerUser", v);
+        SetDword(Hive.HkLm, TermServer, "fSingleSessionPerUser", v);
+        ApplyLog.Write(restrict
+            ? "已启用：限制远程桌面用户到单独会话（fSingleSessionPerUser=1）"
+            : "已关闭：不限制单会话（fSingleSessionPerUser=0）");
+    }
+
+    public static bool IsRestrictSingleSession()
+    {
+        // 策略优先；未配置时回退系统项（缺省视为限制单会话）
+        using (var pol = Open(Hive.HkLm, TermPolicies, writable: false))
+        {
+            if (pol?.GetValue("fSingleSessionPerUser") is int pv)
+                return pv == 1;
+        }
+
+        using var sys = Open(Hive.HkLm, TermServer, writable: false);
+        if (sys?.GetValue("fSingleSessionPerUser") is int sv)
+            return sv == 1;
+        return true;
+    }
+
     public static bool IsConfigured(bool checkFeature)
     {
         if (!DwordEquals(Hive.HkLm, TermServer, "fDenyTSConnections", 0))
             return false;
-        if (!DwordEquals(Hive.HkLm, TermServer, "fSingleSessionPerUser", 0))
+        if (IsRestrictSingleSession())
             return false;
         if (!DwordEquals(Hive.HkLm, TermServer, "MaxSessions", MaxSessionsValue))
             return false;
@@ -51,6 +81,7 @@ internal static class RdpMultiUserTweaks
         TryEnableFirewallRdp();
 
         SetDword(Hive.HkLm, TermServer, "fSingleSessionPerUser", 0);
+        SetDword(Hive.HkLm, TermPolicies, "fSingleSessionPerUser", 0);
         SetDword(Hive.HkLm, TermServer, "MaxSessions", MaxSessionsValue);
         SetDword(Hive.HkLm, TermPolicies, "fAllowConsoleLogout", 0);
 
@@ -65,6 +96,7 @@ internal static class RdpMultiUserTweaks
     {
         // 恢复单会话限制；不卸载 RDS 角色、不关 RDP（避免误伤）
         SetDword(Hive.HkLm, TermServer, "fSingleSessionPerUser", 1);
+        SetDword(Hive.HkLm, TermPolicies, "fSingleSessionPerUser", 1);
         DeleteValue(Hive.HkLm, TermServer, "MaxSessions");
         DeleteValue(Hive.HkLm, TermPolicies, "fAllowConsoleLogout");
         ApplyLog.Write("多用户同时登录：已恢复单会话限制（未卸载 RDS、未关闭 RDP）");

@@ -268,6 +268,7 @@ internal static class SettingRecipeCatalog
                 ActionScript.Dword("MaxSessions", 999999)) +
             ActionScript.Block(
                 ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.Dword("fSingleSessionPerUser", 0),
                 ActionScript.Dword("fAllowConsoleLogout", 0))) +
             "\r\n--- DISM / 防火墙 ---\r\n" +
             "dism.exe /online /Enable-Feature /FeatureName:RDS-RD-Server /All /NoRestart\r\n" +
@@ -280,8 +281,12 @@ internal static class SettingRecipeCatalog
                 ActionScript.DeleteValue("MaxSessions")) +
             ActionScript.Block(
                 ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"),
+                ActionScript.Dword("fSingleSessionPerUser", 1),
                 ActionScript.DeleteValue("fAllowConsoleLogout"))),
             "关闭仅恢复单会话限制；不卸载 RDS、不关闭 RDP。正式环境请确认 RDS CAL。"));
+
+        Add(SettingCatalog.RdpRestrictSingleSession, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "fSingleSessionPerUser", 1, 0));
 
         Add(SettingCatalog.RdpGpuAccel, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", 1, 0));
