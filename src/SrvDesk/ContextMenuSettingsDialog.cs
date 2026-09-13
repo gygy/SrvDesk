@@ -34,9 +34,9 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly ComboBox _adviceFilter = new();
     private readonly Label _count = new();
     private readonly Label _detail = new();
-    private readonly CheckBox _multi = new();
     private List<ContextMenuEntry> _items = [];
     private bool _scanLoaded;
+    private Button[] _scanButtons = [];
 
     public ContextMenuSettingsDialog(Action? onChanged = null)
     {
@@ -251,20 +251,31 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     private Panel BuildScanTools()
     {
         var btnH = UiFit.ControlHeight();
-        var row1 = btnH + UiScale.S(12);
         var bar = new Panel
         {
-            Height = row1 + UiScale.S(28),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             BackColor = AppTheme.Surface,
+            Padding = new Padding(0, 0, 0, UiScale.S(4)),
         };
 
-        var sceneLbl = new Label
+        // 第 1 行：筛选（不与按钮抢宽度）
+        var filterRow = new FlowLayoutPanel
         {
-            Text = AppLang.L("场景", "Scene"),
+            Dock = DockStyle.Top,
             AutoSize = true,
-            ForeColor = AppTheme.TextHeader,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, UiScale.S(2), 0, UiScale.S(2)),
+            Margin = new Padding(0),
         };
-        _sceneFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        UiBuffer.ConfigureNoScrollRow(filterRow);
+
+        var sceneLbl = BarToolLabel(AppLang.L("场景", "Scene"));
+        StyleToolCombo(_sceneFilter, btnH, UiScale.S(120));
         _sceneFilter.Items.AddRange([
             AppLang.L("全部场景", "All scenes"),
             AppLang.L("文件", "File"),
@@ -279,13 +290,8 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _sceneFilter.SelectedIndex = 0;
         _sceneFilter.SelectedIndexChanged += (_, _) => ApplyFilter();
 
-        var adviceLbl = new Label
-        {
-            Text = AppLang.L("建议", "Advice"),
-            AutoSize = true,
-            ForeColor = AppTheme.TextHeader,
-        };
-        _adviceFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        var adviceLbl = BarToolLabel(AppLang.L("建议", "Advice"));
+        StyleToolCombo(_adviceFilter, btnH, UiScale.S(110));
         _adviceFilter.Items.AddRange([
             AppLang.L("全部建议", "All advice"),
             AppLang.L("可精简", "Can slim"),
@@ -297,93 +303,107 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _adviceFilter.SelectedIndex = 0;
         _adviceFilter.SelectedIndexChanged += (_, _) => ApplyFilter();
 
-        var searchLbl = new Label
-        {
-            Text = AppLang.L("搜索", "Search"),
-            AutoSize = true,
-            ForeColor = AppTheme.TextHeader,
-        };
+        var searchLbl = BarToolLabel(AppLang.L("搜索", "Search"));
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.Font = UiFit.UiFont;
+        _search.Width = UiScale.S(160);
+        _search.Height = btnH;
+        _search.Margin = new Padding(0, 0, UiScale.S(12), 0);
         _search.TextChanged += (_, _) => ApplyFilter();
-
-        _multi.Text = AppLang.L("多选", "Multi");
-        _multi.AutoSize = true;
-        _multi.ForeColor = AppTheme.TextMute;
-        _multi.Checked = true;
-        _multi.CheckedChanged += (_, _) => { _list.MultiSelect = _multi.Checked; };
 
         _count.AutoSize = true;
         _count.ForeColor = AppTheme.TextMute;
+        _count.Margin = new Padding(0, UiScale.S(8), 0, 0);
+        _count.TextAlign = ContentAlignment.MiddleLeft;
 
-        _detail.AutoSize = false;
-        _detail.AutoEllipsis = true;
-        _detail.ForeColor = AppTheme.TextMute;
-        _detail.TextAlign = ContentAlignment.MiddleLeft;
-        _detail.Text = AppLang.L("双击切换；Server 精简只动「可精简」项。", "Double-click to toggle; Server slim only touches “Can slim”.");
+        filterRow.Controls.Add(sceneLbl);
+        filterRow.Controls.Add(_sceneFilter);
+        filterRow.Controls.Add(adviceLbl);
+        filterRow.Controls.Add(_adviceFilter);
+        filterRow.Controls.Add(searchLbl);
+        filterRow.Controls.Add(_search);
+        filterRow.Controls.Add(_count);
 
-        var buttons = new[]
+        // 第 2 行：动作按钮（同高，不重叠）
+        var actionRow = new FlowLayoutPanel
         {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, UiScale.S(2), 0, UiScale.S(2)),
+            Margin = new Padding(0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actionRow);
+
+        _scanButtons =
+        [
             ToolBtn(AppLang.L("启用", "Enable"), () => SetSelected(true), btnH),
             ToolBtn(AppLang.L("禁用", "Disable"), () => SetSelected(false), btnH),
             ToolBtn(AppLang.L("Server 精简", "Server slim"), ApplyServerSlim, btnH),
             ToolBtn(AppLang.L("打开位置", "Open key"), OpenSelected, btnH),
             ToolBtn(AppLang.L("刷新", "Refresh"), RefreshScan, btnH),
-        };
-
-        bar.Controls.Add(sceneLbl);
-        bar.Controls.Add(_sceneFilter);
-        bar.Controls.Add(adviceLbl);
-        bar.Controls.Add(_adviceFilter);
-        bar.Controls.Add(searchLbl);
-        bar.Controls.Add(_search);
-        bar.Controls.Add(_multi);
-        bar.Controls.Add(_count);
-        bar.Controls.Add(_detail);
-        foreach (var b in buttons)
-            bar.Controls.Add(b);
-
-        void LayoutTools()
+        ];
+        foreach (var b in _scanButtons)
         {
-            var gap = UiScale.S(6);
-            var pad = UiScale.S(4);
-            foreach (var b in buttons)
-                UiFit.FitButton(b, btnH, minWidth: 64, padding: 22);
-
-            var x = bar.ClientSize.Width - pad;
-            for (var i = buttons.Length - 1; i >= 0; i--)
-            {
-                var b = buttons[i];
-                x -= b.Width;
-                b.Location = new Point(Math.Max(pad, x), UiScale.S(4));
-                x -= gap;
-            }
-
-            var btnLeft = buttons[0].Left;
-            var y1 = UiScale.S(8);
-            sceneLbl.Location = new Point(0, y1);
-            _sceneFilter.SetBounds(sceneLbl.Right + UiScale.S(4), UiScale.S(4), UiScale.S(110), UiScale.S(26));
-            adviceLbl.Location = new Point(_sceneFilter.Right + UiScale.S(10), y1);
-            _adviceFilter.SetBounds(adviceLbl.Right + UiScale.S(4), UiScale.S(4), UiScale.S(100), UiScale.S(26));
-            searchLbl.Location = new Point(_adviceFilter.Right + UiScale.S(10), y1);
-
-            _multi.Location = new Point(Math.Max(searchLbl.Right + UiScale.S(4), btnLeft - UiScale.S(70)), y1);
-            var countW = _count.PreferredSize.Width;
-            var countX = _multi.Left - countW - UiScale.S(10);
-            _count.Visible = countX > searchLbl.Right + UiScale.S(90);
-            if (_count.Visible)
-                _count.Location = new Point(countX, y1);
-
-            var searchRight = _count.Visible ? _count.Left - UiScale.S(8) : _multi.Left - UiScale.S(8);
-            var searchW = Math.Max(UiScale.S(80), searchRight - (searchLbl.Right + UiScale.S(4)));
-            _search.SetBounds(searchLbl.Right + UiScale.S(4), UiScale.S(4), searchW, UiScale.S(26));
-
-            _detail.SetBounds(0, row1, Math.Max(80, bar.ClientSize.Width - pad), UiScale.S(24));
+            b.Margin = new Padding(0, 0, UiScale.S(8), 0);
+            actionRow.Controls.Add(b);
         }
 
-        bar.Resize += (_, _) => LayoutTools();
-        LayoutTools();
+        _detail.AutoSize = false;
+        _detail.AutoEllipsis = true;
+        _detail.Dock = DockStyle.Top;
+        _detail.Height = UiScale.S(24);
+        _detail.ForeColor = AppTheme.TextMute;
+        _detail.TextAlign = ContentAlignment.MiddleLeft;
+        _detail.Text = AppLang.L(
+            "双击切换；可多选后批量启用/禁用。Server 精简只动「可精简」项。",
+            "Double-click to toggle; multi-select then Enable/Disable. Server slim only “Can slim”.");
+
+        // Dock 顺序：后加的在上 → 先 detail 再 action 再 filter，视觉上 filter/action/detail
+        bar.Controls.Add(_detail);
+        bar.Controls.Add(actionRow);
+        bar.Controls.Add(filterRow);
+
+        void SyncHeights()
+        {
+            var h = UiFit.ControlHeight();
+            StyleToolCombo(_sceneFilter, h, _sceneFilter.Width);
+            StyleToolCombo(_adviceFilter, h, _adviceFilter.Width);
+            _search.Height = h;
+            foreach (var b in _scanButtons)
+                UiFit.FitButton(b, h, minWidth: 64, padding: 22);
+            filterRow.Height = h + UiScale.S(8);
+            actionRow.Height = h + UiScale.S(8);
+        }
+
+        bar.HandleCreated += (_, _) => SyncHeights();
+        SyncHeights();
         return bar;
+    }
+
+    private static Label BarToolLabel(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        ForeColor = AppTheme.TextHeader,
+        Margin = new Padding(0, UiScale.S(8), UiScale.S(4), 0),
+        TextAlign = ContentAlignment.MiddleLeft,
+    };
+
+    private static void StyleToolCombo(ComboBox box, int height, int width)
+    {
+        box.DropDownStyle = ComboBoxStyle.DropDownList;
+        box.Font = UiFit.UiFont;
+        box.FlatStyle = FlatStyle.Flat;
+        box.IntegralHeight = false;
+        box.BackColor = Color.White;
+        box.ForeColor = AppTheme.TextMain;
+        box.Width = width;
+        box.Height = height;
+        box.Margin = new Padding(0, 0, UiScale.S(12), 0);
     }
 
     private Button ToolBtn(string text, Action click, int height)

@@ -1162,7 +1162,7 @@ internal sealed class MainForm : Form
 
     private void BuildCommandBar()
     {
-        // 顶栏控件统一外框高度（比全局 ControlHeight 略矮，避免顶栏鼓包）
+        // 搜索 / 下拉 / 按钮同一外框高度（与全局 ControlHeight 一致）
         var itemH = CommandBarItemHeight();
         _commandBar.Padding = new Padding(UiScale.S(12), UiScale.S(6), UiScale.S(12), UiScale.S(6));
         _commandBar.Height = itemH + UiScale.S(12);
@@ -1287,18 +1287,13 @@ internal sealed class MainForm : Form
         ApplyLog.Write(AppLang.L("载入预设 ", "Load preset ") + preset.Id + " / " + preset.Title);
     }
 
-    /// <summary>顶栏搜索/下拉/按钮共用外框高度。</summary>
-    private static int CommandBarItemHeight()
-    {
-        // 略矮于全局 ControlHeight，避免顶栏比内容区按钮更鼓
-        return Math.Max(UiScale.S(28), UiFit.LineHeight(UiFit.UiFont) + UiScale.S(10));
-    }
+    /// <summary>顶栏搜索/下拉/按钮共用外框高度（与全局按钮同高）。</summary>
+    private static int CommandBarItemHeight() => UiFit.ControlHeight(UiFit.UiFont);
 
     private Button BarQuickButton(string text, string tip, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         var h = CommandBarItemHeight();
-        // 只定宽，高度用顶栏统一值，不走 FitButton（否则会变成全局 34+ 与输入框错位）
         var w = Math.Max(UiFit.ButtonWidth(text, b.Font, padding: 24), UiScale.S(72));
         b.AutoSize = false;
         b.Size = new Size(w, h);
@@ -1321,44 +1316,87 @@ internal sealed class MainForm : Form
         box.IntegralHeight = false;
         box.BackColor = Color.White;
         box.ForeColor = AppTheme.TextMain;
-        try { box.ItemHeight = Math.Max(UiScale.S(16), height - UiScale.S(8)); } catch { /* ignore */ }
+        // 先定外框高，再定 ItemHeight；避免 ItemHeight 把 Combo 撑得比按钮高
         box.Height = height;
+        try
+        {
+            var ih = Math.Max(UiScale.S(14), height - UiScale.S(10));
+            if (box.ItemHeight != ih)
+                box.ItemHeight = ih;
+        }
+        catch { /* DropDownList 外偶发 */ }
+        if (box.Height != height)
+            box.Height = height;
     }
+
+    private bool _commandBarHeightHooked;
+    private bool _fittingCommandBar;
 
     private void FitTopCommandBar()
     {
-        var h = CommandBarItemHeight();
-        if (_commandBar.Visible)
+        FitTopCommandBarCore();
+
+        if (_commandBarHeightHooked) return;
+        _commandBarHeightHooked = true;
+        void AlignAfterHandle(object? _, EventArgs __) => FitTopCommandBarCore();
+        _categoryFilter.HandleCreated += AlignAfterHandle;
+        _presetCombo.HandleCreated += AlignAfterHandle;
+        _searchBox.HandleCreated += AlignAfterHandle;
+    }
+
+    private void FitTopCommandBarCore()
+    {
+        if (_fittingCommandBar) return;
+        _fittingCommandBar = true;
+        try
         {
-            _commandBar.Padding = new Padding(UiScale.S(12), UiScale.S(6), UiScale.S(12), UiScale.S(6));
-            _commandBar.Height = h + UiScale.S(12);
+            var h = CommandBarItemHeight();
+
+            _searchBox.Height = h;
+            StyleBarCombo(_categoryFilter, h);
+            _categoryFilter.Margin = new Padding(0);
+            StyleBarCombo(_presetCombo, h);
+            _presetCombo.Margin = new Padding(0, 0, 8, 0);
+
+            // Combo 创建句柄后偶发回弹；以行内实测最高者为准
+            h = Math.Max(h, Math.Max(_searchBox.Height, Math.Max(_categoryFilter.Height, _presetCombo.Height)));
+            if (_searchBox.Height != h) _searchBox.Height = h;
+            if (_categoryFilter.Height != h) _categoryFilter.Height = h;
+            if (_presetCombo.Height != h) _presetCombo.Height = h;
+
+            if (_commandBar.Visible)
+            {
+                _commandBar.Padding = new Padding(UiScale.S(12), UiScale.S(6), UiScale.S(12), UiScale.S(6));
+                var barH = h + UiScale.S(12);
+                if (_commandBar.Height != barH)
+                    _commandBar.Height = barH;
+            }
+
+            foreach (Control c in _commandFlow.Controls)
+            {
+                if (c is Button b)
+                {
+                    var w = Math.Max(UiFit.ButtonWidth(b.Text, b.Font, padding: 24), UiScale.S(72));
+                    b.AutoSize = false;
+                    if (b.Width != w || b.Height != h)
+                        b.Size = new Size(w, h);
+                    b.Margin = new Padding(0, 0, 8, 0);
+                }
+                else if (c is Label lbl && lbl.AutoSize)
+                {
+                    var top = Math.Max(0, (h - lbl.PreferredHeight) / 2);
+                    lbl.Margin = new Padding(0, top, 6, 0);
+                }
+                else if (c is CheckBox cb)
+                {
+                    var top = Math.Max(0, (h - cb.PreferredSize.Height) / 2);
+                    cb.Margin = new Padding(0, top, 16, 0);
+                }
+            }
         }
-
-        _searchBox.Height = h;
-        StyleBarCombo(_categoryFilter, h);
-        _categoryFilter.Margin = new Padding(0);
-        StyleBarCombo(_presetCombo, h);
-        _presetCombo.Margin = new Padding(0, 0, 8, 0);
-
-        foreach (Control c in _commandFlow.Controls)
+        finally
         {
-            if (c is Button b)
-            {
-                var w = Math.Max(UiFit.ButtonWidth(b.Text, b.Font, padding: 24), UiScale.S(72));
-                b.AutoSize = false;
-                b.Size = new Size(w, h);
-                b.Margin = new Padding(0, 0, 8, 0);
-            }
-            else if (c is Label lbl && lbl.AutoSize)
-            {
-                var top = Math.Max(0, (h - lbl.PreferredHeight) / 2);
-                lbl.Margin = new Padding(0, top, 6, 0);
-            }
-            else if (c is CheckBox cb)
-            {
-                var top = Math.Max(0, (h - cb.PreferredSize.Height) / 2);
-                cb.Margin = new Padding(0, top, 16, 0);
-            }
+            _fittingCommandBar = false;
         }
     }
 
