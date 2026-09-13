@@ -392,14 +392,16 @@ internal sealed class MainForm : Form
     {
         Text = $"{AppBrand.ProductName} v{AppBrand.VersionText}";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(UiScale.S(1180), UiScale.S(720));
-        ClientSize = new Size(UiScale.S(1280), UiScale.S(760));
+        // 设计尺寸；高 DPI / 小屏由 FitFormToWorkingArea 再收进工作区，避免底栏按钮出屏
+        MinimumSize = new Size(UiScale.S(1024), UiScale.S(640));
+        ClientSize = new Size(UiScale.S(1180), UiScale.S(720));
         Font = UiFit.UiFont;
         // 列表坐标为手工布局；若再用 Dpi AutoScale 会与 UiScale 叠乘导致错位
         AutoScaleMode = AutoScaleMode.None;
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
         AppBrand.ApplyWindowIcon(this);
+        UiFit.FitFormToWorkingArea(this);
         KeyPreview = true;
         MainMenuStrip = _appMenu;
         DpiChanged += (_, _) =>
@@ -407,6 +409,7 @@ internal sealed class MainForm : Form
             UiScale.OnHostDpiChanged(this);
             FitTopCommandBar();
             FitBottomActionButtons();
+            UiFit.FitFormToWorkingArea(this);
             try { _bottomPanel?.PerformLayout(); } catch { /* ignore */ }
         };
 

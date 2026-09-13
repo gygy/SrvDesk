@@ -45,8 +45,12 @@ internal static class AppBrand
 
     public static Icon ApplicationIcon => _applicationIcon ??= LoadApplicationIcon();
 
-    /// <summary>统一设置窗口标题栏与任务栏图标（与主程序 logo 一致）。</summary>
-    public static void ApplyWindowIcon(Form form) => form.Icon = ApplicationIcon;
+    /// <summary>统一设置窗口标题栏与任务栏图标（与主程序 logo 一致），并按屏幕收小窗体。</summary>
+    public static void ApplyWindowIcon(Form form)
+    {
+        form.Icon = ApplicationIcon;
+        UiFit.HookAutoFitToWorkingArea(form);
+    }
 
     public static Image? LoadLogoImage()
     {

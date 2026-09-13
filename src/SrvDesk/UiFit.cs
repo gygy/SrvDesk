@@ -129,6 +129,139 @@ internal static class UiFit
         }
     }
 
+    private static readonly ConditionalWeakTable<Form, object> FormFitHooked = new();
+
+    /// <summary>
+    /// 按当前显示器工作区收小窗体，避免底栏「应用到系统」等被挤出屏幕。
+    /// 子窗体额外不超过主窗（或 Owner）外框。
+    /// </summary>
+    public static void FitFormToWorkingArea(Form form, Form? sizeCapRelativeTo = null)
+    {
+        if (form is null || form.IsDisposed) return;
+        // 嵌入主窗的页（TopLevel=false）不要改尺寸
+        if (!form.TopLevel || form.FormBorderStyle == FormBorderStyle.None)
+            return;
+
+        Rectangle wa;
+        try
+        {
+            Screen? scr = null;
+            if (form.IsHandleCreated)
+                scr = Screen.FromControl(form);
+            else if (sizeCapRelativeTo is { IsHandleCreated: true })
+                scr = Screen.FromControl(sizeCapRelativeTo);
+            scr ??= Screen.FromPoint(Cursor.Position) ?? Screen.PrimaryScreen;
+            if (scr is null) return;
+            wa = scr.WorkingArea;
+        }
+        catch
+        {
+            return;
+        }
+
+        const float maxFrac = 0.92f;
+        var maxOuterW = Math.Max(360, (int)(wa.Width * maxFrac));
+        var maxOuterH = Math.Max(280, (int)(wa.Height * maxFrac));
+
+        var cap = sizeCapRelativeTo;
+        if (cap is null || cap.IsDisposed || ReferenceEquals(cap, form))
+            cap = FindMainForm(form);
+        if (cap is { IsHandleCreated: true, IsDisposed: false } && !ReferenceEquals(cap, form))
+        {
+            // 子窗不超过主窗，并略留边
+            maxOuterW = Math.Min(maxOuterW, Math.Max(360, cap.Width - UiScale.S(24)));
+            maxOuterH = Math.Min(maxOuterH, Math.Max(280, cap.Height - UiScale.S(24)));
+        }
+
+        var ncW = 16;
+        var ncH = 39;
+        try
+        {
+            if (form.IsHandleCreated)
+            {
+                ncW = Math.Max(0, form.Width - form.ClientSize.Width);
+                ncH = Math.Max(0, form.Height - form.ClientSize.Height);
+            }
+        }
+        catch { /* ignore */ }
+
+        var maxClientW = Math.Max(320, maxOuterW - ncW);
+        var maxClientH = Math.Max(240, maxOuterH - ncH);
+
+        var minOuter = form.MinimumSize;
+        if (minOuter.Width > 0 || minOuter.Height > 0)
+        {
+            form.MinimumSize = new Size(
+                minOuter.Width > 0 ? Math.Min(Math.Max(320, minOuter.Width), maxOuterW) : 0,
+                minOuter.Height > 0 ? Math.Min(Math.Max(240, minOuter.Height), maxOuterH) : 0);
+            minOuter = form.MinimumSize;
+        }
+
+        var cs = form.ClientSize;
+        var w = Math.Min(cs.Width, maxClientW);
+        var h = Math.Min(cs.Height, maxClientH);
+        if (minOuter.Width > 0)
+            w = Math.Max(w, Math.Max(280, minOuter.Width - ncW));
+        if (minOuter.Height > 0)
+            h = Math.Max(h, Math.Max(200, minOuter.Height - ncH));
+        w = Math.Min(w, maxClientW);
+        h = Math.Min(h, maxClientH);
+
+        if (w != cs.Width || h != cs.Height)
+            form.ClientSize = new Size(w, h);
+
+        // 保证整窗落在工作区内（底栏可见）
+        try
+        {
+            if (!form.IsHandleCreated) return;
+            var b = form.Bounds;
+            var x = Math.Min(Math.Max(b.X, wa.Left), Math.Max(wa.Left, wa.Right - b.Width));
+            var y = Math.Min(Math.Max(b.Y, wa.Top), Math.Max(wa.Top, wa.Bottom - b.Height));
+            if (x != b.X || y != b.Y)
+                form.Location = new Point(x, y);
+        }
+        catch { /* ignore */ }
+    }
+
+    /// <summary>在 Load/Shown 时自动 Fit（每个窗体只挂一次）。</summary>
+    public static void HookAutoFitToWorkingArea(Form form)
+    {
+        if (form is null || form.IsDisposed) return;
+        try
+        {
+            if (FormFitHooked.TryGetValue(form, out _))
+                return;
+            FormFitHooked.Add(form, new object());
+        }
+        catch (ArgumentException)
+        {
+            return;
+        }
+
+        void Fit() => FitFormToWorkingArea(form, form.Owner);
+        form.Load += (_, _) => Fit();
+        form.Shown += (_, _) => Fit();
+        form.DpiChanged += (_, _) =>
+        {
+            UiScale.OnHostDpiChanged(form);
+            Fit();
+        };
+    }
+
+    private static Form? FindMainForm(Form? exclude)
+    {
+        try
+        {
+            foreach (Form f in Application.OpenForms)
+            {
+                if (f is MainForm && !f.IsDisposed && !ReferenceEquals(f, exclude))
+                    return f;
+            }
+        }
+        catch { /* ignore */ }
+        return null;
+    }
+
     /// <summary>下拉框高度与 ItemHeight，避免选中项文字被裁。</summary>
     public static void FitCombo(ComboBox box, Font? font = null)
     {

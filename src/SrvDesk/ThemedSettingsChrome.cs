@@ -561,6 +561,11 @@ internal static class ThemedSettingsChrome
 
     private static void WireDpiRefit(Form form)
     {
-        form.DpiChanged += (_, _) => UiScale.OnHostDpiChanged(form);
+        form.DpiChanged += (_, _) =>
+        {
+            UiScale.OnHostDpiChanged(form);
+            UiFit.FitFormToWorkingArea(form, form.Owner);
+        };
+        UiFit.FitFormToWorkingArea(form, form.Owner);
     }
 }
