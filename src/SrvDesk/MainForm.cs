@@ -2309,12 +2309,14 @@ internal sealed class MainForm : Form
         var rule = new Panel { Height = 1, Dock = DockStyle.Top, BackColor = AppTheme.BorderLight };
 
         _status.AutoSize = false;
-        _status.SetBounds(12, 10, 280, 38);
+        _status.SetBounds(UiScale.S(12), 10, UiScale.S(280), 38);
         _status.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
+        _status.TextAlign = ContentAlignment.MiddleLeft;
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
         _defaultStatusText = _systemFacts.CompactSummary;
         _status.Text = _defaultStatusText;
+        _status.TextChanged += (_, _) => LayoutBottomChrome();
 
         var actions = new NoScrollFlowLayoutPanel
         {
@@ -2365,18 +2367,41 @@ internal sealed class MainForm : Form
     private void LayoutBottomChrome()
     {
         if (_bottomActions is null) return;
+        var leftPad = UiScale.S(12);
+        var gap = UiScale.S(10);
         var actionsW = _bottomActions.Width;
-        var rightReserve = actionsW + UiScale.S(20);
-        if (_resourceMeter is not null)
-        {
-            _resourceMeter.Tag = rightReserve;
-            _resourceMeter.LayoutInBottomBar(_bottomPanel, rightReserve);
-        }
+        var rightLimit = _bottomPanel.ClientSize.Width - actionsW - UiScale.S(16);
 
-        var meterLeft = _resourceMeter?.Left ?? (_bottomPanel.ClientSize.Width - rightReserve);
-        _status.Width = Math.Max(120, meterLeft - _status.Left - UiScale.S(12));
+        _status.Left = leftPad;
+        _status.TextAlign = ContentAlignment.MiddleLeft;
         _status.Height = Math.Max(UiScale.S(28), _bottomPanel.ClientSize.Height - UiScale.S(4));
         _status.Top = Math.Max(1, (_bottomPanel.ClientSize.Height - _status.Height) / 2);
+
+        // 版本/状态在左；IP·资源条紧跟其后，同左对齐
+        var statusW = Math.Max(
+            UiScale.S(160),
+            Math.Min(UiScale.S(340), UiFit.TextWidth(_status.Text, _status.Font) + UiScale.S(16)));
+        // 长提示时少占一点，把剩余留给资源条；过长则状态可伸到按钮前
+        if (_status.Text.Length > 36)
+            statusW = Math.Max(UiScale.S(200), Math.Min(statusW, Math.Max(UiScale.S(200), rightLimit - leftPad - UiScale.S(280))));
+
+        if (_resourceMeter is not null)
+        {
+            var meterLeft = leftPad + statusW + gap;
+            if (meterLeft >= rightLimit - UiScale.S(120))
+            {
+                // 空间不够：状态让路，资源条仍靠左排在状态后尽量显示
+                statusW = Math.Max(UiScale.S(140), (rightLimit - leftPad - gap) / 3);
+                meterLeft = leftPad + statusW + gap;
+            }
+
+            _status.Width = statusW;
+            _resourceMeter.LayoutInBottomBar(_bottomPanel, meterLeft, rightLimit);
+        }
+        else
+        {
+            _status.Width = Math.Max(120, rightLimit - leftPad);
+        }
     }
 
     private void StyleBottomActionButton(FlatChromeButton b, string text, bool primary, Color fore)

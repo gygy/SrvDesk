@@ -13,7 +13,7 @@ internal sealed class HeaderResourceMeter : Panel
         Dock = DockStyle.Fill,
         ForeColor = AppTheme.TextMute,
         Font = UiFit.UiFont,
-        TextAlign = ContentAlignment.MiddleRight,
+        TextAlign = ContentAlignment.MiddleLeft,
         BackColor = Color.Transparent,
         Text = "…",
         AutoEllipsis = false,
@@ -49,15 +49,23 @@ internal sealed class HeaderResourceMeter : Panel
         Disposed += (_, _) => Cleanup();
     }
 
-    /// <summary>按底栏单行高度垂直居中（右锚在动作按钮左侧）。</summary>
-    public void LayoutInBottomBar(Control host, int rightReserve)
+    /// <summary>按底栏单行高度垂直居中；从左侧 left 起排，右侧不超过 rightLimit。</summary>
+    public void LayoutInBottomBar(Control host, int left, int rightLimit)
     {
         if (host is null) return;
         Height = UiFit.ControlHeight(_text.Font);
-        Left = Math.Max(8, host.ClientSize.Width - Width - Math.Max(0, rightReserve));
+        var maxW = Math.Max(UiScale.S(160), rightLimit - left);
+        if (Width > maxW)
+            Width = maxW;
+        Left = Math.Max(0, left);
         Top = Math.Max(0, (host.ClientSize.Height - Height) / 2);
-        Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        Anchor = AnchorStyles.Top | AnchorStyles.Left;
+        Tag = rightLimit;
     }
+
+    /// <summary>兼容旧调用：靠右预留 rightReserve。</summary>
+    public void LayoutInBottomBar(Control host, int rightReserve) =>
+        LayoutInBottomBar(host, Math.Max(8, host.ClientSize.Width - Width - Math.Max(0, rightReserve)), host.ClientSize.Width - Math.Max(0, rightReserve));
 
     private void TryCreateCpuCounter()
     {
@@ -137,15 +145,23 @@ internal sealed class HeaderResourceMeter : Panel
             var next = Math.Max(UiScale.S(320), need);
             if (Parent is not null)
             {
-                var rightPad = Tag is int reserve ? reserve : UiScale.S(28);
-                var maxW = Math.Max(UiScale.S(200), Parent.ClientSize.Width - rightPad - UiScale.S(100));
+                var rightLimit = Tag is int lim ? lim : Parent.ClientSize.Width - UiScale.S(28);
+                var left = (Anchor & AnchorStyles.Left) != 0 ? Left : UiScale.S(12);
+                var maxW = Math.Max(UiScale.S(160), rightLimit - left);
                 next = Math.Min(next, maxW);
             }
 
             if (Math.Abs(Width - next) >= 2)
                 Width = next;
 
-            if (Parent is not null && (Anchor & AnchorStyles.Right) != 0)
+            if (Parent is not null && (Anchor & AnchorStyles.Left) != 0)
+            {
+                var rightLimit = Tag is int lim ? lim : Parent.ClientSize.Width - UiScale.S(28);
+                var maxW = Math.Max(UiScale.S(160), rightLimit - Left);
+                if (Width > maxW)
+                    Width = maxW;
+            }
+            else if (Parent is not null && (Anchor & AnchorStyles.Right) != 0)
             {
                 var rightPad = Tag is int reserve ? reserve : UiScale.S(28);
                 Left = Math.Max(0, Parent.ClientSize.Width - Width - rightPad);
