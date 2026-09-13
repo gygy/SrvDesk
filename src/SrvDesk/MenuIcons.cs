@@ -114,6 +114,26 @@ internal static class MenuIcons
         Array.Empty<Cand>(),
         DrawContextMenu);
 
+    /// <summary>侧栏：资源管理器。</summary>
+    public static Image NavExplorer => Get("nav-explorer",
+        [FileCand(Sys("explorer.exe"))],
+        DrawDesktop);
+
+    /// <summary>侧栏：隐私。</summary>
+    public static Image NavPrivacy => Get("nav-privacy",
+        Array.Empty<Cand>(),
+        DrawEyeOff);
+
+    /// <summary>侧栏：DNS（与网络图标区分）。</summary>
+    public static Image NavDns => Get("nav-dns",
+        Array.Empty<Cand>(),
+        DrawHosts);
+
+    /// <summary>侧栏：远程与网络。</summary>
+    public static Image NavNetwork => Get("nav-network",
+        [FileCand(Sys("ncpa.cpl"))],
+        DrawNetwork);
+
     public static Image Quick => Get("quick",
         Array.Empty<Cand>(),
         DrawWrench);

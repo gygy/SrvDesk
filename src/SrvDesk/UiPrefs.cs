@@ -48,6 +48,8 @@ internal sealed class UiPrefsData
     [DataMember] public string LastInspectionUtc { get; set; } = "";
     /// <summary>应用到系统前显示变更计划（干跑确认）。缺省 true。</summary>
     [DataMember] public bool DisableChangePlanPrompt { get; set; }
+    /// <summary>主窗左侧导航宽度（可拖拽）。</summary>
+    [DataMember] public int SidebarWidth { get; set; }
 }
 
 internal static class UiPrefs
@@ -58,6 +60,9 @@ internal static class UiPrefs
     public const int DefaultHelpPanelHeight = 280;
     public const int MinHelpPanelHeight = 160;
     public const int MaxHelpPanelHeight = 520;
+    public const int DefaultSidebarWidth = 200;
+    public const int MinSidebarWidth = 160;
+    public const int MaxSidebarWidth = 360;
 
     private static string FilePath => AppPaths.Combine("ui-prefs.json");
 
@@ -120,6 +125,13 @@ internal static class UiPrefs
         Save(data);
     }
 
+    public static void SetSidebarWidth(int width)
+    {
+        var data = Load();
+        data.SidebarWidth = ClampSidebarWidth(width);
+        Save(data);
+    }
+
     public static bool EnableDebugLog => Load().EnableDebugLog;
     public static bool SoftSkipUnsupported => Load().SoftSkipUnsupported;
 
@@ -149,10 +161,14 @@ internal static class UiPrefs
     public static int ClampHeight(int height) =>
         Math.Max(MinHelpPanelHeight, Math.Min(MaxHelpPanelHeight, height));
 
+    public static int ClampSidebarWidth(int width) =>
+        Math.Max(MinSidebarWidth, Math.Min(MaxSidebarWidth, width <= 0 ? DefaultSidebarWidth : width));
+
     static void Normalize(UiPrefsData data)
     {
         data.HelpPanelWidth = ClampWidth(data.HelpPanelWidth <= 0 ? DefaultHelpPanelWidth : data.HelpPanelWidth);
         data.HelpPanelHeight = ClampHeight(data.HelpPanelHeight <= 0 ? DefaultHelpPanelHeight : data.HelpPanelHeight);
+        data.SidebarWidth = ClampSidebarWidth(data.SidebarWidth);
 
         // 旧版用 ShowHelpPanel=false 表示关闭，而 HelpPanelDock 仍可能是 Right/Bottom → 迁为 Hidden
         if (!data.ShowHelpPanel
@@ -185,5 +201,6 @@ internal static class UiPrefs
         EnableDebugLog = true,
         SoftSkipUnsupported = true,
         Language = "auto",
+        SidebarWidth = DefaultSidebarWidth,
     };
 }

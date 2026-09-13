@@ -260,6 +260,8 @@ internal sealed class MainForm : Form
 
     private readonly HelpDetailPanel _helpDetail = new();
     private readonly SplitContainer _mainSplit = new();
+    private readonly SplitContainer _navSplit = new();
+    private System.Windows.Forms.Timer? _saveNavSplitTimer;
     private readonly AppMenuStrip _appMenu = new();
     private readonly Panel _commandBar = new();
     private readonly Panel _workArea = new();
@@ -882,13 +884,27 @@ internal sealed class MainForm : Form
     {
         UiBuffer.Enable(_workArea);
         _workArea.BackColor = AppTheme.Surface;
-        sidebar.Dock = DockStyle.Left;
 
         var prefs = UiPrefs.Load();
         var showPanel = UiPrefs.IsDefaultPanelVisible(prefs);
         _scriptPanelSize = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
         _scriptPanelHeight = UiPrefs.ClampHeight(prefs.HelpPanelHeight);
         _scriptDock = UiPrefs.GetDock(prefs);
+        var sidebarW = UiPrefs.ClampSidebarWidth(prefs.SidebarWidth);
+
+        // 左侧导航可拖拽调宽；列表 Dock.Fill 随宽度自动拉伸
+        _navSplit.Dock = DockStyle.Fill;
+        _navSplit.Orientation = Orientation.Vertical;
+        _navSplit.FixedPanel = FixedPanel.Panel1;
+        _navSplit.SplitterWidth = 5;
+        _navSplit.BackColor = AppTheme.BorderLight;
+        _navSplit.Panel1MinSize = UiPrefs.MinSidebarWidth;
+        _navSplit.Panel2MinSize = 400;
+        _navSplit.Panel1.BackColor = AppTheme.NavBg;
+        _navSplit.Panel2.BackColor = AppTheme.Surface;
+        sidebar.Dock = DockStyle.Fill;
+        sidebar.Width = sidebarW;
+        _navSplit.Panel1.Controls.Add(sidebar);
 
         _mainSplit.Dock = DockStyle.Fill;
         _mainSplit.FixedPanel = FixedPanel.Panel2;
@@ -906,6 +922,7 @@ internal sealed class MainForm : Form
         _helpDetail.Dock = DockStyle.Fill;
         _mainSplit.Panel1.Controls.Add(_contentHost);
         _mainSplit.Panel2.Controls.Add(_helpDetail);
+        _navSplit.Panel2.Controls.Add(_mainSplit);
 
         _saveSplitTimer = new System.Windows.Forms.Timer { Interval = 350 };
         _saveSplitTimer.Tick += (_, _) =>
@@ -920,19 +937,45 @@ internal sealed class MainForm : Form
             _saveSplitTimer.Start();
         };
 
+        _saveNavSplitTimer = new System.Windows.Forms.Timer { Interval = 350 };
+        _saveNavSplitTimer.Tick += (_, _) =>
+        {
+            _saveNavSplitTimer!.Stop();
+            try { UiPrefs.SetSidebarWidth(_navSplit.SplitterDistance); } catch { /* ignore */ }
+        };
+        _navSplit.SplitterMoved += (_, _) =>
+        {
+            _saveNavSplitTimer!.Stop();
+            _saveNavSplitTimer.Start();
+        };
+
         void ApplyStartupScriptLayout()
         {
             ApplyConfigScriptDock(_scriptDock, fromUser: false);
             SetConfigScriptPanelVisible(showPanel);
         }
 
+        void ApplyNavWidth()
+        {
+            try
+            {
+                if (_navSplit.Width > sidebarW + _navSplit.Panel2MinSize + _navSplit.SplitterWidth)
+                    _navSplit.SplitterDistance = sidebarW;
+            }
+            catch { /* 布局未就绪 */ }
+        }
+
+        if (_navSplit.IsHandleCreated)
+            BeginInvoke(ApplyNavWidth);
+        else
+            _navSplit.HandleCreated += (_, _) => BeginInvoke(ApplyNavWidth);
+
         if (_mainSplit.IsHandleCreated)
             BeginInvoke(ApplyStartupScriptLayout);
         else
             _mainSplit.HandleCreated += (_, _) => BeginInvoke(ApplyStartupScriptLayout);
 
-        _workArea.Controls.Add(_mainSplit);
-        _workArea.Controls.Add(sidebar);
+        _workArea.Controls.Add(_navSplit);
 
         // 菜单勾选与显隐立即对齐偏好（不依赖 HandleCreated）
         _appMenu.ViewHelpPanel.Checked = showPanel;
@@ -942,7 +985,6 @@ internal sealed class MainForm : Form
             : Orientation.Vertical;
         SetConfigScriptPanelVisible(showPanel);
     }
-
     private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromUser)
     {
         if (_applyingDock) return;
@@ -2578,8 +2620,29 @@ internal sealed class MainForm : Form
             Font,
             e.Index == _menuHover,
             separator: MenuItems[e.Index] == AppLang.L("性能及安全", "Performance & security"),
-            matchCount: badge);
+            matchCount: badge,
+            icon: MenuIconFor(e.Index));
     }
+
+    private static Image MenuIconFor(int index) => index switch
+    {
+        0 => MenuIcons.ServerRoles,          // Server专属
+        1 => MenuIcons.Autologon,            // 账户策略
+        2 => MenuIcons.Identity,             // 账户与登录
+        3 => MenuIcons.NavExplorer,          // 资源管理器
+        4 => MenuIcons.DesktopMaintenance,   // 桌面外观
+        5 => MenuIcons.NavNetwork,           // 远程与网络
+        6 => MenuIcons.NavPrivacy,           // 隐私与体验
+        7 => MenuIcons.SecurityCenter,       // 性能及安全
+        8 => MenuIcons.TaskScheduler,        // 登录启动项
+        9 => MenuIcons.ShutdownTimer,        // 电源与后台
+        10 => MenuIcons.Advanced,            // 高级设置
+        11 => MenuIcons.ContextMenu,         // 右键菜单
+        12 => MenuIcons.ComputerMgmt,        // 服务优化
+        13 => MenuIcons.NavDns,              // DNS
+        14 => MenuIcons.Script,              // 自定义配置
+        _ => MenuIcons.Quick,
+    };
 
     /// <param name="forceUi">
     /// true：用系统状态覆盖界面开关（启动首读、用户点刷新、应用后回读）。
