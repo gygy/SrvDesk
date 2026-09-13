@@ -282,8 +282,6 @@ internal sealed class MainForm : Form
     private int _menuHover = -1;
     /// <summary>侧栏各标签全局搜索匹配数；-1 表示不显示角标。</summary>
     private int[] _menuMatchCounts = [];
-    /// <summary>侧栏各标签待优化（强烈推荐+）未达项数量；-1 表示不显示。</summary>
-    private int[] _menuRecommendCounts = [];
     private SettingRow? _selectedRow;
     private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
     private readonly TextBox _searchBox = new();
@@ -1526,8 +1524,12 @@ internal sealed class MainForm : Form
                 RefreshAfterProfileImport();
             }
 
+            if (parts.Count == 0) return;
+
             _status.Text = AppLang.L("已导入", "Imported ") + string.Join(AppLang.L("、", ", "), parts) + "：" + dlg.FileName
-                           + (bundle.HasSettings ? AppLang.L("（开关需点「应用到系统」生效）", " (toggles need Apply)") : "");
+                           + (parts.Contains(AppLang.L("开关", "Toggles"))
+                               ? AppLang.L("（开关需点「应用到系统」生效）", " (toggles need Apply)")
+                               : "");
             ApplyLog.Write(AppLang.L("导入配置 ", "Import profile ") + dlg.FileName + " [" + string.Join(",", parts) + "]");
         }
         catch (Exception ex)
@@ -1757,7 +1759,6 @@ internal sealed class MainForm : Form
         var hideDe = _hideIncompatible.Checked;
         var category = CurrentCategoryFilter();
         UpdateGlobalMenuMatchCounts(query, category, hideDe);
-        UpdateMenuRecommendCounts();
 
         if (_activeSections.Length == 0 || _activeWrap is null)
         {
@@ -1845,38 +1846,6 @@ internal sealed class MainForm : Form
             }
 
             _menuMatchCounts[i] = n;
-        }
-    }
-
-    private void UpdateMenuRecommendCounts()
-    {
-        if (_menuRecommendCounts.Length != MenuItems.Length)
-            _menuRecommendCounts = new int[MenuItems.Length];
-
-        var facts = _systemFacts;
-        var hideDe = _hideIncompatible.Checked;
-        for (var i = 0; i < MenuItems.Length; i++)
-        {
-            var groupIndex = FindBatchGroupIndex(MenuItems[i]);
-            if (groupIndex < 0)
-            {
-                _menuRecommendCounts[i] = -1;
-                continue;
-            }
-
-            var n = 0;
-            foreach (var (_, rows) in _groups[groupIndex].Sections)
-            {
-                foreach (var row in rows)
-                {
-                    if (!row.MatchesFilter("", facts, hideDe)) continue;
-                    if (RecommendRules.Resolve(row.Help, facts) < RecommendLevel.Strong) continue;
-                    if (row.Checked) continue;
-                    n++;
-                }
-            }
-
-            _menuRecommendCounts[i] = n > 0 ? n : -1;
         }
     }
 
@@ -2602,10 +2571,7 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
-        var match = e.Index < _menuMatchCounts.Length ? _menuMatchCounts[e.Index] : -1;
-        var recommend = e.Index < _menuRecommendCounts.Length ? _menuRecommendCounts[e.Index] : -1;
-        // 搜索中显示匹配数；否则显示待优化推荐数
-        var badge = match >= 0 ? match : recommend;
+        var badge = e.Index < _menuMatchCounts.Length ? _menuMatchCounts[e.Index] : -1;
         NavMenuStyle.DrawItem(
             e,
             MenuItems[e.Index],
