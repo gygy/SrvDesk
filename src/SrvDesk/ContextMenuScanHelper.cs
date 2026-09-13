@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Win32;
 
 namespace SrvDesk;
@@ -11,15 +12,15 @@ internal enum ContextMenuKind
 /// <summary>已安装右键菜单项（扫描结果，可安全启停）。</summary>
 internal sealed class ContextMenuEntry
 {
-    public required string Id { get; init; }
-    public required string Name { get; init; }
-    public required string Scene { get; init; }
-    public required ContextMenuKind Kind { get; init; }
-    public required string Source { get; init; }
-    public required string Advice { get; init; }
-    public required string RegistryPath { get; init; }
-    public string? Clsid { get; init; }
-    public bool Protected { get; init; }
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Scene { get; set; } = "";
+    public ContextMenuKind Kind { get; set; }
+    public string Source { get; set; } = "";
+    public string Advice { get; set; } = "";
+    public string RegistryPath { get; set; } = "";
+    public string? Clsid { get; set; }
+    public bool Protected { get; set; }
     public bool Enabled { get; set; }
 
     public string KindText => Kind == ContextMenuKind.Shell
@@ -36,28 +37,40 @@ internal static class ContextMenuScanHelper
     private const string BlockedKey =
         @"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Blocked";
 
-    private static readonly (string Relative, string Scene)[] ShellRoots =
+    private static readonly (string Relative, string SceneKey)[] ShellRoots =
     [
-        (@"*\shell", AppLang.L("文件", "File")),
-        (@"Directory\shell", AppLang.L("文件夹", "Folder")),
-        (@"Directory\Background\shell", AppLang.L("空白处", "Background")),
-        (@"Folder\shell", AppLang.L("文件夹(Folder)", "Folder key")),
-        (@"Drive\shell", AppLang.L("驱动器", "Drive")),
-        (@"AllFilesystemObjects\shell", AppLang.L("所有对象", "All objects")),
-        (@"LibraryFolder\Background\shell", AppLang.L("库空白处", "Library bg")),
-        (@"DesktopBackground\Shell", AppLang.L("桌面空白", "Desktop bg")),
+        (@"*\shell", "file"),
+        (@"Directory\shell", "folder"),
+        (@"Directory\Background\shell", "background"),
+        (@"Folder\shell", "folderkey"),
+        (@"Drive\shell", "drive"),
+        (@"AllFilesystemObjects\shell", "all"),
+        (@"LibraryFolder\Background\shell", "libbg"),
+        (@"DesktopBackground\Shell", "deskbg"),
     ];
 
-    private static readonly (string Relative, string Scene)[] ShellExRoots =
+    private static readonly (string Relative, string SceneKey)[] ShellExRoots =
     [
-        (@"*\shellex\ContextMenuHandlers", AppLang.L("文件", "File")),
-        (@"Directory\shellex\ContextMenuHandlers", AppLang.L("文件夹", "Folder")),
-        (@"Directory\Background\shellex\ContextMenuHandlers", AppLang.L("空白处", "Background")),
-        (@"Folder\shellex\ContextMenuHandlers", AppLang.L("文件夹(Folder)", "Folder key")),
-        (@"Drive\shellex\ContextMenuHandlers", AppLang.L("驱动器", "Drive")),
-        (@"AllFilesystemObjects\shellex\ContextMenuHandlers", AppLang.L("所有对象", "All objects")),
-        (@"Directory\Background\shellex\ContextMenuHandlers", AppLang.L("空白处", "Background")),
+        (@"*\shellex\ContextMenuHandlers", "file"),
+        (@"Directory\shellex\ContextMenuHandlers", "folder"),
+        (@"Directory\Background\shellex\ContextMenuHandlers", "background"),
+        (@"Folder\shellex\ContextMenuHandlers", "folderkey"),
+        (@"Drive\shellex\ContextMenuHandlers", "drive"),
+        (@"AllFilesystemObjects\shellex\ContextMenuHandlers", "all"),
     ];
+
+    private static string SceneLabel(string key) => key switch
+    {
+        "file" => AppLang.L("文件", "File"),
+        "folder" => AppLang.L("文件夹", "Folder"),
+        "background" => AppLang.L("空白处", "Background"),
+        "folderkey" => AppLang.L("文件夹(Folder)", "Folder key"),
+        "drive" => AppLang.L("驱动器", "Drive"),
+        "all" => AppLang.L("所有对象", "All objects"),
+        "libbg" => AppLang.L("库空白处", "Library bg"),
+        "deskbg" => AppLang.L("桌面空白", "Desktop bg"),
+        _ => key,
+    };
 
     private static readonly HashSet<string> ProtectedShellNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -94,11 +107,11 @@ internal static class ContextMenuScanHelper
         var list = new List<ContextMenuEntry>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (root, scene) in ShellRoots)
-            ScanShell(root, scene, list, seen);
+        foreach (var (root, sceneKey) in ShellRoots)
+            ScanShell(root, SceneLabel(sceneKey), list, seen);
 
-        foreach (var (root, scene) in ShellExRoots)
-            ScanShellEx(root, scene, list, seen);
+        foreach (var (root, sceneKey) in ShellExRoots)
+            ScanShellEx(root, SceneLabel(sceneKey), list, seen);
 
         return list
             .OrderBy(e => e.Scene, StringComparer.CurrentCultureIgnoreCase)
@@ -268,7 +281,8 @@ internal static class ContextMenuScanHelper
             throw new InvalidOperationException(AppLang.L("缺少 CLSID。", "Missing CLSID."));
 
         // 优先走 Blocked（可逆、不改供应商键值）；同时清理默认值前的 "-" 脏状态
-        SetBlocked(clsid, !enable);
+        var id = clsid!;
+        SetBlocked(id, !enable);
 
         using var k = Registry.ClassesRoot.OpenSubKey(relative, writable: true);
         if (k is null) return;
@@ -281,8 +295,8 @@ internal static class ContextMenuScanHelper
         else
         {
             // Blocked 已足够；若键仅有本地权限问题再尝试破折号
-            if (!cur.StartsWith("-", StringComparison.Ordinal) && !IsBlocked(clsid))
-                k.SetValue("", "-" + clsid);
+            if (!cur.StartsWith("-", StringComparison.Ordinal) && !IsBlocked(id))
+                k.SetValue("", "-" + id);
         }
     }
 
@@ -358,10 +372,10 @@ internal static class ContextMenuScanHelper
 
     private static string PrettifyKeyName(string name)
     {
-        if (name.StartsWith("SrvDesk", StringComparison.OrdinalIgnoreCase))
-            return name["SrvDesk".Length..];
-        if (name.StartsWith("WinOpt", StringComparison.OrdinalIgnoreCase))
-            return name["WinOpt".Length..];
+        if (name.StartsWith("SrvDesk", StringComparison.OrdinalIgnoreCase) && name.Length > 7)
+            return name.Substring(7);
+        if (name.StartsWith("WinOpt", StringComparison.OrdinalIgnoreCase) && name.Length > 6)
+            return name.Substring(6);
         return name;
     }
 
