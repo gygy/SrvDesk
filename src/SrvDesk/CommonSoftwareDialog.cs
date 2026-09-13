@@ -364,7 +364,7 @@ internal sealed class CommonSoftwareDialog : Form
 
     private static Panel BuildTableHeader()
     {
-        const int h = 36;
+        var h = Math.Max(UiScale.S(36), UiFit.ControlHeight(UiFit.UiFontBold()));
         var header = new Panel
         {
             Height = h,
@@ -375,11 +375,12 @@ internal sealed class CommonSoftwareDialog : Form
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
         };
-        header.Controls.Add(MakeHeaderCell(AppLang.L("选", "Sel"), 8, 36, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell(AppLang.L("软件名称", "Name"), 44, 300));
-        header.Controls.Add(MakeHeaderCell(AppLang.L("安装", "Install"), 352, 96, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell(AppLang.L("卸载", "Uninstall"), 456, 72, ContentAlignment.MiddleCenter));
-        header.Controls.Add(MakeHeaderCell(AppLang.L("状态", "Status"), 536, 300));
+        // 列位与 CommonSoftwareRow.LayoutColumns 对齐
+        header.Controls.Add(MakeHeaderCell(AppLang.L("选", "Sel"), CommonSoftwareRow.SelectColX, CommonSoftwareRow.SelectColW, h, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("软件名称", "Name"), CommonSoftwareRow.NameColX, CommonSoftwareRow.NameColW, h));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("安装", "Install"), CommonSoftwareRow.InstallColX, CommonSoftwareRow.ActionColW, h, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("卸载", "Uninstall"), CommonSoftwareRow.UninstallColX, CommonSoftwareRow.ActionColW, h, ContentAlignment.MiddleCenter));
+        header.Controls.Add(MakeHeaderCell(AppLang.L("状态", "Status"), CommonSoftwareRow.StatusColX, 300, h));
         header.Resize += (_, _) => header.Invalidate();
         return header;
     }
@@ -397,7 +398,7 @@ internal sealed class CommonSoftwareDialog : Form
             ? CommonSoftwareCatalog.GetAll()
             : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategoryKey).ToList();
 
-        const int rowH = 44;
+        var rowH = CommonSoftwareRow.PreferredHeight;
         var y = 0;
         var alt = false;
         var w = Math.Max(680, Math.Max(0, _listHost.ClientSize.Width - SystemInformation.VerticalScrollBarWidth));
@@ -1098,21 +1099,36 @@ internal sealed class CommonSoftwareDialog : Form
         RunBatchInstall(missing, "安装系统必备软件");
     }
 
-    private static Label MakeHeaderCell(string text, int x, int w, ContentAlignment align = ContentAlignment.MiddleLeft) => new()
-    {
-        Text = text,
-        Location = new Point(x, 0),
-        Size = new Size(w, 36),
-        ForeColor = AppTheme.TextHeader,
-        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-        TextAlign = align,
-        BackColor = Color.Transparent,
-    };
+    private static Label MakeHeaderCell(string text, int x, int w, int h, ContentAlignment align = ContentAlignment.MiddleLeft) =>
+        new SingleLineLabel
+        {
+            Text = text,
+            Location = new Point(x, 0),
+            Size = new Size(w, h),
+            ForeColor = AppTheme.TextHeader,
+            Font = UiFit.UiFontBold(),
+            TextAlign = align,
+            BackColor = Color.Transparent,
+            AutoEllipsis = false,
+        };
 
     private sealed class CommonSoftwareRow : Panel
     {
+        // 与表头共用，避免「选」列与勾选框错位、按钮列压扁字
+        public static int SelectColX => UiScale.S(8);
+        public static int SelectColW => UiScale.S(40);
+        public static int NameColX => SelectColX + SelectColW;
+        public static int NameColW => UiScale.S(300);
+        public static int InstallColX => NameColX + NameColW + UiScale.S(8);
+        public static int ActionColW => UiScale.S(108);
+        public static int UninstallColX => InstallColX + ActionColW + UiScale.S(8);
+        public static int StatusColX => UninstallColX + ActionColW + UiScale.S(12);
+        public static int PreferredHeight =>
+            Math.Max(UiScale.S(48), UiFit.ControlHeight(UiFit.UiFont) + UiScale.S(16));
+
         private readonly CommonSoftwareItem _item;
         private readonly CheckBox _select = new();
+        private readonly SingleLineLabel _name;
         private readonly Button _install;
         private readonly Button _uninstall;
         private readonly Label _status;
@@ -1141,7 +1157,7 @@ internal sealed class CommonSoftwareDialog : Form
             _item = item;
             _onInstall = onInstall;
             _onUninstall = onUninstall;
-            // 行内有 CheckBox/Button：不要开 UserPaint，否则子控件易残影/只剩边线
+            // 行内有 CheckBox/Button：不要开 UserPaint，否则勾选框易只剩竖边线
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
@@ -1151,30 +1167,29 @@ internal sealed class CommonSoftwareDialog : Form
             Height = height;
             BackColor = bg;
 
+            var box = Math.Max(UiScale.S(18), SystemInformation.MenuCheckSize.Width);
             _select.AutoSize = false;
             _select.Text = "";
-            _select.Size = new Size(16, 16);
-            _select.Location = new Point(14, (height - 16) / 2);
+            _select.Size = new Size(box, box);
             _select.BackColor = bg;
-            _select.FlatStyle = FlatStyle.Standard;
+            _select.FlatStyle = FlatStyle.System;
             _select.UseVisualStyleBackColor = true;
+            _select.CheckAlign = ContentAlignment.MiddleCenter;
+            _select.TabStop = true;
 
-            var name = new SingleLineLabel
+            _name = new SingleLineLabel
             {
                 Text = item.Title,
                 Font = UiFit.UiFont,
-                Location = new Point(44, 0),
-                Size = new Size(300, height),
                 ForeColor = AppTheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent,
             };
 
-            var btnY = Math.Max(6, (height - 28) / 2);
-            _install = RowButton("一键安装", 352, btnY);
+            _install = RowButton("一键安装");
             _install.Click += (_, _) => _onInstall(_item);
 
-            _uninstall = RowButton("卸载", 352 + _install.Width + 12, btnY);
+            _uninstall = RowButton("卸载");
             _uninstall.Click += (_, _) => _onUninstall(_item);
             if (item.IsWingetBootstrap)
             {
@@ -1184,26 +1199,15 @@ internal sealed class CommonSoftwareDialog : Form
 
             _status = new SingleLineLabel
             {
-                Location = new Point(_uninstall.Right + 12, 0),
-                Size = new Size(Math.Max(160, 280), height),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Microsoft YaHei UI", 8.75F),
-                Padding = new Padding(8, 0, 8, 0),
+                Font = UiFit.UiFontSmall,
+                Padding = new Padding(UiScale.S(8), 0, UiScale.S(8), 0),
                 BackColor = Color.Transparent,
             };
 
-            Controls.AddRange([_select, name, _install, _uninstall, _status]);
-            Resize += (_, _) =>
-            {
-                if (Width <= 0) return;
-                _status.Width = Math.Max(120, Width - _status.Left - 12);
-                _status.Height = Height;
-                name.Height = Height;
-                _select.Top = (Height - _select.Height) / 2;
-                var by = Math.Max(6, (Height - _install.Height) / 2);
-                _install.Top = by;
-                _uninstall.Top = by;
-            };
+            Controls.AddRange([_select, _name, _install, _uninstall, _status]);
+            LayoutColumns();
+            Resize += (_, _) => LayoutColumns();
             Paint += (_, e) =>
             {
                 using var pen = new Pen(AppTheme.BorderLight);
@@ -1211,6 +1215,38 @@ internal sealed class CommonSoftwareDialog : Form
             };
 
             SetPendingDetect();
+        }
+
+        private void LayoutColumns()
+        {
+            if (Width <= 0 || Height <= 0) return;
+
+            UiFit.FitButton(_install, padding: 20);
+            UiFit.FitButton(_uninstall, padding: 20);
+            // 列宽取「量宽」与预留列宽较大者，避免「修复安装」挤扁
+            var installW = Math.Max(ActionColW, _install.Width);
+            var uninstallW = Math.Max(UiScale.S(72), _uninstall.Width);
+            _install.Width = installW;
+            _uninstall.Width = uninstallW;
+
+            var btnH = Math.Min(_install.Height, Height - UiScale.S(8));
+            if (btnH < UiScale.S(28)) btnH = Math.Max(UiScale.S(28), Height - UiScale.S(8));
+            _install.Height = btnH;
+            _uninstall.Height = btnH;
+            var by = Math.Max(2, (Height - btnH) / 2);
+
+            _select.Location = new Point(
+                SelectColX + Math.Max(0, (SelectColW - _select.Width) / 2),
+                Math.Max(0, (Height - _select.Height) / 2));
+
+            _name.SetBounds(NameColX, 0, NameColW, Height);
+
+            var installX = InstallColX;
+            _install.Location = new Point(installX, by);
+            _uninstall.Location = new Point(_install.Right + UiScale.S(8), by);
+
+            var statusX = _uninstall.Right + UiScale.S(12);
+            _status.SetBounds(statusX, 0, Math.Max(UiScale.S(120), Width - statusX - UiScale.S(12)), Height);
         }
 
         public void SetPendingDetect()
@@ -1282,6 +1318,7 @@ internal sealed class CommonSoftwareDialog : Form
             _statusTip.SetToolTip(_status, _status.Text);
             _install.Enabled = true;
             _uninstall.Enabled = true;
+            LayoutColumns();
         }
 
         public void SetBusy(bool busy, string? statusText = null)
@@ -1306,28 +1343,11 @@ internal sealed class CommonSoftwareDialog : Form
             _statusTip.SetToolTip(_status, "任务进行中，请稍候…");
         }
 
-        private static Button RowButton(string text, int x, int y)
+        private static Button RowButton(string text)
         {
-            var font = UiFit.UiFont;
-            var b = new Button
-            {
-                Text = text,
-                Location = new Point(x, y),
-                Size = UiFit.ButtonSize(text, UiFit.ControlHeight(font), font, minWidth: 72, padding: 20),
-                FlatStyle = FlatStyle.Flat,
-                ForeColor = AppTheme.PrimaryDeep,
-                BackColor = AppTheme.SurfaceCard,
-                Cursor = Cursors.Hand,
-                Font = font,
-                TextAlign = ContentAlignment.MiddleCenter,
-                UseVisualStyleBackColor = false,
-                UseCompatibleTextRendering = false,
-                Padding = Padding.Empty,
-            };
-            b.FlatAppearance.BorderColor = AppTheme.Border;
-            b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
-            b.MouseLeave += (_, _) => { b.BackColor = AppTheme.SurfaceCard; b.Invalidate(); };
-            UiFit.EnableCenteredFlatText(b);
+            var b = ThemedSettingsChrome.CreateButton(text, false);
+            b.ForeColor = AppTheme.PrimaryDeep;
+            UiFit.FitButton(b, padding: 20);
             return b;
         }
     }
