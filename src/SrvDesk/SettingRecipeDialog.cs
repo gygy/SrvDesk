@@ -6,16 +6,16 @@ internal sealed class SettingRecipeDialog : Form
     private readonly SettingActionRecipe? _recipe;
     private readonly string _itemTitle;
     private readonly ScriptSyntaxEditor _box = new();
-    private readonly Button _tabOn = new();
-    private readonly Button _tabOff = new();
+    private readonly Button _tabOn;
+    private readonly Button _tabOff;
     private readonly Label _head = new();
     private readonly Label _hint = new();
     private readonly Label _kind = new();
     private readonly Label _note = new();
-    private readonly Button _copy = new();
-    private readonly Button _export = new();
-    private readonly Button _reset = new();
-    private readonly Button _close = new();
+    private readonly Button _copy;
+    private readonly Button _export;
+    private readonly Button _reset;
+    private readonly Button _close;
     private readonly System.Windows.Forms.Timer _persistTimer = new() { Interval = 600 };
     private bool _showEnable = true;
 
@@ -38,32 +38,67 @@ internal sealed class SettingRecipeDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
         AutoScaleMode = AutoScaleMode.None;
-        ClientSize = new Size(640, 480);
-        MinimumSize = new Size(480, 360);
+        ClientSize = UiScale.Size(920, 640);
+        MinimumSize = UiScale.Size(780, 520);
         BackColor = AppTheme.SurfaceCard;
         Font = UiFit.UiFont;
-        Padding = new Padding(16);
+
+        var body = ThemedSettingsChrome.CreateBodyPanel();
+        body.AutoScroll = false;
+        body.Padding = new Padding(UiScale.S(20), UiScale.S(14), UiScale.S(20), UiScale.S(10));
+
+        var top = ThemedSettingsChrome.CreateToggleStack();
+        top.Dock = DockStyle.Top;
+        top.AutoSize = true;
+        top.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        top.Padding = Padding.Empty;
 
         _head.Text = itemTitle;
         _head.Font = UiFit.UiFontBold(10F);
         _head.ForeColor = AppTheme.PrimaryDeep;
         _head.AutoEllipsis = true;
         _head.AutoSize = false;
+        _head.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontBold(10F)));
+        _head.TextAlign = ContentAlignment.MiddleLeft;
+        _head.Margin = new Padding(0, 0, 0, UiScale.S(4));
 
         _hint.Text = "可直接编辑；修改会自动记住。可复制或导出为文件。";
         _hint.ForeColor = AppTheme.TextMute;
         _hint.Font = UiFit.UiFontSmall;
         _hint.AutoSize = false;
+        _hint.Height = Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall));
+        _hint.TextAlign = ContentAlignment.MiddleLeft;
+        _hint.Margin = new Padding(0, 0, 0, UiScale.S(8));
 
-        StyleTab(_tabOn, "开启（优化）");
-        StyleTab(_tabOff, "关闭（恢复）");
+        _tabOn = StyleTab("开启（优化）");
+        _tabOff = StyleTab("关闭（恢复）");
         _tabOn.Click += (_, _) => SetSide(true, flush: true);
         _tabOff.Click += (_, _) => SetSide(false, flush: true);
 
-        _kind.AutoSize = true;
+        _kind.AutoSize = false;
         _kind.ForeColor = AppTheme.TextMute;
         _kind.Font = UiFit.UiFontSmall;
+        _kind.TextAlign = ContentAlignment.MiddleLeft;
+        _kind.Height = Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall));
 
+        var tabs = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            Margin = new Padding(0, 0, 0, UiScale.S(8)),
+            Padding = Padding.Empty,
+        };
+        _tabOn.Margin = new Padding(0, 0, UiScale.S(8), UiScale.S(4));
+        _tabOff.Margin = new Padding(0, 0, UiScale.S(12), UiScale.S(4));
+        _kind.Margin = new Padding(0, UiScale.S(6), 0, UiScale.S(4));
+        _kind.AutoSize = true;
+        tabs.Controls.AddRange([_tabOn, _tabOff, _kind]);
+
+        top.Controls.AddRange([_head, _hint, tabs]);
+
+        _box.Dock = DockStyle.Fill;
         _box.UserScriptChanged += (_, _) =>
         {
             _persistTimer.Stop();
@@ -76,17 +111,29 @@ internal sealed class SettingRecipeDialog : Form
             RefreshNote();
         };
 
+        _note.Dock = DockStyle.Bottom;
         _note.ForeColor = AppTheme.PrimaryDark;
         _note.Font = UiFit.UiFontScope;
         _note.AutoSize = false;
+        _note.Padding = new Padding(0, UiScale.S(8), 0, UiScale.S(4));
 
-        StyleAction(_copy, "复制到剪贴板");
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            AutoScroll = false,
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actions);
+
+        _copy = StyleAction("复制到剪贴板", false);
         _copy.Click += (_, _) => CopyClipboard();
-
-        StyleAction(_export, "导出");
+        _export = StyleAction("导出", false);
         _export.Click += (_, _) => ExportAs();
-
-        StyleAction(_reset, "恢复默认");
+        _reset = StyleAction("恢复默认", false);
+        _reset.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         _reset.Click += (_, _) =>
         {
             if (_recipe is null) return;
@@ -95,28 +142,31 @@ internal sealed class SettingRecipeDialog : Form
             _box.SetScript(_recipe.ContentFor(_showEnable), _recipe.Kind);
             RefreshNote();
         };
-
-        StyleAction(_close, "关闭");
+        _close = StyleAction("关闭", true);
+        _close.Margin = new Padding(UiScale.S(16), 0, 0, UiScale.S(4));
         _close.Click += (_, _) => Close();
+
+        _copy.Margin = new Padding(0, 0, 0, UiScale.S(4));
+        _export.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
+        actions.Controls.AddRange([_copy, _export, _reset, _close]);
+
+        body.Controls.Add(_box);
+        body.Controls.Add(_note);
+        body.Controls.Add(actions);
+        body.Controls.Add(top);
+        body.Resize += (_, _) =>
+        {
+            ThemedSettingsChrome.StretchStackChildren(top);
+            FitNoteHeight();
+        };
+
+        Controls.Add(body);
 
         FormClosing += (_, _) =>
         {
             _persistTimer.Stop();
             Persist();
         };
-        Resize += (_, _) => LayoutContent();
-
-        Controls.Add(_head);
-        Controls.Add(_hint);
-        Controls.Add(_tabOn);
-        Controls.Add(_tabOff);
-        Controls.Add(_kind);
-        Controls.Add(_box);
-        Controls.Add(_note);
-        Controls.Add(_copy);
-        Controls.Add(_export);
-        Controls.Add(_reset);
-        Controls.Add(_close);
 
         if (_recipe is null)
         {
@@ -137,58 +187,33 @@ internal sealed class SettingRecipeDialog : Form
             SetSide(true, flush: false);
         }
 
-        LayoutContent();
+        Load += (_, _) =>
+        {
+            ThemedSettingsChrome.StretchStackChildren(top);
+            FitNoteHeight();
+            PaintTab(_tabOn, _showEnable);
+            PaintTab(_tabOff, !_showEnable);
+        };
+        AcceptButton = _close;
     }
 
-    private void LayoutContent()
+    private void FitNoteHeight()
     {
-        const int pad = 16;
-        var w = Math.Max(320, ClientSize.Width - pad * 2);
-        var y = pad;
-
-        _head.SetBounds(pad, y, w, Math.Max(22, UiFit.LineHeight(_head.Font) + 4));
-        y = _head.Bottom + 4;
-
-        _hint.SetBounds(pad, y, w, Math.Max(18, UiFit.LineHeight(_hint.Font) + 2));
-        y = _hint.Bottom + 10;
-
-        _tabOn.Location = new Point(pad, y);
-        _tabOff.Location = new Point(pad + _tabOn.Width + 8, y);
-        _kind.Location = new Point(_tabOff.Right + 12, y + Math.Max(0, (_tabOn.Height - _kind.PreferredHeight) / 2));
-        // 编辑框必须在 Tab 实际底边之下，避免盖住文字
-        y = Math.Max(_tabOn.Bottom, _tabOff.Bottom) + 10;
-
-        var btnH = Math.Max(_copy.Height, UiFit.ControlHeight());
-        var noteH = string.IsNullOrEmpty(_note.Text)
-            ? 0
-            : Math.Max(UiFit.LineHeight(_note.Font) + 8,
-                TextRenderer.MeasureText(_note.Text, _note.Font, new Size(w, int.MaxValue),
-                    TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height + 6);
-        var bottomChrome = (noteH > 0 ? noteH + 8 : 0) + btnH + pad + 8;
-        var boxH = Math.Max(120, ClientSize.Height - y - bottomChrome);
-        _box.SetBounds(pad, y, w, boxH);
-        _box.BringToFront();
-        _tabOn.BringToFront();
-        _tabOff.BringToFront();
-        _kind.BringToFront();
-
-        y = _box.Bottom + 8;
-        if (noteH > 0)
-        {
-            _note.Visible = true;
-            _note.SetBounds(pad, y, w, noteH);
-            y = _note.Bottom + 8;
-        }
-        else
+        if (string.IsNullOrEmpty(_note.Text))
         {
             _note.Visible = false;
             _note.Height = 0;
+            return;
         }
 
-        _copy.Location = new Point(pad, y);
-        _export.Location = new Point(_copy.Right + 8, y);
-        _reset.Location = new Point(_export.Right + 8, y);
-        _close.Location = new Point(Math.Max(_reset.Right + 8, pad + w - _close.Width), y);
+        _note.Visible = true;
+        var w = Math.Max(200, _note.ClientSize.Width > 0 ? _note.ClientSize.Width : ClientSize.Width - UiScale.S(48));
+        var h = TextRenderer.MeasureText(
+            _note.Text,
+            _note.Font,
+            new Size(w, int.MaxValue),
+            TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+        _note.Height = Math.Max(UiScale.S(28), h + UiScale.S(16));
     }
 
     private void CopyClipboard()
@@ -197,14 +222,12 @@ internal sealed class SettingRecipeDialog : Form
         {
             Clipboard.SetText(_box.PlainText);
             _copy.Text = "已复制";
-            UiFit.FitButton(_copy);
-            LayoutContent();
+            UiFit.FitButton(_copy, padding: 22);
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
                 _copy.Text = "复制到剪贴板";
-                UiFit.FitButton(_copy);
-                LayoutContent();
+                UiFit.FitButton(_copy, padding: 22);
                 t.Stop();
                 t.Dispose();
             };
@@ -235,7 +258,7 @@ internal sealed class SettingRecipeDialog : Form
             _box.SetScript(text, _recipe.Kind);
             RefreshNote();
         }
-        LayoutContent();
+        FitNoteHeight();
     }
 
     private void Persist()
@@ -254,6 +277,7 @@ internal sealed class SettingRecipeDialog : Form
         if (_recipe is null)
         {
             _note.Text = "";
+            FitNoteHeight();
             return;
         }
         var customized = SettingScriptStore.HasOverride(_itemTitle, _showEnable);
@@ -261,6 +285,7 @@ internal sealed class SettingRecipeDialog : Form
         _note.Text = customized
             ? "已记住你的修改。可导出文件，或点「恢复默认」还原内置脚本。"
             : (_recipe.Note.Length > 0 ? _recipe.Note + " · 修改会自动记住。" : "修改会自动记住。");
+        FitNoteHeight();
     }
 
     private static bool ScriptsEqual(string a, string b)
@@ -303,16 +328,12 @@ internal sealed class SettingRecipeDialog : Form
         }
     }
 
-    private static void StyleTab(Button b, string text)
+    private static Button StyleTab(string text)
     {
-        b.Text = text;
-        b.Font = UiFit.UiFont;
-        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 88, padding: 22);
-        b.FlatStyle = FlatStyle.Flat;
-        b.Cursor = Cursors.Hand;
-        b.FlatAppearance.BorderSize = 1;
+        var b = ThemedSettingsChrome.CreateButton(text, false);
+        UiFit.FitButton(b, padding: 22);
         PaintTab(b, selected: text.StartsWith("开启", StringComparison.Ordinal));
-        UiFit.EnableCenteredFlatText(b);
+        return b;
     }
 
     private static void PaintTab(Button b, bool selected)
@@ -321,28 +342,25 @@ internal sealed class SettingRecipeDialog : Form
         {
             b.BackColor = AppTheme.Primary;
             b.ForeColor = AppTheme.TextOnPrimary;
-            b.FlatAppearance.BorderColor = AppTheme.PrimaryDark;
+            b.FlatAppearance.BorderSize = 0;
         }
         else
         {
-            b.BackColor = Color.White;
+            b.BackColor = AppTheme.SurfaceCard;
             b.ForeColor = AppTheme.TextMain;
             b.FlatAppearance.BorderColor = AppTheme.Border;
+            b.FlatAppearance.BorderSize = 1;
         }
         b.Invalidate();
     }
 
-    private static void StyleAction(Button b, string text)
+    private static Button StyleAction(string text, bool primary)
     {
-        b.Text = text;
-        b.Font = UiFit.UiFont;
-        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, padding: 22);
-        b.FlatStyle = FlatStyle.Flat;
-        b.BackColor = Color.White;
-        b.ForeColor = AppTheme.PrimaryDeep;
-        b.Cursor = Cursors.Hand;
-        b.FlatAppearance.BorderColor = AppTheme.Primary;
-        UiFit.EnableCenteredFlatText(b);
+        var b = ThemedSettingsChrome.CreateButton(text, primary);
+        if (!primary)
+            b.ForeColor = AppTheme.PrimaryDeep;
+        UiFit.FitButton(b, padding: 22);
+        return b;
     }
 
     protected override void Dispose(bool disposing)

@@ -19,12 +19,14 @@
 - [ ] 标题 `AppLang.L`
 - [ ] 底色 `AppTheme.Surface` 或 `SurfaceCard`
 - [ ] 复杂布局 `AutoScaleMode.None`
-- [ ] 可缩放窗有合理 `MinimumSize`
+- [ ] 可缩放窗有合理 `MinimumSize`（多钮一行按 FitButton 实测留宽）
+- [ ] 有 Padding 的容器未用 `Location(0,y)` 贴左（优先 Dock / TableLayout / CreateToggleStack）
+- [ ] 模态有 `AcceptButton`/`CancelButton`（适用时）
 
 ## 颜色 / 字体
 
 - [ ] 无随机硬编码主色（品牌色只在 `BrandPalette`）
-- [ ] 正文 `UiFit.UiFont`，提示 `TextMute`
+- [ ] 正文 `UiFit.UiFont` + `TextMain`；提示 `TextMute`；无灰压灰
 - [ ] 固定像素经 `UiScale.S`
 
 ## 按钮与顶/底栏（防裁字）
@@ -46,11 +48,20 @@
 - [ ] ListView `SurfaceCard` + 双缓冲（`UiBuffer`）
 - [ ] 列宽 fit，无多余横/竖滚动条
 - [ ] 单行工具条 `ConfigureNoScrollRow`
+- [ ] 行高 ≥ `ControlHeight` + 边距；勾选框完整可见（勿写死矮行裁成竖线）
+- [ ] 表头列位与行控件共用常量
+- [ ] 标签/名可省略号；按钮文案完整显示
+
+## 反馈与交互
+
+- [ ] 长操作有忙态 / 禁用主钮 / 状态文案（不静默卡住）
+- [ ] 失败有短原因与可恢复路径
+- [ ] 危险操作有确认 / 等级拦截
+- [ ] 图标钮有 ToolTip；字段有可见 Label
 
 ## 文案与风险
 
 - [ ] 用户串双语
-- [ ] 危险操作有确认 / 等级拦截
 - [ ] 建议含原因或可点到说明（服务页等）
 
 ## 参考实现

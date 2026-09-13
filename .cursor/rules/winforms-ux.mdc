@@ -17,6 +17,15 @@ alwaysApply: false
 3. **中文优先可读**：防裁字、防半个字；Flat 控件必须量高。
 4. **主操作可辨、状态不可扮按钮**：主按钮 vs 次按钮 vs 状态条三者视觉分离。
 5. **禁止画蛇添足的说明**：界面只放用户立刻要用的数据与操作，不加反复解说。
+6. **可读对比与反馈**（借鉴通用 UX，落地 WinForms）：正文/提示用 `TextMain`/`TextMute`，忌灰压灰；长操作有忙态；错误可行动；焦点与 Tab 序可用。
+
+## 布局（防贴左 / 防矮窗裁钮）
+
+1. **Padding ≠ 绝对定位边距**：`Location = Point(0,y)` **忽略**父级 `Padding`，内容会贴左。有 Padding 的容器：子控件用 `Dock`/`TableLayoutPanel`/`FlowLayoutPanel`，或内层 `Dock=Fill`；开关列表用 `CreateToggleStack` + `StretchStackChildren`。
+2. **窗体宽度按 FitButton 留足**：一行多钮（关闭/应用/批处理…）时，`ClientSize`/`MinimumSize` 宽度须 ≥ 钮宽之和 + 边距；勿默认卡在 `640` 把按钮裁掉。
+3. **列表行高 ≥ `ControlHeight` + 边距**：禁止写死矮行（如 `44`）竖直裁切 Flat 钮与勾选框（只剩竖线）。
+4. **表头列位与行控件共用常量**，禁止表头写死 X、行内另算。
+5. **截断策略**：标签/列表名可用 `SingleLineLabel`+省略；**按钮文案禁止**省略号糊弄。
 
 ## 文案：少说教、不重复（强制）
 
@@ -95,7 +104,10 @@ alwaysApply: false
 
 - **状态条 / 只读摘要**：浅底 `SurfaceCard` + `Border` + `TextMute`（或启用态 `PrimaryPale` + `PrimaryDark` 字）
 - **禁止**把状态做成第二块「深蓝实心按钮」与主按钮抢视觉（参见定时关机底栏教训）
-- 进度/忙：`UseWaitCursor` 或明确禁用主按钮；错误用 `MessageBox` + `ApplyLog`，文案短、可行动
+- 进度/忙：`UseWaitCursor` 或明确禁用主按钮；错误用 `MessageBox` + `ApplyLog`，文案短、可行动；禁止静默卡住无反馈
+- 异步改列表状态时尽量预留行高/状态区，减少「检测中…→结果」导致跳动
+- 模态：`AcceptButton`/`CancelButton`；勿让 Dock 底栏完全挡住当前焦点控件
+- 字段用可见 Label；图标-only 控件配 `ToolTip`
 - 风险色：与 `OptimizationLevelUi.RiskColor` 一致（绿低/琥珀中/红高）
 
 ## 窗体结构
@@ -127,11 +139,13 @@ alwaysApply: false
 
 ## 新窗体检查清单（提交前）
 
-- [ ] 颜色皆来自 `AppTheme`（或风险色约定）
+- [ ] 颜色皆来自 `AppTheme`（或风险色约定）；正文对比度可读
 - [ ] 按钮皆 `CreateButton`；主/次分明；**顶栏与底栏都用 `ControlHeight`/`FitButton`，无写死 30/36**
 - [ ] Flat 按钮已 `EnableCenteredFlatText`；中文无裁切、无半个字
+- [ ] **无 Padding+`Location(0,y)` 贴左**；多钮窗 `MinimumSize` 够宽
+- [ ] 列表行高够；勾选框完整；表头与行共用列常量
 - [ ] 换屏：壳窗体走 Mount；自建工具条在 `Layout`/`DpiChanged` 能重算尺寸
-- [ ] 状态区不像按钮
+- [ ] 状态区不像按钮；长操作有忙态/禁用；危险有确认
 - [ ] `ApplyWindowIcon`；标题走 `AppLang`
 - [ ] ListView/工具条无异常滚动条或列裁切
 - [ ] **无流程条 / 无重复说明 / 无「提示：」科普注脚 / 无底栏默认摘要文案**
@@ -154,3 +168,5 @@ alwaysApply: false
 - 可选功能页 `Height=40` 快捷条 + `_btn.Size = (140,34)` 裁字并盖住「共 N 项」（已修，勿再写死矮条）
 - Autologon 页顶「实现方式与微软 Sysinternals Autologon 相同：密码存入 LSA…仅建议…」（已删，勿加回）
 - 右键菜单页常态「开关立即写入注册表…」（缺 wt.exe 时的短提示可保留）
+- 有 Padding 的 Panel 里 `Location(0,y)` 贴左（Edge/安全中心等曾翻车）
+- 对话框 `ClientSize` 过窄裁掉底栏「关闭」；列表行写死 44 把勾选框裁成竖线
