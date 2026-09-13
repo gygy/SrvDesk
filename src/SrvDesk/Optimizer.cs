@@ -79,6 +79,8 @@ internal static class Optimizer
         public bool RdpDisableWddm;
         /// <summary>多用户同时登录（同账号多会话 + MaxSessions + RDS-RD-Server）。</summary>
         public bool RdpMultiUserLogin;
+        /// <summary>组策略：限制远程桌面服务用户到单独的远程桌面服务会话（fSingleSessionPerUser=1）。</summary>
+        public bool RdpRestrictSingleSession;
         public bool EnableNetworkDiscovery;
         public bool DisableSmRemoting;
 
@@ -558,6 +560,8 @@ internal static class Optimizer
 
         Do(Ch(x => x.EnableRdp), "远程桌面", () => SetRdp(s.EnableRdp));
         Do(Ch(x => x.RdpMultiUserLogin), "多用户同时登录", () => RdpMultiUserTweaks.Apply(s.RdpMultiUserLogin));
+        Do(Ch(x => x.RdpRestrictSingleSession), "限制RDP单会话", () =>
+            RdpMultiUserTweaks.ApplyRestrictSingleSession(s.RdpRestrictSingleSession));
         Do(Ch(x => x.RdpGpuAccel), "RDP图形加速", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services", "UseAdvancedGraphics", s.RdpGpuAccel ? 1 : 0));
         Do(Ch(x => x.RdpHighRefresh), "RDP帧率", () =>

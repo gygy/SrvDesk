@@ -17,12 +17,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly Label _recipeCaption = new();
     private readonly Label _recipeKind = new();
     private readonly Label _recipeNote = new();
-    private readonly Button _tabEnable = new();
-    private readonly Button _tabDisable = new();
+    private readonly FlatChromeButton _tabEnable = new();
+    private readonly FlatChromeButton _tabDisable = new();
     private readonly ScriptSyntaxEditor _recipeBox = new();
-    private readonly Button _btnCopy = new();
-    private readonly Button _btnSave = new();
-    private readonly Button _btnReset = new();
+    private readonly FlatChromeButton _btnCopy = new();
+    private readonly FlatChromeButton _btnSave = new();
+    private readonly FlatChromeButton _btnReset = new();
     private readonly Label _emptyRecipe = new();
 
     private SettingActionRecipe? _recipe;
@@ -230,12 +230,11 @@ internal sealed class HelpDetailPanel : BufferedPanel
     {
         b.Text = text;
         b.Font = UiFit.UiFontSmall;
-        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 56, padding: 20);
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.Cursor = Cursors.Hand;
         b.FlatAppearance.BorderSize = 1;
         ApplyTabVisual(b, selected: primaryLook);
-        UiFit.EnableCenteredFlatText(b);
     }
 
     private static void ApplyTabVisual(Button b, bool selected)
@@ -252,19 +251,20 @@ internal sealed class HelpDetailPanel : BufferedPanel
             b.ForeColor = AppTheme.TextMain;
             b.FlatAppearance.BorderColor = AppTheme.Border;
         }
+        b.Invalidate();
     }
 
     private static void StyleAction(Button b, string text)
     {
         b.Text = text;
         b.Font = UiFit.UiFontSmall;
-        b.Size = UiFit.ButtonSize(text, UiFit.ControlHeight(b.Font), b.Font, minWidth: 56, padding: 20);
+        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), minWidth: 56, padding: 20);
         b.FlatStyle = FlatStyle.Flat;
         b.BackColor = Color.White;
         b.ForeColor = AppTheme.PrimaryDeep;
         b.FlatAppearance.BorderColor = AppTheme.Primary;
+        b.FlatAppearance.BorderSize = 1;
         b.Cursor = Cursors.Hand;
-        UiFit.EnableCenteredFlatText(b);
     }
 
     public void ShowEmbeddedGuide(string pageTitle)
@@ -616,10 +616,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
         {
             Clipboard.SetText(CurrentScriptText());
             _btnCopy.Text = AppLang.L("已复制", "Copied");
+            UiFit.FitButton(_btnCopy, UiFit.ControlHeight(_btnCopy.Font), minWidth: 56, padding: 20);
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
                 _btnCopy.Text = AppLang.L("复制", "Copy");
+                UiFit.FitButton(_btnCopy, UiFit.ControlHeight(_btnCopy.Font), minWidth: 56, padding: 20);
                 t.Stop();
                 t.Dispose();
             };
@@ -662,10 +664,12 @@ internal sealed class HelpDetailPanel : BufferedPanel
             File.WriteAllText(dlg.FileName, CurrentScriptText(),
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             _btnSave.Text = AppLang.L("已导出", "Exported");
+            UiFit.FitButton(_btnSave, UiFit.ControlHeight(_btnSave.Font), minWidth: 56, padding: 20);
             var t = new System.Windows.Forms.Timer { Interval = 1200 };
             t.Tick += (_, _) =>
             {
                 _btnSave.Text = AppLang.L("导出", "Export");
+                UiFit.FitButton(_btnSave, UiFit.ControlHeight(_btnSave.Font), minWidth: 56, padding: 20);
                 t.Stop();
                 t.Dispose();
             };

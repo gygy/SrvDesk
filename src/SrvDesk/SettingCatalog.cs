@@ -429,6 +429,18 @@ internal static class SettingCatalog
         SettingScope.ServerExclusive,
         recommend: RecommendLevel.Suggested);
 
+    public static readonly SettingHelpInfo RdpRestrictSingleSession = H(
+        L("限制远程桌面服务用户到单独的远程桌面服务会话。",
+            "Restrict Remote Desktop Services users to a single Remote Desktop Services session."),
+        L("计算机配置 → 管理模板 → Windows 组件 → 远程桌面服务 → 远程桌面会话主机 → 连接；写入 Policies\\Terminal Services\\fSingleSessionPerUser。",
+            "Computer Configuration → Administrative Templates → Windows Components → Remote Desktop Services → Remote Desktop Session Host → Connections; writes Policies\\Terminal Services\\fSingleSessionPerUser."),
+        L("同一用户再次远程时复用/接管已有会话，避免一人占多个会话。",
+            "Reconnect reuses/takes over the existing session so one user does not consume multiple sessions."),
+        L("需要同账号多会话时请关闭本项，并可用「多用户同时登录」。",
+            "Turn off if you need multi-session per user; use Multi-user RDP sessions for the full package."),
+        L("新远程连接生效；策略与系统项同步写入。", "Applies to new remote connections; policy and system values written together."),
+        recommend: RecommendLevel.Suggested);
+
     public static readonly SettingHelpInfo RdpGpuAccel = H(
         L("RDP 会话启用 GPU 硬件加速与更好的图形管线。", "Enable GPU acceleration and a better graphics pipeline for RDP sessions."),
         L("Terminal Services UseAdvancedGraphics 策略。", "Terminal Services UseAdvancedGraphics policy."),

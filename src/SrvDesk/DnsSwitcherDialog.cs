@@ -90,7 +90,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         _hint.Height = 44;
         _hint.ForeColor = AppTheme.TextMute;
         _hint.AutoEllipsis = true;
-        _hint.Text = "勾选要修改的网卡。默认勾选「已连接」的物理网卡；虚拟网卡默认不勾选。";
+        _hint.Text = "勾选要改的网卡（虚拟网卡默认不选）";
 
         var listCap = new Label
         {
