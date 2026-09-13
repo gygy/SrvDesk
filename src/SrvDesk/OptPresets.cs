@@ -125,6 +125,9 @@ internal static class OptPresets
         s.DisableHpet = false;
         s.EnableF8BootMenu = false;
         s.EnableLoginVerbose = false;
+        s.UacNotifyLevel = 2; // DisableUac=true
+        s.EnableDeveloperMode = false;
+        // DisableDriverCoInstallers / DisableToastNotifications 已由全 true 覆盖
         return s;
     }
 
@@ -132,6 +135,7 @@ internal static class OptPresets
     {
         var s = ServerDesktop();
         s.DisableUac = false;
+        s.UacNotifyLevel = 1;
         s.DisableCad = false;
         s.DisablePasswordComplexity = false;
         s.DisablePasswordHistory = false;

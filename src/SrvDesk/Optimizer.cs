@@ -31,6 +31,8 @@ internal static class Optimizer
         public bool CpuProgramPriority;
         public bool Dep;
         public bool DisableUac;
+        /// <summary>UAC 通知级别：0 始终通知 / 1 默认 / 2 从不通知。与 DisableUac（==2）同步。</summary>
+        public int UacNotifyLevel;
         public bool DisableIeEsc;
         public bool HighPerfPower;
         /// <summary>卓越性能电源计划（与 HighPerfPower 互斥；笔记本通常不推荐）。</summary>
@@ -291,6 +293,12 @@ internal static class Optimizer
         public int ShowDriveLettersMode;
         public int FolderGroupByMode;
         public int FolderSortByMode;
+
+        // Winhance 缺口
+        public bool DisableDriverCoInstallers;
+        public bool DisableToastNotifications;
+        public bool EnableDeveloperMode;
+        public bool PowerShellRemoteSigned;
     }
 
     public static bool IsWindowsServer()
@@ -315,7 +323,8 @@ internal static class Optimizer
         {
             CpuProgramPriority = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", 38),
             Dep = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", 1),
-            DisableUac = IsUacNeverNotify(),
+            UacNotifyLevel = ReadUacNotifyLevel(),
+            DisableUac = false, // 下面与 UacNotifyLevel 同步
             DisableIeEsc = DwordEquals(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", 0),
             HighPerfPower = false,
             UltimatePerfPower = false,
@@ -429,12 +438,14 @@ internal static class Optimizer
             PauseWindowsUpdatesUx = Win11DesktopTweaks.IsPauseWindowsUpdatesUxOn(),
             TaskbarSearchMode = -1,
         };
+        state.DisableUac = state.UacNotifyLevel == 2;
         EasySettingsTweaks.ReadInto(state);
         CompetitorTweaks.ReadInto(state);
         CommunityTweaks.ReadInto(state);
         SophiaGapTweaks.ReadInto(state);
         AtlasGapTweaks.ReadInto(state);
         WinUtilGapTweaks.ReadInto(state);
+        WinhanceGapTweaks.ReadInto(state);
         RemoteFxTweaks.ReadInto(state);
         RdpMultiUserTweaks.ReadInto(state, fullScan);
         ReadPowerPlanInto(state);
@@ -501,7 +512,12 @@ internal static class Optimizer
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", s.CpuProgramPriority ? 38 : 2));
         Do(Ch(x => x.Dep), "DEP", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DataExecutionPrevention_S4UEnable", s.Dep ? 1 : 0));
-        Do(Ch(x => x.DisableUac), "UAC从不通知", () => SetUacNeverNotify(s.DisableUac));
+        Do(baseline is null || baseline.UacNotifyLevel != s.UacNotifyLevel || baseline.DisableUac != s.DisableUac,
+            "UAC通知级别", () =>
+            {
+                var level = s.UacNotifyLevel is >= 0 and <= 2 ? s.UacNotifyLevel : (s.DisableUac ? 2 : 1);
+                SetUacNotifyLevel(level);
+            });
         Do(Ch(x => x.DisableIeEsc), "IE增强安全", () =>
         {
             SetDword(Hive.HkLm, $@"SOFTWARE\Microsoft\Active Setup\Installed Components\{IeEscAdmin}", "IsInstalled", s.DisableIeEsc ? 0 : 1);
@@ -678,6 +694,7 @@ internal static class Optimizer
         Do(SophiaGapTweaks.AnyChanged(baseline, s), "Sophia对齐项", () => SophiaGapTweaks.Apply(s, baseline));
         Do(AtlasGapTweaks.AnyChanged(baseline, s), "Atlas对齐项", () => AtlasGapTweaks.Apply(s, baseline));
         Do(WinUtilGapTweaks.AnyChanged(baseline, s), "WinUtil对齐项", () => WinUtilGapTweaks.Apply(s, baseline));
+        Do(WinhanceGapTweaks.AnyChanged(baseline, s), "Winhance缺口项", () => WinhanceGapTweaks.Apply(s, baseline));
         Do(RemoteFxTweaks.AnyChanged(baseline, s), "RemoteFX/AVC增强", () => RemoteFxTweaks.Apply(s, baseline));
         Do(FolderViewTweaks.AnyChanged(baseline, s), "文件夹选项", () => FolderViewTweaks.Apply(s, baseline));
         ApplyLog.Debug($"本批次计划写入优化项数：{LastApplyActionCount}；截至组写入前累计变更条数以各优化项结束日志为准");
@@ -907,29 +924,39 @@ internal static class Optimizer
 
     private const string UacPolicyKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System";
 
-    /// <summary>UAC 滑块「从不通知」：ConsentPromptBehaviorAdmin=0 且 PromptOnSecureDesktop=0。
-    /// 兼容旧版本工具写过的 EnableLUA=0。</summary>
-    private static bool IsUacNeverNotify()
+    /// <summary>0 始终通知 / 1 默认 / 2 从不通知。兼容旧版 EnableLUA=0 → 2。</summary>
+    private static int ReadUacNotifyLevel()
     {
+        if (DwordEquals(Hive.HkLm, UacPolicyKey, "EnableLUA", 0))
+            return 2;
         if (DwordEquals(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 0)
             && DwordEquals(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 0))
-            return true;
-        return DwordEquals(Hive.HkLm, UacPolicyKey, "EnableLUA", 0);
+            return 2;
+        if (DwordEquals(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 2)
+            && DwordEquals(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 1))
+            return 0;
+        return 1;
     }
 
-    private static void SetUacNeverNotify(bool neverNotify)
+    private static void SetUacNotifyLevel(int level)
     {
-        if (neverNotify)
+        switch (level)
         {
-            SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 0);
-            SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 0);
-            return;
+            case 0:
+                SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 2);
+                SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 1);
+                SetDword(Hive.HkLm, UacPolicyKey, "EnableLUA", 1);
+                break;
+            case 2:
+                SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 0);
+                SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 0);
+                break;
+            default:
+                SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 5);
+                SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 1);
+                SetDword(Hive.HkLm, UacPolicyKey, "EnableLUA", 1);
+                break;
         }
-
-        // 恢复默认通知级别，并确保未彻底关掉 LUA（纠正旧版 EnableLUA=0）
-        SetDword(Hive.HkLm, UacPolicyKey, "ConsentPromptBehaviorAdmin", 5);
-        SetDword(Hive.HkLm, UacPolicyKey, "PromptOnSecureDesktop", 1);
-        SetDword(Hive.HkLm, UacPolicyKey, "EnableLUA", 1);
     }
 
     private static void SetShutdownReason(bool enableUi)

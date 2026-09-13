@@ -49,6 +49,8 @@ internal static class RecommendRules
                 return RecommendLevel.Must;
             if (ReferenceEquals(help, SettingCatalog.EnableAudio))
                 return RecommendLevel.Must;
+            if (ReferenceEquals(help, SettingCatalog.DisableDriverCoInstallers))
+                return RecommendLevel.Strong;
             // 账户策略：个人/桌面 Server 体验项 → 强烈推荐（顾问同步）
             if (ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
                 || ReferenceEquals(help, SettingCatalog.DisablePasswordHistory)
@@ -204,6 +206,7 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableSearchHighlights)
         || ReferenceEquals(help, SettingCatalog.DisableSearchBoxSuggestions)
         || ReferenceEquals(help, SettingCatalog.DisableTips)
+        || ReferenceEquals(help, SettingCatalog.DisableToastNotifications)
         || ReferenceEquals(help, SettingCatalog.DisableWidgets)
         || ReferenceEquals(help, SettingCatalog.HideTaskbarChat)
         || ReferenceEquals(help, SettingCatalog.DisableGameDvr)

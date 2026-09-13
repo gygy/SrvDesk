@@ -8,7 +8,7 @@ internal sealed class MainForm : Form
         [AppLang.L("后台服务优先", "Background first"), AppLang.L("程序优先", "Programs first")], optimizedIndex: 1);
     private readonly SettingRow _dep = Row(AppLang.L("数据执行保护 DEP（T）", "DEP (OptOut)"), AppLang.L("按系统策略", "System policy"), SettingCatalog.Dep);
     private readonly SettingRow _uac = Choice(AppLang.L("UAC 设置", "UAC settings"), AppLang.L("默认通知", "Default notify"), SettingCatalog.DisableUac,
-        [AppLang.L("默认通知", "Default notify"), AppLang.L("从不通知", "Never notify")], optimizedIndex: 1);
+        [AppLang.L("始终通知", "Always notify"), AppLang.L("默认通知", "Default notify"), AppLang.L("从不通知", "Never notify")], optimizedIndex: 2);
     private readonly SettingRow _ie = Row(AppLang.L("关闭 IE 增强安全配置", "Disable IE ESC"), AppLang.L("开启", "On"), SettingCatalog.DisableIeEsc);
     private readonly SettingRow _highPerf = Choice(AppLang.L("电源计划", "Power plan"), AppLang.L("平衡", "Balanced"), SettingCatalog.HighPerfPower,
         [AppLang.L("平衡", "Balanced"), AppLang.L("高性能", "High performance"), AppLang.L("卓越性能（笔记本不推荐）", "Ultimate (not for laptops)")], optimizedIndex: 1);
@@ -203,6 +203,10 @@ internal sealed class MainForm : Form
     private readonly SettingRow _animations = Row(AppLang.L("禁用窗口与任务栏动画", "Disable animations"), AppLang.L("开启", "On"), SettingCatalog.DisableAnimations);
     private readonly SettingRow _transparency = Row(AppLang.L("禁用透明效果", "Disable transparency"), AppLang.L("开启", "On"), SettingCatalog.DisableTransparency);
     private readonly SettingRow _tips = Row(AppLang.L("关闭 Windows 提示与建议", "Disable tips & suggestions"), AppLang.L("开启", "On"), SettingCatalog.DisableTips);
+    private readonly SettingRow _toast = Row(AppLang.L("关闭 Toast 通知", "Disable toast notifications"), AppLang.L("开启", "On"), SettingCatalog.DisableToastNotifications);
+    private readonly SettingRow _driverCoInstall = Row(AppLang.L("禁止驱动协同安装程序", "Disable driver co-installers"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableDriverCoInstallers);
+    private readonly SettingRow _devMode = Row(AppLang.L("启用开发人员模式", "Enable Developer Mode"), AppLang.L("关闭", "Off"), SettingCatalog.EnableDeveloperMode);
+    private readonly SettingRow _psRemoteSigned = Row(AppLang.L("PowerShell 策略 RemoteSigned", "PowerShell RemoteSigned"), AppLang.L("Restricted", "Restricted"), SettingCatalog.PowerShellRemoteSigned);
     private readonly SettingRow _autoplay = Row(AppLang.L("禁用所有驱动器自动播放", "Disable AutoPlay"), AppLang.L("开启", "On"), SettingCatalog.DisableAutoplay);
     private readonly SettingRow _activityHist = Row(AppLang.L("禁用活动历史记录", "Disable activity history"), AppLang.L("开启", "On"), SettingCatalog.DisableActivityHistory);
     private readonly SettingRow _storageSense = Row(AppLang.L("禁用存储感知", "Disable Storage Sense"), AppLang.L("开启", "On"), SettingCatalog.DisableStorageSense);
@@ -278,6 +282,8 @@ internal sealed class MainForm : Form
     private int _menuHover = -1;
     /// <summary>侧栏各标签全局搜索匹配数；-1 表示不显示角标。</summary>
     private int[] _menuMatchCounts = [];
+    /// <summary>侧栏各标签待优化（强烈推荐+）未达项数量；-1 表示不显示。</summary>
+    private int[] _menuRecommendCounts = [];
     private SettingRow? _selectedRow;
     private readonly SystemFacts _systemFacts = SystemInfoHelper.Detect();
     private readonly TextBox _searchBox = new();
@@ -376,11 +382,12 @@ internal sealed class MainForm : Form
         _batteryPct, _alwaysScroll, _numLock, _noMouseAccel, _noWpbt, _startClassic,
         _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
         _driveLetters, _folderGroup, _folderSort,
-        _animations, _transparency, _tips, _autoplay, _activityHist, _storageSense, _backgroundApps,
+        _animations, _transparency, _tips, _toast, _autoplay, _activityHist, _storageSense, _backgroundApps,
         _searchHighlights, _searchBoxSuggest, _recommended, _adTracking, _searchHistory, _stickyKeys,
         _cloudSearch, _langList, _trackApps, _settingsSuggest, _inking,
         _msPinyinEn, _msPinyinCloud, _msPinyinBar, _msrt,
         _cortana, _copilotAi, _officeTel, _gameDvr, _location, _consumer, _edgePre, _teredo, _clipCloud,
+        _driverCoInstall, _devMode, _psRemoteSigned,
         _insider, _storeUpd,
         _rdp, _rdpMultiUser, _rdpSingleSession, _rdpGpu, _rdpFps, _rdpNla, _rdpAvc444, _rdpAvcHw, _rdpHwFirst, _rdpRfxGfx, _rdpLowLat, _rdpNoWddm,
         _netDiscovery, _smRemoting, _ra,
@@ -416,7 +423,7 @@ internal sealed class MainForm : Form
         // 批量分组顺序与 MenuItems 中分组项一致；组内可再分可折叠分区
         _groups.Add((AppLang.L("性能及安全", "Performance & security"), [
             (AppLang.L("常用开关", "Common"), [
-                _ie, _uac, _highPerf,
+                _ie, _uac, _highPerf, _driverCoInstall, _devMode, _psRemoteSigned,
             ]),
             (AppLang.L("性能加速", "Performance"), [
                 _visualPerf, _powerThrottle, _boostMode, _gpuSched, _largeCache, _pca, _cpu, _mmcss,
@@ -487,7 +494,7 @@ internal sealed class MainForm : Form
                 _autoRestartShell, _win11Explorer, _classicMenu, _onedrive,
             ]),
             (AppLang.L("任务栏", "Taskbar"), [
-                _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbCopilot,
+                _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat,
                 _taskView, _taskbarClock,
             ]),
         ]));
@@ -515,14 +522,17 @@ internal sealed class MainForm : Form
         ]));
         _groups.Add((AppLang.L("隐私与体验", "Privacy & UX"), [
             (AppLang.L("广告与推荐", "Ads & recommendations"), [
-                _tips, _recommended, _searchHighlights, _searchBoxSuggest, _adTracking, _settingsSuggest, _consumer,
+                _tips, _toast, _recommended, _searchHighlights, _searchBoxSuggest, _adTracking, _settingsSuggest, _consumer,
                 _noSilentApps, _hideSettingsHome,
             ]),
             (AppLang.L("搜索与助手", "Search & assistants"), [
-                _cloudSearch, _webSearch, _searchHistory, _cortana, _copilotAi, _extraAi,
+                _cloudSearch, _webSearch, _searchHistory,
+            ]),
+            (AppLang.L("AI 相关", "AI"), [
+                _copilotAi, _extraAi, _tbCopilot, _officeTel, _cortana,
             ]),
             (AppLang.L("隐私数据", "Privacy data"), [
-                _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _officeTel, _cliTelemetry,
+                _trackApps, _langList, _location, _activityHist, _clipCloud, _inking, _cliTelemetry,
                 _noSigninReopen, _noCompanionApps, _settingSync, _finishSetup,
             ]),
             (AppLang.L("输入法与键盘", "IME & keyboard"), [
@@ -1476,9 +1486,29 @@ internal sealed class MainForm : Form
             var parts = new List<string>();
             if (bundle.HasSettings)
             {
-                Bind(bundle.State);
-                _uiDirty = true;
-                parts.Add(AppLang.L("开关", "Toggles"));
+                var diffs = ProfileImportDiffDialog.Compute(CaptureState(), bundle.State);
+                if (diffs.Count > 0)
+                {
+                    using var confirm = new ProfileImportDiffDialog(diffs);
+                    if (confirm.ShowDialog(this) != DialogResult.Yes)
+                    {
+                        if (!bundle.HasScriptOverrides && !bundle.HasCustomPacks)
+                            return;
+                        // 跳过开关，仍可导入脚本/自定义方案
+                    }
+                    else
+                    {
+                        Bind(bundle.State);
+                        _uiDirty = true;
+                        parts.Add(AppLang.L("开关", "Toggles"));
+                    }
+                }
+                else
+                {
+                    Bind(bundle.State);
+                    _uiDirty = true;
+                    parts.Add(AppLang.L("开关", "Toggles"));
+                }
             }
             if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
             {
@@ -1727,6 +1757,7 @@ internal sealed class MainForm : Form
         var hideDe = _hideIncompatible.Checked;
         var category = CurrentCategoryFilter();
         UpdateGlobalMenuMatchCounts(query, category, hideDe);
+        UpdateMenuRecommendCounts();
 
         if (_activeSections.Length == 0 || _activeWrap is null)
         {
@@ -1814,6 +1845,38 @@ internal sealed class MainForm : Form
             }
 
             _menuMatchCounts[i] = n;
+        }
+    }
+
+    private void UpdateMenuRecommendCounts()
+    {
+        if (_menuRecommendCounts.Length != MenuItems.Length)
+            _menuRecommendCounts = new int[MenuItems.Length];
+
+        var facts = _systemFacts;
+        var hideDe = _hideIncompatible.Checked;
+        for (var i = 0; i < MenuItems.Length; i++)
+        {
+            var groupIndex = FindBatchGroupIndex(MenuItems[i]);
+            if (groupIndex < 0)
+            {
+                _menuRecommendCounts[i] = -1;
+                continue;
+            }
+
+            var n = 0;
+            foreach (var (_, rows) in _groups[groupIndex].Sections)
+            {
+                foreach (var row in rows)
+                {
+                    if (!row.MatchesFilter("", facts, hideDe)) continue;
+                    if (RecommendRules.Resolve(row.Help, facts) < RecommendLevel.Strong) continue;
+                    if (row.Checked) continue;
+                    n++;
+                }
+            }
+
+            _menuRecommendCounts[i] = n > 0 ? n : -1;
         }
     }
 
@@ -2539,7 +2602,10 @@ internal sealed class MainForm : Form
     private void DrawMenuItem(object sender, DrawItemEventArgs e)
     {
         if (e.Index < 0) return;
-        var badge = e.Index < _menuMatchCounts.Length ? _menuMatchCounts[e.Index] : -1;
+        var match = e.Index < _menuMatchCounts.Length ? _menuMatchCounts[e.Index] : -1;
+        var recommend = e.Index < _menuRecommendCounts.Length ? _menuRecommendCounts[e.Index] : -1;
+        // 搜索中显示匹配数；否则显示待优化推荐数
+        var badge = match >= 0 ? match : recommend;
         NavMenuStyle.DrawItem(
             e,
             MenuItems[e.Index],
@@ -2943,7 +3009,7 @@ internal sealed class MainForm : Form
     {
         _cpu.Checked = s.CpuProgramPriority;
         _dep.Checked = s.Dep;
-        _uac.Checked = s.DisableUac;
+        _uac.ChoiceIndex = s.UacNotifyLevel is >= 0 and <= 2 ? s.UacNotifyLevel : (s.DisableUac ? 2 : 1);
         _ie.Checked = s.DisableIeEsc;
         _highPerf.ChoiceIndex = s.UltimatePerfPower ? 2 : (s.HighPerfPower ? 1 : 0);
         _telemetry.Checked = s.DisableTelemetry;
@@ -3007,6 +3073,10 @@ internal sealed class MainForm : Form
         _animations.Checked = s.DisableAnimations;
         _transparency.Checked = s.DisableTransparency;
         _tips.Checked = s.DisableTips;
+        _toast.Checked = s.DisableToastNotifications;
+        _driverCoInstall.Checked = s.DisableDriverCoInstallers;
+        _devMode.Checked = s.EnableDeveloperMode;
+        _psRemoteSigned.Checked = s.PowerShellRemoteSigned;
         _autoplay.Checked = s.DisableAutoplay;
         _activityHist.Checked = s.DisableActivityHistory;
         _storageSense.Checked = s.DisableStorageSense;
@@ -3183,7 +3253,8 @@ internal sealed class MainForm : Form
     {
         CpuProgramPriority = _cpu.Checked,
         Dep = _dep.Checked,
-        DisableUac = _uac.Checked,
+        UacNotifyLevel = _uac.ChoiceIndex is >= 0 and <= 2 ? _uac.ChoiceIndex : 1,
+        DisableUac = _uac.ChoiceIndex == 2,
         DisableIeEsc = _ie.Checked,
         HighPerfPower = _highPerf.ChoiceIndex == 1,
         UltimatePerfPower = _highPerf.ChoiceIndex == 2,
@@ -3366,6 +3437,10 @@ internal sealed class MainForm : Form
         DisableAnimations = _animations.Checked,
         DisableTransparency = _transparency.Checked,
         DisableTips = _tips.Checked,
+        DisableToastNotifications = _toast.Checked,
+        DisableDriverCoInstallers = _driverCoInstall.Checked,
+        EnableDeveloperMode = _devMode.Checked,
+        PowerShellRemoteSigned = _psRemoteSigned.Checked,
         DisableAutoplay = _autoplay.Checked,
         DisableActivityHistory = _activityHist.Checked,
         DisableStorageSense = _storageSense.Checked,

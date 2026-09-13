@@ -35,7 +35,7 @@ internal static class SettingRecipeCatalog
                 ActionScript.Dword("ConsentPromptBehaviorAdmin", 5),
                 ActionScript.Dword("PromptOnSecureDesktop", 1),
                 ActionScript.Dword("EnableLUA", 1)),
-            "对齐「从不通知」滑块；关闭时恢复默认通知并确保 EnableLUA=1。"));
+            "一键脚本对齐「从不通知」；关闭时恢复默认通知。界面另有「始终通知」档。"));
 
         Add(SettingCatalog.DisableIeEsc, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm($@"SOFTWARE\Microsoft\Active Setup\Installed Components\{Optimizer.IeEscAdmin}"),
@@ -232,6 +232,26 @@ internal static class SettingRecipeCatalog
                 ActionScript.Dword("SubscribedContent-338388Enabled", 1),
                 ActionScript.Dword("SubscribedContent-338389Enabled", 1),
                 ActionScript.Dword("SoftLandingEnabled", 1))));
+
+        Add(SettingCatalog.DisableToastNotifications, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled", 0, 1));
+
+        Add(SettingCatalog.DisableDriverCoInstallers, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer", "DisableCoInstallers", 1, 0));
+
+        Add(SettingCatalog.EnableDeveloperMode, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"),
+                ActionScript.Dword("AllowDevelopmentWithoutDevLicense", 1),
+                ActionScript.Dword("AllowAllTrustedApps", 1)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"),
+                ActionScript.Dword("AllowDevelopmentWithoutDevLicense", 0),
+                ActionScript.Dword("AllowAllTrustedApps", 0))));
+
+        Add(SettingCatalog.PowerShellRemoteSigned, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"),
+                ActionScript.Sz("ExecutionPolicy", "RemoteSigned")),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"),
+                ActionScript.Sz("ExecutionPolicy", "Restricted"))));
 
         Add(SettingCatalog.DisableAutoplay, ActionScript.DwordToggle(false,
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDriveTypeAutoRun", 255, 145));

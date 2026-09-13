@@ -37,14 +37,15 @@ internal static class SettingCatalog
         L("立即生效。", "Takes effect immediately."));
 
     public static readonly SettingHelpInfo DisableUac = H(
-        L("将用户账户控制滑块设为「从不通知」，安装/改系统时不再弹确认框。", "Set UAC to Never notify so installs/system changes skip prompts."),
-        L("ConsentPromptBehaviorAdmin=0、PromptOnSecureDesktop=0（与常见「从不通知」.reg 一致；不关闭 EnableLUA）。", "ConsentPromptBehaviorAdmin=0, PromptOnSecureDesktop=0 (same as common Never-notify .reg; EnableLUA stays on)."),
-        L("个人桌面减少 UAC 打断；比直接 EnableLUA=0 更接近系统自带滑块行为。", "Fewer UAC interruptions on personal desktops; closer to the built-in slider than EnableLUA=0."),
-        L("仅建议在可信的个人/内网环境开启；企业或公网暴露环境请保持默认通知。", "Only for trusted personal/LAN use; keep default prompts on enterprise or public-facing hosts."),
+        L("设置用户账户控制（UAC）通知级别：始终 / 默认 / 从不。", "Set UAC notify level: Always / Default / Never."),
+        L("始终：ConsentPromptBehaviorAdmin=2+安全桌面；默认：=5+安全桌面；从不：=0且PromptOnSecureDesktop=0（不关 EnableLUA）。",
+            "Always: ConsentPromptBehaviorAdmin=2+secure desktop; Default: =5+secure desktop; Never: =0 and PromptOnSecureDesktop=0 (EnableLUA stays on)."),
+        L("个人桌面可降打扰；始终通知最严，从不通知最松。", "Personal desktops can reduce prompts; Always is strictest, Never is loosest."),
+        L("仅建议在可信环境使用「从不」；企业或公网暴露请保持默认或始终通知。", "Use Never only on trusted hosts; keep Default/Always on enterprise or public-facing hosts."),
         L("立即生效；个别程序建议注销或重启后再试。", "Takes effect immediately; some apps may need logoff/reboot."),
         recommend: RecommendLevel.Optional,
         uiPlace: L("控制面板 → 用户账户 → 更改用户账户控制设置", "Control Panel → User Accounts → Change User Account Control settings"),
-        whenHint: L("个人桌面可开；公网/域环境慎用", "OK for personal desktop; caution on public/domain hosts"));
+        whenHint: L("个人桌面可调；公网/域环境慎用从不", "OK to tune on personal desktop; caution Never on public/domain hosts"));
 
     public static readonly SettingHelpInfo DisableIeEsc = H(
         L("关闭 Server 默认的 IE 增强安全模式。", "Turn off IE Enhanced Security Configuration on Server."),
@@ -385,6 +386,41 @@ internal static class SettingCatalog
         L("个人桌面推荐开启。", "Recommended for personal desktops."),
         L("立即生效。", "Takes effect immediately."),
         W10De);
+
+    public static readonly SettingHelpInfo DisableToastNotifications = H(
+        L("关闭系统 Toast 通知（推送通知）。", "Disable system toast / push notifications."),
+        L("HKCU\\…\\PushNotifications ToastEnabled=0。", "HKCU\\…\\PushNotifications ToastEnabled=0."),
+        L("减少右下角弹出打扰；与「提示与建议」不同，专管 Toast。", "Fewer lower-right popups; distinct from tips — this is toast only."),
+        L("个人/Server 桌面强烈推荐；依赖通知提醒的场景可关闭。", "Strongly recommended on personal/Server desktops; keep off if you rely on toasts."),
+        L("立即生效。", "Takes effect immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableDriverCoInstallers = H(
+        L("禁止硬件驱动自带的协同安装程序（厂商捆绑软件）。", "Block driver co-installers (vendor bundled software)."),
+        L("HKLM\\…\\Device Installer DisableCoInstallers=1。", "HKLM\\…\\Device Installer DisableCoInstallers=1."),
+        L("插设备时少装无关工具/托盘；驱动本体仍可由 Windows Update 安装。", "Fewer junk tools on device plug-in; drivers can still come from Windows Update."),
+        L("Server 桌面强烈推荐；确需厂商协同安装工具时再关。", "Strongly recommended on Server desktops; turn off only if you need vendor co-installers."),
+        L("立即生效，下次安装驱动时生效。", "Written immediately; applies on next driver install."),
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo EnableDeveloperMode = H(
+        L("开启 Windows 开发人员模式（侧载/未签名包等）。", "Enable Windows Developer Mode (sideload / unsigned packages)."),
+        L("AppModelUnlock AllowDevelopmentWithoutDevLicense=1、AllowAllTrustedApps=1。", "AppModelUnlock AllowDevelopmentWithoutDevLicense=1, AllowAllTrustedApps=1."),
+        L("便于调试 UWP/WinUI 与侧载；扩大可安装应用面。", "Easier UWP/WinUI debug and sideload; broader install surface."),
+        L("仅开发机按需开启；生产 Server 默认关闭。", "Only on dev machines as needed; leave off on production Servers."),
+        L("立即写入。", "Written immediately."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Optional);
+
+    public static readonly SettingHelpInfo PowerShellRemoteSigned = H(
+        L("将本机 PowerShell 执行策略设为 RemoteSigned。", "Set local PowerShell ExecutionPolicy to RemoteSigned."),
+        L("HKLM\\…\\Microsoft.PowerShell ExecutionPolicy=RemoteSigned（关闭时 Restricted）。", "HKLM\\…\\Microsoft.PowerShell ExecutionPolicy=RemoteSigned (Restricted when off)."),
+        L("可运行本地脚本与已签名远程脚本，便于运维脚本。", "Allows local scripts and signed remote scripts for admin tooling."),
+        L("桌面/管理机按需开启；Server Core 或不需要脚本时保持关闭。", "Optional on desktop/admin PCs; leave off on Server Core or when scripts are unused."),
+        L("立即生效（新开 PowerShell 窗口）。", "Takes effect in new PowerShell windows."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Optional);
 
     public static readonly SettingHelpInfo DisableAutoplay = H(
         L("插入 U 盘/光盘不自动运行或弹窗。", "Do not autoplay or prompt when inserting USB/optical media."),

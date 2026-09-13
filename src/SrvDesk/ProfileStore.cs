@@ -107,6 +107,13 @@ internal static class ProfileStore
             : Optimizer.Read();
         StateMapper.ApplyExtra(state, profile.Extra);
 
+        var hasUacLevel = profile.Extra?.Any(e =>
+            string.Equals(e.Key, "UacNotifyLevel", StringComparison.Ordinal)) == true;
+        if (hasUacLevel)
+            state.DisableUac = state.UacNotifyLevel == 2;
+        else
+            state.UacNotifyLevel = state.DisableUac ? 2 : 1;
+
         return new OptProfileBundle
         {
             State = state,
