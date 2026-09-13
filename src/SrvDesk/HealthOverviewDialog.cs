@@ -25,8 +25,8 @@ internal sealed class HealthOverviewDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(960, 680);
-        MinimumSize = new Size(760, 520);
+        ClientSize = UiScale.Size(1000, 720);
+        MinimumSize = UiScale.Size(820, 560);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
 
@@ -709,7 +709,8 @@ internal sealed class PortExposureDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 480);
+        ClientSize = UiScale.Size(860, 580);
+        MinimumSize = UiScale.Size(720, 480);
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
@@ -720,12 +721,12 @@ internal sealed class PortExposureDialog : Form
             FullRowSelect = true,
             BackColor = AppTheme.SurfaceCard,
         };
-        list.Columns.Add("Proto", 50);
-        list.Columns.Add("Port", 60);
-        list.Columns.Add(AppLang.L("本地地址", "Local"), 140);
-        list.Columns.Add("PID", 60);
-        list.Columns.Add(AppLang.L("进程", "Process"), 160);
-        list.Columns.Add(AppLang.L("标记", "Flag"), 120);
+        list.Columns.Add("Proto", 60);
+        list.Columns.Add("Port", 70);
+        list.Columns.Add(AppLang.L("本地地址", "Local"), 160);
+        list.Columns.Add("PID", 70);
+        list.Columns.Add(AppLang.L("进程", "Process"), 180);
+        list.Columns.Add(AppLang.L("标记", "Flag"), 140);
         foreach (var p in PortExposureHelper.Scan())
         {
             var row = new ListViewItem(p.Protocol);
@@ -758,7 +759,8 @@ internal sealed class ScheduledTaskDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(860, 560);
+        ClientSize = UiScale.Size(960, 640);
+        MinimumSize = UiScale.Size(820, 540);
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
@@ -767,32 +769,36 @@ internal sealed class ScheduledTaskDialog : Form
         _list.FullRowSelect = true;
         _list.MultiSelect = true;
         _list.BackColor = AppTheme.SurfaceCard;
-        _list.Columns.Add(AppLang.L("分类", "Bucket"), 80);
-        _list.Columns.Add(AppLang.L("任务", "Task"), 280);
-        _list.Columns.Add(AppLang.L("状态", "Status"), 70);
-        _list.Columns.Add(AppLang.L("风险", "Risk"), 50);
-        _list.Columns.Add(AppLang.L("建议", "Advice"), 220);
+        _list.Columns.Add(AppLang.L("分类", "Bucket"), 90);
+        _list.Columns.Add(AppLang.L("任务", "Task"), 300);
+        _list.Columns.Add(AppLang.L("状态", "Status"), 80);
+        _list.Columns.Add(AppLang.L("风险", "Risk"), 60);
+        _list.Columns.Add(AppLang.L("建议", "Advice"), 240);
 
         var bar = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = UiFit.ControlHeight() + 12,
-            Padding = new Padding(0, 8, 0, 0),
-            WrapContents = false,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+            WrapContents = true,
             AutoScroll = false,
         };
         UiBuffer.ConfigureNoScrollRow(bar);
         var refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新", "Refresh"), false);
+        UiFit.FitButton(refresh, padding: 28);
         refresh.Click += (_, _) => Reload();
         var disable = ThemedSettingsChrome.CreateButton(AppLang.L("禁用所选（仅允许项）", "Disable selected (allowed)"), true);
-        disable.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(disable, padding: 28);
+        disable.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         disable.Click += (_, _) => ToggleSelected(false);
         var enable = ThemedSettingsChrome.CreateButton(AppLang.L("启用所选", "Enable selected"), false);
-        enable.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(enable, padding: 28);
+        enable.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         enable.Click += (_, _) => ToggleSelected(true);
         var disableTelem = ThemedSettingsChrome.CreateButton(
             AppLang.L("禁用遥测建议项", "Disable telemetry set"), false);
-        disableTelem.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(disableTelem, padding: 28);
+        disableTelem.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         disableTelem.Click += (_, _) =>
         {
             var n = 0;
@@ -812,7 +818,8 @@ internal sealed class ScheduledTaskDialog : Form
         };
         var openSys = ThemedSettingsChrome.CreateButton(
             AppLang.L("打开系统计划任务", "Open Task Scheduler"), false);
-        openSys.Margin = new Padding(16, 0, 0, 0);
+        UiFit.FitButton(openSys, padding: 28);
+        openSys.Margin = new Padding(UiScale.S(16), 0, 0, UiScale.S(4));
         openSys.Click += (_, _) => SystemToolLauncher.OpenTaskScheduler(this);
         bar.Controls.AddRange([refresh, disable, enable, disableTelem, openSys]);
 
@@ -877,7 +884,8 @@ internal sealed class OptimizationHistoryDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 480);
+        ClientSize = UiScale.Size(900, 600);
+        MinimumSize = UiScale.Size(760, 500);
         Font = UiFit.UiFont;
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
@@ -888,9 +896,9 @@ internal sealed class OptimizationHistoryDialog : Form
             FullRowSelect = true,
             BackColor = AppTheme.SurfaceCard,
         };
-        list.Columns.Add(AppLang.L("时间", "Time"), 140);
-        list.Columns.Add(AppLang.L("标题", "Title"), 200);
-        list.Columns.Add(AppLang.L("详情", "Detail"), 300);
+        list.Columns.Add(AppLang.L("时间", "Time"), 160);
+        list.Columns.Add(AppLang.L("标题", "Title"), 220);
+        list.Columns.Add(AppLang.L("详情", "Detail"), 360);
         foreach (var e in OptimizationHistory.List())
         {
             var row = new ListViewItem(e.TimeLocal) { Tag = e };
@@ -899,15 +907,25 @@ internal sealed class OptimizationHistoryDialog : Form
             list.Items.Add(row);
         }
 
-        var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = UiFit.ControlHeight() + 12, Padding = new Padding(0, 8, 0, 0) };
+        var bar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+            WrapContents = true,
+            AutoScroll = false,
+        };
+        UiBuffer.ConfigureNoScrollRow(bar);
         var snap = ThemedSettingsChrome.CreateButton(AppLang.L("打开服务快照还原…", "Service snapshot restore…"), true);
+        UiFit.FitButton(snap, padding: 28);
         snap.Click += (_, _) =>
         {
             using var d = new ServiceSnapshotRestoreDialog();
             d.ShowDialog(this);
         };
         var rstrui = ThemedSettingsChrome.CreateButton(AppLang.L("系统还原 rstrui", "System Restore"), false);
-        rstrui.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(rstrui, padding: 28);
+        rstrui.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         rstrui.Click += (_, _) =>
         {
             try { System.Diagnostics.Process.Start("rstrui.exe"); }

@@ -17,8 +17,8 @@ internal sealed class CleanupDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 600);
-        MinimumSize = new Size(640, 520);
+        ClientSize = UiScale.Size(900, 660);
+        MinimumSize = UiScale.Size(780, 560);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.AutoScroll = false;
@@ -41,30 +41,36 @@ internal sealed class CleanupDialog : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = btnH + 16,
+            Height = btnH + UiScale.S(20),
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             AutoScroll = false,
-            Padding = new Padding(0, 8, 0, 0),
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
         };
         UiBuffer.ConfigureNoScrollRow(actions);
         _run = ThemedSettingsChrome.CreateButton(AppLang.L("开始清理", "Start cleanup"), true);
+        UiFit.FitButton(_run, padding: 28);
         _run.Click += (_, _) => StartCleanup();
         _cancelRun = ThemedSettingsChrome.CreateButton(AppLang.L("停止", "Stop"), false);
+        UiFit.FitButton(_cancelRun, padding: 28);
         _cancelRun.Enabled = false;
-        _cancelRun.Margin = new Padding(8, 0, 0, 0);
+        _cancelRun.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         _cancelRun.Click += (_, _) => _cts?.Cancel();
         var allOn = ThemedSettingsChrome.CreateButton(AppLang.L("全选", "Select all"), false);
-        allOn.Margin = new Padding(16, 0, 0, 0);
+        UiFit.FitButton(allOn, padding: 28);
+        allOn.Margin = new Padding(UiScale.S(16), 0, 0, UiScale.S(4));
         allOn.Click += (_, _) => SetAll(true);
         var allOff = ThemedSettingsChrome.CreateButton(AppLang.L("全不选", "Select none"), false);
-        allOff.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(allOff, padding: 28);
+        allOff.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         allOff.Click += (_, _) => SetAll(false);
         var safe = ThemedSettingsChrome.CreateButton(AppLang.L("仅安全项", "Safe items only"), false);
-        safe.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(safe, padding: 28);
+        safe.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         safe.Click += (_, _) => ResetDefaults();
         var repair = ThemedSettingsChrome.CreateButton(AppLang.L("修复被锁组件", "Repair locked components"), false);
-        repair.Margin = new Padding(16, 0, 0, 0);
+        UiFit.FitButton(repair, padding: 28);
+        repair.Margin = new Padding(UiScale.S(16), 0, 0, UiScale.S(4));
         repair.Click += (_, _) =>
         {
             CompetitorTweaks.RepairLockedComponents();
@@ -79,8 +85,8 @@ internal sealed class CleanupDialog : Form
         var progress = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(0, 8, 0, 0),
+            Height = UiScale.S(56),
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
         };
         _bar.Dock = DockStyle.Top;
         _bar.Height = 16;
@@ -103,13 +109,10 @@ internal sealed class CleanupDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             AppLang.L("垃圾清理", "Junk cleanup"),
-            AppLang.L(
-                "缓存 · 系统残留 · 临时文件 · 对照 ZyperWin++ 项，占用中的文件会跳过",
-                "Cache · leftovers · temp · ZyperWin++-aligned; in-use files are skipped"),
+            "",
             body,
-            AppLang.L(
-                "清理不可恢复。WinSxS / .NET 镜像较重，请按需勾选。",
-                "Cleanup cannot be undone. WinSxS / .NET image are heavy — check only if needed."));
+            "",
+            showHeader: false);
         UiBuffer.BindListViewColumnFit(_list, 1, 160);
         FormClosing += (_, e) =>
         {

@@ -62,8 +62,8 @@ internal sealed class CommonSoftwareDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(920, 620);
-        MinimumSize = new Size(780, 520);
+        ClientSize = UiScale.Size(960, 680);
+        MinimumSize = UiScale.Size(800, 560);
         ForeColor = AppTheme.TextMain;
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(0, 0, 0, 4) };
@@ -104,11 +104,11 @@ internal sealed class CommonSoftwareDialog : Form
         var actions = new NoScrollFlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 48,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             AutoScroll = false,
-            Padding = new Padding(12, 6, 12, 6),
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8)),
             BackColor = AppTheme.Surface,
         };
         UiBuffer.ConfigureNoScrollRow(actions);

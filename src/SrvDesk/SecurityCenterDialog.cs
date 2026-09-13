@@ -12,17 +12,18 @@ internal sealed class SecurityCenterDialog : Form
     {
         Text = "安全中心管理";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(480, 360);
+        ClientSize = UiScale.Size(720, 520);
+        MinimumSize = UiScale.Size(640, 460);
 
         var body = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(20, 12, 20, 8),
+            Padding = new Padding(UiScale.S(20), UiScale.S(12), UiScale.S(20), UiScale.S(8)),
             BackColor = AppTheme.Surface,
+            AutoScroll = true,
         };
 
         var stack = new FlowLayoutPanel
@@ -37,11 +38,13 @@ internal sealed class SecurityCenterDialog : Form
         stack.Controls.Add(MakeRow("Microsoft Defender (WinDefend)", _defender));
         stack.Controls.Add(MakeRow("组策略 / 禁用防间谍软件", _policy));
 
+        var rowH = UiFit.ControlHeight(UiFit.UiFontBold());
         _summary.AutoSize = false;
-        _summary.Width = 420;
-        _summary.Height = 28;
-        _summary.Margin = new Padding(0, 8, 0, 4);
-        _summary.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+        _summary.Width = UiScale.S(640);
+        _summary.Height = Math.Max(rowH, UiScale.S(36));
+        _summary.Margin = new Padding(0, UiScale.S(10), 0, UiScale.S(8));
+        _summary.Font = UiFit.UiFontBold();
+        _summary.AutoEllipsis = true;
         stack.Controls.Add(_summary);
 
         var buttons = new FlowLayoutPanel
@@ -50,6 +53,7 @@ internal sealed class SecurityCenterDialog : Form
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
             Margin = new Padding(0),
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
         };
         buttons.Controls.Add(MkBtn("禁用安全中心", true, DisableCenter));
         buttons.Controls.Add(MkBtn("启用安全中心", false, EnableCenter));
@@ -69,12 +73,22 @@ internal sealed class SecurityCenterDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "安全中心管理",
-            "禁用 / 启用 Windows 安全中心",
+            "",
             body,
             "",
-            showHeader: false);
+            showHeader: false,
+            onRefresh: RefreshStatus);
 
         Load += (_, _) => RefreshStatus();
+        body.Resize += (_, _) =>
+        {
+            var w = Math.Max(UiScale.S(400), body.ClientSize.Width - body.Padding.Horizontal);
+            foreach (Control c in stack.Controls)
+            {
+                if (c is Panel p) p.Width = w;
+                else if (c == _summary) _summary.Width = w;
+            }
+        };
     }
 
     private void RefreshStatus()
@@ -156,33 +170,40 @@ internal sealed class SecurityCenterDialog : Form
     private static Label MakeValueLabel() => new()
     {
         AutoSize = true,
-        Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+        Font = UiFit.UiFontBold(),
         ForeColor = AppTheme.PrimaryDeep,
     };
 
     private static Control MakeRow(string title, Label value)
     {
-        var panel = new Panel { Width = 420, Height = 36, Margin = new Padding(0, 0, 0, 4) };
-        var name = new Label
+        var h = Math.Max(UiScale.S(36), UiFit.ControlHeight(UiFit.UiFontBold()) + UiScale.S(8));
+        var panel = new Panel
+        {
+            Width = UiScale.S(640),
+            Height = h,
+            Margin = new Padding(0, 0, 0, UiScale.S(6)),
+        };
+        var name = new SingleLineLabel
         {
             Text = title,
-            AutoSize = true,
-            Location = new Point(0, 8),
+            Location = new Point(0, 0),
+            Size = new Size(UiScale.S(280), h),
             ForeColor = AppTheme.TextHeader,
+            Font = UiFit.UiFont,
+            TextAlign = ContentAlignment.MiddleLeft,
         };
-        value.Location = new Point(240, 8);
+        value.Location = new Point(UiScale.S(290), Math.Max(0, (h - value.PreferredHeight) / 2));
         value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         panel.Controls.Add(name);
         panel.Controls.Add(value);
         return panel;
     }
 
-    private Button MkBtn(string text, bool primary, Action click)
+    private static Button MkBtn(string text, bool primary, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, primary);
-        b.AutoSize = true;
-        b.Margin = new Padding(0, 0, 8, 8);
-        b.MinimumSize = new Size(120, 34);
+        UiFit.FitButton(b, padding: 28);
+        b.Margin = new Padding(0, 0, UiScale.S(8), UiScale.S(8));
         b.Click += (_, _) => click();
         return b;
     }

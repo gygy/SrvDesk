@@ -16,29 +16,45 @@ internal sealed class QuickToolsDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(640, 520);
-        MinimumSize = new Size(520, 420);
+        ClientSize = UiScale.Size(860, 620);
+        MinimumSize = UiScale.Size(720, 520);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 8), BackColor = AppTheme.Surface };
+        var body = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8)),
+            BackColor = AppTheme.Surface,
+        };
 
-        var toolbar = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = AppTheme.Surface };
-        toolbar.Controls.Add(new Label
+        var toolH = Math.Max(UiScale.S(40), UiFit.ControlHeight() + UiScale.S(12));
+        var toolbar = new Panel { Dock = DockStyle.Top, Height = toolH, BackColor = AppTheme.Surface };
+        var searchLbl = new Label
         {
             Text = AppLang.L("搜索", "Search"),
-            Location = new Point(0, 8),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
-        });
-        _search.SetBounds(44, 4, 280, 26);
-        _search.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            Font = UiFit.UiFont,
+        };
+        toolbar.Controls.Add(searchLbl);
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.ForeColor = AppTheme.TextMain;
+        _search.Font = UiFit.UiFont;
         _search.TextChanged += (_, _) => ApplyFilter();
         toolbar.Controls.Add(_search);
         _count.AutoSize = true;
-        _count.Location = new Point(336, 8);
         _count.ForeColor = AppTheme.TextMute;
+        _count.Font = UiFit.UiFont;
         toolbar.Controls.Add(_count);
+        void LayoutToolbar()
+        {
+            var h = UiFit.ControlHeight(_search.Font);
+            searchLbl.Location = new Point(0, Math.Max(0, (toolbar.Height - searchLbl.PreferredHeight) / 2));
+            _search.SetBounds(searchLbl.Right + UiScale.S(8), Math.Max(4, (toolbar.Height - h) / 2),
+                Math.Max(UiScale.S(220), toolbar.ClientSize.Width / 2), h);
+            _count.Location = new Point(_search.Right + UiScale.S(12),
+                Math.Max(0, (toolbar.Height - _count.PreferredHeight) / 2));
+        }
+        toolbar.Resize += (_, _) => LayoutToolbar();
 
         _list.View = View.Details;
         _list.FullRowSelect = true;
@@ -49,40 +65,46 @@ internal sealed class QuickToolsDialog : Form
         _list.BackColor = AppTheme.SurfaceCard;
         _list.BorderStyle = BorderStyle.FixedSingle;
         UiBuffer.Enable(_list);
-        _list.Columns.Add(AppLang.L("分类", "Category"), 108);
-        _list.Columns.Add(AppLang.L("工具", "Tool"), 200);
-        _list.Columns.Add(AppLang.L("说明", "Description"), 260);
+        _list.Columns.Add(AppLang.L("分类", "Category"), 120);
+        _list.Columns.Add(AppLang.L("工具", "Tool"), 220);
+        _list.Columns.Add(AppLang.L("说明", "Description"), 360);
         _list.DoubleClick += (_, _) => OpenSelected();
 
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            AutoScroll = false,
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actions);
         var openBtn = ThemedSettingsChrome.CreateButton(AppLang.L("打开", "Open"), true);
-        openBtn.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        UiFit.FitButton(openBtn, padding: 28);
         openBtn.Click += (_, _) => OpenSelected();
+        actions.Controls.Add(openBtn);
 
         body.Controls.Add(_list);
+        body.Controls.Add(actions);
         body.Controls.Add(toolbar);
-        body.Controls.Add(openBtn);
 
         ThemedSettingsChrome.MountModal(
             this,
             AppLang.L("快速工具", "Quick tools"),
-            AppLang.L(
-                "系统管理工具快捷入口 · 已按 Server 桌面场景筛选",
-                "Shortcuts to system tools · filtered for Server desktop"),
+            "",
             body,
-            "");
+            "",
+            showHeader: false);
 
         UiBuffer.BindListViewColumnFit(_list, 2, 120);
         Load += (_, _) =>
         {
-            openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
+            LayoutToolbar();
             _tools = QuickToolsLauncher.GetAvailableTools(_facts).ToList();
             ReloadList(_tools);
         };
-        body.Resize += (_, _) =>
-        {
-            openBtn.Location = new Point(body.ClientSize.Width - openBtn.Width - 4, body.ClientSize.Height - openBtn.Height - 4);
-            UiBuffer.FitListViewColumn(_list, 2, 120);
-        };
+        body.Resize += (_, _) => UiBuffer.FitListViewColumn(_list, 2, 120);
     }
 
     private void ReloadList(IEnumerable<QuickTool> tools)

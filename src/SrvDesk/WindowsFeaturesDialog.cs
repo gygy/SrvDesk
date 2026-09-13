@@ -36,8 +36,8 @@ internal sealed class WindowsFeaturesDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(900, 560);
-        MinimumSize = new Size(720, 440);
+        ClientSize = UiScale.Size(960, 640);
+        MinimumSize = UiScale.Size(800, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         var btnH = UiFit.ControlHeight();

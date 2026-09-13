@@ -12,14 +12,21 @@ internal sealed class GroupPolicyDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(640, 480);
-        MinimumSize = new Size(520, 380);
+        ClientSize = UiScale.Size(780, 580);
+        MinimumSize = UiScale.Size(660, 480);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 48), BackColor = AppTheme.Surface };
+        var body = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8)),
+            BackColor = AppTheme.Surface,
+        };
 
         _gpeditHint.Dock = DockStyle.Top;
-        _gpeditHint.Height = 22;
+        _gpeditHint.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontSmall));
         _gpeditHint.ForeColor = AppTheme.TextHeader;
+        _gpeditHint.Font = UiFit.UiFont;
+        _gpeditHint.TextAlign = ContentAlignment.MiddleLeft;
 
         _output.Dock = DockStyle.Fill;
         _output.Multiline = true;
@@ -31,34 +38,38 @@ internal sealed class GroupPolicyDialog : Form
         _output.Font = new Font("Consolas", 9F);
         _output.Text = "点击下方「强制更新组策略」执行 gpupdate /force，输出将显示在此处。";
 
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actions);
         var gpupdate = ThemedSettingsChrome.CreateButton("强制更新组策略", true);
-        gpupdate.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        UiFit.FitButton(gpupdate, padding: 28);
         gpupdate.Click += (_, _) => RunGpUpdate();
-
         var gpedit = ThemedSettingsChrome.CreateButton("打开组策略编辑器", false);
-        gpedit.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        UiFit.FitButton(gpedit, padding: 28);
+        gpedit.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         gpedit.Click += (_, _) => OpenGpedit();
+        actions.Controls.AddRange([gpupdate, gpedit]);
 
         body.Controls.Add(_output);
+        body.Controls.Add(actions);
         body.Controls.Add(_gpeditHint);
-        body.Controls.AddRange([gpupdate, gpedit]);
 
         ThemedSettingsChrome.MountModal(
             this,
             "组策略",
-            "本地 GPO 更新与编辑器",
+            "",
             body,
-            "修改策略后需强制更新或重启/注销后生效。");
+            "",
+            showHeader: false);
 
-        void LayoutButtons()
-        {
-            gpupdate.Location = new Point(body.ClientSize.Width - gpupdate.Width, body.ClientSize.Height - gpupdate.Height);
-            gpedit.Location = new Point(gpupdate.Left - gpedit.Width - 8, gpupdate.Top);
-        }
-
-        body.Resize += (_, _) => LayoutButtons();
         Load += (_, _) => UpdateGpeditHint();
-        Shown += (_, _) => LayoutButtons();
     }
 
     private void UpdateGpeditHint()

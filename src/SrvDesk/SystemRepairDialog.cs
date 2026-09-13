@@ -20,8 +20,8 @@ internal sealed class SystemRepairDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(780, 560);
-        MinimumSize = new Size(680, 480);
+        ClientSize = UiScale.Size(900, 640);
+        MinimumSize = UiScale.Size(780, 540);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.AutoScroll = false;
@@ -29,13 +29,14 @@ internal sealed class SystemRepairDialog : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = UiFit.ControlHeight() * 2 + 28,
+            Height = UiFit.ControlHeight() * 2 + UiScale.S(28),
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
-            Padding = new Padding(0, 4, 0, 8),
+            Padding = new Padding(0, UiScale.S(4), 0, UiScale.S(8)),
         };
 
         var btnSfc = ThemedSettingsChrome.CreateButton(AppLang.L("SFC 扫描修复", "SFC scan"), true);
+        UiFit.FitButton(btnSfc, padding: 28);
         btnSfc.Click += async (_, _) => await RunConfirmedAsync(
             AppLang.L("SFC 扫描修复", "SFC scan"),
             AppLang.L(
@@ -44,7 +45,8 @@ internal sealed class SystemRepairDialog : Form
             token => RunProcessAsync("sfc.exe", "/scannow", token, timeoutMs: 0));
 
         var btnDism = ThemedSettingsChrome.CreateButton(AppLang.L("DISM 修复映像", "DISM restore"), false);
-        btnDism.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(btnDism, padding: 28);
+        btnDism.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         btnDism.Click += async (_, _) => await RunConfirmedAsync(
             AppLang.L("DISM 修复映像", "DISM restore"),
             AppLang.L(
@@ -57,7 +59,8 @@ internal sealed class SystemRepairDialog : Form
                 timeoutMs: 0));
 
         var btnWu = ThemedSettingsChrome.CreateButton(AppLang.L("重置 Windows Update", "Reset Windows Update"), false);
-        btnWu.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(btnWu, padding: 28);
+        btnWu.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         btnWu.Click += async (_, _) => await RunConfirmedAsync(
             AppLang.L("重置 Windows Update", "Reset Windows Update"),
             AppLang.L(
@@ -66,7 +69,8 @@ internal sealed class SystemRepairDialog : Form
             ResetWindowsUpdateAsync);
 
         var btnNet = ThemedSettingsChrome.CreateButton(AppLang.L("重置网络栈", "Reset network"), false);
-        btnNet.Margin = new Padding(8, 0, 0, 0);
+        UiFit.FitButton(btnNet, padding: 28);
+        btnNet.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
         btnNet.Click += async (_, _) => await RunConfirmedAsync(
             AppLang.L("重置网络栈", "Reset network"),
             AppLang.L(
@@ -75,7 +79,8 @@ internal sealed class SystemRepairDialog : Form
             ResetNetworkAsync);
 
         var btnStop = ThemedSettingsChrome.CreateButton(AppLang.L("停止", "Stop"), false);
-        btnStop.Margin = new Padding(16, 0, 0, 0);
+        UiFit.FitButton(btnStop, padding: 28);
+        btnStop.Margin = new Padding(UiScale.S(16), 0, 0, UiScale.S(4));
         btnStop.Click += (_, _) => _cts?.Cancel();
 
         _actionButtons = [btnSfc, btnDism, btnWu, btnNet];
@@ -93,8 +98,8 @@ internal sealed class SystemRepairDialog : Form
         var progress = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = 52,
-            Padding = new Padding(0, 8, 0, 0),
+            Height = UiScale.S(56),
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
         };
         _bar.Dock = DockStyle.Top;
         _bar.Height = 16;
@@ -119,11 +124,10 @@ internal sealed class SystemRepairDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             AppLang.L("系统修复", "System repair"),
-            AppLang.L("SFC · DISM · 重置更新 · 重置网络", "SFC · DISM · Reset Update · Reset network"),
+            "",
             body,
-            AppLang.L(
-                "修复不保证解决所有故障；重置更新/网络后建议重启。",
-                "Repair does not fix every issue; reboot after reset update/network."));
+            "",
+            showHeader: false);
 
         FormClosing += (_, e) =>
         {

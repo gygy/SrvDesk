@@ -18,14 +18,20 @@ internal sealed class HostsEditorDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         KeyPreview = true;
-        ClientSize = new Size(780, 560);
-        MinimumSize = new Size(640, 420);
+        ClientSize = UiScale.Size(900, 640);
+        MinimumSize = UiScale.Size(760, 520);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 48), BackColor = AppTheme.Surface };
+        var body = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8)),
+            BackColor = AppTheme.Surface,
+        };
 
         _path.Dock = DockStyle.Top;
-        _path.Height = 22;
+        _path.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontSmall));
         _path.ForeColor = AppTheme.TextHeader;
+        _path.Font = UiFit.UiFont;
 
         _grid.Dock = DockStyle.Fill;
         _grid.AllowUserToAddRows = true;
@@ -36,20 +42,22 @@ internal sealed class HostsEditorDialog : Form
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        _grid.ColumnHeadersHeight = 32;
-        _grid.RowTemplate.Height = 28;
+        _grid.ColumnHeadersHeight = Math.Max(UiScale.S(32), UiFit.ControlHeight());
+        _grid.RowTemplate.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight() - UiScale.S(4));
         _grid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Enabled", HeaderText = "启用", FillWeight = 12 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "IP 地址", FillWeight = 28 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Hosts", HeaderText = "主机名（多个用空格分隔）", FillWeight = 40 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Comment", HeaderText = "备注", FillWeight = 20 });
 
+        var optH = Math.Max(UiScale.S(36), UiFit.ControlHeight() + UiScale.S(8));
         var options = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 36,
+            Height = optH,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
         };
         UiBuffer.ConfigureNoScrollRow(options);
         _backup.Text = "保存前备份";
@@ -59,7 +67,7 @@ internal sealed class HostsEditorDialog : Form
         _flush.Text = "保存后刷新 DNS 缓存";
         _flush.Checked = true;
         _flush.AutoSize = true;
-        _flush.Margin = new Padding(16, 0, 0, 0);
+        _flush.Margin = new Padding(UiScale.S(16), 0, 0, 0);
         _flush.ForeColor = AppTheme.TextMain;
         options.Controls.Add(_backup);
         options.Controls.Add(_flush);
@@ -67,11 +75,11 @@ internal sealed class HostsEditorDialog : Form
         var bar = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 40,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             AutoScroll = false,
-            Padding = new Padding(0, 4, 0, 0),
+            Padding = new Padding(0, UiScale.S(6), 0, 0),
         };
         UiBuffer.ConfigureNoScrollRow(bar);
         bar.Controls.Add(MkBtn("添加", AddRow, false));
@@ -91,10 +99,11 @@ internal sealed class HostsEditorDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "编辑 hosts",
-            "本机 DNS 覆盖 · 支持 Ctrl+V 批量粘贴 · 一键 GitHub hosts",
+            "",
             body,
-            "「添加 GitHub」来源：github.com/maxiaof/github-hosts",
-            Reload);
+            "",
+            showHeader: false,
+            onRefresh: Reload);
 
         Load += (_, _) => Reload();
     }
@@ -302,9 +311,8 @@ internal sealed class HostsEditorDialog : Form
     private static Button MkBtn(string text, Action click, bool primary)
     {
         var b = ThemedSettingsChrome.CreateButton(text, primary);
-        b.AutoSize = true;
-        b.Height = 32;
-        b.Margin = new Padding(0, 0, 8, 0);
+        UiFit.FitButton(b, padding: 28);
+        b.Margin = new Padding(0, 0, UiScale.S(8), UiScale.S(4));
         b.Click += (_, _) => click();
         return b;
     }

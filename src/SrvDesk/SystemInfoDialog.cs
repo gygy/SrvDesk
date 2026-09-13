@@ -15,10 +15,15 @@ internal sealed class SystemInfoDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(640, 560);
-        MinimumSize = new Size(520, 420);
+        ClientSize = UiScale.Size(860, 640);
+        MinimumSize = UiScale.Size(720, 520);
 
-        var body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12, 8, 12, 48), BackColor = AppTheme.Surface };
+        var body = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8)),
+            BackColor = AppTheme.Surface,
+        };
 
         _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
@@ -29,48 +34,50 @@ internal sealed class SystemInfoDialog : Form
         _list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         _list.BackColor = AppTheme.SurfaceCard;
         _list.BorderStyle = BorderStyle.FixedSingle;
-        _list.Columns.Add("项目", 160);
-        _list.Columns.Add("值", 420);
+        _list.Columns.Add("项目", 180);
+        _list.Columns.Add("值", 480);
+
         _summary.Dock = DockStyle.Top;
-        _summary.Height = 22;
+        _summary.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontSmall));
         _summary.ForeColor = AppTheme.TextMute;
+        _summary.Font = UiFit.UiFont;
+        _summary.TextAlign = ContentAlignment.MiddleLeft;
 
-        var refresh = ThemedSettingsChrome.CreateButton("刷新", false);
-        refresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-        refresh.Click += (_, _) => LoadInfo();
-
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actions);
         var copy = ThemedSettingsChrome.CreateButton("复制全部", false);
-        copy.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        UiFit.FitButton(copy, padding: 28);
         copy.Click += (_, _) => CopyAll();
-
         var msinfo = ThemedSettingsChrome.CreateButton("msinfo32", false);
-        msinfo.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        UiFit.FitButton(msinfo, padding: 28);
+        msinfo.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         msinfo.Click += (_, _) => OpenMsinfo();
+        actions.Controls.AddRange([copy, msinfo]);
 
         body.Controls.Add(_list);
+        body.Controls.Add(actions);
         body.Controls.Add(_summary);
-        body.Controls.AddRange([refresh, copy, msinfo]);
 
         ThemedSettingsChrome.MountModal(
             this,
             "系统信息",
-            "操作系统 · 硬件 · 网络摘要",
+            "",
             body,
-            "可复制为文本，或打开系统自带 msinfo32。",
-            LoadInfo);
-
-        void LayoutButtons()
-        {
-            msinfo.Location = new Point(body.ClientSize.Width - msinfo.Width, body.ClientSize.Height - msinfo.Height);
-            copy.Location = new Point(msinfo.Left - copy.Width - 8, msinfo.Top);
-            refresh.Location = new Point(copy.Left - refresh.Width - 8, msinfo.Top);
-            UiBuffer.FitListViewColumn(_list, 1, 200);
-        }
+            "",
+            showHeader: false,
+            onRefresh: LoadInfo);
 
         UiBuffer.BindListViewColumnFit(_list, 1, 200);
-        body.Resize += (_, _) => LayoutButtons();
+        body.Resize += (_, _) => UiBuffer.FitListViewColumn(_list, 1, 200);
         Load += (_, _) => LoadInfo();
-        Shown += (_, _) => LayoutButtons();
     }
 
     private void LoadInfo()
