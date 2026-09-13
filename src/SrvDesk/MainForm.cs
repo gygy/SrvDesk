@@ -1162,9 +1162,9 @@ internal sealed class MainForm : Form
 
     private void BuildCommandBar()
     {
-        _commandBar.Height = UiFit.ControlHeight() + 20;
+        _commandBar.Height = UiFit.ControlHeight() + UiScale.S(12);
         _commandBar.BackColor = AppTheme.SurfaceCard;
-        _commandBar.Padding = new Padding(12, 8, 12, 8);
+        _commandBar.Padding = new Padding(UiScale.S(12), UiScale.S(6), UiScale.S(12), UiScale.S(6));
         _commandBar.Paint += (_, e) =>
         {
             using var pen = new Pen(AppTheme.BorderLight);
@@ -1180,12 +1180,7 @@ internal sealed class MainForm : Form
         UiBuffer.ConfigureNoScrollRow(_commandFlow);
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("全局搜索", "Global search")));
-        _searchBox.Width = 200;
-        _searchBox.Font = UiFit.UiFont;
-        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font);
-        _searchBox.Margin = new Padding(0, 0, 16, 0);
-        _searchBox.BorderStyle = BorderStyle.FixedSingle;
-        _searchBox.ForeColor = AppTheme.TextMain;
+        StyleBarTextBox(_searchBox, 200);
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
         _toolTip.SetToolTip(_searchBox,
             AppLang.L("跨所有设置标签搜索；匹配数量显示在左侧标签上。", "Search across all setting tabs; match counts appear on the left nav."));
@@ -1199,10 +1194,8 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(_hideIncompatible);
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("分类", "Filter")));
-        _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _categoryFilter.Font = UiFit.UiFont;
-        UiFit.FitCombo(_categoryFilter);
-        _categoryFilter.Margin = new Padding(0, 0, 0, 0);
+        StyleBarCombo(_categoryFilter);
+        _categoryFilter.Margin = new Padding(0);
         _categoryFilter.Items.AddRange([
             AppLang.L("全部", "All"),
             AppLang.L("Server 推荐", "Server picks"),
@@ -1218,10 +1211,8 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(_categoryFilter);
 
         _commandFlow.Controls.Add(BarLabel(AppLang.L("预设", "Preset")));
-        _presetCombo.Font = UiFit.UiFont;
-        UiFit.FitCombo(_presetCombo);
+        StyleBarCombo(_presetCombo);
         _presetCombo.Margin = new Padding(0, 0, 8, 0);
-        _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         foreach (var p in OptPresets.All)
             _presetCombo.Items.Add(p);
         if (_presetCombo.Items.Count > 0)
@@ -1292,9 +1283,11 @@ internal sealed class MainForm : Form
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         var h = UiFit.ControlHeight(b.Font);
-        UiFit.FitButton(b, h, padding: 28);
+        UiFit.FitButton(b, h, padding: 24);
         b.Margin = new Padding(0, 0, 8, 0);
         b.BackColor = Color.White;
+        b.FlatAppearance.BorderColor = AppTheme.Border;
+        b.FlatAppearance.BorderSize = 1;
         b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
         b.MouseLeave += (_, _) => { b.BackColor = Color.White; b.Invalidate(); };
         b.Click += (_, _) => click();
@@ -1302,25 +1295,76 @@ internal sealed class MainForm : Form
         return b;
     }
 
+    private void StyleBarTextBox(TextBox box, int width)
+    {
+        var h = UiFit.ControlHeight(UiFit.UiFont);
+        box.Width = width;
+        box.Font = UiFit.UiFont;
+        box.Height = h;
+        box.Margin = new Padding(0, 0, 16, 0);
+        box.BorderStyle = BorderStyle.FixedSingle;
+        box.BackColor = Color.White;
+        box.ForeColor = AppTheme.TextMain;
+        LockBarControlHeight(box, h);
+    }
+
+    private void StyleBarCombo(ComboBox box)
+    {
+        var h = UiFit.ControlHeight(UiFit.UiFont);
+        box.DropDownStyle = ComboBoxStyle.DropDownList;
+        box.Font = UiFit.UiFont;
+        box.FlatStyle = FlatStyle.Flat;
+        box.IntegralHeight = false;
+        box.BackColor = Color.White;
+        box.ForeColor = AppTheme.TextMain;
+        try { box.ItemHeight = Math.Max(18, h - UiScale.S(8)); } catch { /* ignore */ }
+        box.Height = h;
+        LockBarControlHeight(box, h);
+    }
+
+    private static void LockBarControlHeight(Control c, int h)
+    {
+        void Apply()
+        {
+            try
+            {
+                if (c.Height != h)
+                    c.Height = h;
+            }
+            catch { /* ignore */ }
+        }
+
+        Apply();
+        c.HandleCreated -= OnHandle;
+        c.HandleCreated += OnHandle;
+        void OnHandle(object? _, EventArgs __) => Apply();
+    }
+
     private void FitTopCommandBar()
     {
         var h = UiFit.ControlHeight();
         if (_commandBar.Visible)
-            _commandBar.Height = h + UiScale.S(16);
+        {
+            _commandBar.Padding = new Padding(UiScale.S(12), UiScale.S(6), UiScale.S(12), UiScale.S(6));
+            _commandBar.Height = h + UiScale.S(12);
+        }
 
-        // 搜索 / 下拉 / 按钮同一行高，避免「全局搜索」旁控件与「载入」高低不齐
-        _searchBox.Height = h;
-        UiFit.FitCombo(_categoryFilter);
-        _categoryFilter.Height = h;
-        UiFit.FitCombo(_presetCombo);
-        _presetCombo.Height = h;
+        // 搜索 / 下拉 / 按钮强制同一外框高度，避免顶栏高低不齐
+        StyleBarTextBox(_searchBox, _searchBox.Width > 0 ? _searchBox.Width : 200);
+        StyleBarCombo(_categoryFilter);
+        _categoryFilter.Margin = new Padding(0);
+        StyleBarCombo(_presetCombo);
+        _presetCombo.Margin = new Padding(0, 0, 8, 0);
 
         foreach (Control c in _commandFlow.Controls)
         {
             if (c is Button b)
             {
-                UiFit.FitButton(b, h, padding: 28);
+                UiFit.FitButton(b, h, padding: 24);
+                b.Height = h;
                 b.Margin = new Padding(0, 0, 8, 0);
+                if (b.FlatAppearance.BorderSize > 0)
+                    b.FlatAppearance.BorderColor = AppTheme.Border;
             }
             else if (c is Label lbl && lbl.AutoSize)
             {
@@ -1331,11 +1375,6 @@ internal sealed class MainForm : Form
             {
                 var top = Math.Max(0, (h - cb.PreferredSize.Height) / 2);
                 cb.Margin = new Padding(0, top, 16, 0);
-            }
-            else if (c is ComboBox or TextBox)
-            {
-                c.Margin = new Padding(c.Margin.Left, 0, c.Margin.Right, 0);
-                c.Height = h;
             }
         }
     }
