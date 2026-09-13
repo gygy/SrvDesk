@@ -13,8 +13,9 @@ internal static class SettingListLayout
     /// <summary>下拉选择控件（多档设置）。</summary>
     public static int ChoiceX => UiScale.S(350);
     public static int ChoiceW => UiScale.S(114);
-    /// <summary>行内「配置脚本」图标按钮宽度。</summary>
-    public static int ScriptW => UiScale.S(22);
+    /// <summary>行内说明 / 配置脚本图标统一边长。</summary>
+    public static int RowIconSize => Math.Max(UiScale.S(18), MenuIcons.PixelSize);
+    public static int ScriptW => RowIconSize;
     public static int ScriptX => ChoiceX - ScriptW - UiScale.S(4);
     /// <summary>系统默认值列（加宽避免「系统默认值」被裁成「系统…」）。</summary>
     public static int SystemX => UiScale.S(478);

@@ -7,6 +7,10 @@ namespace SrvDesk;
 internal static class MenuIcons
 {
     private static int Size => Math.Max(16, UiScale.S(16));
+
+    /// <summary>菜单/工具条统一图标边长（随 DPI）。</summary>
+    public static int PixelSize => Size;
+
     private static readonly Dictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
 
     // —— 文件 ——
@@ -233,19 +237,42 @@ internal static class MenuIcons
                 var h = ExtractIcon(IntPtr.Zero, path, index);
                 if (h == IntPtr.Zero) return null;
                 using var ico = Icon.FromHandle(h);
-                var bmp = new Bitmap(ico.ToBitmap(), Size, Size);
+                using var src = ico.ToBitmap();
                 DestroyIcon(h);
-                return bmp;
+                return ResizeSquare(src, Size, disposeSrc: false);
             }
 
             using var associated = Icon.ExtractAssociatedIcon(path);
             if (associated is null) return null;
-            return new Bitmap(associated.ToBitmap(), Size, Size);
+            using var bmp = associated.ToBitmap();
+            return ResizeSquare(bmp, Size, disposeSrc: false);
         }
         catch
         {
             return null;
         }
+    }
+
+    private static Bitmap ResizeSquare(Image src, int side, bool disposeSrc = true)
+    {
+        var bmp = new Bitmap(side, side);
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.Clear(Color.Transparent);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            // 居中等比缩放，避免系统图标裁切/高低不一
+            var scale = Math.Min((float)side / Math.Max(1, src.Width), (float)side / Math.Max(1, src.Height));
+            var w = Math.Max(1, (int)Math.Round(src.Width * scale));
+            var h = Math.Max(1, (int)Math.Round(src.Height * scale));
+            var x = (side - w) / 2;
+            var y = (side - h) / 2;
+            g.DrawImage(src, x, y, w, h);
+        }
+        if (disposeSrc)
+            src.Dispose();
+        return bmp;
     }
 
     private static Image Draw(Action<Graphics> paint)

@@ -51,7 +51,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ForeColor = AppTheme.TextMain;
         Renderer = new ToolStripProfessionalRenderer(new AppMenuColorTable());
         Padding = new Padding(4, 2, 0, 2);
-        ImageScalingSize = new Size(16, 16);
+        ImageScalingSize = new Size(MenuIcons.PixelSize, MenuIcons.PixelSize);
         ShowItemToolTips = true;
 
         var file = new ToolStripMenuItem(AppLang.L("文件(&F)", "File(&F)"));
@@ -153,7 +153,7 @@ internal sealed class AppMenuStrip : MenuStrip
         var item = shortcut == Keys.None
             ? new ToolStripMenuItem(text, image)
             : new ToolStripMenuItem(text, image, null, shortcut);
-        item.ImageScaling = ToolStripItemImageScaling.None;
+        item.ImageScaling = ToolStripItemImageScaling.SizeToFit;
         return item;
     }
 

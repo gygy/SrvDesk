@@ -1182,8 +1182,8 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(BarLabel(AppLang.L("全局搜索", "Global search")));
         _searchBox.Width = 200;
         _searchBox.Font = UiFit.UiFont;
-        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font, 28);
-        _searchBox.Margin = new Padding(0, 2, 16, 0);
+        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font);
+        _searchBox.Margin = new Padding(0, 0, 16, 0);
         _searchBox.BorderStyle = BorderStyle.FixedSingle;
         _searchBox.ForeColor = AppTheme.TextMain;
         _searchBox.TextChanged += (_, _) => ApplySearchFilter();
@@ -1193,7 +1193,7 @@ internal sealed class MainForm : Form
 
         _hideIncompatible.Text = AppLang.L("隐藏不适用项", "Hide incompatible");
         _hideIncompatible.AutoSize = true;
-        _hideIncompatible.Margin = new Padding(0, 4, 16, 0);
+        _hideIncompatible.Margin = new Padding(0, 0, 16, 0);
         _hideIncompatible.ForeColor = AppTheme.TextMute;
         _hideIncompatible.CheckedChanged += (_, _) => ApplySearchFilter();
         _commandFlow.Controls.Add(_hideIncompatible);
@@ -1202,7 +1202,7 @@ internal sealed class MainForm : Form
         _categoryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
         _categoryFilter.Font = UiFit.UiFont;
         UiFit.FitCombo(_categoryFilter);
-        _categoryFilter.Margin = new Padding(0, 2, 0, 0);
+        _categoryFilter.Margin = new Padding(0, 0, 0, 0);
         _categoryFilter.Items.AddRange([
             AppLang.L("全部", "All"),
             AppLang.L("Server 推荐", "Server picks"),
@@ -1220,7 +1220,7 @@ internal sealed class MainForm : Form
         _commandFlow.Controls.Add(BarLabel(AppLang.L("预设", "Preset")));
         _presetCombo.Font = UiFit.UiFont;
         UiFit.FitCombo(_presetCombo);
-        _presetCombo.Margin = new Padding(0, 2, 8, 0);
+        _presetCombo.Margin = new Padding(0, 0, 8, 0);
         _presetCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         foreach (var p in OptPresets.All)
             _presetCombo.Items.Add(p);
@@ -1251,6 +1251,7 @@ internal sealed class MainForm : Form
 
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
+        FitTopCommandBar();
     }
 
     private void WirePresetMenu()
@@ -1290,8 +1291,9 @@ internal sealed class MainForm : Form
     private Button BarQuickButton(string text, string tip, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        UiFit.FitButton(b, UiFit.ControlHeight(b.Font), padding: 28);
-        b.Margin = new Padding(0, 2, 8, 0);
+        var h = UiFit.ControlHeight(b.Font);
+        UiFit.FitButton(b, h, padding: 28);
+        b.Margin = new Padding(0, 0, 8, 0);
         b.BackColor = Color.White;
         b.MouseEnter += (_, _) => { b.BackColor = AppTheme.PrimaryPale; b.Invalidate(); };
         b.MouseLeave += (_, _) => { b.BackColor = Color.White; b.Invalidate(); };
@@ -1304,14 +1306,37 @@ internal sealed class MainForm : Form
     {
         var h = UiFit.ControlHeight();
         if (_commandBar.Visible)
-            _commandBar.Height = h + UiScale.S(20);
-        _searchBox.Height = UiFit.ControlHeight(_searchBox.Font, 28);
+            _commandBar.Height = h + UiScale.S(16);
+
+        // 搜索 / 下拉 / 按钮同一行高，避免「全局搜索」旁控件与「载入」高低不齐
+        _searchBox.Height = h;
         UiFit.FitCombo(_categoryFilter);
+        _categoryFilter.Height = h;
         UiFit.FitCombo(_presetCombo);
+        _presetCombo.Height = h;
+
         foreach (Control c in _commandFlow.Controls)
         {
             if (c is Button b)
+            {
                 UiFit.FitButton(b, h, padding: 28);
+                b.Margin = new Padding(0, 0, 8, 0);
+            }
+            else if (c is Label lbl && lbl.AutoSize)
+            {
+                var top = Math.Max(0, (h - lbl.PreferredHeight) / 2);
+                lbl.Margin = new Padding(0, top, 6, 0);
+            }
+            else if (c is CheckBox cb)
+            {
+                var top = Math.Max(0, (h - cb.PreferredSize.Height) / 2);
+                cb.Margin = new Padding(0, top, 16, 0);
+            }
+            else if (c is ComboBox or TextBox)
+            {
+                c.Margin = new Padding(c.Margin.Left, 0, c.Margin.Right, 0);
+                c.Height = h;
+            }
         }
     }
 
@@ -1325,9 +1350,10 @@ internal sealed class MainForm : Form
     {
         Text = text,
         AutoSize = true,
-        Margin = new Padding(0, 6, 6, 0),
+        Margin = new Padding(0, 0, 6, 0),
         ForeColor = AppTheme.TextMute,
         BackColor = Color.Transparent,
+        TextAlign = ContentAlignment.MiddleLeft,
     };
 
     private static void FitComboToItems(ComboBox box, int minWidth, int extra)
@@ -3701,7 +3727,7 @@ internal sealed class MainForm : Form
             {
                 Image = MenuIcons.RowInfo,
                 SizeMode = PictureBoxSizeMode.CenterImage,
-                Size = UiScale.Size(18, 18),
+                Size = new Size(SettingListLayout.RowIconSize, SettingListLayout.RowIconSize),
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
             };
@@ -3711,7 +3737,7 @@ internal sealed class MainForm : Form
                 SizeMode = PictureBoxSizeMode.CenterImage,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
-                Size = new Size(SettingListLayout.ScriptW, UiScale.S(20)),
+                Size = new Size(SettingListLayout.RowIconSize, SettingListLayout.RowIconSize),
             };
             _level = new Label
             {
