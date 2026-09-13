@@ -174,6 +174,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _quickPage.BackColor = AppTheme.Surface;
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.Dock = DockStyle.Fill;
+        body.Padding = new Padding(UiScale.S(12), UiScale.S(10), UiScale.S(12), UiScale.S(12));
 
         var common = ThemedSettingsChrome.CreateSection(
             AppLang.L("常用", "Common"),
@@ -188,26 +189,35 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             AppLang.L("其它", "Other"),
             [_blockShare]);
 
-        _hint.AutoSize = true;
-        _hint.MaximumSize = new Size(640, 0);
+        _hint.AutoSize = false;
+        _hint.Dock = DockStyle.Top;
+        _hint.Height = Math.Max(UiScale.S(28), UiFit.LineHeight(UiFit.UiFontSmall) + UiScale.S(12));
         _hint.ForeColor = AppTheme.TextMute;
-        _hint.Margin = new Padding(4, 8, 4, 4);
+        _hint.Font = UiFit.UiFontSmall;
+        _hint.TextAlign = ContentAlignment.MiddleLeft;
+        _hint.AutoEllipsis = true;
+        _hint.Padding = new Padding(UiScale.S(4), 0, UiScale.S(4), UiScale.S(6));
+        _hint.Margin = Padding.Empty;
         if (!ContextMenuTweaks.TerminalAvailable())
         {
             _hint.Text = AppLang.L(
                 "未检测到 Windows 终端（wt.exe），相关项开启前请先安装。",
                 "Windows Terminal (wt.exe) not found — install it before enabling those items.");
-            body.Controls.Add(_hint);
+        }
+        else
+        {
+            _hint.Visible = false;
+            _hint.Height = 0;
         }
 
+        // Dock.Top：后加的在上 → common 最上，其次终端…；提示再压在分区之上
         body.Controls.Add(other);
         body.Controls.Add(edit);
         body.Controls.Add(terminal);
         body.Controls.Add(common);
+        if (_hint.Visible)
+            body.Controls.Add(_hint);
         _quickPage.Controls.Add(body);
-
-        Resize += (_, _) =>
-            _hint.MaximumSize = new Size(Math.Max(280, ClientSize.Width - 80), 0);
     }
 
     private void BuildScanPage()

@@ -17,10 +17,11 @@ internal sealed class InstantToggleRow : Panel
             | ControlStyles.ResizeRedraw,
             true);
         DoubleBuffered = true;
-        Height = 36;
-        MinimumSize = new Size(200, 36);
-        Margin = new Padding(0, 0, 0, 4);
-        Padding = new Padding(4, 0, 8, 0);
+        var rowH = Math.Max(UiScale.S(36), UiFit.ControlHeight());
+        Height = rowH;
+        MinimumSize = new Size(200, rowH);
+        Margin = new Padding(0, 0, 0, UiScale.S(6));
+        Padding = new Padding(UiScale.S(4), 0, UiScale.S(8), 0);
         BackColor = Color.Transparent;
 
         // Dock 布局：右侧固定槽放开关，文字填满左侧；行高恒定，不在 Resize 里改尺寸
@@ -333,14 +334,17 @@ internal static class ThemedSettingsChrome
         return b;
     }
 
-    /// <summary>带标题分区：高度随正文自适应，标题完整显示。</summary>
+    /// <summary>带标题分区：高度随正文自适应，标题与首行不重叠。</summary>
     public static (Panel Card, FlowLayoutPanel Body) CreateSectionShell(string title, int minHeight = 0)
     {
+        var titleFont = UiFit.UiFontBold(10F);
+        var headerH = Math.Max(UiScale.S(30), UiFit.LineHeight(titleFont) + UiScale.S(12));
+
         var card = new BufferedPanel
         {
             BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(10, 8, 10, 10),
-            Margin = new Padding(0, 0, 0, 8),
+            Padding = new Padding(UiScale.S(12), UiScale.S(10), UiScale.S(12), UiScale.S(12)),
+            Margin = new Padding(0, 0, 0, UiScale.S(12)),
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
@@ -354,32 +358,51 @@ internal static class ThemedSettingsChrome
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
+        // TableLayout：避免 AutoSize 面板里两个 Dock.Top 互相盖住标题
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = AppTheme.SurfaceCard,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, headerH));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
         var cap = new Label
         {
             Text = title,
-            Dock = DockStyle.Top,
-            Height = 28,
-            Font = UiFit.UiFontBold(10F),
+            Dock = DockStyle.Fill,
+            Font = titleFont,
             ForeColor = AppTheme.TextHeader,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = false,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+            BackColor = AppTheme.SurfaceCard,
         };
 
         var body = new BufferedFlowLayoutPanel
         {
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(0, 2, 0, 2),
+            Margin = Padding.Empty,
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
         };
         body.Resize += (_, _) => StretchStackChildren(body);
 
-        // 先 body 后 cap：cap 停靠在最上，body 在其下并随内容增高
-        card.Controls.Add(body);
-        card.Controls.Add(cap);
+        root.Controls.Add(cap, 0, 0);
+        root.Controls.Add(body, 0, 1);
+        card.Controls.Add(root);
         card.Tag = body;
         return (card, body);
     }
