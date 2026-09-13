@@ -251,25 +251,24 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     private Panel BuildScanTools()
     {
         var btnH = UiFit.ControlHeight();
+        var rowH = btnH + UiScale.S(10);
         var bar = new Panel
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
+            Height = rowH * 2 + UiScale.S(28),
             BackColor = AppTheme.Surface,
-            Padding = new Padding(0, 0, 0, UiScale.S(4)),
+            Padding = new Padding(0, 0, 0, UiScale.S(2)),
         };
 
-        // 第 1 行：筛选（不与按钮抢宽度）
+        // 第 1 行：筛选（不与按钮抢同一行宽度）
         var filterRow = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Height = rowH,
             WrapContents = false,
             FlowDirection = FlowDirection.LeftToRight,
             BackColor = AppTheme.Surface,
-            Padding = new Padding(0, UiScale.S(2), 0, UiScale.S(2)),
+            Padding = new Padding(0, UiScale.S(4), 0, 0),
             Margin = new Padding(0),
         };
         UiBuffer.ConfigureNoScrollRow(filterRow);
@@ -306,7 +305,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         var searchLbl = BarToolLabel(AppLang.L("搜索", "Search"));
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.Font = UiFit.UiFont;
-        _search.Width = UiScale.S(160);
+        _search.Width = UiScale.S(180);
         _search.Height = btnH;
         _search.Margin = new Padding(0, 0, UiScale.S(12), 0);
         _search.TextChanged += (_, _) => ApplyFilter();
@@ -324,16 +323,15 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         filterRow.Controls.Add(_search);
         filterRow.Controls.Add(_count);
 
-        // 第 2 行：动作按钮（同高，不重叠）
+        // 第 2 行：动作按钮（同高）
         var actionRow = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Height = rowH,
             WrapContents = false,
             FlowDirection = FlowDirection.LeftToRight,
             BackColor = AppTheme.Surface,
-            Padding = new Padding(0, UiScale.S(2), 0, UiScale.S(2)),
+            Padding = new Padding(0, UiScale.S(2), 0, 0),
             Margin = new Padding(0),
         };
         UiBuffer.ConfigureNoScrollRow(actionRow);
@@ -362,7 +360,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             "双击切换；可多选后批量启用/禁用。Server 精简只动「可精简」项。",
             "Double-click to toggle; multi-select then Enable/Disable. Server slim only “Can slim”.");
 
-        // Dock 顺序：后加的在上 → 先 detail 再 action 再 filter，视觉上 filter/action/detail
+        // 后 Add 的 Dock.Top 靠上：filter → action → detail
         bar.Controls.Add(_detail);
         bar.Controls.Add(actionRow);
         bar.Controls.Add(filterRow);
@@ -370,13 +368,15 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         void SyncHeights()
         {
             var h = UiFit.ControlHeight();
-            StyleToolCombo(_sceneFilter, h, _sceneFilter.Width);
-            StyleToolCombo(_adviceFilter, h, _adviceFilter.Width);
+            var rh = h + UiScale.S(10);
+            StyleToolCombo(_sceneFilter, h, _sceneFilter.Width > 0 ? _sceneFilter.Width : UiScale.S(120));
+            StyleToolCombo(_adviceFilter, h, _adviceFilter.Width > 0 ? _adviceFilter.Width : UiScale.S(110));
             _search.Height = h;
             foreach (var b in _scanButtons)
                 UiFit.FitButton(b, h, minWidth: 64, padding: 22);
-            filterRow.Height = h + UiScale.S(8);
-            actionRow.Height = h + UiScale.S(8);
+            filterRow.Height = rh;
+            actionRow.Height = rh;
+            bar.Height = rh * 2 + UiScale.S(28);
         }
 
         bar.HandleCreated += (_, _) => SyncHeights();
