@@ -32,8 +32,6 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly TextBox _search = new();
     private readonly ComboBox _sceneFilter = new();
     private readonly ComboBox _adviceFilter = new();
-    private readonly Label _count = new();
-    private readonly Label _detail = new();
     private List<ContextMenuEntry> _items = [];
     private bool _scanLoaded;
     private Button[] _scanButtons = [];
@@ -239,7 +237,6 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _list.Columns.Add(AppLang.L("类型", "Kind"), 56);
         _list.Columns.Add(AppLang.L("来源", "Source"), 72);
         _list.Columns.Add(AppLang.L("注册表", "Registry"), 260);
-        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
         _list.DoubleClick += (_, _) => ToggleSelected();
         _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
 
@@ -255,7 +252,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         var bar = new Panel
         {
             Dock = DockStyle.Top,
-            Height = rowH * 2 + UiScale.S(28),
+            Height = rowH * 2 + UiScale.S(8),
             BackColor = AppTheme.Surface,
             Padding = new Padding(0, 0, 0, UiScale.S(2)),
         };
@@ -310,18 +307,12 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _search.Margin = new Padding(0, 0, UiScale.S(12), 0);
         _search.TextChanged += (_, _) => ApplyFilter();
 
-        _count.AutoSize = true;
-        _count.ForeColor = AppTheme.TextMute;
-        _count.Margin = new Padding(0, UiScale.S(8), 0, 0);
-        _count.TextAlign = ContentAlignment.MiddleLeft;
-
         filterRow.Controls.Add(sceneLbl);
         filterRow.Controls.Add(_sceneFilter);
         filterRow.Controls.Add(adviceLbl);
         filterRow.Controls.Add(_adviceFilter);
         filterRow.Controls.Add(searchLbl);
         filterRow.Controls.Add(_search);
-        filterRow.Controls.Add(_count);
 
         // 第 2 行：动作按钮（同高）
         var actionRow = new FlowLayoutPanel
@@ -350,18 +341,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             actionRow.Controls.Add(b);
         }
 
-        _detail.AutoSize = false;
-        _detail.AutoEllipsis = true;
-        _detail.Dock = DockStyle.Top;
-        _detail.Height = UiScale.S(24);
-        _detail.ForeColor = AppTheme.TextMute;
-        _detail.TextAlign = ContentAlignment.MiddleLeft;
-        _detail.Text = AppLang.L(
-            "双击切换；可多选后批量启用/禁用。Server 精简只动「可精简」项。",
-            "Double-click to toggle; multi-select then Enable/Disable. Server slim only “Can slim”.");
-
-        // 后 Add 的 Dock.Top 靠上：filter → action → detail
-        bar.Controls.Add(_detail);
+        // 后 Add 的 Dock.Top 靠上：filter → action
         bar.Controls.Add(actionRow);
         bar.Controls.Add(filterRow);
 
@@ -376,7 +356,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
                 UiFit.FitButton(b, h, minWidth: 64, padding: 22);
             filterRow.Height = rh;
             actionRow.Height = rh;
-            bar.Height = rh * 2 + UiScale.S(28);
+            bar.Height = rh * 2 + UiScale.S(8);
         }
 
         bar.HandleCreated += (_, _) => SyncHeights();
@@ -471,8 +451,6 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
 
         _list.BeginUpdate();
         _list.Items.Clear();
-        var shown = 0;
-        var slim = 0;
         foreach (var item in _items)
         {
             if (scene != allScene
@@ -503,16 +481,10 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             row.SubItems.Add(item.RegistryPath);
             if (!item.Enabled) row.ForeColor = AppTheme.TextMute;
             if (item.Protected) row.ForeColor = AppTheme.TextMute;
-            if (ContextMenuScanHelper.IsSlimCandidate(item) && item.Enabled)
-                slim++;
             _list.Items.Add(row);
-            shown++;
         }
 
         _list.EndUpdate();
-        _count.Text = AppLang.Lf("共 {0} · 显示 {1} · 可精简 {2}",
-            "{0} total · {1} shown · {2} slimable", _items.Count, shown, slim);
-        UpdateDetail();
     }
 
     private IEnumerable<ContextMenuEntry> SelectedEntries()
@@ -522,27 +494,6 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             if (row.Tag is ContextMenuEntry e)
                 yield return e;
         }
-    }
-
-    private void UpdateDetail()
-    {
-        var sel = SelectedEntries().ToList();
-        if (sel.Count == 0)
-        {
-            _detail.Text = AppLang.L(
-                "双击切换；Server 精简只动「可精简」项，不删注册表。",
-                "Double-click to toggle; Server slim only “Can slim”, no delete.");
-            return;
-        }
-
-        if (sel.Count == 1)
-        {
-            var e = sel[0];
-            _detail.Text = $"{e.Name}  ·  {e.Scene}  ·  {e.Source}  ·  {(e.Enabled ? AppLang.L("启用", "On") : AppLang.L("禁用", "Off"))}  ·  {e.RegistryPath}";
-            return;
-        }
-
-        _detail.Text = AppLang.Lf("已选 {0} 项", "{0} selected", sel.Count);
     }
 
     private void ToggleSelected()
@@ -630,8 +581,13 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
             var n = ContextMenuScanHelper.ApplyServerSlim(candidates);
             RefreshScan();
             _onChanged?.Invoke();
-            _detail.Text = AppLang.Lf("已精简 {0} 项。重新打开资源管理器窗口后生效更彻底。",
-                "Slimmed {0} items. Reopen Explorer windows for full effect.", n);
+            if (n > 0)
+            {
+                MessageBox.Show(this,
+                    AppLang.Lf("已精简 {0} 项。", "Slimmed {0} items.", n),
+                    AppLang.L("Server 精简", "Server slim"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
         catch (Exception ex)
         {
