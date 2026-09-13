@@ -7,7 +7,7 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly CheckBox _askBeforeInstall = new();
     private readonly Panel _listHost = new BufferedPanel(composited: true);
     private readonly Label _wingetHint = new();
-    private readonly Button _installWingetBtn = new();
+    private readonly Button _installWingetBtn = ThemedSettingsChrome.CreateButton("一键安装 winget", true);
     private readonly ListBox _categoryMenu = new();
     private readonly Dictionary<string, CommonSoftwareRow> _rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Panel _progressHost = new();
@@ -266,15 +266,8 @@ internal sealed class CommonSoftwareDialog : Form
         _wingetHint.AutoEllipsis = true;
 
         _installWingetBtn.Text = "一键安装 winget";
-        _installWingetBtn.Font = UiFit.UiFont;
-        _installWingetBtn.Size = UiFit.ButtonSize("一键安装 winget", btnH, padding: 28);
-        _installWingetBtn.FlatStyle = FlatStyle.Flat;
-        _installWingetBtn.BackColor = AppTheme.Primary;
-        _installWingetBtn.ForeColor = AppTheme.TextOnPrimary;
-        _installWingetBtn.Cursor = Cursors.Hand;
-        _installWingetBtn.FlatAppearance.BorderSize = 0;
         _installWingetBtn.Visible = false;
-        UiFit.EnableCenteredFlatText(_installWingetBtn);
+        UiFit.FitButton(_installWingetBtn, padding: 28);
         _installWingetBtn.Click += (_, _) => InstallWingetNow();
 
         _askBeforeInstall.Text = "安装前确认";
@@ -341,7 +334,7 @@ internal sealed class CommonSoftwareDialog : Form
 
             if (_installWingetBtn.Visible)
             {
-                _installWingetBtn.Size = UiFit.ButtonSize(_installWingetBtn.Text, h, padding: 28);
+                UiFit.FitButton(_installWingetBtn, h, padding: 28);
                 _installWingetBtn.Location = new Point(Math.Max(0, right - _installWingetBtn.Width), y);
                 right = _installWingetBtn.Left - gap;
             }

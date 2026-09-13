@@ -119,24 +119,12 @@ internal sealed class AppSettingsDialog : Form
             Padding = new Padding(0, 4, 0, 0),
         };
         UiBuffer.ConfigureNoScrollRow(bottom);
-        var cancel = new Button
-        {
-            Text = AppLang.L("取消", "Cancel"),
-            DialogResult = DialogResult.Cancel,
-            Width = 88,
-            Height = 32,
-        };
-        var ok = new Button
-        {
-            Text = AppLang.L("保存", "Save"),
-            Width = 88,
-            Height = 32,
-            Margin = new Padding(0, 0, 8, 0),
-            BackColor = AppTheme.Primary,
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-        };
-        ok.FlatAppearance.BorderSize = 0;
+        var cancel = ThemedSettingsChrome.CreateButton(AppLang.L("取消", "Cancel"), false);
+        cancel.DialogResult = DialogResult.Cancel;
+        UiFit.FitButton(cancel, padding: 28);
+        var ok = ThemedSettingsChrome.CreateButton(AppLang.L("保存", "Save"), true);
+        UiFit.FitButton(ok, padding: 28);
+        ok.Margin = new Padding(0, 0, 8, 0);
         ok.Click += (_, _) =>
         {
             var restart = Save();
@@ -309,19 +297,10 @@ internal sealed class AppSettingsDialog : Form
 
     private static Button LinkBtn(string text, Action click)
     {
-        var b = new Button
-        {
-            Text = text,
-            AutoSize = false,
-            FlatStyle = FlatStyle.Flat,
-            Cursor = Cursors.Hand,
-            ForeColor = AppTheme.Primary,
-            BackColor = AppTheme.SurfaceCard,
-            Margin = new Padding(0, 0, 8, 4),
-            Size = UiFit.ButtonSize(text, UiFit.ControlHeight(), minWidth: 64, padding: 18),
-        };
-        b.FlatAppearance.BorderColor = AppTheme.Border;
-        UiFit.EnableCenteredFlatText(b);
+        var b = ThemedSettingsChrome.CreateButton(text, false);
+        b.ForeColor = AppTheme.Primary;
+        UiFit.FitButton(b, minWidth: 64, padding: 18);
+        b.Margin = new Padding(0, 0, 8, 4);
         b.Click += (_, _) => click();
         return b;
     }

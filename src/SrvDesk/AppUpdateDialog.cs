@@ -119,7 +119,7 @@ internal sealed class AppUpdateDialog : Form
             "检查更新",
             "从 GitHub Releases 获取最新 SrvDesk.exe，下载后自动替换并重启",
             body,
-            "更新需要能访问 GitHub。替换时会退出当前进程。");
+            "");
         if (known is not null)
             Bind(known);
         FormClosing += (_, e) =>

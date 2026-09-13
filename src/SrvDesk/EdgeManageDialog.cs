@@ -29,7 +29,7 @@ internal sealed class EdgeManageDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         Font = UiFit.UiFont;
         ClientSize = UiScale.Size(780, 520);
-        MinimumSize = UiScale.Size(700, 460);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.AutoScroll = true;

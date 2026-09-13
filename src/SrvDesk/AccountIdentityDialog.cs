@@ -68,8 +68,8 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 560);
-        MinimumSize = new Size(560, 420);
+        ClientSize = UiScale.Size(820, 560);
+        MinimumSize = UiScale.Size(780, 520);
         CancelButton = null;
 
         var body = new Panel
@@ -83,7 +83,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 42,
+            Height = UiFit.ControlHeight() + UiScale.S(16),
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             AutoScroll = false,
@@ -93,14 +93,15 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         UiBuffer.ConfigureNoScrollRow(buttons);
 
         _disableAuto = ThemedSettingsChrome.CreateButton(AppLang.L("禁用自动登录", "Disable Autologon"), false);
-        _disableAuto.Height = 32;
+        UiFit.FitButton(_disableAuto, padding: 24);
         _disableAuto.Margin = new Padding(6, 0, 0, 0);
         _disableAuto.Click += (_, _) => TryDisableAutologon();
 
         _primary = ThemedSettingsChrome.CreateButton(AppLang.L("一键添加", "Add user"), true);
-        _primary.Height = 32;
+        UiFit.FitButton(_primary, padding: 24);
         _primary.Margin = new Padding(6, 0, 0, 0);
         _primary.Click += (_, _) => ApplyCurrentTab();
+        buttons.Height = Math.Max(buttons.Height, Math.Max(_primary.Height, _disableAuto.Height) + UiScale.S(12));
 
         buttons.Controls.Add(_primary);
         buttons.Controls.Add(_disableAuto);
@@ -406,6 +407,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
             : user
                 ? AppLang.L("一键添加", "Add user")
                 : AppLang.L("应用修改", "Apply");
+        UiFit.FitButton(_primary, padding: 24);
         FocusActiveField();
     }
 

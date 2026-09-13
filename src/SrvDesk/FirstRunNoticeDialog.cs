@@ -71,11 +71,13 @@ internal sealed class FirstRunNoticeDialog : Form
             LegalDocumentDialog.Show(this, privacyTitle, "SrvDesk.PRIVACY.md");
 
         var ok = ThemedSettingsChrome.CreateButton(AppLang.L("知道了", "Got it"), true);
-        ok.Size = new Size(88, 32);
-        ok.Location = new Point(ClientSize.Width - 24 - 88, 214);
+        UiFit.FitButton(ok, padding: 28);
+        ok.Location = new Point(ClientSize.Width - 24 - ok.Width, 214);
         ok.DialogResult = DialogResult.OK;
         AcceptButton = ok;
         CancelButton = ok;
+        ClientSize = new Size(Math.Max(ClientSize.Width, ok.Right + 24), Math.Max(ClientSize.Height, ok.Bottom + 24));
+        ok.Location = new Point(ClientSize.Width - 24 - ok.Width, ClientSize.Height - 24 - ok.Height);
 
         Controls.AddRange([body, linkVt, linkDisclaimer, linkPrivacy, ok]);
     }

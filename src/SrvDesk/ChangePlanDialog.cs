@@ -18,7 +18,7 @@ internal sealed class ChangePlanDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(780, 520);
-        MinimumSize = new Size(640, 400);
+        MinimumSize = new Size(780, 480);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
 

@@ -26,7 +26,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(780, 640);
-        MinimumSize = new Size(680, 520);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 
@@ -91,7 +91,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
             "隐私与搜索",
             "搜索隐私 · 广告跟踪 · 更新传递",
             body,
-            "建议同时添加防火墙规则以拦截搜索上传。",
+            "",
             LoadValues);
         Load += (_, _) => LoadValues();
     }
@@ -126,8 +126,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
     private static Button Btn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.AutoSize = true;
-        b.Height = 30;
+        UiFit.FitButton(b, padding: 24);
         b.Margin = new Padding(0, 4, 8, 4);
         b.Click += (_, _) =>
         {

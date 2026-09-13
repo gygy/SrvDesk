@@ -72,7 +72,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             "自定义配置",
             "粘贴脚本/注册表 · 保存到方案 · 界面直接运行",
             body,
-            "内容保存在本机 AppData，不引用外部文件路径。运行通常需要管理员权限。");
+            "");
 
         UiBuffer.BindListViewColumnFit(_items, 0, 180);
         KeyDown += OnFormKeyDown;
@@ -627,8 +627,8 @@ internal sealed class CustomPackItemEditDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 520);
-        MinimumSize = new Size(560, 400);
+        ClientSize = new Size(780, 560);
+        MinimumSize = new Size(780, 480);
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = AppTheme.Surface;
 

@@ -205,7 +205,7 @@ internal sealed class HealthOverviewDialog : Form
     private Panel BuildCollapsibleGroup(TabOptimizeGroup group, int width)
     {
         const int headerH = 36;
-        var rowH = Math.Max(30, UiFit.LineHeight() + 12);
+        var rowH = Math.Max(UiFit.ControlHeight(), UiFit.LineHeight() + UiScale.S(16));
         var findings = group.Findings;
         var groupRows = new List<FindingRowChrome>();
 
@@ -360,11 +360,12 @@ internal sealed class HealthOverviewDialog : Form
             BackColor = bg,
         };
 
+        var checkSz = Math.Min(UiScale.S(20), Math.Max(UiScale.S(16), h - UiScale.S(10)));
         var check = new CheckBox
         {
             AutoSize = false,
-            Size = new Size(UiScale.S(18), UiScale.S(18)),
-            Location = new Point(UiScale.S(10), (h - UiScale.S(18)) / 2),
+            Size = new Size(checkSz, checkSz),
+            Location = new Point(UiScale.S(10), (h - checkSz) / 2),
             BackColor = Color.Transparent,
             FlatStyle = FlatStyle.Flat,
         };

@@ -84,11 +84,13 @@ internal sealed class SupportDialog : Form
         };
 
         var ok = ThemedSettingsChrome.CreateButton(AppLang.L("关闭", "Close"), true);
-        ok.Size = new Size(88, 32);
-        ok.Location = new Point(ClientSize.Width - 28 - 88, 168);
+        UiFit.FitButton(ok, padding: 28);
+        ok.Location = new Point(ClientSize.Width - 28 - ok.Width, 168);
         ok.DialogResult = DialogResult.OK;
         AcceptButton = ok;
         CancelButton = ok;
+        ClientSize = new Size(Math.Max(ClientSize.Width, ok.Right + 28), Math.Max(ClientSize.Height, ok.Bottom + 24));
+        ok.Location = new Point(ClientSize.Width - 28 - ok.Width, ClientSize.Height - 24 - ok.Height);
 
         Controls.AddRange([title, subtitle, author, authorValue, feedback, link, ok]);
     }

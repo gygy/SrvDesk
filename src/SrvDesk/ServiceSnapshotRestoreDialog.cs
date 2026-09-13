@@ -7,11 +7,11 @@ internal sealed class ServiceSnapshotRestoreDialog : Form
     private readonly ListView _diff = new();
     private readonly Label _meta = new();
     private readonly Label _hint = new();
-    private readonly Button _restore = new();
-    private readonly Button _export = new();
-    private readonly Button _folder = new();
-    private readonly Button _cancel = new();
-    private readonly Button _refresh = new();
+    private readonly Button _restore;
+    private readonly Button _export;
+    private readonly Button _folder;
+    private readonly Button _cancel;
+    private readonly Button _refresh;
     private List<ServiceSnapshotInfo> _list = [];
     private ServiceSnapshotFile? _current;
 
@@ -25,10 +25,21 @@ internal sealed class ServiceSnapshotRestoreDialog : Form
         MaximizeBox = true;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = UiScale.Size(860, 520);
-        MinimumSize = UiScale.Size(720, 420);
+        MinimumSize = UiScale.Size(780, 480);
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
         ForeColor = AppTheme.TextMain;
+
+        _restore = ThemedSettingsChrome.CreateButton(AppLang.L("还原勾选", "Restore checked"), true);
+        _export = ThemedSettingsChrome.CreateButton(AppLang.L("导出副本…", "Export copy…"), false);
+        _folder = ThemedSettingsChrome.CreateButton(AppLang.L("打开目录", "Open folder"), false);
+        _cancel = ThemedSettingsChrome.CreateButton(AppLang.L("关闭", "Close"), false);
+        _refresh = ThemedSettingsChrome.CreateButton(AppLang.L("刷新", "Refresh"), false);
+        UiFit.FitButton(_restore, padding: 24);
+        UiFit.FitButton(_export, padding: 24);
+        UiFit.FitButton(_folder, padding: 24);
+        UiFit.FitButton(_cancel, padding: 24);
+        UiFit.FitButton(_refresh, minWidth: 56, padding: 12);
 
         var left = new Panel
         {
@@ -37,17 +48,19 @@ internal sealed class ServiceSnapshotRestoreDialog : Form
             Padding = UiScale.Pad(8),
             BackColor = AppTheme.Surface,
         };
-        var leftTop = new Panel { Dock = DockStyle.Top, Height = UiScale.S(36) };
+        var leftTop = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = Math.Max(UiScale.S(40), _refresh.Height + UiScale.S(12)),
+        };
         var leftTitle = new Label
         {
             Text = AppLang.L("备份列表", "Backups"),
             AutoSize = true,
             Font = UiFit.UiFontBold(),
             ForeColor = AppTheme.Primary,
-            Location = new Point(0, UiScale.S(8)),
+            Location = new Point(UiScale.S(4), Math.Max(UiScale.S(8), (_refresh.Height - UiFit.LineHeight()) / 2)),
         };
-        _refresh.Text = AppLang.L("刷新", "Refresh");
-        UiFit.FitButton(_refresh, UiScale.S(28), minWidth: 56, padding: 12);
         _refresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         _refresh.Location = new Point(left.Width - UiScale.S(24) - _refresh.Width, UiScale.S(4));
         _refresh.Click += (_, _) => ReloadList();
@@ -98,27 +111,13 @@ internal sealed class ServiceSnapshotRestoreDialog : Form
         UiBuffer.Enable(_diff);
         UiBuffer.BindListViewColumnFit(_diff, 1, 160);
 
+        var btnH = Math.Max(_restore.Height, Math.Max(_export.Height, Math.Max(_folder.Height, _cancel.Height)));
         var footer = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = UiScale.S(48),
+            Height = btnH + UiScale.S(20),
             Padding = UiScale.Pad(0, 8, 0, 0),
         };
-        _restore.Text = AppLang.L("还原勾选", "Restore checked");
-        _export.Text = AppLang.L("导出副本…", "Export copy…");
-        _folder.Text = AppLang.L("打开目录", "Open folder");
-        _cancel.Text = AppLang.L("关闭", "Close");
-        foreach (var b in new[] { _restore, _export, _folder, _cancel })
-        {
-            UiFit.FitButton(b, UiScale.S(32), minWidth: 72, padding: 16);
-            b.FlatStyle = FlatStyle.Flat;
-            b.BackColor = AppTheme.SurfaceCard;
-            b.ForeColor = AppTheme.TextMain;
-            b.FlatAppearance.BorderColor = AppTheme.Border;
-        }
-        _restore.BackColor = AppTheme.Primary;
-        _restore.ForeColor = Color.White;
-        _restore.FlatAppearance.BorderSize = 0;
         _restore.Click += (_, _) => DoRestore();
         _export.Click += (_, _) => DoExport();
         _folder.Click += (_, _) =>
@@ -135,11 +134,12 @@ internal sealed class ServiceSnapshotRestoreDialog : Form
         footer.Resize += (_, _) =>
         {
             var gap = UiScale.S(8);
+            var y = Math.Max(UiScale.S(6), (footer.Height - btnH) / 2);
             var x = footer.ClientSize.Width;
             foreach (var b in new[] { _cancel, _folder, _export, _restore })
             {
                 x -= b.Width;
-                b.Location = new Point(x, UiScale.S(8));
+                b.Location = new Point(x, y);
                 x -= gap;
             }
         };

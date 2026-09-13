@@ -50,6 +50,7 @@ internal static class UiFit
 
     public static Font UiFontBold(float size = 9F) => new(UiFontFamily, size, FontStyle.Bold);
 
+    /// <summary>标签单行省略（按钮请用 PaintFlatButtonFace，勿带 EndEllipsis）。</summary>
     public static readonly TextFormatFlags SingleLineFlags =
         TextFormatFlags.SingleLine
         | TextFormatFlags.EndEllipsis

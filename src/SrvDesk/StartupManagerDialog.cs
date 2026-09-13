@@ -327,7 +327,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
             ForeColor = AppTheme.TextMute,
         };
         var ok = ThemedSettingsChrome.CreateButton("添加", true);
-        ok.Size = new Size(88, 32);
+        UiFit.FitButton(ok, padding: 28);
         ok.Location = new Point(280, 118);
         ok.Click += (_, _) =>
         {
@@ -342,11 +342,12 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
             }
         };
         var cancel = ThemedSettingsChrome.CreateButton("取消", false);
-        cancel.Size = new Size(88, 32);
-        cancel.Location = new Point(376, 118);
+        UiFit.FitButton(cancel, padding: 28);
+        cancel.Location = new Point(ok.Right + 8, 118);
         cancel.DialogResult = DialogResult.Cancel;
         dlg.AcceptButton = ok;
         dlg.CancelButton = cancel;
+        dlg.ClientSize = new Size(Math.Max(dlg.ClientSize.Width, cancel.Right + 24), Math.Max(dlg.ClientSize.Height, ok.Bottom + 16));
         dlg.Controls.AddRange([nameLabel, nameBox, cmdLabel, cmdBox, browse, hint, ok, cancel]);
         if (dlg.ShowDialog(this) == DialogResult.OK)
             RefreshList();

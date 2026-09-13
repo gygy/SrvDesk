@@ -14,8 +14,8 @@ internal sealed class CustomSoftwareManageDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = UiScale.Size(640, 480);
-        MinimumSize = UiScale.Size(560, 420);
+        ClientSize = UiScale.Size(820, 520);
+        MinimumSize = UiScale.Size(780, 480);
         BackColor = AppTheme.SurfaceCard;
         Font = UiFit.UiFont;
         ShowInTaskbar = false;
@@ -24,10 +24,10 @@ internal sealed class CustomSoftwareManageDialog : Form
 
         var hint = new Label
         {
-            Text = "填写显示名称与 winget 包 ID（如 Google.Chrome）。不确定 ID 时可在终端运行 winget search 软件名。",
+            Text = "名称 + winget 包 ID（如 Google.Chrome）",
             Dock = DockStyle.Top,
-            Height = Math.Max(UiScale.S(40), UiFit.ControlHeight() + UiScale.S(12)),
-            Padding = new Padding(UiScale.S(16), UiScale.S(10), UiScale.S(16), UiScale.S(4)),
+            Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontSmall)),
+            Padding = new Padding(UiScale.S(16), UiScale.S(8), UiScale.S(16), UiScale.S(4)),
             ForeColor = AppTheme.TextMute,
             Font = UiFit.UiFontSmall,
         };

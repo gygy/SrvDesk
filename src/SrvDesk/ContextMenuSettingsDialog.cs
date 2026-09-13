@@ -27,7 +27,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(720, 560);
-        MinimumSize = new Size(600, 480);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
 

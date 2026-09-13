@@ -15,8 +15,8 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 520);
-        MinimumSize = new Size(560, 400);
+        ClientSize = UiScale.Size(780, 560);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.Controls.Add(BuildSearchTools());
@@ -65,7 +65,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         _port.Maximum = 65535;
         _port.Width = 90;
         var portBtn = ThemedSettingsChrome.CreateButton(AppLang.L("更改端口", "Change port"), false);
-        portBtn.Height = 30;
+        UiFit.FitButton(portBtn, padding: 24);
         portBtn.Click += (_, _) =>
         {
             try
@@ -114,7 +114,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         _prefetch.Maximum = 4096;
         _prefetch.Width = 90;
         var pfBtn = ThemedSettingsChrome.CreateButton(AppLang.L("应用", "Apply"), true);
-        pfBtn.Height = 30;
+        UiFit.FitButton(pfBtn, padding: 24);
         pfBtn.Click += (_, _) =>
         {
             EasySettingsTweaks.SetMaxPrefetchFiles((int)_prefetch.Value);
@@ -173,8 +173,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
     private Button MkBtn(string text, Action click)
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
-        b.AutoSize = true;
-        b.Height = 32;
+        UiFit.FitButton(b, padding: 24);
         b.Margin = new Padding(0, 0, 8, 8);
         b.Click += (_, _) =>
         {

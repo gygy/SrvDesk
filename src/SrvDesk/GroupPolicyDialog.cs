@@ -13,7 +13,7 @@ internal sealed class GroupPolicyDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = UiScale.Size(780, 580);
-        MinimumSize = UiScale.Size(660, 480);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = new Panel
         {

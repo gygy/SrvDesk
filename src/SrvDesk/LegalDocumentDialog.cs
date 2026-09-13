@@ -45,15 +45,17 @@ internal sealed class LegalDocumentDialog : Form
         };
 
         var ok = ThemedSettingsChrome.CreateButton("关闭", true);
-        ok.Size = new Size(88, 32);
+        UiFit.FitButton(ok, padding: 28);
         ok.Anchor = AnchorStyles.Right | AnchorStyles.Top;
         ok.DialogResult = DialogResult.OK;
         bottom.Controls.Add(ok);
-        bottom.Resize += (_, _) =>
+        void LayoutOk()
         {
-            ok.Location = new Point(bottom.ClientSize.Width - ok.Width - 16, 10);
-        };
-        ok.Location = new Point(bottom.ClientSize.Width - ok.Width - 16, 10);
+            bottom.Height = Math.Max(UiScale.S(52), ok.Height + UiScale.S(20));
+            ok.Location = new Point(bottom.ClientSize.Width - ok.Width - 16, Math.Max(6, (bottom.Height - ok.Height) / 2));
+        }
+        bottom.Resize += (_, _) => LayoutOk();
+        LayoutOk();
 
         var bodyHost = new Panel
         {

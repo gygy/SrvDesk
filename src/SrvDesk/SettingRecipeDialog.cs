@@ -62,13 +62,10 @@ internal sealed class SettingRecipeDialog : Form
         _head.TextAlign = ContentAlignment.MiddleLeft;
         _head.Margin = new Padding(0, 0, 0, UiScale.S(4));
 
-        _hint.Text = "可直接编辑；修改会自动记住。可复制或导出为文件。";
-        _hint.ForeColor = AppTheme.TextMute;
-        _hint.Font = UiFit.UiFontSmall;
-        _hint.AutoSize = false;
-        _hint.Height = Math.Max(UiScale.S(22), UiFit.ControlHeight(UiFit.UiFontSmall));
-        _hint.TextAlign = ContentAlignment.MiddleLeft;
-        _hint.Margin = new Padding(0, 0, 0, UiScale.S(8));
+        _hint.Text = "";
+        _hint.Visible = false;
+        _hint.Height = 0;
+        _hint.Margin = Padding.Empty;
 
         _tabOn = StyleTab("开启（优化）");
         _tabOff = StyleTab("关闭（恢复）");

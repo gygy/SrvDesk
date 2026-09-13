@@ -15,8 +15,8 @@ internal sealed class SecurityCenterDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = UiScale.Size(720, 520);
-        MinimumSize = UiScale.Size(640, 460);
+        ClientSize = UiScale.Size(820, 560);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.Padding = new Padding(UiScale.S(20), UiScale.S(14), UiScale.S(20), UiScale.S(10));

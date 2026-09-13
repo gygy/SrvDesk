@@ -36,8 +36,8 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 520);
-        MinimumSize = new Size(600, 440);
+        ClientSize = new Size(780, 560);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         var card = new Panel
@@ -55,14 +55,14 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         var form = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 120,
             ColumnCount = 2,
         };
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, UiFit.ControlHeight() + 4));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, UiFit.ControlHeight() + 4));
+        form.RowStyles.Add(new RowStyle(SizeType.Absolute, UiFit.ControlHeight() + 4));
+        form.Height = (UiFit.ControlHeight() + 4) * 3;
 
         _preset.DropDownStyle = ComboBoxStyle.DropDownList;
         _preset.Dock = DockStyle.Fill;
@@ -110,19 +110,11 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         _adapters.HorizontalScrollbar = true;
         _adapters.ItemCheck += (_, _) => _userCheckedAdapters = true;
 
-        var actions = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 48,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoScroll = false,
-            Padding = new Padding(0, 8, 0, 0),
-        };
-        UiBuffer.ConfigureNoScrollRow(actions);
         var apply = ThemedSettingsChrome.CreateButton("应用到勾选网卡", true);
+        UiFit.FitButton(apply, padding: 24);
         apply.Click += (_, _) => ApplyDns();
         var flush = ThemedSettingsChrome.CreateButton("仅刷新缓存", false);
+        UiFit.FitButton(flush, padding: 24);
         flush.Margin = new Padding(8, 0, 0, 0);
         flush.Click += (_, _) =>
         {
@@ -130,12 +122,24 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             MessageBox.Show(this, "已刷新 DNS 缓存。", "DNS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         var more = ThemedSettingsChrome.CreateButton("选择 ▾", false);
+        UiFit.FitButton(more, padding: 24);
         more.Margin = new Padding(8, 0, 0, 0);
         var selectMenu = new ContextMenuStrip();
         selectMenu.Items.Add("仅勾选已连接", null, (_, _) => SelectConnectedOnly());
         selectMenu.Items.Add("全选", null, (_, _) => SetAllChecked(true));
         selectMenu.Items.Add("全不选", null, (_, _) => SetAllChecked(false));
         more.Click += (_, _) => selectMenu.Show(more, new Point(0, more.Height));
+        var btnH = Math.Max(apply.Height, Math.Max(flush.Height, more.Height));
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = btnH + UiScale.S(16),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+        UiBuffer.ConfigureNoScrollRow(actions);
         actions.Controls.AddRange([apply, flush, more]);
 
         card.Controls.Add(_adapters);
@@ -150,7 +154,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             "DNS 设置",
             "仅修改勾选的网卡 · 虚拟网卡默认不选",
             body,
-            "DHCP 模式会对勾选网卡恢复自动获取 DNS。",
+            "",
             () => RefreshAdapters(preserveChecks: _userCheckedAdapters || _adapters.Items.Count > 0));
 
         Shown += (_, _) =>

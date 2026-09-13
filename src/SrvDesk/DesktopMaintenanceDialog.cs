@@ -10,7 +10,7 @@ internal sealed class DesktopMaintenanceDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = UiScale.Size(720, 520);
-        MinimumSize = UiScale.Size(620, 460);
+        MinimumSize = UiScale.Size(780, 520);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         var rowH = Math.Max(UiScale.S(48), UiFit.ControlHeight() + UiScale.S(16));

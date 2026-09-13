@@ -253,6 +253,8 @@ internal static class UiBuffer
     {
         if (list is null) return;
         var h = Math.Max(22, UiFit.LineHeight(list.Font) + 10);
+        if (list.CheckBoxes)
+            h = Math.Max(h, UiFit.ControlHeight(list.Font) - UiScale.S(6));
         var cur = list.SmallImageList;
         if (cur is not null && cur.ImageSize.Width == 1 && cur.ImageSize.Height == h)
             return;
