@@ -238,9 +238,10 @@ internal sealed class CommonSoftwareDialog : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = NavMenuStyle.CreateSidebar();
+        var labels = CategoryDefs.Select(c => CategoryLabel(c.Key)).ToArray();
+        var sidebar = NavMenuStyle.CreateSidebar(labels, withIcon: false);
         NavMenuStyle.Apply(_categoryMenu);
-        _categoryMenu.Items.AddRange(CategoryDefs.Select(c => CategoryLabel(c.Key)).Cast<object>().ToArray());
+        _categoryMenu.Items.AddRange(labels.Cast<object>().ToArray());
         _categoryMenu.DrawItem += DrawCategoryItem;
         NavMenuStyle.BindHover(_categoryMenu, () => _categoryHover, v => _categoryHover = v);
         sidebar.Controls.Add(_categoryMenu);

@@ -416,6 +416,7 @@ internal sealed class MainForm : Form
             UiScale.OnHostDpiChanged(this);
             FitTopCommandBar();
             FitBottomActionButtons();
+            ApplyNavSplitWidth();
             UiFit.FitFormToWorkingArea(this);
             try { _bottomPanel?.PerformLayout(); } catch { /* ignore */ }
         };
@@ -879,6 +880,7 @@ internal sealed class MainForm : Form
     private ConfigScriptDock _scriptDock = ConfigScriptDock.Right;
     private bool _applyingDock;
     private System.Windows.Forms.Timer? _saveSplitTimer;
+    private int _pendingNavSidebarWidth;
 
     private void BuildWorkArea(Panel sidebar)
     {
@@ -890,7 +892,13 @@ internal sealed class MainForm : Form
         _scriptPanelSize = UiPrefs.ClampWidth(prefs.HelpPanelWidth);
         _scriptPanelHeight = UiPrefs.ClampHeight(prefs.HelpPanelHeight);
         _scriptDock = UiPrefs.GetDock(prefs);
-        var sidebarW = UiPrefs.ClampSidebarWidth(prefs.SidebarWidth);
+        // 启动宽度至少盖住全部标签完整文案（图标+加粗）
+        var fitSidebar = NavMenuStyle.PreferredWidth(MenuItems, withIcon: true);
+        var sidebarW = Math.Max(fitSidebar, UiPrefs.ClampSidebarWidth(prefs.SidebarWidth));
+        if (prefs.SidebarWidth > 0 && prefs.SidebarWidth < fitSidebar)
+        {
+            try { UiPrefs.SetSidebarWidth(fitSidebar); } catch { /* ignore */ }
+        }
 
         // 左侧导航可拖拽调宽；列表 Dock.Fill 随宽度自动拉伸
         _navSplit.Dock = DockStyle.Fill;
@@ -956,26 +964,11 @@ internal sealed class MainForm : Form
             SetConfigScriptPanelVisible(showPanel);
         }
 
-        void ApplyNavWidth()
-        {
-            try
-            {
-                var total = _navSplit.Width;
-                if (total < UiPrefs.MinSidebarWidth + 400 + _navSplit.SplitterWidth)
-                    return;
-                _navSplit.Panel1MinSize = UiPrefs.MinSidebarWidth;
-                _navSplit.Panel2MinSize = 400;
-                var dist = Math.Min(sidebarW, total - 400 - _navSplit.SplitterWidth);
-                dist = Math.Max(UiPrefs.MinSidebarWidth, dist);
-                _navSplit.SplitterDistance = dist;
-            }
-            catch { /* 布局未就绪 */ }
-        }
-
+        _pendingNavSidebarWidth = sidebarW;
         if (_navSplit.IsHandleCreated)
-            BeginInvoke(ApplyNavWidth);
+            BeginInvoke(ApplyNavSplitWidth);
         else
-            _navSplit.HandleCreated += (_, _) => BeginInvoke(ApplyNavWidth);
+            _navSplit.HandleCreated += (_, _) => BeginInvoke(ApplyNavSplitWidth);
 
         if (_mainSplit.IsHandleCreated)
             BeginInvoke(ApplyStartupScriptLayout);
@@ -992,6 +985,34 @@ internal sealed class MainForm : Form
             : Orientation.Vertical;
         SetConfigScriptPanelVisible(showPanel);
     }
+
+    /// <summary>启动/DPI：侧栏宽度至少容纳全部标签完整文案。</summary>
+    private void ApplyNavSplitWidth()
+    {
+        try
+        {
+            if (!_navSplit.IsHandleCreated) return;
+            var fit = NavMenuStyle.PreferredWidth(MenuItems, withIcon: true);
+            var minW = Math.Max(UiPrefs.MinSidebarWidth, fit);
+            var target = Math.Max(minW, _pendingNavSidebarWidth > 0
+                ? _pendingNavSidebarWidth
+                : UiPrefs.ClampSidebarWidth(UiPrefs.Load().SidebarWidth));
+
+            var total = _navSplit.Width;
+            if (total < minW + 400 + _navSplit.SplitterWidth)
+                return;
+
+            _navSplit.Panel1MinSize = minW;
+            _navSplit.Panel2MinSize = 400;
+            var dist = Math.Min(target, total - 400 - _navSplit.SplitterWidth);
+            dist = Math.Max(minW, dist);
+            if (Math.Abs(_navSplit.SplitterDistance - dist) > 1)
+                _navSplit.SplitterDistance = dist;
+            _pendingNavSidebarWidth = dist;
+        }
+        catch { /* 布局未就绪 */ }
+    }
+
     private void ApplyConfigScriptDock(ConfigScriptDock dock, bool fromUser)
     {
         if (_applyingDock) return;

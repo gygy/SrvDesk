@@ -7,8 +7,39 @@ internal static class NavMenuStyle
     public static int ItemHeight => UiScale.S(40);
     public static int IconSize => Math.Max(16, UiScale.S(16));
 
-    public static Panel CreateSidebar() =>
-        new() { Width = SidebarWidth, BackColor = AppTheme.NavBg };
+    /// <summary>
+    /// 按全部标签完整文案（含选中加粗、图标槽）计算侧栏最小宽度，
+    /// 避免启动时只露出半截字或省略号。
+    /// </summary>
+    public static int PreferredWidth(IEnumerable<string> labels, bool withIcon = true)
+    {
+        var font = UiFit.UiFont;
+        using var bold = UiFit.UiFontBold(font.SizeInPoints);
+        var maxText = 0;
+        foreach (var raw in labels)
+        {
+            var t = raw?.Trim() ?? "";
+            if (t.Length == 0) continue;
+            maxText = Math.Max(maxText, UiFit.TextWidth(t, font));
+            maxText = Math.Max(maxText, UiFit.TextWidth(t, bold));
+        }
+
+        if (maxText <= 0)
+            maxText = UiFit.TextWidth("自定义配置", bold);
+
+        var left = UiScale.S(12);
+        if (withIcon)
+            left += IconSize + UiScale.S(8);
+        // 右侧内边距 + ClearType/选中条余量
+        var right = UiScale.S(12) + Math.Max(UiScale.S(8), UiFit.LineHeight(font) / 3);
+        return left + maxText + right;
+    }
+
+    public static Panel CreateSidebar(int? width = null) =>
+        new() { Width = width ?? SidebarWidth, BackColor = AppTheme.NavBg };
+
+    public static Panel CreateSidebar(IEnumerable<string> labels, bool withIcon = false) =>
+        CreateSidebar(PreferredWidth(labels, withIcon));
 
     public static void Apply(ListBox menu)
     {

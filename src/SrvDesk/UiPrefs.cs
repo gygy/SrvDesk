@@ -60,9 +60,9 @@ internal static class UiPrefs
     public const int DefaultHelpPanelHeight = 280;
     public const int MinHelpPanelHeight = 160;
     public const int MaxHelpPanelHeight = 520;
-    public const int DefaultSidebarWidth = 200;
-    public const int MinSidebarWidth = 160;
-    public const int MaxSidebarWidth = 360;
+    public const int DefaultSidebarWidth = 220;
+    public const int MinSidebarWidth = 180;
+    public const int MaxSidebarWidth = 420;
 
     private static string FilePath => AppPaths.Combine("ui-prefs.json");
 
