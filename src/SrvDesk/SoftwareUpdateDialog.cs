@@ -15,13 +15,13 @@ internal sealed class SoftwareUpdateDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(720, 420);
-        MinimumSize = new Size(560, 320);
+        ClientSize = UiScale.Size(860, 560);
+        MinimumSize = UiScale.Size(720, 480);
 
         var body = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(16, 8, 16, 56),
+            Padding = new Padding(UiScale.S(16), UiScale.S(8), UiScale.S(16), UiScale.S(8)),
             BackColor = AppTheme.Surface,
         };
 

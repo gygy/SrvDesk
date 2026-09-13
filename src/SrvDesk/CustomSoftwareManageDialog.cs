@@ -10,13 +10,14 @@ internal sealed class CustomSoftwareManageDialog : Form
     {
         Text = "自定义软件";
         AppBrand.ApplyWindowIcon(this);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 380);
+        ClientSize = UiScale.Size(640, 480);
+        MinimumSize = UiScale.Size(560, 420);
         BackColor = AppTheme.SurfaceCard;
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
         ShowInTaskbar = false;
 
         _items = CustomSoftwareStore.Load();
@@ -24,9 +25,11 @@ internal sealed class CustomSoftwareManageDialog : Form
         var hint = new Label
         {
             Text = "填写显示名称与 winget 包 ID（如 Google.Chrome）。不确定 ID 时可在终端运行 winget search 软件名。",
-            Location = new Point(16, 12),
-            Size = new Size(488, 36),
+            Dock = DockStyle.Top,
+            Height = Math.Max(UiScale.S(40), UiFit.ControlHeight() + UiScale.S(12)),
+            Padding = new Padding(UiScale.S(16), UiScale.S(10), UiScale.S(16), UiScale.S(4)),
             ForeColor = AppTheme.TextMute,
+            Font = UiFit.UiFontSmall,
         };
 
         _list.View = View.Details;
@@ -34,35 +37,47 @@ internal sealed class CustomSoftwareManageDialog : Form
         _list.HideSelection = false;
         _list.MultiSelect = false;
         _list.BorderStyle = BorderStyle.FixedSingle;
-        _list.Location = new Point(16, 52);
-        _list.Size = new Size(488, 240);
-        _list.Columns.Add("软件名称", 200);
-        _list.Columns.Add("Winget ID / 名称", 260);
+        _list.Dock = DockStyle.Fill;
+        _list.Columns.Add("软件名称", 220);
+        _list.Columns.Add("Winget ID / 名称", 300);
         UiBuffer.Enable(_list);
 
+        var bar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            Padding = new Padding(UiScale.S(16), UiScale.S(8), UiScale.S(16), UiScale.S(8)),
+        };
+        UiBuffer.ConfigureNoScrollRow(bar);
+
         var add = ThemedSettingsChrome.CreateButton("添加", true);
-        add.Size = new Size(80, 30);
-        add.Location = new Point(16, 308);
+        UiFit.FitButton(add, padding: 28);
         add.Click += (_, _) => AddItem();
 
         var edit = ThemedSettingsChrome.CreateButton("编辑", false);
-        edit.Size = new Size(80, 30);
-        edit.Location = new Point(104, 308);
+        UiFit.FitButton(edit, padding: 28);
+        edit.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         edit.Click += (_, _) => EditSelected();
 
         var remove = ThemedSettingsChrome.CreateButton("删除", false);
-        remove.Size = new Size(80, 30);
-        remove.Location = new Point(192, 308);
+        UiFit.FitButton(remove, padding: 28);
+        remove.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         remove.Click += (_, _) => RemoveSelected();
 
         var close = ThemedSettingsChrome.CreateButton("关闭", false);
-        close.Size = new Size(80, 30);
-        close.Location = new Point(424, 308);
+        UiFit.FitButton(close, padding: 28);
+        close.Margin = new Padding(UiScale.S(16), 0, 0, 0);
         close.DialogResult = DialogResult.OK;
         AcceptButton = close;
         CancelButton = close;
 
-        Controls.AddRange([hint, _list, add, edit, remove, close]);
+        bar.Controls.AddRange([add, edit, remove, close]);
+        Controls.Add(_list);
+        Controls.Add(bar);
+        Controls.Add(hint);
         UiBuffer.BindListViewColumnFit(_list, 1, 160);
         ReloadList();
     }
@@ -145,7 +160,7 @@ internal sealed class CustomSoftwareManageDialog : Form
             Text = existing is null ? "添加自定义软件" : "编辑自定义软件",
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
-            ClientSize = new Size(440, 168),
+            ClientSize = UiScale.Size(520, 220),
             MaximizeBox = false,
             MinimizeBox = false,
             Font = Font,
@@ -154,34 +169,36 @@ internal sealed class CustomSoftwareManageDialog : Form
         };
         AppBrand.ApplyWindowIcon(dlg);
 
-        var nameLabel = new Label { Text = "软件名称", Location = new Point(16, 20), AutoSize = true };
+        var nameLabel = new Label { Text = "软件名称", Location = new Point(UiScale.S(16), UiScale.S(20)), AutoSize = true };
         var nameBox = new TextBox
         {
-            Location = new Point(100, 16),
-            Size = new Size(320, 24),
+            Location = new Point(UiScale.S(110), UiScale.S(16)),
+            Size = new Size(UiScale.S(360), UiFit.ControlHeight()),
             Text = existing?.Title ?? "",
+            Font = UiFit.UiFont,
         };
-        var idLabel = new Label { Text = "Winget ID", Location = new Point(16, 56), AutoSize = true };
+        var idLabel = new Label { Text = "Winget ID", Location = new Point(UiScale.S(16), UiScale.S(64)), AutoSize = true };
         var idBox = new TextBox
         {
-            Location = new Point(100, 52),
-            Size = new Size(320, 24),
+            Location = new Point(UiScale.S(110), UiScale.S(60)),
+            Size = new Size(UiScale.S(360), UiFit.ControlHeight()),
             Text = existing?.WingetId ?? "",
+            Font = UiFit.UiFont,
         };
         var tip = new Label
         {
             Text = "例：Google.Chrome 或 NetEase.MailMaster",
-            Location = new Point(100, 82),
+            Location = new Point(UiScale.S(110), UiScale.S(100)),
             AutoSize = true,
             ForeColor = AppTheme.TextMute,
         };
         var ok = ThemedSettingsChrome.CreateButton("确定", true);
-        ok.Size = new Size(88, 30);
-        ok.Location = new Point(240, 120);
+        UiFit.FitButton(ok, padding: 28);
+        ok.Location = new Point(UiScale.S(280), UiScale.S(140));
         ok.DialogResult = DialogResult.OK;
         var cancel = ThemedSettingsChrome.CreateButton("取消", false);
-        cancel.Size = new Size(88, 30);
-        cancel.Location = new Point(336, 120);
+        UiFit.FitButton(cancel, padding: 28);
+        cancel.Location = new Point(UiScale.S(380), UiScale.S(140));
         cancel.DialogResult = DialogResult.Cancel;
         dlg.AcceptButton = ok;
         dlg.CancelButton = cancel;

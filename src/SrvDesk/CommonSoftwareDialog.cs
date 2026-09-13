@@ -222,9 +222,8 @@ internal sealed class CommonSoftwareDialog : Form
     private static Button MkBtn(string text, Action click, bool primary)
     {
         var b = ThemedSettingsChrome.CreateButton(text, primary);
-        b.AutoSize = true;
-        b.Height = 32;
-        b.Margin = new Padding(6, 0, 0, 0);
+        UiFit.FitButton(b, padding: 28);
+        b.Margin = new Padding(UiScale.S(6), 0, 0, 0);
         b.Click += (_, _) => click();
         return b;
     }

@@ -107,56 +107,70 @@ internal sealed class ServerProfileDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(440, 480);
+        ClientSize = UiScale.Size(560, 560);
         Font = UiFit.UiFont;
         BackColor = AppTheme.SurfaceCard;
 
-        var y = 16;
+        var scroll = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            Padding = new Padding(UiScale.S(20), UiScale.S(16), UiScale.S(20), UiScale.S(8)),
+        };
+
+        var y = 0;
         foreach (ServerRoleFlags f in Enum.GetValues(typeof(ServerRoleFlags)))
         {
             if (f == ServerRoleFlags.None) continue;
             var cb = new CheckBox
             {
                 Text = ServerProfile.RoleTitle(f),
-                Location = new Point(20, y),
+                Location = new Point(0, y),
                 AutoSize = true,
                 Checked = ServerProfile.Has(f),
+                Font = UiFit.UiFont,
             };
             _boxes[f] = cb;
-            Controls.Add(cb);
-            y += 26;
+            scroll.Controls.Add(cb);
+            y += Math.Max(UiScale.S(28), UiFit.ControlHeight());
         }
 
-        Controls.Add(new Label
+        var levelLbl = new Label
         {
             Text = AppLang.L("优化等级", "Optimization level"),
-            Location = new Point(20, y + 8),
+            Location = new Point(0, y + UiScale.S(8)),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
-        });
+            Font = UiFit.UiFont,
+        };
         _level.DropDownStyle = ComboBoxStyle.DropDownList;
-        _level.Location = new Point(20, y + 32);
-        _level.Width = 280;
+        _level.Location = new Point(0, y + UiScale.S(32));
+        _level.Width = UiScale.S(320);
         foreach (OptimizationLevel lv in Enum.GetValues(typeof(OptimizationLevel)))
             _level.Items.Add(OptimizationLevelUi.Title(lv));
         _level.SelectedIndex = (int)ServerProfile.Level;
         UiFit.FitCombo(_level);
 
         _inspect.Text = AppLang.L("启用持续健康巡检（约每 6 小时）", "Enable health inspection (~every 6h)");
-        _inspect.Location = new Point(20, y + 70);
+        _inspect.Location = new Point(0, _level.Bottom + UiScale.S(12));
         _inspect.AutoSize = true;
         _inspect.Checked = ServerProfile.Load().HealthInspectionEnabled;
+        _inspect.Font = UiFit.UiFont;
 
-        var detect = ThemedSettingsChrome.CreateButton(AppLang.L("自动探测", "Detect"), false);
-        detect.Location = new Point(20, 430);
-        detect.Click += (_, _) =>
+        scroll.Controls.AddRange([levelLbl, _level, _inspect]);
+
+        var bar = new FlowLayoutPanel
         {
-            ServerRoleDetector.MergeDetectedIntoProfile();
-            foreach (var kv in _boxes)
-                kv.Value.Checked = ServerProfile.Has(kv.Key);
+            Dock = DockStyle.Bottom,
+            Height = UiFit.ControlHeight() + UiScale.S(20),
+            FlowDirection = FlowDirection.RightToLeft,
+            Padding = new Padding(UiScale.S(16), UiScale.S(8), UiScale.S(16), UiScale.S(8)),
+            WrapContents = false,
+            AutoScroll = false,
         };
+        UiBuffer.ConfigureNoScrollRow(bar);
         var save = ThemedSettingsChrome.CreateButton(AppLang.L("保存", "Save"), true);
-        save.Location = new Point(320, 430);
+        UiFit.FitButton(save, padding: 28);
         save.Click += (_, _) =>
         {
             ServerRoleFlags roles = ServerRoleFlags.None;
@@ -173,8 +187,19 @@ internal sealed class ServerProfileDialog : Form
             DialogResult = DialogResult.OK;
             Close();
         };
+        var detect = ThemedSettingsChrome.CreateButton(AppLang.L("自动探测", "Detect"), false);
+        UiFit.FitButton(detect, padding: 28);
+        detect.Margin = new Padding(0, 0, UiScale.S(8), 0);
+        detect.Click += (_, _) =>
+        {
+            ServerRoleDetector.MergeDetectedIntoProfile();
+            foreach (var kv in _boxes)
+                kv.Value.Checked = ServerProfile.Has(kv.Key);
+        };
+        bar.Controls.AddRange([save, detect]);
 
-        Controls.AddRange([_level, _inspect, detect, save]);
+        Controls.Add(scroll);
+        Controls.Add(bar);
         AcceptButton = save;
     }
 }
