@@ -898,8 +898,9 @@ internal sealed class MainForm : Form
         _navSplit.FixedPanel = FixedPanel.Panel1;
         _navSplit.SplitterWidth = 5;
         _navSplit.BackColor = AppTheme.BorderLight;
-        _navSplit.Panel1MinSize = UiPrefs.MinSidebarWidth;
-        _navSplit.Panel2MinSize = 400;
+        // 未布局前 MinSize 必须很小，否则 set_Panel2MinSize 会抛 InvalidOperationException
+        _navSplit.Panel1MinSize = 50;
+        _navSplit.Panel2MinSize = 50;
         _navSplit.Panel1.BackColor = AppTheme.NavBg;
         _navSplit.Panel2.BackColor = AppTheme.Surface;
         sidebar.Dock = DockStyle.Fill;
@@ -959,8 +960,14 @@ internal sealed class MainForm : Form
         {
             try
             {
-                if (_navSplit.Width > sidebarW + _navSplit.Panel2MinSize + _navSplit.SplitterWidth)
-                    _navSplit.SplitterDistance = sidebarW;
+                var total = _navSplit.Width;
+                if (total < UiPrefs.MinSidebarWidth + 400 + _navSplit.SplitterWidth)
+                    return;
+                _navSplit.Panel1MinSize = UiPrefs.MinSidebarWidth;
+                _navSplit.Panel2MinSize = 400;
+                var dist = Math.Min(sidebarW, total - 400 - _navSplit.SplitterWidth);
+                dist = Math.Max(UiPrefs.MinSidebarWidth, dist);
+                _navSplit.SplitterDistance = dist;
             }
             catch { /* 布局未就绪 */ }
         }
