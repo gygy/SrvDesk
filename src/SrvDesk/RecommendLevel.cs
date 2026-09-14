@@ -59,7 +59,7 @@ internal static class RecommendLevelUi
         level == RecommendLevel.Optional ? StarOff : StarOn;
 
     public static string Tip(RecommendLevel level) =>
-        $"{Icon(level)} {Title(level)}（{StarsOn(level)}/5） · " + level switch
+        $"{Icon(level)} {Title(level)} · " + level switch
         {
             RecommendLevel.Must => AppLang.L(
                 "低风险、可逆，体验收益明显；适合作为默认/顾问优化。",

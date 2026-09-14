@@ -440,7 +440,20 @@ internal sealed class HelpDetailPanel : BufferedPanel
             Tag = "stars",
         });
 
-        var line2 = TrimOneLine(help.Purpose, 56);
+        var what = help.Purpose.Trim();
+        if (help.Benefit.Length > 0)
+        {
+            var benefit = help.Benefit.Trim();
+            if (what.Length == 0)
+                what = benefit;
+            else if (what.EndsWith("。", StringComparison.Ordinal) || what.EndsWith(".", StringComparison.Ordinal)
+                     || what.EndsWith("；", StringComparison.Ordinal) || what.EndsWith(";", StringComparison.Ordinal))
+                what += benefit;
+            else
+                what += AppLang.L("。", ". ") + benefit;
+        }
+
+        var line2 = TrimOneLine(what, 72);
         if (line2.Length > 0)
         {
             _sections.Controls.Add(new Label
@@ -454,12 +467,10 @@ internal sealed class HelpDetailPanel : BufferedPanel
             });
         }
 
-        var line3 = help.Guide.Length > 0
-            ? TrimOneLine(help.Guide, 56)
-            : (help.Benefit.Length > 0 ? TrimOneLine(help.Benefit, 56) : "");
-        if (line3.Length == 0 && help.UiPlace.Length > 0)
+        var line3 = "";
+        if (help.UiPlace.Length > 0)
             line3 = TrimOneLine(help.UiPlace, 56);
-        else if (line3.Length == 0 && help.WhenHint.Length > 0)
+        else if (help.WhenHint.Length > 0)
             line3 = TrimOneLine(help.WhenHint, 56);
 
         if (line3.Length > 0)

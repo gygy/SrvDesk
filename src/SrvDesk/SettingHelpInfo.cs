@@ -59,14 +59,26 @@ internal sealed class SettingHelpInfo
     public string FormatDetail(SystemFacts? facts)
     {
         var level = EffectiveRecommend(facts);
+        var what = JoinSentences(Purpose, Benefit);
         return Scope.FormatHelpSection() +
         "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.Tip(level) +
         (UiPlace.Length > 0 ? "\r\n" + AppLang.L("【对应】", "[Where] ") + UiPlace : "") +
         (WhenHint.Length > 0 ? "\r\n" + AppLang.L("【建议】", "[When] ") + WhenHint : "") +
-        "\r\n" + AppLang.L("【作用】", "[What] ") + Purpose +
-        "\r\n" + AppLang.L("【好处】", "[Benefit] ") + Benefit +
-        "\r\n" + AppLang.L("【指引】", "[Guide] ") + Guide +
+        (what.Length > 0 ? "\r\n" + AppLang.L("【作用】", "[What] ") + what : "") +
         "\r\n" + AppLang.L("【生效】", "[Effect] ") + Effect;
+    }
+
+    /// <summary>把作用与好处合成一句展示，避免悬浮说明重复分行。</summary>
+    private static string JoinSentences(string a, string b)
+    {
+        a = (a ?? "").Trim();
+        b = (b ?? "").Trim();
+        if (a.Length == 0) return b;
+        if (b.Length == 0) return a;
+        if (a.EndsWith("。", StringComparison.Ordinal) || a.EndsWith(".", StringComparison.Ordinal)
+            || a.EndsWith("；", StringComparison.Ordinal) || a.EndsWith(";", StringComparison.Ordinal))
+            return a + b;
+        return a + AppLang.L("。", ". ") + b;
     }
 
     private static string Compact(string text, int max)
