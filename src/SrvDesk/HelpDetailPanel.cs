@@ -11,7 +11,13 @@ internal sealed class HelpDetailPanel : BufferedPanel
     private readonly Button _dockRight = new();
     private readonly Button _dockBottom = new();
     private readonly Button _dockClose = new();
-    private readonly ToolTip _tip = new();
+    private readonly ToolTip _tip = new()
+    {
+        AutoPopDelay = 15000,
+        InitialDelay = 400,
+        ReshowDelay = 200,
+        ShowAlways = true,
+    };
 
     private readonly Panel _recipeHost = new();
     private readonly Label _recipeCaption = new();
@@ -368,12 +374,19 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _caption.Text = AppLang.L("使用说明", "How to use");
         _title.Text = AppBrand.ProductName;
         _summary.Text = AppLang.L(
-            "勾选后点「应用到系统」。需管理员权限。",
-            "Check items, then Apply. Administrator required.");
+            "勾选要改的项，再点「应用到系统」。需以管理员身份运行。",
+            "Check items to change, then Apply. Run as Administrator.");
         _footer.Text = "";
         BuildSections([
-            (AppLang.L("配置脚本", "Config script"), AppLang.L("点左侧项可查看对应脚本。", "Select an item to view its scripts.")),
-            (AppLang.L("备份", "Backup"), AppLang.L("文件菜单可导入、导出配置。", "Import/export profiles from the File menu.")),
+            (AppLang.L("配置脚本", "Config script"), AppLang.L(
+                "点左侧项目名称或「说明」列，可在本栏查看完整说明与开启/关闭脚本。",
+                "Click an item name or the Notes column to see full notes and on/off scripts here.")),
+            (AppLang.L("备份", "Backup"), AppLang.L(
+                "文件菜单可导入、导出配置；重要环境请先备份或创建还原点。",
+                "Import/export profiles from the File menu; back up or create a restore point on important machines.")),
+            (AppLang.L("提示", "Tip"), AppLang.L(
+                "说明列较窄时只显示摘要；鼠标悬停可看全文。",
+                "The Notes column shows a short summary; hover for the full text.")),
         ]);
     }
 
@@ -744,12 +757,15 @@ internal sealed class HelpDetailPanel : BufferedPanel
         var titleH = Math.Max(28, TextRenderer.MeasureText(
             _title.Text, _title.Font, new Size(w, int.MaxValue),
             TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
-        _title.Height = Math.Min(titleH, 72);
+        _title.Height = _recipeHost.Visible ? Math.Min(titleH, 72) : titleH;
         _summary.Top = _title.Bottom + 4;
         var summaryH = Math.Max(24, TextRenderer.MeasureText(
             _summary.Text, _summary.Font, new Size(w, int.MaxValue),
             TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix).Height + 4);
-        _summary.Height = Math.Min(summaryH, 96);
+        // 有脚本区时限制摘要高度；纯说明页（如使用说明）完整展开，靠面板滚动查看
+        _summary.Height = _recipeHost.Visible ? Math.Min(summaryH, 96) : summaryH;
+        _tip.SetToolTip(_summary, string.IsNullOrWhiteSpace(_summary.Text) ? "" : _summary.Text);
+        _tip.SetToolTip(_title, string.IsNullOrWhiteSpace(_title.Text) ? "" : _title.Text);
 
         var y = _summary.Bottom + 8;
         if (_recipeHost.Visible)
@@ -827,6 +843,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 h = Math.Max(16, h);
             lbl.Top = y;
             lbl.Height = h;
+            _tip.SetToolTip(lbl, string.IsNullOrWhiteSpace(lbl.Text) ? "" : lbl.Text);
             y += h + (isHead ? 4 : 6);
         }
         _sections.Height = Math.Max(y, 8);
