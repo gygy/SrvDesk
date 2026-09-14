@@ -59,9 +59,21 @@ internal sealed class SettingHelpInfo
     public string FormatDetail(SystemFacts? facts)
     {
         var level = EffectiveRecommend(facts);
+        return FormatDetailBody(level) ;
+    }
+
+    /// <summary>悬浮说明内容：推荐星由界面彩色绘制，正文不含 ★ 字符。</summary>
+    public (RecommendLevel Level, string Body) FormatDetailParts(SystemFacts? facts = null)
+    {
+        var level = EffectiveRecommend(facts);
+        return (level, FormatDetailBody(level));
+    }
+
+    private string FormatDetailBody(RecommendLevel level)
+    {
         var what = JoinSentences(Purpose, Benefit);
         return Scope.FormatHelpSection() +
-        "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.Tip(level) +
+        "\r\n" + AppLang.L("【推荐】", "[Recommend] ") + RecommendLevelUi.TipBody(level) +
         (UiPlace.Length > 0 ? "\r\n" + AppLang.L("【对应】", "[Where] ") + UiPlace : "") +
         (WhenHint.Length > 0 ? "\r\n" + AppLang.L("【建议】", "[When] ") + WhenHint : "") +
         (what.Length > 0 ? "\r\n" + AppLang.L("【作用】", "[What] ") + what : "") +

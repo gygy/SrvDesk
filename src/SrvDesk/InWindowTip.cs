@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace SrvDesk;
 
 /// <summary>
-/// 窗体内悬浮说明：位置与尺寸钳制在宿主 Form 客户区，避免系统 ToolTip 画出窗口外。
+/// 窗体内悬浮说明：位置与尺寸钳制在宿主 Form 客户区；推荐星用与主界面相同的彩色几何星。
 /// </summary>
 internal sealed class InWindowTip
 {
@@ -11,17 +11,45 @@ internal sealed class InWindowTip
 
     private readonly Form _form;
     private readonly Panel _panel;
+    private readonly Panel _bodyHost;
+    private readonly Label _prefix;
+    private readonly RecommendStarsRow _stars;
     private readonly Label _label;
     private readonly System.Windows.Forms.Timer _showDelay = new() { Interval = 380 };
     private readonly System.Windows.Forms.Timer _hideDelay = new() { Interval = 180 };
     private Control? _pendingAnchor;
     private Control? _activeAnchor;
-    private Func<string>? _pendingText;
+    private Func<(RecommendLevel Level, string Body)>? _pendingContent;
     private bool _overPanel;
 
     private InWindowTip(Form form)
     {
         _form = form;
+        _prefix = new Label
+        {
+            AutoSize = false,
+            Text = AppLang.L("【推荐】", "[Recommend] "),
+            Font = UiFit.UiFontSmall,
+            ForeColor = AppTheme.TextMain,
+            BackColor = AppTheme.SurfaceCard,
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseMnemonic = false,
+        };
+        _stars = new RecommendStarsRow
+        {
+            BackColor = AppTheme.SurfaceCard,
+        };
+        var recommendRow = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = Math.Max(UiScale.S(24), RecommendLevelUi.StarSize + UiScale.S(8)),
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(UiScale.S(8), UiScale.S(4), UiScale.S(8), 0),
+        };
+        recommendRow.Controls.Add(_stars);
+        recommendRow.Controls.Add(_prefix);
+        recommendRow.Resize += (_, _) => LayoutRecommendRow(recommendRow);
+
         _label = new Label
         {
             AutoSize = false,
@@ -29,48 +57,46 @@ internal sealed class InWindowTip
             BackColor = AppTheme.SurfaceCard,
             ForeColor = AppTheme.TextMain,
             Font = UiFit.UiFontSmall,
-            Padding = new Padding(UiScale.S(8), UiScale.S(6), UiScale.S(8), UiScale.S(6)),
+            Padding = new Padding(UiScale.S(8), UiScale.S(2), UiScale.S(8), UiScale.S(6)),
             UseMnemonic = false,
         };
+        _bodyHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = AppTheme.SurfaceCard,
+            AutoScroll = true,
+        };
+        _bodyHost.Controls.Add(_label);
+
         _panel = new BufferedPanel
         {
             Visible = false,
             BackColor = AppTheme.SurfaceCard,
             Padding = new Padding(1),
-            AutoScroll = true,
         };
         _panel.Paint += (_, e) =>
         {
             using var pen = new Pen(AppTheme.Border);
             e.Graphics.DrawRectangle(pen, 0, 0, _panel.Width - 1, _panel.Height - 1);
         };
-        _panel.Controls.Add(_label);
-        _panel.MouseEnter += (_, _) =>
-        {
-            _overPanel = true;
-            _hideDelay.Stop();
-        };
-        _panel.MouseLeave += (_, _) =>
-        {
-            _overPanel = false;
-            ScheduleHide();
-        };
-        _label.MouseEnter += (_, _) =>
-        {
-            _overPanel = true;
-            _hideDelay.Stop();
-        };
-        _label.MouseLeave += (_, _) =>
-        {
-            _overPanel = false;
-            ScheduleHide();
-        };
+        _panel.Controls.Add(_bodyHost);
+        _panel.Controls.Add(recommendRow);
+
+        WireKeepOpen(_panel);
+        WireKeepOpen(recommendRow);
+        WireKeepOpen(_prefix);
+        WireKeepOpen(_stars);
+        WireKeepOpen(_bodyHost);
+        WireKeepOpen(_label);
 
         _showDelay.Tick += (_, _) =>
         {
             _showDelay.Stop();
-            if (_pendingAnchor is { IsDisposed: false } a && _pendingText is not null)
-                ShowNow(a, _pendingText());
+            if (_pendingAnchor is { IsDisposed: false } a && _pendingContent is not null)
+            {
+                var (level, body) = _pendingContent();
+                ShowNow(a, level, body);
+            }
         };
         _hideDelay.Tick += (_, _) =>
         {
@@ -87,6 +113,29 @@ internal sealed class InWindowTip
         form.Move += (_, _) => Hide();
     }
 
+    private void LayoutRecommendRow(Panel row)
+    {
+        var prefixW = TextRenderer.MeasureText(
+            _prefix.Text, _prefix.Font, new Size(int.MaxValue, row.Height),
+            TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 4;
+        _prefix.SetBounds(row.Padding.Left, 0, prefixW, row.ClientSize.Height);
+        _stars.SetBounds(_prefix.Right, 0, Math.Max(40, row.ClientSize.Width - _prefix.Right - row.Padding.Right), row.ClientSize.Height);
+    }
+
+    private void WireKeepOpen(Control c)
+    {
+        c.MouseEnter += (_, _) =>
+        {
+            _overPanel = true;
+            _hideDelay.Stop();
+        };
+        c.MouseLeave += (_, _) =>
+        {
+            _overPanel = false;
+            ScheduleHide();
+        };
+    }
+
     public static InWindowTip For(Form form)
     {
         if (ByForm.TryGetValue(form, out var tip))
@@ -96,16 +145,15 @@ internal sealed class InWindowTip
         return tip;
     }
 
-    /// <summary>绑定控件：悬停后在窗体内弹出说明（不再使用系统 ToolTip）。</summary>
-    public static void Attach(Control anchor, Func<string> getText)
+    /// <summary>绑定控件：悬停后在窗体内弹出说明（彩色推荐星 + 正文）。</summary>
+    public static void Attach(Control anchor, Func<(RecommendLevel Level, string Body)> getContent)
     {
         if (anchor is null) return;
         void OnEnter(object? _, EventArgs __)
         {
             var form = anchor.FindForm();
             if (form is null) return;
-            var tip = For(form);
-            tip.ScheduleShow(anchor, getText);
+            For(form).ScheduleShow(anchor, getContent);
         }
         void OnLeave(object? _, EventArgs __)
         {
@@ -127,11 +175,11 @@ internal sealed class InWindowTip
         anchor.MouseDown += OnDown;
     }
 
-    private void ScheduleShow(Control anchor, Func<string> getText)
+    private void ScheduleShow(Control anchor, Func<(RecommendLevel Level, string Body)> getContent)
     {
         _hideDelay.Stop();
         _pendingAnchor = anchor;
-        _pendingText = getText;
+        _pendingContent = getContent;
         _showDelay.Stop();
         _showDelay.Start();
     }
@@ -140,42 +188,52 @@ internal sealed class InWindowTip
     {
         _showDelay.Stop();
         _pendingAnchor = null;
-        _pendingText = null;
+        _pendingContent = null;
         _hideDelay.Stop();
         _hideDelay.Start();
     }
 
-    private void ShowNow(Control anchor, string text)
+    private void ShowNow(Control anchor, RecommendLevel level, string body)
     {
-        text = (text ?? "").Trim();
-        if (text.Length == 0 || _form.IsDisposed || !anchor.IsHandleCreated)
+        body = (body ?? "").Trim();
+        if (body.Length == 0 || _form.IsDisposed || !anchor.IsHandleCreated)
         {
             Hide();
             return;
         }
 
+        // 正文里已有「【推荐】…」文字行时去掉，改由上方彩色星行展示
+        body = StripRecommendLine(body);
+
         _activeAnchor = anchor;
+        _stars.Level = level;
+        _stars.TrailingText = RecommendLevelUi.TipBody(level);
+
         var margin = UiScale.S(8);
         var pad = UiScale.S(8);
         var maxW = Math.Max(UiScale.S(200), _form.ClientSize.Width - margin * 2);
-        var tipW = Math.Min(maxW, UiScale.S(380));
+        var tipW = Math.Min(maxW, UiScale.S(400));
         var textW = Math.Max(UiScale.S(160), tipW - pad * 2 - 2);
-        var measured = TextRenderer.MeasureText(
-            text,
-            _label.Font,
-            new Size(textW, int.MaxValue),
-            TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.Left);
-        var contentH = measured.Height + pad * 2;
+        var measured = body.Length == 0
+            ? Size.Empty
+            : TextRenderer.MeasureText(
+                body,
+                _label.Font,
+                new Size(textW, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.Left);
+        var recommendH = Math.Max(UiScale.S(24), RecommendLevelUi.StarSize + UiScale.S(8));
+        var bodyH = measured.Height + pad;
+        var contentH = recommendH + bodyH + 2;
         var maxH = Math.Max(UiScale.S(48), _form.ClientSize.Height - margin * 2);
         var tipH = Math.Min(contentH, maxH);
 
-        _label.Text = text;
-        _label.AutoSize = false;
-        // 内容超出时靠面板滚动，仍不超出窗口
-        _panel.AutoScrollMinSize = contentH > tipH
-            ? new Size(0, contentH)
+        _label.Text = body;
+        _bodyHost.AutoScrollMinSize = contentH > tipH
+            ? new Size(0, Math.Max(0, bodyH))
             : Size.Empty;
         _panel.Size = new Size(tipW, tipH);
+        if (_panel.Controls.Count > 0 && _panel.Controls[_panel.Controls.Count - 1] is Panel rec)
+            LayoutRecommendRow(rec);
 
         var below = _form.PointToClient(anchor.PointToScreen(new Point(0, anchor.Height)));
         var above = _form.PointToClient(anchor.PointToScreen(Point.Empty));
@@ -197,12 +255,27 @@ internal sealed class InWindowTip
         _panel.BringToFront();
     }
 
+    private static string StripRecommendLine(string body)
+    {
+        var lines = body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var kept = new List<string>();
+        foreach (var line in lines)
+        {
+            var t = line.TrimStart();
+            if (t.StartsWith("【推荐】", StringComparison.Ordinal)
+                || t.StartsWith("[Recommend]", StringComparison.OrdinalIgnoreCase))
+                continue;
+            kept.Add(line);
+        }
+        return string.Join("\r\n", kept).Trim();
+    }
+
     public void Hide()
     {
         _showDelay.Stop();
         _hideDelay.Stop();
         _pendingAnchor = null;
-        _pendingText = null;
+        _pendingContent = null;
         _activeAnchor = null;
         _overPanel = false;
         if (!_form.IsDisposed && _panel.Visible)

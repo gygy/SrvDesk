@@ -4170,7 +4170,7 @@ internal sealed class MainForm : Form
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(EffectiveRecommend));
             // 完整说明用窗内悬浮层（钳制在主窗客户区），不用系统 ToolTip（会画出窗外）
             toolTip.SetToolTip(_note, "");
-            InWindowTip.Attach(_note, () => Help.FormatDetail());
+            InWindowTip.Attach(_note, () => Help.FormatDetailParts());
             if (hasScope) toolTip.SetToolTip(_scope, Help.Scope.FormatHelpSection());
             toolTip.SetToolTip(_system, AppLang.L("系统默认值（出厂）", "Factory default"));
             toolTip.SetToolTip(_current, AppLang.L("系统当前值：与左侧设置操作一致（读取自本机）", "Current value: matches Action (read from this PC)"));
