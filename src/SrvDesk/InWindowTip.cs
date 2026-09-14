@@ -4,6 +4,7 @@ namespace SrvDesk;
 
 /// <summary>
 /// 窗体内悬浮说明：位置与尺寸钳制在宿主 Form 客户区；推荐星用与主界面相同的彩色几何星。
+/// 推荐说明可换行完整显示，不在星旁单行省略。
 /// </summary>
 internal sealed class InWindowTip
 {
@@ -11,9 +12,12 @@ internal sealed class InWindowTip
 
     private readonly Form _form;
     private readonly Panel _panel;
-    private readonly Panel _bodyHost;
+    private readonly Panel _recommendHost;
+    private readonly Panel _starRow;
     private readonly Label _prefix;
     private readonly RecommendStarsRow _stars;
+    private readonly Label _recommendText;
+    private readonly Panel _bodyHost;
     private readonly Label _label;
     private readonly System.Windows.Forms.Timer _showDelay = new() { Interval = 380 };
     private readonly System.Windows.Forms.Timer _hideDelay = new() { Interval = 180 };
@@ -35,25 +39,42 @@ internal sealed class InWindowTip
             TextAlign = ContentAlignment.MiddleLeft,
             UseMnemonic = false,
         };
-        _stars = new RecommendStarsRow
-        {
-            BackColor = AppTheme.SurfaceCard,
-        };
-        var recommendRow = new Panel
+        _stars = new RecommendStarsRow { BackColor = AppTheme.SurfaceCard };
+        _starRow = new Panel
         {
             Dock = DockStyle.Top,
-            Height = Math.Max(UiScale.S(24), RecommendLevelUi.StarSize + UiScale.S(8)),
+            Height = Math.Max(UiScale.S(22), RecommendLevelUi.StarSize + UiScale.S(4)),
             BackColor = AppTheme.SurfaceCard,
-            Padding = new Padding(UiScale.S(8), UiScale.S(4), UiScale.S(8), 0),
         };
-        recommendRow.Controls.Add(_stars);
-        recommendRow.Controls.Add(_prefix);
-        recommendRow.Resize += (_, _) => LayoutRecommendRow(recommendRow);
+        _starRow.Controls.Add(_stars);
+        _starRow.Controls.Add(_prefix);
+        _starRow.Resize += (_, _) => LayoutStarRow();
+
+        _recommendText = new Label
+        {
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Font = UiFit.UiFontSmall,
+            ForeColor = AppTheme.TextMain,
+            BackColor = AppTheme.SurfaceCard,
+            UseMnemonic = false,
+            Padding = new Padding(0, 0, 0, UiScale.S(4)),
+        };
+
+        _recommendHost = new Panel
+        {
+            Dock = DockStyle.Top,
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(UiScale.S(8), UiScale.S(6), UiScale.S(8), UiScale.S(2)),
+        };
+        // Dock Top：后加的在上 → 先加文案再加星行，星行在上
+        _recommendHost.Controls.Add(_recommendText);
+        _recommendHost.Controls.Add(_starRow);
 
         _label = new Label
         {
             AutoSize = false,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             BackColor = AppTheme.SurfaceCard,
             ForeColor = AppTheme.TextMain,
             Font = UiFit.UiFontSmall,
@@ -80,14 +101,10 @@ internal sealed class InWindowTip
             e.Graphics.DrawRectangle(pen, 0, 0, _panel.Width - 1, _panel.Height - 1);
         };
         _panel.Controls.Add(_bodyHost);
-        _panel.Controls.Add(recommendRow);
+        _panel.Controls.Add(_recommendHost);
 
-        WireKeepOpen(_panel);
-        WireKeepOpen(recommendRow);
-        WireKeepOpen(_prefix);
-        WireKeepOpen(_stars);
-        WireKeepOpen(_bodyHost);
-        WireKeepOpen(_label);
+        foreach (Control c in new Control[] { _panel, _recommendHost, _starRow, _prefix, _stars, _recommendText, _bodyHost, _label })
+            WireKeepOpen(c);
 
         _showDelay.Tick += (_, _) =>
         {
@@ -113,13 +130,14 @@ internal sealed class InWindowTip
         form.Move += (_, _) => Hide();
     }
 
-    private void LayoutRecommendRow(Panel row)
+    private void LayoutStarRow()
     {
         var prefixW = TextRenderer.MeasureText(
-            _prefix.Text, _prefix.Font, new Size(int.MaxValue, row.Height),
+            _prefix.Text, _prefix.Font, new Size(int.MaxValue, _starRow.Height),
             TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 4;
-        _prefix.SetBounds(row.Padding.Left, 0, prefixW, row.ClientSize.Height);
-        _stars.SetBounds(_prefix.Right, 0, Math.Max(40, row.ClientSize.Width - _prefix.Right - row.Padding.Right), row.ClientSize.Height);
+        _prefix.SetBounds(0, 0, prefixW, _starRow.ClientSize.Height);
+        _stars.SetBounds(_prefix.Right, 0, RecommendLevelUi.StarsBlockWidth + 4, _starRow.ClientSize.Height);
+        _stars.TrailingText = ""; // 文案改到下方换行 Label，避免单行省略
     }
 
     private void WireKeepOpen(Control c)
@@ -145,7 +163,6 @@ internal sealed class InWindowTip
         return tip;
     }
 
-    /// <summary>绑定控件：悬停后在窗体内弹出说明（彩色推荐星 + 正文）。</summary>
     public static void Attach(Control anchor, Func<(RecommendLevel Level, string Body)> getContent)
     {
         if (anchor is null) return;
@@ -202,38 +219,46 @@ internal sealed class InWindowTip
             return;
         }
 
-        // 正文里已有「【推荐】…」文字行时去掉，改由上方彩色星行展示
         body = StripRecommendLine(body);
 
         _activeAnchor = anchor;
         _stars.Level = level;
-        _stars.TrailingText = RecommendLevelUi.TipBody(level);
+        _stars.TrailingText = "";
+        var tipBody = RecommendLevelUi.TipBody(level);
+        _recommendText.Text = tipBody;
 
         var margin = UiScale.S(8);
         var pad = UiScale.S(8);
         var maxW = Math.Max(UiScale.S(200), _form.ClientSize.Width - margin * 2);
-        var tipW = Math.Min(maxW, UiScale.S(400));
-        var textW = Math.Max(UiScale.S(160), tipW - pad * 2 - 2);
-        var measured = body.Length == 0
-            ? Size.Empty
-            : TextRenderer.MeasureText(
-                body,
-                _label.Font,
-                new Size(textW, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.Left);
-        var recommendH = Math.Max(UiScale.S(24), RecommendLevelUi.StarSize + UiScale.S(8));
-        var bodyH = measured.Height + pad;
-        var contentH = recommendH + bodyH + 2;
+        var tipW = Math.Min(maxW, UiScale.S(420));
+        var innerW = Math.Max(UiScale.S(160), tipW - pad * 2 - 2);
+
+        LayoutStarRow();
+        var starH = Math.Max(UiScale.S(22), RecommendLevelUi.StarSize + UiScale.S(4));
+        _starRow.Height = starH;
+
+        var recFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.Left;
+        var recTextH = TextRenderer.MeasureText(tipBody, _recommendText.Font, new Size(innerW, int.MaxValue), recFlags).Height
+                       + _recommendText.Padding.Vertical;
+        _recommendText.Height = Math.Max(UiFit.LineHeight(_recommendText.Font), recTextH);
+        _recommendHost.Height = _recommendHost.Padding.Vertical + starH + _recommendText.Height;
+
+        var bodyFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.Left;
+        var bodyTextH = body.Length == 0
+            ? 0
+            : TextRenderer.MeasureText(body, _label.Font, new Size(innerW, int.MaxValue), bodyFlags).Height
+              + _label.Padding.Vertical;
+        _label.Text = body;
+        _label.Width = tipW - 2;
+        _label.Height = Math.Max(bodyTextH, body.Length == 0 ? 0 : UiFit.LineHeight(_label.Font));
+
+        var contentH = 2 + _recommendHost.Height + _label.Height;
         var maxH = Math.Max(UiScale.S(48), _form.ClientSize.Height - margin * 2);
         var tipH = Math.Min(contentH, maxH);
-
-        _label.Text = body;
         _bodyHost.AutoScrollMinSize = contentH > tipH
-            ? new Size(0, Math.Max(0, bodyH))
+            ? new Size(0, _label.Height)
             : Size.Empty;
         _panel.Size = new Size(tipW, tipH);
-        if (_panel.Controls.Count > 0 && _panel.Controls[_panel.Controls.Count - 1] is Panel rec)
-            LayoutRecommendRow(rec);
 
         var below = _form.PointToClient(anchor.PointToScreen(new Point(0, anchor.Height)));
         var above = _form.PointToClient(anchor.PointToScreen(Point.Empty));
