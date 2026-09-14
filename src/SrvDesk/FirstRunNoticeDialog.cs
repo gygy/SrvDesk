@@ -21,12 +21,12 @@ internal sealed class FirstRunNoticeDialog : Form
         var bodyText = AppLang.L(
             "本程序是 Windows Server 优化助手：先识别用途，再给建议，确认后执行，并可回滚。\r\n" +
             "请以管理员身份运行；重要环境请先备份或创建还原点。\r\n" +
-            "入口：工具 → 优化顾问。完整条款见「帮助」。\r\n\r\n" +
+            "入口：工具 → 优化顾问。\r\n\r\n" +
             "部分杀软可能误报。如遇误报，请将本程序加入信任/白名单；" +
             "若不放心，可通过在线查杀核对：",
             "SrvDesk is a Windows Server optimization assistant: profile → advice → confirm → apply → rollback.\r\n" +
             "Run as Administrator; back up or create a restore point on important machines.\r\n" +
-            "Start at Tools → Optimization advisor. See Help for legal terms.\r\n\r\n" +
+            "Start at Tools → Optimization advisor.\r\n\r\n" +
             "Some antivirus products may false-positive. If so, add this app to trust/whitelist; " +
             "or verify online at:");
 
