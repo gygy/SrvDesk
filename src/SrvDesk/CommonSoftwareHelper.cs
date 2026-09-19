@@ -855,6 +855,39 @@ internal static class CommonSoftwareHelper
             + Path.GetFileNameWithoutExtension(exeName) + "。";
     }
 
+    /// <summary>解压便携 zip（如 rg），把主程序放到工具目录并加入用户 PATH。</summary>
+    private static string? InstallPortableFromZip(
+        CommonSoftwareItem item,
+        string zipPath,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        var exeName = ResolvePortableExeName(item);
+        var toolDir = Path.Combine(ToolsDir, item.Id);
+        Directory.CreateDirectory(toolDir);
+        Report(onProgress, "正在解压…", 70);
+        using (var zip = ZipFile.OpenRead(zipPath))
+        {
+            var entry = zip.Entries.FirstOrDefault(e =>
+                e.Name.Equals(exeName, StringComparison.OrdinalIgnoreCase));
+            if (entry is null)
+            {
+                ApplyLog.Write("压缩包内未找到 " + exeName);
+                return null;
+            }
+
+            var dest = Path.Combine(toolDir, exeName);
+            entry.ExtractToFile(dest, overwrite: true);
+        }
+
+        EnsureUserPathContains(toolDir);
+        PrependProcessPath(toolDir);
+        InvalidateStatusCache();
+        Report(onProgress, "安装完成", 100);
+        ApplyLog.Write("便携解压：" + Path.Combine(toolDir, exeName));
+        return "已安装到 " + Path.Combine(toolDir, exeName) + "，并已加入用户 PATH。请新开终端后使用 "
+            + Path.GetFileNameWithoutExtension(exeName) + "。";
+    }
+
     private static string ResolvePortableExeName(CommonSoftwareItem item)
     {
         if (item.DetectExeNames.Length > 0)
@@ -1004,6 +1037,9 @@ internal static class CommonSoftwareHelper
 
         Report(onProgress, "下载离线安装包…", 5);
         DownloadInstaller(url, dest, minBytes: 80_000, onProgress, percentBase: 5, percentSpan: 55);
+
+        if (dest.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            return InstallPortableFromZip(item, dest, onProgress);
 
         var args = string.IsNullOrWhiteSpace(item.OfflineInstallArgs)
             ? OfficialInstallerResolver.GuessSilentArgs(url)
