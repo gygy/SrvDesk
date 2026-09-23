@@ -220,6 +220,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             bits.HideTaskbarChat = _chat.Checked;
             bits.HideTaskbarCopilot = _copilot.Checked;
             bits.HideWindowsInkWorkspace = _ink.Checked;
+            // Ink/Chat/Copilot 已在开关回调里即时写入；此处再写一次保证与其它任务栏项同批落盘
             EasySettingsTweaks.ApplyExplorerBits(bits);
 
             DesktopQuickActions.RestartExplorer();
@@ -273,10 +274,21 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         _office.Bind(bits.HideOfficeCloudFiles, v => { bits.HideOfficeCloudFiles = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
         _onedrive.Bind(bits.DisableOneDrive, v => { bits.DisableOneDrive = v; EasySettingsTweaks.ApplyExplorerBits(bits); });
 
-        // 任务栏相关：只更新界面，真正写入在「应用到系统」
-        _chat.Bind(bits.HideTaskbarChat, _ => { });
-        _copilot.Bind(bits.HideTaskbarCopilot, _ => { });
-        _ink.Bind(bits.HideWindowsInkWorkspace, _ => { });
+        // 任务栏托盘按钮：切换即写注册表并重启资源管理器
+        _chat.Bind(bits.HideTaskbarChat, v =>
+        {
+            bits.HideTaskbarChat = v;
+            SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn", v ? 0 : 1);
+            DesktopQuickActions.RestartExplorer();
+        });
+        _copilot.Bind(bits.HideTaskbarCopilot, v =>
+        {
+            bits.HideTaskbarCopilot = v;
+            SetDwordCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarCo", v ? 0 : 1);
+            DesktopQuickActions.RestartExplorer();
+        });
+        _ink.Bind(bits.HideWindowsInkWorkspace, v =>
+            EasySettingsTweaks.SetWindowsInkWorkspaceHidden(v));
         _arrow.Bind(Win11DesktopTweaks.IsShortcutArrowHidden(), Win11DesktopTweaks.SetShortcutArrowHidden);
         _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), Win11DesktopTweaks.SetNoShortcutSuffix);
         _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), Win11DesktopTweaks.SetRemoveAdminShield);

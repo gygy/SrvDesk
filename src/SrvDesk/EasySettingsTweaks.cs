@@ -56,17 +56,53 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkCu, ExplorerAdv, "ShowCloudFilesInQuickAccess", s.HideOfficeCloudFiles ? 0 : 1);
         if (Take("DisableOneDrive", x => x.DisableOneDrive))
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\OneDrive", "DisableFileSyncNGSC", s.DisableOneDrive ? 1 : 0);
+        var restartExplorer = false;
         if (Take("HideTaskbarChat", x => x.HideTaskbarChat))
-            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
+        {
+            var want = s.HideTaskbarChat ? 0 : 1;
+            var cur = GetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn");
+            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", want);
+            if (cur != want) restartExplorer = true;
+        }
         if (Take("HideTaskbarCopilot", x => x.HideTaskbarCopilot))
-            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
+        {
+            var want = s.HideTaskbarCopilot ? 0 : 1;
+            var cur = GetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo");
+            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", want);
+            if (cur != want) restartExplorer = true;
+        }
         if (Take("HideWindowsInkWorkspace", x => x.HideWindowsInkWorkspace))
-            SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", s.HideWindowsInkWorkspace ? 0 : 1);
+        {
+            var before = IsWindowsInkWorkspaceHidden();
+            SetWindowsInkWorkspaceHidden(s.HideWindowsInkWorkspace, restartExplorer: false);
+            if (before != s.HideWindowsInkWorkspace) restartExplorer = true;
+        }
         if (Take("NotepadWordWrap", x => x.NotepadWordWrap))
             SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
         if (Take("NotepadStatusBar", x => x.NotepadStatusBar))
             SetDword(Hive.HkCu, NotepadKey, "StatusBar", s.NotepadStatusBar ? 1 : 0);
+
+        // 仅当托盘按钮实际变更时才重启 explorer（避免其它即时开关误闪任务栏）
+        if (restartExplorer)
+            DesktopQuickActions.RestartExplorer();
     }
+
+    /// <summary>隐藏/显示任务栏 Windows Ink 工作区（笔菜单）按钮；默认重启资源管理器使托盘立即刷新。</summary>
+    public static void SetWindowsInkWorkspaceHidden(bool hide, bool restartExplorer = true)
+    {
+        // 去掉策略覆盖，否则 DesiredVisibility 写了也不反映到托盘/设置页
+        try { DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace", "AllowWindowsInkWorkspace"); }
+        catch { /* 无权限或键不存在时忽略 */ }
+
+        SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", hide ? 0 : 1);
+        DesktopQuickActions.NotifyShellChanged();
+        if (restartExplorer)
+            DesktopQuickActions.RestartExplorer();
+    }
+
+    public static bool IsWindowsInkWorkspaceHidden() =>
+        // 缺省视为未强制隐藏（与 Win10/Server「显示」菜单未勾选但键未建时一致，便于顾问推荐写入 0）
+        DwordEquals(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
 
     public static void ApplyPrivacyBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
@@ -202,7 +238,7 @@ internal static class EasySettingsTweaks
             s.HideTaskbarCopilot = DwordEquals(adv, "TaskbarCo", 0);
         }
 
-        s.HideWindowsInkWorkspace = DwordEquals(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
+        s.HideWindowsInkWorkspace = IsWindowsInkWorkspaceHidden();
 
         using (var exp = OpenKey(Hive.HkCu, Explorer))
         {
