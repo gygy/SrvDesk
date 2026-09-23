@@ -177,6 +177,7 @@ internal static class Optimizer
         public bool DisableOneDrive;
         public bool HideTaskbarChat;
         public bool HideTaskbarCopilot;
+        public bool HideWindowsInkWorkspace;
         public bool NotepadWordWrap;
         public bool NotepadStatusBar;
         public int TaskbarSearchMode = -1;
@@ -738,6 +739,7 @@ internal static class Optimizer
             || b.DisableOneDrive != s.DisableOneDrive
             || b.HideTaskbarChat != s.HideTaskbarChat
             || b.HideTaskbarCopilot != s.HideTaskbarCopilot
+            || b.HideWindowsInkWorkspace != s.HideWindowsInkWorkspace
             || b.NotepadWordWrap != s.NotepadWordWrap
             || b.NotepadStatusBar != s.NotepadStatusBar
             || b.DisableCloudSearch != s.DisableCloudSearch

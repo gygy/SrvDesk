@@ -8,6 +8,7 @@ internal static class EasySettingsTweaks
 {
     private const string ExplorerAdv = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
     private const string Explorer = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
+    private const string PenWorkspace = @"Software\Microsoft\Windows\CurrentVersion\PenWorkspace";
     /// <summary>经典记事本；.reg 里偶见 NotePad/fwrap，注册表大小写不敏感。</summary>
     private const string NotepadKey = @"Software\Microsoft\Notepad";
     private const string DeviceGuard = @"SYSTEM\CurrentControlSet\Control\DeviceGuard";
@@ -59,6 +60,8 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkCu, ExplorerAdv, "TaskbarMn", s.HideTaskbarChat ? 0 : 1);
         if (Take("HideTaskbarCopilot", x => x.HideTaskbarCopilot))
             SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", s.HideTaskbarCopilot ? 0 : 1);
+        if (Take("HideWindowsInkWorkspace", x => x.HideWindowsInkWorkspace))
+            SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", s.HideWindowsInkWorkspace ? 0 : 1);
         if (Take("NotepadWordWrap", x => x.NotepadWordWrap))
             SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
         if (Take("NotepadStatusBar", x => x.NotepadStatusBar))
@@ -198,6 +201,8 @@ internal static class EasySettingsTweaks
             s.HideTaskbarChat = DwordEquals(adv, "TaskbarMn", 0);
             s.HideTaskbarCopilot = DwordEquals(adv, "TaskbarCo", 0);
         }
+
+        s.HideWindowsInkWorkspace = DwordEquals(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
 
         using (var exp = OpenKey(Hive.HkCu, Explorer))
         {

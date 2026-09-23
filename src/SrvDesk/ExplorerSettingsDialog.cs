@@ -23,6 +23,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
     private readonly InstantToggleRow _taskView = new(AppLang.L("显示任务视图按钮", "Show Task View button"));
     private readonly InstantToggleRow _chat = new(AppLang.L("隐藏任务栏聊天", "Hide taskbar chat"));
     private readonly InstantToggleRow _copilot = new(AppLang.L("隐藏任务栏 Copilot", "Hide taskbar Copilot"));
+    private readonly InstantToggleRow _ink = new(AppLang.L("隐藏 Windows Ink 工作区按钮", "Hide Windows Ink Workspace button"));
     private readonly InstantToggleRow _widgets = new(AppLang.L("关闭任务栏小组件", "Disable taskbar widgets"));
     private readonly InstantToggleRow _seconds = new(AppLang.L("托盘时钟显示秒", "Show seconds in tray clock"));
     private readonly ComboBox _launchTo = new();
@@ -74,7 +75,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         ]);
         var taskbar = ThemedSettingsChrome.CreateSection("任务栏", [
             BuildSearchRow(), BuildAlignRow(),
-            _widgets, _chat, _copilot,
+            _widgets, _chat, _copilot, _ink,
             BuildAutohideRow(), _taskView, _seconds, BuildGlomRow(),
         ]);
 
@@ -218,6 +219,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
             EasySettingsTweaks.ReadExplorerOnly(bits);
             bits.HideTaskbarChat = _chat.Checked;
             bits.HideTaskbarCopilot = _copilot.Checked;
+            bits.HideWindowsInkWorkspace = _ink.Checked;
             EasySettingsTweaks.ApplyExplorerBits(bits);
 
             DesktopQuickActions.RestartExplorer();
@@ -274,6 +276,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         // 任务栏相关：只更新界面，真正写入在「应用到系统」
         _chat.Bind(bits.HideTaskbarChat, _ => { });
         _copilot.Bind(bits.HideTaskbarCopilot, _ => { });
+        _ink.Bind(bits.HideWindowsInkWorkspace, _ => { });
         _arrow.Bind(Win11DesktopTweaks.IsShortcutArrowHidden(), Win11DesktopTweaks.SetShortcutArrowHidden);
         _suffix.Bind(Win11DesktopTweaks.IsNoShortcutSuffixOn(), Win11DesktopTweaks.SetNoShortcutSuffix);
         _shield.Bind(Win11DesktopTweaks.IsRemoveAdminShieldOn(), Win11DesktopTweaks.SetRemoveAdminShield);

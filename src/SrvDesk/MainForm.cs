@@ -61,6 +61,7 @@ internal sealed class MainForm : Form
     private readonly SettingRow _onedrive = Row(AppLang.L("禁止 OneDrive 同步", "Disable OneDrive sync"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableOneDrive);
     private readonly SettingRow _tbChat = Row(AppLang.L("隐藏任务栏聊天", "Hide taskbar Chat"), AppLang.L("显示", "Shown"), SettingCatalog.HideTaskbarChat);
     private readonly SettingRow _tbCopilot = Row(AppLang.L("隐藏任务栏 Copilot", "Hide taskbar Copilot"), AppLang.L("显示", "Shown"), SettingCatalog.HideTaskbarCopilot);
+    private readonly SettingRow _tbInk = Row(AppLang.L("隐藏 Windows Ink 工作区按钮", "Hide Windows Ink Workspace button"), AppLang.L("显示", "Shown"), SettingCatalog.HideWindowsInkWorkspace);
     private readonly SettingRow _notepadWrap = Row(AppLang.L("记事本默认自动换行", "Notepad word wrap"), AppLang.L("不换行", "No wrap"), SettingCatalog.NotepadWordWrap);
     private readonly SettingRow _notepadStatus = Row(AppLang.L("记事本显示状态栏", "Notepad status bar"), AppLang.L("不显示", "Hidden"), SettingCatalog.NotepadStatusBar);
     private readonly SettingRow _cloudSearch = Row(AppLang.L("禁止搜索云内容", "Disable cloud search"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableCloudSearch);
@@ -371,7 +372,7 @@ internal sealed class MainForm : Form
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
         _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
-        _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot,
+        _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot, _tbInk,
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
         _noBrokenLnk, _sepProcess, _autoRestartShell, _hideSpotlight, _noDupDrives, _noRunMru,
         _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
@@ -495,7 +496,7 @@ internal sealed class MainForm : Form
                 _autoRestartShell, _win11Explorer, _classicMenu, _onedrive,
             ]),
             (AppLang.L("任务栏", "Taskbar"), [
-                _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat,
+                _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbInk,
                 _taskView, _taskbarClock,
             ]),
         ]));
@@ -3165,6 +3166,7 @@ internal sealed class MainForm : Form
         _onedrive.Checked = s.DisableOneDrive;
         _tbChat.Checked = s.HideTaskbarChat;
         _tbCopilot.Checked = s.HideTaskbarCopilot;
+        _tbInk.Checked = s.HideWindowsInkWorkspace;
         _notepadWrap.Checked = s.NotepadWordWrap;
         _notepadStatus.Checked = s.NotepadStatusBar;
         _cloudSearch.Checked = s.DisableCloudSearch;
@@ -3361,6 +3363,7 @@ internal sealed class MainForm : Form
         DisableOneDrive = _onedrive.Checked,
         HideTaskbarChat = _tbChat.Checked,
         HideTaskbarCopilot = _tbCopilot.Checked,
+        HideWindowsInkWorkspace = _tbInk.Checked,
         NotepadWordWrap = _notepadWrap.Checked,
         NotepadStatusBar = _notepadStatus.Checked,
         DisableCloudSearch = _cloudSearch.Checked,
@@ -3627,6 +3630,7 @@ internal sealed class MainForm : Form
         Sync(_onedrive, s.DisableOneDrive);
         Sync(_tbChat, s.HideTaskbarChat);
         Sync(_tbCopilot, s.HideTaskbarCopilot);
+        Sync(_tbInk, s.HideWindowsInkWorkspace);
         Sync(_notepadWrap, s.NotepadWordWrap);
         Sync(_notepadStatus, s.NotepadStatusBar);
         Sync(_takeOwn, s.ContextMenuTakeOwnership);

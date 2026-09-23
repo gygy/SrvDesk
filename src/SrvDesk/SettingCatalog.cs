@@ -901,6 +901,15 @@ internal static class SettingCatalog
         L("隐藏任务栏聊天按钮。", "Hide the taskbar Chat button."), L("TaskbarMn=0。", "TaskbarMn=0."), L("任务栏更干净。", "Cleaner taskbar."), L("Win11 有效。", "Effective on Win11."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo HideTaskbarCopilot = H(
         L("隐藏任务栏 Copilot。", "Hide Copilot on the taskbar."), L("TaskbarCo=0。", "TaskbarCo=0."), L("减少入口干扰。", "Fewer distracting entry points."), L("Win11 有效。", "Effective on Win11."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
+    public static readonly SettingHelpInfo HideWindowsInkWorkspace = H(
+        L("隐藏任务栏「Windows Ink 工作区 / 笔菜单」按钮。", "Hide the Windows Ink Workspace / Pen menu button on the taskbar."),
+        L("PenWorkspace\\PenWorkspaceButtonDesiredVisibility=0。", "PenWorkspace\\PenWorkspaceButtonDesiredVisibility=0."),
+        L("无手写笔时去掉多余托盘入口，任务栏更干净。", "Removes a tray entry you rarely need without a pen; cleaner taskbar."),
+        L("强烈推荐隐藏；使用手写笔时再关闭本项以恢复显示。", "Strongly recommended hidden; turn this off to show again if you use a pen."),
+        L("重启资源管理器后生效。", "Takes effect after Explorer restart."),
+        W10De,
+        uiPlace: L("设置 → 个性化 → 任务栏 → 系统托盘图标 → 笔菜单 / Windows Ink 工作区", "Settings → Personalization → Taskbar → System tray icons → Pen menu / Windows Ink Workspace"),
+        recommend: RecommendLevel.Must);
     public static readonly SettingHelpInfo DisableCloudSearch = H(
         L("禁止搜索界面云内容搜索。", "Disable cloud content search in Search."), L("AllowCloudSearch=0。", "AllowCloudSearch=0."), L("搜索不查 OneDrive/SharePoint 等。", "Search does not query OneDrive/SharePoint, etc."), L("推荐隐私场景。", "Recommended for privacy."), L("立即生效。", "Takes effect immediately."), W10De);
     public static readonly SettingHelpInfo DisableWebsiteLangList = H(

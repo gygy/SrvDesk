@@ -165,6 +165,7 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.ContextMenuCopyMoveTo)
         || ReferenceEquals(help, SettingCatalog.ContextMenuQuickOps)
         || ReferenceEquals(help, SettingCatalog.TaskbarAllIcons)
+        || ReferenceEquals(help, SettingCatalog.HideWindowsInkWorkspace)
         || ReferenceEquals(help, SettingCatalog.DisableSystemRestore)
         || ReferenceEquals(help, SettingCatalog.DisablePasswordComplexity)
         || ReferenceEquals(help, SettingCatalog.DisablePasswordHistory)
