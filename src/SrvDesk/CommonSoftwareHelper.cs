@@ -718,6 +718,7 @@ internal static class CommonSoftwareHelper
 
         Report(onProgress, "准备安装 " + item.Title, 2);
         var preferOffline = PreferOfflineNow(item);
+        var preferOfficialApi = PreferOfficialApiNow(item);
 
         // Server 无商店：优先离线自动安装（Appx/Msix + 依赖，与手工放包一致）
         if (item.PreferAppxSideload && !string.IsNullOrWhiteSpace(item.StoreProductId))
@@ -748,6 +749,23 @@ internal static class CommonSoftwareHelper
             {
                 ApplyLog.Write("离线安装失败，尝试其它方式：" + ex.Message);
                 Report(onProgress, "离线安装失败，尝试其它方式…", 45);
+            }
+        }
+
+        // 天翼/海康等：签名直链每次现查，优先官网自动下载安装（勿先跳浏览器）
+        if (preferOfficialApi)
+        {
+            try
+            {
+                Report(onProgress, "正在解析官网最新安装包…", 12);
+                var earlyOfficial = TryInstallFromOfficialLatest(item, onProgress);
+                if (earlyOfficial is not null)
+                    return earlyOfficial;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("官网优先安装失败：" + ex.Message);
+                Report(onProgress, "官网自动安装失败，尝试其它方式…", 40);
             }
         }
 
@@ -807,10 +825,13 @@ internal static class CommonSoftwareHelper
 
         try
         {
-            Report(onProgress, "正在解析官网最新安装包…", 70);
-            var officialMsg = TryInstallFromOfficialLatest(item, onProgress);
-            if (officialMsg is not null)
-                return officialMsg;
+            if (!preferOfficialApi)
+            {
+                Report(onProgress, "正在解析官网最新安装包…", 70);
+                var officialMsg = TryInstallFromOfficialLatest(item, onProgress);
+                if (officialMsg is not null)
+                    return officialMsg;
+            }
         }
         catch (Exception ex)
         {
@@ -845,6 +866,13 @@ internal static class CommonSoftwareHelper
             Report(onProgress, "自动安装未成功", 100);
             return "iCloud 离线 Appx 安装未成功。可将 VCLibs.140 / WindowsAppRuntime / AppleInc.iCloud_*.Appx 放入：\r\n"
                 + dir + "\r\n后重试「一键安装」。未打开官网。";
+        }
+
+        // 天翼/海康等官网 API 项：禁止打开浏览器（SPA/签名链失败时打开官网也下不了）
+        if (PreferOfficialApiNow(item))
+        {
+            Report(onProgress, "自动安装未成功", 100);
+            return item.Title + " 自动安装未成功（官网解析或下载/静默安装失败）。请检查网络后重试。未打开官网。";
         }
 
         Report(onProgress, "打开官方下载页…", 95);
@@ -896,6 +924,12 @@ internal static class CommonSoftwareHelper
     private static bool PreferOfflineNow(CommonSoftwareItem item) =>
         item.PreferOfflineInstall
         || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer());
+
+    /// <summary>有官方 JSON API（签名直链会过期）时优先现查并安装，且勿回退浏览器。</summary>
+    private static bool PreferOfficialApiNow(CommonSoftwareItem item) =>
+        !string.IsNullOrWhiteSpace(item.LatestApiUrl)
+        || item.Id.Equals("tianyiyun", StringComparison.OrdinalIgnoreCase)
+        || item.Id.Equals("hikconnect", StringComparison.OrdinalIgnoreCase);
 
     private static bool SkipMsStoreRetry(CommonSoftwareItem item) =>
         item.PreferOfflineInstall
@@ -1022,6 +1056,31 @@ internal static class CommonSoftwareHelper
                     Installed = true,
                     UninstallCommand = "portable:" + candidate,
                 };
+            }
+
+            // 常见安装目录（天翼 eCloud 等不在 PATH）
+            foreach (var root in new[]
+                     {
+                         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                     })
+            {
+                if (string.IsNullOrWhiteSpace(root)) continue;
+                foreach (var sub in new[]
+                         {
+                             Path.Combine(root, "ecloud", "ecloud", name),
+                             Path.Combine(root, "eCloud", name),
+                             Path.Combine(root, item.Id, name),
+                         })
+                {
+                    if (!File.Exists(sub)) continue;
+                    return new CommonSoftwareStatus
+                    {
+                        Installed = true,
+                        UninstallCommand = "portable:" + sub,
+                    };
+                }
             }
 
             if (!allowWhere) continue;
@@ -3370,13 +3429,22 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? DownloadDir);
 
         Exception? last = null;
-        // 1) HttpClient（浏览器 UA + 系统代理）  2) curl.exe  3) WebClient
-        foreach (var attempt in new Func<bool>[]
-                 {
-                     () => TryDownloadHttpClient(url, dest, onProgress, percentBase, percentSpan),
-                     () => TryDownloadCurl(url, dest),
-                     () => TryDownloadWebClient(url, dest, onProgress, percentBase, percentSpan),
-                 })
+        // 天翼等 opaque 签名链：curl -L 跟跳转更稳；其它优先 HttpClient
+        var preferCurl = OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url);
+        var attempts = preferCurl
+            ? new Func<bool>[]
+            {
+                () => TryDownloadCurl(url, dest),
+                () => TryDownloadHttpClient(url, dest, onProgress, percentBase, percentSpan),
+                () => TryDownloadWebClient(url, dest, onProgress, percentBase, percentSpan),
+            }
+            : new Func<bool>[]
+            {
+                () => TryDownloadHttpClient(url, dest, onProgress, percentBase, percentSpan),
+                () => TryDownloadCurl(url, dest),
+                () => TryDownloadWebClient(url, dest, onProgress, percentBase, percentSpan),
+            };
+        foreach (var attempt in attempts)
         {
             try
             {
@@ -3447,10 +3515,16 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
 
         using var client = new System.Net.Http.HttpClient(handler)
         {
-            Timeout = TimeSpan.FromMinutes(15),
+            Timeout = TimeSpan.FromMinutes(30),
         };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", BrowserUa);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
+        if (OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url)
+            || (Uri.TryCreate(url, UriKind.Absolute, out var dlUri)
+                && dlUri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0))
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://cloud.189.cn/");
+        }
 
         using var resp = client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead)
             .GetAwaiter().GetResult();
@@ -3483,12 +3557,15 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         if (!File.Exists(curl))
             curl = "curl.exe";
 
-        // -L 跟随跳转；-A 浏览器 UA；--proxy-default 跟随系统（Win10+ curl）
+        // -L 跟随跳转；-A 浏览器 UA；大包（天翼 ~270MB）放宽到 30 分钟
+        var referer = OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url)
+            ? " -e \"https://cloud.189.cn/\" "
+            : " ";
         var args =
-            "-L --retry 3 --connect-timeout 20 --max-time 900 " +
-            "-A \"" + BrowserUa + "\" " +
+            "-L --retry 3 --connect-timeout 20 --max-time 1800 " +
+            "-A \"" + BrowserUa + "\"" + referer +
             "-o \"" + dest + "\" \"" + url + "\"";
-        var code = Run(curl, args, timeoutMs: 920_000);
+        var code = Run(curl, args, timeoutMs: 1_850_000);
         return code == 0 && File.Exists(dest) && new FileInfo(dest).Length > 0;
     }
 

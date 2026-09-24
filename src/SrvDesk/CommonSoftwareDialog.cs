@@ -766,7 +766,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先 winget；失败则自动从官网下载最新安装包并静默安装。\r\n都失败才会打开下载页。\r\n安装期间可继续使用主窗口。\r\n是否继续？",
+                $"即将对「{item.Title}」执行{action}。\r\n\r\n优先自动下载官网最新安装包并静默安装；必要时再试 winget。\r\n安装期间可继续使用主窗口。\r\n是否继续？",
                 "常用软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }

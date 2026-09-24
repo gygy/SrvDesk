@@ -467,6 +467,12 @@ internal static class OfficialInstallerResolver
     }
 
     /// <summary>无 .exe 后缀的官方下载接口（如天翼 downloadFile.action）。</summary>
+    public static bool IsOpaqueInstallerDownloadUrl(string? url)
+    {
+        if (!Uri.TryCreate((url ?? "").Trim(), UriKind.Absolute, out var uri)) return false;
+        return LooksLikeOpaqueInstallerDownload(uri);
+    }
+
     private static bool LooksLikeOpaqueInstallerDownload(Uri uri)
     {
         var path = uri.AbsolutePath;
@@ -523,6 +529,13 @@ internal static class OfficialInstallerResolver
         using var client = new System.Net.Http.HttpClient(handler) { Timeout = TimeSpan.FromSeconds(40) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", BrowserUa);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", accept ?? "text/html,application/json,*/*");
+        if (Uri.TryCreate(url, UriKind.Absolute, out var refererUri)
+            && (refererUri.Host.IndexOf("cloud.189.cn", StringComparison.OrdinalIgnoreCase) >= 0
+                || refererUri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0))
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://cloud.189.cn/");
+        }
+
         var text = client.GetStringAsync(url).GetAwaiter().GetResult();
         return text ?? "";
     }
