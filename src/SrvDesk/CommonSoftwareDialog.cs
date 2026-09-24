@@ -23,13 +23,19 @@ internal sealed class CommonSoftwareDialog : Form
     [
         ("全部", "All"),
         ("必备", "Essentials"),
-        ("AI", "AI"),
-        ("微软运行库", "Microsoft runtimes"),
-        ("工具", "Tools"),
+        ("驱动", "Drivers"),
         ("浏览器", "Browsers"),
+        ("压缩", "Compression"),
+        ("工具", "Tools"),
+        ("网络/专业", "Network / Pro"),
+        ("微软", "Microsoft"),
+        ("多媒体", "Media"),
+        ("文档", "Documents"),
         ("通讯", "Comms"),
         ("网盘", "Cloud drives"),
         ("开发", "Dev"),
+        ("AI", "AI"),
+        ("微软运行库", "Microsoft runtimes"),
         ("自定义", "Custom"),
     ];
 
