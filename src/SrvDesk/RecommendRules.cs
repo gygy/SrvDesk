@@ -173,6 +173,8 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableShutdownReason)
         || ReferenceEquals(help, SettingCatalog.EnableDiskPerfCounters)
         || ReferenceEquals(help, SettingCatalog.DisableAeroShake)
+        || ReferenceEquals(help, SettingCatalog.DisableStoreOpenWith)
+        || ReferenceEquals(help, SettingCatalog.DisableStartNotifyNewApps)
         || ReferenceEquals(help, SettingCatalog.RestrictNullSessionShares)
         || ReferenceEquals(help, SettingCatalog.RestrictAnonymousEnum)
         || ReferenceEquals(help, SettingCatalog.DisableTelemetryScheduledTasks);
@@ -203,6 +205,7 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableCeip)
         || ReferenceEquals(help, SettingCatalog.DisableConsumerFeatures)
         || ReferenceEquals(help, SettingCatalog.DisableSilentAppInstall)
+        || ReferenceEquals(help, SettingCatalog.DisableInkAppSuggestions)
         || ReferenceEquals(help, SettingCatalog.DisableAdTracking)
         || ReferenceEquals(help, SettingCatalog.DisableSearchHighlights)
         || ReferenceEquals(help, SettingCatalog.DisableSearchBoxSuggestions)

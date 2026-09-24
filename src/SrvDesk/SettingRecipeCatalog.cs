@@ -1062,6 +1062,19 @@ internal static class SettingRecipeCatalog
         Add(SettingCatalog.DisableSilentAppInstall, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager",
             "SilentInstalledAppsEnabled", 0, 1));
+        Add(SettingCatalog.DisableStoreOpenWith, ActionScript.DwordToggle(false,
+            @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith", 1, 0));
+        Add(SettingCatalog.DisableStartNotifyNewApps, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_NotifyNewApps", 0, 1));
+        Add(SettingCatalog.LockTaskbar, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarSizeMove", 0, 1,
+            "导入后重启资源管理器。"));
+        Add(SettingCatalog.PreventWindowFocusSteal, ActionScript.DwordToggle(true,
+            @"Control Panel\Desktop", "ForegroundLockTimeout", 0, 200000,
+            "重新登录后完全生效。"));
+        Add(SettingCatalog.DisableInkAppSuggestions, ActionScript.DwordToggle(true,
+            @"Software\Microsoft\Windows\CurrentVersion\PenWorkspace",
+            "PenWorkspaceAppSuggestionsEnabled", 0, 1));
         Add(SettingCatalog.HideExplorerHomeGallery, ActionScript.Reg(
             ActionScript.Block(
                 ActionScript.HkCu(@"Software\Classes\CLSID\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}"),

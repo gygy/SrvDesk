@@ -56,6 +56,11 @@ internal static class AtlasGapTweaks
 
         if (Take("InstantMenuShow", x => x.InstantMenuShow))
             SetSz(Hive.HkCu, Desktop, "MenuShowDelay", s.InstantMenuShow ? "0" : "400");
+        var lockTaskbarChanged = Take("LockTaskbar", x => x.LockTaskbar);
+        if (lockTaskbarChanged)
+            SetDword(Hive.HkCu, ExplorerAdv, "TaskbarSizeMove", s.LockTaskbar ? 0 : 1);
+        if (Take("PreventWindowFocusSteal", x => x.PreventWindowFocusSteal))
+            SetDword(Hive.HkCu, Desktop, "ForegroundLockTimeout", s.PreventWindowFocusSteal ? 0 : 200000);
         if (Take("DisableAeroShake", x => x.DisableAeroShake))
             SetDword(Hive.HkCu, ExplorerAdv, "DisallowShaking", s.DisableAeroShake ? 1 : 0);
         if (Take("DisableNetworkLocationWizard", x => x.DisableNetworkLocationWizard))
@@ -72,6 +77,9 @@ internal static class AtlasGapTweaks
 
         if (Take("DisableTelemetryScheduledTasks", x => x.DisableTelemetryScheduledTasks))
             SetTelemetryScheduledTasks(!s.DisableTelemetryScheduledTasks);
+
+        if (lockTaskbarChanged)
+            DesktopQuickActions.RestartExplorer();
     }
 
     public static void ReadInto(Optimizer.State s)
@@ -82,6 +90,8 @@ internal static class AtlasGapTweaks
         s.FasterShutdown = IsFasterShutdownOn();
         s.DisableStartupAppDelay = DwordEquals(Hive.HkCu, Serialize, "StartupDelayInMSec", 0);
         s.InstantMenuShow = SzEquals(Hive.HkCu, Desktop, "MenuShowDelay", "0");
+        s.LockTaskbar = DwordEquals(Hive.HkCu, ExplorerAdv, "TaskbarSizeMove", 0);
+        s.PreventWindowFocusSteal = DwordEquals(Hive.HkCu, Desktop, "ForegroundLockTimeout", 0);
         s.DisableAeroShake = DwordEquals(Hive.HkCu, ExplorerAdv, "DisallowShaking", 1);
         s.DisableNetworkLocationWizard = KeyExists(Hive.HkLm, NetworkWizardOff);
         s.DisableSettingSync = DwordEquals(Hive.HkLm, SettingSyncPol, "DisableSettingSync", 2);
@@ -99,6 +109,8 @@ internal static class AtlasGapTweaks
             || b.FasterShutdown != s.FasterShutdown
             || b.DisableStartupAppDelay != s.DisableStartupAppDelay
             || b.InstantMenuShow != s.InstantMenuShow
+            || b.LockTaskbar != s.LockTaskbar
+            || b.PreventWindowFocusSteal != s.PreventWindowFocusSteal
             || b.DisableAeroShake != s.DisableAeroShake
             || b.DisableNetworkLocationWizard != s.DisableNetworkLocationWizard
             || b.DisableSettingSync != s.DisableSettingSync

@@ -39,6 +39,14 @@ internal static class SophiaGapTweaks
             SetSigninReopen(!s.DisableSigninReopen);
         if (Take("DisableSilentAppInstall", x => x.DisableSilentAppInstall))
             SetDword(Hive.HkCu, ContentDelivery, "SilentInstalledAppsEnabled", s.DisableSilentAppInstall ? 0 : 1);
+        if (Take("DisableStoreOpenWith", x => x.DisableStoreOpenWith))
+            SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith",
+                s.DisableStoreOpenWith ? 1 : 0);
+        if (Take("DisableStartNotifyNewApps", x => x.DisableStartNotifyNewApps))
+            SetDword(Hive.HkCu, ExplorerAdv, "Start_NotifyNewApps", s.DisableStartNotifyNewApps ? 0 : 1);
+        if (Take("DisableInkAppSuggestions", x => x.DisableInkAppSuggestions))
+            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\PenWorkspace",
+                "PenWorkspaceAppSuggestionsEnabled", s.DisableInkAppSuggestions ? 0 : 1);
         if (Take("HideExplorerHomeGallery", x => x.HideExplorerHomeGallery))
             SetHomeGalleryHidden(s.HideExplorerHomeGallery);
         if (Take("DisableSnapAssist", x => x.DisableSnapAssist))
@@ -69,6 +77,10 @@ internal static class SophiaGapTweaks
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableAutomaticRestartSignOn", 1)
             || IsUserArsoOptOut();
         s.DisableSilentAppInstall = DwordEquals(Hive.HkCu, ContentDelivery, "SilentInstalledAppsEnabled", 0);
+        s.DisableStoreOpenWith = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith", 1);
+        s.DisableStartNotifyNewApps = DwordEquals(Hive.HkCu, ExplorerAdv, "Start_NotifyNewApps", 0);
+        s.DisableInkAppSuggestions = DwordEquals(Hive.HkCu,
+            @"Software\Microsoft\Windows\CurrentVersion\PenWorkspace", "PenWorkspaceAppSuggestionsEnabled", 0);
         s.HideExplorerHomeGallery =
             DwordEquals(Hive.HkCu, HomeClsid, "System.IsPinnedToNameSpaceTree", 0)
             && DwordEquals(Hive.HkCu, GalleryClsid, "System.IsPinnedToNameSpaceTree", 0);
@@ -92,6 +104,9 @@ internal static class SophiaGapTweaks
         return b.DiagnosticDataMinimal != s.DiagnosticDataMinimal
             || b.DisableSigninReopen != s.DisableSigninReopen
             || b.DisableSilentAppInstall != s.DisableSilentAppInstall
+            || b.DisableStoreOpenWith != s.DisableStoreOpenWith
+            || b.DisableStartNotifyNewApps != s.DisableStartNotifyNewApps
+            || b.DisableInkAppSuggestions != s.DisableInkAppSuggestions
             || b.HideExplorerHomeGallery != s.HideExplorerHomeGallery
             || b.DisableSnapAssist != s.DisableSnapAssist
             || b.EnableDarkMode != s.EnableDarkMode

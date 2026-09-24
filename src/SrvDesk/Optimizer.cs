@@ -255,6 +255,11 @@ internal static class Optimizer
         public bool DiagnosticDataMinimal;
         public bool DisableSigninReopen;
         public bool DisableSilentAppInstall;
+        public bool DisableStoreOpenWith;
+        public bool DisableStartNotifyNewApps;
+        public bool LockTaskbar;
+        public bool PreventWindowFocusSteal;
+        public bool DisableInkAppSuggestions;
         public bool HideExplorerHomeGallery;
         public bool DisableSnapAssist;
         public bool EnableDarkMode;

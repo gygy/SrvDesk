@@ -121,6 +121,11 @@ internal sealed class MainForm : Form
     private readonly SettingRow _diagMinimal = Row(AppLang.L("诊断数据设为最小（官方级别）", "Diagnostic data: Required"), AppLang.L("完整", "Full"), SettingCatalog.DiagnosticDataMinimal);
     private readonly SettingRow _noSigninReopen = Row(AppLang.L("更新后不自动重开应用", "Don't reopen apps after update"), AppLang.L("允许重开", "Allow reopen"), SettingCatalog.DisableSigninReopen);
     private readonly SettingRow _noSilentApps = Row(AppLang.L("禁止静默安装建议应用", "Block silent suggested apps"), AppLang.L("允许", "Allowed"), SettingCatalog.DisableSilentAppInstall);
+    private readonly SettingRow _noStoreOpenWith = Row(AppLang.L("禁止打开方式跳转应用商店", "Block Open with → Store"), AppLang.L("允许跳转", "Allow Store"), SettingCatalog.DisableStoreOpenWith);
+    private readonly SettingRow _noNewAppHighlight = Row(AppLang.L("关闭突出显示新安装程序", "Don't highlight new apps in Start"), AppLang.L("高亮", "Highlight"), SettingCatalog.DisableStartNotifyNewApps);
+    private readonly SettingRow _lockTaskbar = Row(AppLang.L("锁定任务栏", "Lock taskbar"), AppLang.L("可拖动", "Movable"), SettingCatalog.LockTaskbar);
+    private readonly SettingRow _noFocusSteal = Row(AppLang.L("禁止后台窗口抢焦点", "Prevent focus stealing"), AppLang.L("允许抢焦点", "Allow steal"), SettingCatalog.PreventWindowFocusSteal);
+    private readonly SettingRow _noInkSuggest = Row(AppLang.L("关闭 Windows Ink 推广应用", "Disable Ink app suggestions"), AppLang.L("允许推广", "Allow promos"), SettingCatalog.DisableInkAppSuggestions);
     private readonly SettingRow _hideHomeGallery = Row(AppLang.L("隐藏资源管理器主页与图库", "Hide Explorer Home & Gallery"), AppLang.L("显示", "Shown"), SettingCatalog.HideExplorerHomeGallery);
     private readonly SettingRow _noSnapAssist = Row(AppLang.L("关闭窗口贴靠建议", "Disable Snap Assist"), AppLang.L("开启", "On"), SettingCatalog.DisableSnapAssist);
     private readonly SettingRow _darkMode = Row(AppLang.L("使用深色模式", "Dark mode"), AppLang.L("浅色", "Light"), SettingCatalog.EnableDarkMode);
@@ -376,9 +381,9 @@ internal sealed class MainForm : Form
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
         _noBrokenLnk, _sepProcess, _autoRestartShell, _hideSpotlight, _noDupDrives, _noRunMru,
         _mergeSvchost, _trkWks, _noLowDisk, _usbPowerOff, _autoReboot, _cliTelemetry,
-        _diagMinimal, _noSigninReopen, _noSilentApps, _hideHomeGallery, _noSnapAssist, _darkMode,
+        _diagMinimal, _noSigninReopen, _noSilentApps, _noStoreOpenWith, _noNewAppHighlight, _noInkSuggest, _hideHomeGallery, _noSnapAssist, _darkMode,
         _noBitlockerAuto, _noCompanionApps, _noUpdateAsap, _hideSettingsHome, _extraAi,
-        _nullSess, _anonEnum, _smbThrottle, _fastShutdown, _startupDelay, _menuDelay, _aeroShake,
+        _nullSess, _anonEnum, _smbThrottle, _fastShutdown, _startupDelay, _menuDelay, _lockTaskbar, _noFocusSteal, _aeroShake,
         _netLocWizard, _settingSync, _finishSetup, _xferDetails, _telemTasks,
         _batteryPct, _alwaysScroll, _numLock, _noMouseAccel, _noWpbt, _startClassic,
         _alwaysMenu, _hideMerge, _compColor, _infoTip, _statusBar, _noPersistFold, _navExpand, _noShareWiz,
@@ -497,7 +502,7 @@ internal sealed class MainForm : Form
             ]),
             (AppLang.L("任务栏", "Taskbar"), [
                 _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbInk,
-                _taskView, _taskbarClock,
+                _lockTaskbar, _taskView, _taskbarClock,
             ]),
         ]));
         _groups.Add((AppLang.L("远程与网络", "Remote & network"), [
@@ -525,7 +530,7 @@ internal sealed class MainForm : Form
         _groups.Add((AppLang.L("隐私与体验", "Privacy & UX"), [
             (AppLang.L("广告与推荐", "Ads & recommendations"), [
                 _tips, _toast, _recommended, _searchHighlights, _searchBoxSuggest, _adTracking, _settingsSuggest, _consumer,
-                _noSilentApps, _hideSettingsHome,
+                _noSilentApps, _noStoreOpenWith, _noNewAppHighlight, _noInkSuggest, _hideSettingsHome,
             ]),
             (AppLang.L("搜索与助手", "Search & assistants"), [
                 _cloudSearch, _webSearch, _searchHistory,
@@ -542,7 +547,7 @@ internal sealed class MainForm : Form
             ]),
             (AppLang.L("界面体验", "UI experience"), [
                 _animations, _transparency, _backgroundApps, _storageSense, _autoplay, _edgePre, _gameDvr,
-                _menuDelay, _aeroShake, _netLocWizard,
+                _menuDelay, _noFocusSteal, _aeroShake, _netLocWizard,
                 _batteryPct, _alwaysScroll, _numLock, _noMouseAccel, _noWpbt, _startClassic,
             ]),
             (AppLang.L("商店与预览", "Store & Insider"), [
@@ -3226,6 +3231,9 @@ internal sealed class MainForm : Form
         _diagMinimal.Checked = s.DiagnosticDataMinimal;
         _noSigninReopen.Checked = s.DisableSigninReopen;
         _noSilentApps.Checked = s.DisableSilentAppInstall;
+        _noStoreOpenWith.Checked = s.DisableStoreOpenWith;
+        _noNewAppHighlight.Checked = s.DisableStartNotifyNewApps;
+        _noInkSuggest.Checked = s.DisableInkAppSuggestions;
         _hideHomeGallery.Checked = s.HideExplorerHomeGallery;
         _noSnapAssist.Checked = s.DisableSnapAssist;
         _darkMode.Checked = s.EnableDarkMode;
@@ -3240,6 +3248,8 @@ internal sealed class MainForm : Form
         _fastShutdown.Checked = s.FasterShutdown;
         _startupDelay.Checked = s.DisableStartupAppDelay;
         _menuDelay.Checked = s.InstantMenuShow;
+        _lockTaskbar.Checked = s.LockTaskbar;
+        _noFocusSteal.Checked = s.PreventWindowFocusSteal;
         _aeroShake.Checked = s.DisableAeroShake;
         _netLocWizard.Checked = s.DisableNetworkLocationWizard;
         _settingSync.Checked = s.DisableSettingSync;
@@ -3423,6 +3433,9 @@ internal sealed class MainForm : Form
         DiagnosticDataMinimal = _diagMinimal.Checked,
         DisableSigninReopen = _noSigninReopen.Checked,
         DisableSilentAppInstall = _noSilentApps.Checked,
+        DisableStoreOpenWith = _noStoreOpenWith.Checked,
+        DisableStartNotifyNewApps = _noNewAppHighlight.Checked,
+        DisableInkAppSuggestions = _noInkSuggest.Checked,
         HideExplorerHomeGallery = _hideHomeGallery.Checked,
         DisableSnapAssist = _noSnapAssist.Checked,
         EnableDarkMode = _darkMode.Checked,
@@ -3437,6 +3450,8 @@ internal sealed class MainForm : Form
         FasterShutdown = _fastShutdown.Checked,
         DisableStartupAppDelay = _startupDelay.Checked,
         InstantMenuShow = _menuDelay.Checked,
+        LockTaskbar = _lockTaskbar.Checked,
+        PreventWindowFocusSteal = _noFocusSteal.Checked,
         DisableAeroShake = _aeroShake.Checked,
         DisableNetworkLocationWizard = _netLocWizard.Checked,
         DisableSettingSync = _settingSync.Checked,

@@ -1206,6 +1206,51 @@ internal static class SettingCatalog
         L("立即生效。", "Takes effect immediately."),
         W10De);
 
+    public static readonly SettingHelpInfo DisableStoreOpenWith = H(
+        L("禁止「打开方式」跳转到应用商店查找关联应用。", "Block Open with → Look for an app in the Store."),
+        L("Policies\\Explorer NoUseStoreOpenWith=1。", "Policies\\Explorer NoUseStoreOpenWith=1."),
+        L("未关联文件不再弹商店推荐，Server/无商店环境更干净。", "No Store suggestions for unassociated files; cleaner on Server / Store-less PCs."),
+        L("强烈推荐开启。", "Strongly recommended on."),
+        L("立即生效。", "Takes effect immediately."),
+        W10De,
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo DisableStartNotifyNewApps = H(
+        L("关闭开始菜单「突出显示新安装的程序」。", "Disable Start menu highlight for newly installed apps."),
+        L("Explorer\\Advanced Start_NotifyNewApps=0。", "Explorer\\Advanced Start_NotifyNewApps=0."),
+        L("新装软件不再在开始菜单里闪高亮。", "Newly installed apps no longer flash in Start."),
+        L("强烈推荐开启。", "Strongly recommended on."),
+        L("立即生效。", "Takes effect immediately."),
+        W10De,
+        recommend: RecommendLevel.Must);
+
+    public static readonly SettingHelpInfo LockTaskbar = H(
+        L("锁定任务栏，禁止拖动改变大小与位置。", "Lock the taskbar (no resize/move by dragging)."),
+        L("Explorer\\Advanced TaskbarSizeMove=0。", "Explorer\\Advanced TaskbarSizeMove=0."),
+        L("避免误拖任务栏；需要调整时再关闭本项。", "Prevents accidental taskbar drag; turn off when you need to adjust."),
+        L("桌面推荐开启；Win11 部分布局下效果有限。", "Recommended on desktops; limited effect on some Win11 layouts."),
+        L("重启资源管理器后生效。", "Takes effect after Explorer restart."),
+        W10De,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo PreventWindowFocusSteal = H(
+        L("禁止后台窗口抢夺前台焦点。", "Prevent background windows from stealing foreground focus."),
+        L("Control Panel\\Desktop ForegroundLockTimeout=0。", "Control Panel\\Desktop ForegroundLockTimeout=0."),
+        L("弹窗少打断当前操作，运维/开发桌面更稳。", "Fewer focus steals while you work; steadier for ops/dev desktops."),
+        L("推荐开启。", "Recommended on."),
+        L("重新登录后完全生效。", "Fully applies after re-login."),
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Strong);
+
+    public static readonly SettingHelpInfo DisableInkAppSuggestions = H(
+        L("关闭 Windows Ink 工作区推广/建议应用。", "Disable Windows Ink Workspace suggested/promoted apps."),
+        L("PenWorkspace PenWorkspaceAppSuggestionsEnabled=0。", "PenWorkspace PenWorkspaceAppSuggestionsEnabled=0."),
+        L("笔菜单不再塞商店推广；与隐藏 Ink 按钮互补。", "Pen menu stops pushing Store promos; complements hiding the Ink button."),
+        L("推荐开启。", "Recommended on."),
+        L("立即生效。", "Takes effect immediately."),
+        W10De,
+        recommend: RecommendLevel.Strong);
+
     public static readonly SettingHelpInfo HideExplorerHomeGallery = H(
         L("从资源管理器导航窗格去掉「主页」和「图库」。", "Remove Home and Gallery from Explorer navigation pane."),
         L("CLSID Home / Gallery 的 System.IsPinnedToNameSpaceTree=0。", "CLSID Home/Gallery System.IsPinnedToNameSpaceTree=0."),
