@@ -1304,14 +1304,15 @@ internal static class CommonSoftwareHelper
     /// <summary>静默跑 EXE 安装包：隐藏窗口、不重定向输出（避免 NSIS 卡死）。</summary>
     private static int RunWindowlessNoRedirect(string file, string args, int timeoutMs = 600_000)
     {
-        // CreateNoWindow 对部分 NSIS（如天翼）会导致 /S 一直挂起；用 Hidden 更稳。
+        // CreateNoWindow / Hidden 会把安装包 MessageBox 藏起来导致一直卡住；
+        // /S 本身不显示向导，用 Normal 即可，偶发提示框用户能看见。
         var psi = new ProcessStartInfo
         {
             FileName = file,
             Arguments = args,
             UseShellExecute = false,
             CreateNoWindow = false,
-            WindowStyle = ProcessWindowStyle.Hidden,
+            WindowStyle = ProcessWindowStyle.Normal,
             WorkingDirectory = Path.GetDirectoryName(file) is { Length: > 0 } d
                 ? d
                 : Environment.CurrentDirectory,
