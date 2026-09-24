@@ -30,9 +30,10 @@ internal static class NavMenuStyle
         var left = UiScale.S(12);
         if (withIcon)
             left += IconSize + UiScale.S(8);
-        // 右侧内边距 + ClearType/选中条余量
-        var right = UiScale.S(12) + Math.Max(UiScale.S(8), UiFit.LineHeight(font) / 3);
-        return left + maxText + right;
+        // 右侧内边距 + ClearType/选中条余量；预留纵向滚动条，避免项多时把字挤成「网络/专…」
+        var right = UiScale.S(16) + Math.Max(UiScale.S(10), UiFit.LineHeight(font) / 3)
+                    + SystemInformation.VerticalScrollBarWidth;
+        return Math.Max(UiScale.S(148), left + maxText + right);
     }
 
     public static Panel CreateSidebar(int? width = null) =>

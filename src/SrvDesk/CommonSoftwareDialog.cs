@@ -248,6 +248,7 @@ internal sealed class CommonSoftwareDialog : Form
     private Panel BuildSidebar()
     {
         var labels = CategoryDefs.Select(c => CategoryLabel(c.Key)).ToArray();
+        // 按最长分类名（如「微软运行库」「网络/专业」）量宽，并预留滚动条
         var sidebar = NavMenuStyle.CreateSidebar(labels, withIcon: false);
         NavMenuStyle.Apply(_categoryMenu);
         _categoryMenu.Items.AddRange(labels.Cast<object>().ToArray());
@@ -260,10 +261,11 @@ internal sealed class CommonSoftwareDialog : Form
     private void DrawCategoryItem(object? sender, DrawItemEventArgs e)
     {
         if (e.Index < 0 || sender is not ListBox box) return;
+        // 与 PreferredWidth 同一字体，避免窗体 Font 偏大导致测宽不准、文字被省略
         NavMenuStyle.DrawItem(
             e,
             box.Items[e.Index]?.ToString() ?? "",
-            Font,
+            box.Font ?? UiFit.UiFont,
             e.Index == _categoryHover);
     }
 
