@@ -528,10 +528,10 @@ internal static class CommonSoftwareCatalog
             ["阿里云盘"], "https://www.alipan.com/download", essential: false,
             offlineInstallArgs: "/S",
             installerLinkPattern: @"aDrive.*\.exe|aliyundrive.*\.exe|阿里云盘.*\.exe"),
-        // 天翼：listClients TELEPC 签名直链（无 .exe 后缀）；勿用 Cloud189/eCloud 作检测（会误命中 Office 插件）。
+        // 天翼：listClients TELEPC 签名直链；安装壳为自绘 UI（/S 无效），走 ui-auto 自动点安装。
         Item("tianyiyun", "天翼云盘", "网盘", "",
             ["天翼云盘"], "https://cloud.189.cn/web/static/download-client/index.html", essential: false,
-            offlineInstallArgs: "/S",
+            offlineInstallArgs: "ui-auto",
             preferOfflineInstall: true,
             detectExeNames: ["eCloud.exe"],
             installerLinkPattern: @"TELEPC|eCloud.*\.exe|Cloud189.*\.exe|天翼云盘.*\.exe",

@@ -1272,7 +1272,9 @@ internal static class CommonSoftwareHelper
         }
 
         // NSIS（天翼等）只认 /S；再试 /VERYSILENT 可能弹未知参数框，Hidden 下会一直卡住
-        if (string.Equals(primary.Trim(), "/S", StringComparison.OrdinalIgnoreCase))
+        // 天翼实际走 ui-auto（见 RunInstaller），此处不把 ui-auto 扩成 VERYSILENT
+        if (string.Equals(primary.Trim(), "/S", StringComparison.OrdinalIgnoreCase)
+            || primary.IndexOf("ui-auto", StringComparison.OrdinalIgnoreCase) >= 0)
             return list;
 
         if (list.All(a => a.IndexOf("VERYSILENT", StringComparison.OrdinalIgnoreCase) < 0))
@@ -1296,8 +1298,14 @@ internal static class CommonSoftwareHelper
     {
         if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
-        // NSIS/Inno 等安装包：切勿重定向 stdout/stderr，否则易管道堵死卡到超时，
-        // 随后误走「打开官网」；天翼云盘即因此超时（退出码 -2）。
+
+        // 天翼：自绘壳忽略 /S，必须 UI 自动勾选协议并点安装
+        var fileName = Path.GetFileName(dest) ?? "";
+        if (fileName.StartsWith("tianyiyun", StringComparison.OrdinalIgnoreCase)
+            || args.IndexOf("ui-auto", StringComparison.OrdinalIgnoreCase) >= 0)
+            return TianyiSetupUiDriver.Run(dest, timeoutMs: 600_000);
+
+        // NSIS/Inno 等：切勿重定向 stdout/stderr，否则易管道堵死
         return RunWindowlessNoRedirect(dest, args, timeoutMs: 600_000);
     }
 
