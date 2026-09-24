@@ -118,8 +118,22 @@ internal static class EdgeManageHelper
                 "--uninstall --msedgewebview --system-level --verbose-logging --force-uninstall",
             EdgeComponentKind.EdgeCore =>
                 "--uninstall --system-level --verbose-logging --force-uninstall",
+            // 与「应用和功能」卸载字符串一致：必须带 --msedge --channel=stable
             _ =>
-                "--uninstall --system-level --verbose-logging --force-uninstall",
+                "--uninstall --msedge --channel=stable --system-level --verbose-logging --force-uninstall",
+        };
+
+        var appRoot = kind switch
+        {
+            EdgeComponentKind.WebView2 => Path.Combine(Pf86, "Microsoft", "EdgeWebView", "Application"),
+            EdgeComponentKind.EdgeCore => Path.Combine(Pf86, "Microsoft", "EdgeCore", "Application"),
+            _ => Path.Combine(Pf86, "Microsoft", "Edge", "Application"),
+        };
+        var clientGuid = kind switch
+        {
+            EdgeComponentKind.WebView2 => GuidWebView2,
+            EdgeComponentKind.EdgeCore => GuidEdgeCore,
+            _ => GuidEdge,
         };
 
         ApplyLog.Write("卸载 " + item.Title + "：" + item.SetupExe + " " + args);
@@ -128,7 +142,24 @@ internal static class EdgeManageHelper
         if (code is not (0 or 19))
             throw new InvalidOperationException(item.Title + " 卸载退出码 " + code + "。");
 
-        return item.Title + " 卸载命令已执行。";
+        // 卸载进程退出后注册表/目录可能稍晚才清干净
+        Thread.Sleep(1_500);
+        TryCleanupOrphanMarkers(kind, appRoot, clientGuid);
+
+        var after = Query();
+        var still = kind switch
+        {
+            EdgeComponentKind.Edge => after.Edge,
+            EdgeComponentKind.WebView2 => after.WebView2,
+            _ => after.EdgeCore,
+        };
+        if (still.Installed)
+        {
+            ApplyLog.Write(item.Title + " 卸载命令已返回成功，但探测仍显示已安装（版本=" + still.Version + "）");
+            return item.Title + " 卸载命令已执行，但系统仍检测到残留。可点刷新；若仍显示已安装，请重启后再查，或检查是否被系统组件保护。";
+        }
+
+        return item.Title + " 已卸载。";
     }
 
     public static string UninstallAll()
@@ -350,15 +381,88 @@ internal static class EdgeManageHelper
         string[] uninstallNames)
     {
         var st = new EdgeComponentStatus { Kind = kind, Title = title };
-        var version = ReadClientVersion(clientGuid) ?? ReadVersionFromFolder(appRoot) ?? ReadUninstallVersion(uninstallNames);
-        var setup = FindSetupExe(appRoot);
+        var mainExe = MainExeName(kind);
+        var hasMainExe = HasMainExecutable(appRoot, mainExe);
+        var setup = hasMainExe ? FindSetupExe(appRoot) : null;
+        var folderVer = hasMainExe ? ReadVersionFromFolder(appRoot) : null;
+        var clientVer = ReadClientVersion(clientGuid);
+        var uninstallVer = ReadUninstallVersion(kind, uninstallNames);
 
-        st.Version = version ?? "";
+        // 以主程序是否存在为准；注册表残留 / 空目录 / 其它 Edge* 产品名不再算「已安装」
+        st.Installed = hasMainExe;
         st.SetupExe = setup;
-        st.Installed = !string.IsNullOrWhiteSpace(version) || setup is not null || Directory.Exists(appRoot);
-        if (st.Installed && st.Version.Length == 0)
-            st.Version = "已安装（版本未知）";
+        if (st.Installed)
+        {
+            st.Version = FirstNonEmpty(folderVer, clientVer, uninstallVer) ?? "已安装（版本未知）";
+        }
+        else
+        {
+            st.Version = "";
+            st.SetupExe = null;
+        }
+
         return st;
+    }
+
+    private static string MainExeName(EdgeComponentKind kind) => kind switch
+    {
+        EdgeComponentKind.WebView2 => "msedgewebview2.exe",
+        EdgeComponentKind.EdgeCore => "msedge.exe",
+        _ => "msedge.exe",
+    };
+
+    private static bool HasMainExecutable(string appRoot, string exeName)
+    {
+        try
+        {
+            if (!Directory.Exists(appRoot)) return false;
+            if (File.Exists(Path.Combine(appRoot, exeName))) return true;
+            foreach (var dir in Directory.GetDirectories(appRoot))
+            {
+                var name = Path.GetFileName(dir);
+                if (name is null || name.Length == 0 || !char.IsDigit(name[0])) continue;
+                if (File.Exists(Path.Combine(dir, exeName))) return true;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var v in values)
+        {
+            if (!string.IsNullOrWhiteSpace(v)) return v!.Trim();
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 卸载成功但 EdgeUpdate Clients / 空目录残留时，清掉误导探测的标记。
+    /// 仅在主程序已不存在时执行。
+    /// </summary>
+    private static void TryCleanupOrphanMarkers(EdgeComponentKind kind, string appRoot, string clientGuid)
+    {
+        if (HasMainExecutable(appRoot, MainExeName(kind)))
+            return;
+
+        try
+        {
+            foreach (var view in new[] { RegistryView.Registry32, RegistryView.Registry64 })
+            {
+                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
+                using var k = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\EdgeUpdate\Clients\" + clientGuid, writable: true);
+                if (k is null) continue;
+                var pv = k.GetValue("pv") as string;
+                if (string.IsNullOrWhiteSpace(pv) || pv == "0.0.0.0") continue;
+                ApplyLog.RegistryDelete("HKLM", @"SOFTWARE\Microsoft\EdgeUpdate\Clients\" + clientGuid, "pv", pv);
+                k.SetValue("pv", "0.0.0.0", RegistryValueKind.String);
+            }
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("清理 EdgeUpdate Clients 残留失败：" + ex.Message);
+        }
     }
 
     private static string? ReadClientVersion(string guid)
@@ -396,7 +500,7 @@ internal static class EdgeManageHelper
         }
     }
 
-    private static string? ReadUninstallVersion(string[] names)
+    private static string? ReadUninstallVersion(EdgeComponentKind kind, string[] names)
     {
         foreach (var (hive, sub) in UninstallRoots())
         {
@@ -409,8 +513,7 @@ internal static class EdgeManageHelper
                 {
                     using var k = root.OpenSubKey(name);
                     var display = k?.GetValue("DisplayName") as string ?? "";
-                    if (!names.Any(n => display.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0))
-                        continue;
+                    if (!IsUninstallNameMatch(kind, display, names)) continue;
                     var ver = k?.GetValue("DisplayVersion") as string;
                     if (!string.IsNullOrWhiteSpace(ver)) return ver;
                 }
@@ -418,6 +521,44 @@ internal static class EdgeManageHelper
             catch { /* ignore */ }
         }
         return null;
+    }
+
+    /// <summary>
+    /// 「Microsoft Edge」不能用 IndexOf：否则会误命中 WebView2 / Edge Update / Edge Core。
+    /// </summary>
+    private static bool IsUninstallNameMatch(EdgeComponentKind kind, string displayName, string[] names)
+    {
+        var display = (displayName ?? "").Trim();
+        if (display.Length == 0) return false;
+
+        return kind switch
+        {
+            EdgeComponentKind.WebView2 =>
+                display.IndexOf("WebView2", StringComparison.OrdinalIgnoreCase) >= 0,
+            EdgeComponentKind.EdgeCore =>
+                display.IndexOf("Edge Core", StringComparison.OrdinalIgnoreCase) >= 0
+                || display.Equals("Microsoft Edge Core", StringComparison.OrdinalIgnoreCase),
+            _ => IsExactEdgeBrowserDisplayName(display),
+        };
+    }
+
+    private static bool IsExactEdgeBrowserDisplayName(string display)
+    {
+        // 接受：Microsoft Edge / Microsoft Edge Beta / Dev / Canary
+        // 拒绝：WebView2、Update、Core、更新等
+        if (display.IndexOf("WebView", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+        if (display.IndexOf("Update", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+        if (display.IndexOf("Core", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+        if (display.Equals("Microsoft Edge", StringComparison.OrdinalIgnoreCase)) return true;
+        if (display.StartsWith("Microsoft Edge ", StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = display.Substring("Microsoft Edge ".Length).Trim();
+            return rest.Equals("Beta", StringComparison.OrdinalIgnoreCase)
+                   || rest.Equals("Dev", StringComparison.OrdinalIgnoreCase)
+                   || rest.Equals("Canary", StringComparison.OrdinalIgnoreCase)
+                   || rest.Length == 0;
+        }
+        return false;
     }
 
     private static string? FindSetupExe(string appRoot)
