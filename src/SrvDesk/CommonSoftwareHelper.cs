@@ -1293,15 +1293,17 @@ internal static class CommonSoftwareHelper
         return RunWindowlessNoRedirect(dest, args, timeoutMs: 600_000);
     }
 
-    /// <summary>静默跑 EXE 安装包：无窗口、不重定向输出。</summary>
+    /// <summary>静默跑 EXE 安装包：隐藏窗口、不重定向输出（避免 NSIS 卡死）。</summary>
     private static int RunWindowlessNoRedirect(string file, string args, int timeoutMs = 600_000)
     {
+        // CreateNoWindow 对部分 NSIS（如天翼）会导致 /S 一直挂起；用 Hidden 更稳。
         var psi = new ProcessStartInfo
         {
             FileName = file,
             Arguments = args,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = false,
+            WindowStyle = ProcessWindowStyle.Hidden,
             WorkingDirectory = Path.GetDirectoryName(file) is { Length: > 0 } d
                 ? d
                 : Environment.CurrentDirectory,
