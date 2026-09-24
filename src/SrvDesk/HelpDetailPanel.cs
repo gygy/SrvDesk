@@ -324,8 +324,8 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _sections.AutoSize = false;
         _sections.Controls.Add(new RecommendStarsRow
         {
-            Level = row.OptimizeLevel,
-            TrailingText = RecommendLevelUi.Title(row.OptimizeLevel) + " · " + row.AdviceTag,
+            Level = row.AdviceLevel,
+            TrailingText = RecommendLevelUi.Title(row.AdviceLevel) + " · " + row.AdviceTag,
             Tag = "stars",
         });
 

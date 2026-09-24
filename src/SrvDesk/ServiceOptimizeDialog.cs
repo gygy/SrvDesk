@@ -6,7 +6,6 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private readonly ListView _list = new();
     private readonly TextBox _search = new();
     private readonly ComboBox _filter = new();
-    private readonly ComboBox _category = new();
     private readonly Label _count = new();
     private readonly Label _detail = new();
     private readonly CheckBox _showMissingBox = new();
@@ -15,11 +14,9 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private ServiceOsTarget _currentOs;
     private bool _warmLoadSkip;
     private bool _showMissing;
-    private readonly HashSet<string> _collapsedCategories = new(StringComparer.Ordinal);
-    private readonly Font _headerFont = UiFit.UiFontBold();
     private readonly ToolTip _listTip = new();
 
-    /// <summary>-1=默认（推荐值+已禁用靠后）；否则为列索引。</summary>
+    /// <summary>-1=默认（按推荐强度，已禁用靠后）；否则为列索引。</summary>
     private int _sortColumn = -1;
     private bool _sortAscending;
 
@@ -32,12 +29,6 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private const int ColStars = 5;
     private const int ColNote = 6;
     private const int ColSvc = 7;
-
-    private sealed class CategoryHeader
-    {
-        public string Category { get; }
-        public CategoryHeader(string category) => Category = category;
-    }
 
     /// <summary>选中行变化时通知主窗口，刷新右侧配置脚本栏。</summary>
     public Action<ServiceOptimizeRow?>? SelectionChanged { get; set; }
@@ -97,9 +88,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         _list.Columns.Add(AppLang.L("说明", "Note"), UiScale.S(180));
         _list.Columns.Add(AppLang.L("服务名", "Service"), UiScale.S(110));
         _list.SelectedIndexChanged += (_, _) => UpdateDetail();
-        _list.MouseClick += OnListMouseClick;
         _list.MouseDoubleClick += OnListMouseDoubleClick;
-        _list.KeyDown += OnListKeyDown;
         _list.ColumnClick += OnColumnClick;
         _list.DrawColumnHeader += (_, e) => e.DrawDefault = true;
         _list.DrawItem += OnDrawItem;
@@ -329,12 +318,6 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         _filter.SelectedIndex = 0;
         _filter.SelectedIndexChanged += (_, _) => ApplyFilter();
 
-        var catCap = Cap(AppLang.L("分类", "Category"));
-        _category.DropDownStyle = ComboBoxStyle.DropDownList;
-        _category.Items.Add(AppLang.L("全部分类", "All categories"));
-        _category.SelectedIndex = 0;
-        _category.SelectedIndexChanged += (_, _) => ApplyFilter();
-
         var searchCap = Cap(AppLang.L("搜索", "Search"));
         _search.BorderStyle = BorderStyle.FixedSingle;
         _search.TextChanged += (_, _) => ApplyFilter();
@@ -356,12 +339,12 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         _detail.AutoEllipsis = true;
         _detail.ForeColor = AppTheme.TextMute;
         _detail.TextAlign = ContentAlignment.MiddleLeft;
-        _detail.Text = AppLang.L("可备份/还原；按分类折叠；推荐值高优先。批量修改前会自动备份。",
-            "Backup/restore; collapsible categories; high score first. Auto-backup before batch changes.");
+        _detail.Text = AppLang.L("可备份/还原；按推荐强度排序（强烈推荐在前）。批量修改前会自动备份。",
+            "Backup/restore; sorted by recommendation (strongest first). Auto-backup before batch changes.");
 
 
         bar.Controls.AddRange([
-            _count, filterCap, _filter, catCap, _category, searchCap, _search, _showMissingBox, _detail,
+            _count, filterCap, _filter, searchCap, _search, _showMissingBox, _detail,
         ]);
 
         var buttons = new[]
@@ -420,13 +403,11 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
             var y2Label = row1 + UiScale.S(8);
             filterCap.Location = new Point(0, y2Label);
             _filter.SetBounds(filterCap.Right + UiScale.S(4), y2, UiScale.S(110), UiScale.S(26));
-            catCap.Location = new Point(_filter.Right + UiScale.S(10), y2Label);
-            _category.SetBounds(catCap.Right + UiScale.S(4), y2, UiScale.S(120), UiScale.S(26));
-            searchCap.Location = new Point(_category.Right + UiScale.S(10), y2Label);
+            searchCap.Location = new Point(_filter.Right + UiScale.S(10), y2Label);
 
             var missW = _showMissingBox.PreferredSize.Width;
             _showMissingBox.Location = new Point(
-                Math.Max(_category.Right + UiScale.S(8), bar.ClientSize.Width - missW - pad),
+                Math.Max(_filter.Right + UiScale.S(8), bar.ClientSize.Width - missW - pad),
                 y2Label);
             var searchW = Math.Max(UiScale.S(90), _showMissingBox.Left - searchCap.Right - UiScale.S(12));
             _search.SetBounds(searchCap.Right + UiScale.S(4), y2, searchW, UiScale.S(26));
@@ -464,7 +445,6 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         {
             _currentOs = ServiceOptimizeHelper.DetectOsTarget();
             _items = ServiceOptimizeHelper.LoadApplicable(installedOnly: !_showMissing);
-            RebuildCategoryCombo();
             ApplyFilter();
         }
         catch (Exception ex)
@@ -474,43 +454,16 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         }
     }
 
-    private void RebuildCategoryCombo()
-    {
-        var selected = _category.SelectedItem as string;
-        var cats = _items.Select(x => x.Entry.Category).Distinct().OrderBy(x => x).ToList();
-        _category.BeginUpdate();
-        _category.Items.Clear();
-        _category.Items.Add(AppLang.L("全部分类", "All categories"));
-        foreach (var c in cats)
-            _category.Items.Add(c);
-        var idx = 0;
-        if (!string.IsNullOrEmpty(selected))
-        {
-            for (var i = 0; i < _category.Items.Count; i++)
-            {
-                if (Equals(_category.Items[i], selected))
-                {
-                    idx = i;
-                    break;
-                }
-            }
-        }
-        _category.SelectedIndex = idx;
-        _category.EndUpdate();
-    }
-
     private void ApplyFilter()
     {
         var q = _search.Text.Trim();
         var filterKey = _filter.SelectedIndex >= 0 && _filter.SelectedIndex < FilterDefs.Length
             ? FilterDefs[_filter.SelectedIndex].Key
             : "all";
-        var cat = _category.SelectedIndex <= 0 ? null : _category.SelectedItem as string;
 
         var filtered = new List<ServiceOptimizeRow>();
         foreach (var item in _items)
         {
-            if (cat is not null && item.Entry.Category != cat) continue;
             if (filterKey == "opt" && !item.CanOptimize) continue;
             if (filterKey == "disable" && item.AdviceTag is not ("应禁用" or "Disable")) continue;
             if (filterKey == "keep"
@@ -538,49 +491,11 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         _list.Items.Clear();
         var shown = 0;
         var optimizable = 0;
-
-        // 按当前排序结果分组，组序跟随首条出现位置
-        var groups = filtered
-            .GroupBy(x => x.Entry.Category)
-            .OrderBy(g => filtered.FindIndex(x => ReferenceEquals(x, g.First())));
-
-        foreach (var group in groups)
+        foreach (var item in filtered)
         {
-            var catName = group.Key;
-            var list = group.ToList(); // filtered 已按 CompareVisible 排好，组内保持相对序
-            var optInCat = list.Count(x => x.CanOptimize);
-            optimizable += optInCat;
-            var collapsed = _collapsedCategories.Contains(catName);
-            var marker = collapsed ? "▶" : "▼";
-            var headerText = AppLang.Lf("{0} {1}（{2}）", "{0} {1} ({2})",
-                marker, catName, list.Count);
-            if (optInCat > 0)
-                headerText += AppLang.Lf(" · 可优化 {0}", " · {0} to optimize", optInCat);
-
-            var header = new ListViewItem(headerText)
-            {
-                Tag = new CategoryHeader(catName),
-                BackColor = AppTheme.PrimaryLight,
-                ForeColor = AppTheme.TextHeader,
-                Font = _headerFont,
-                UseItemStyleForSubItems = false,
-            };
-            while (header.SubItems.Count < _list.Columns.Count)
-                header.SubItems.Add("");
-            for (var i = 0; i < header.SubItems.Count; i++)
-            {
-                header.SubItems[i].BackColor = AppTheme.PrimaryLight;
-                header.SubItems[i].ForeColor = AppTheme.TextHeader;
-            }
-            _list.Items.Add(header);
-
-            if (collapsed) continue;
-
-            foreach (var item in list)
-            {
-                _list.Items.Add(MakeRow(item));
-                shown++;
-            }
+            _list.Items.Add(MakeRow(item));
+            shown++;
+            if (item.CanOptimize) optimizable++;
         }
 
         _list.EndUpdate();
@@ -657,21 +572,16 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         var back = selected
             ? Color.FromArgb(210, 228, 245)
             : e.Item.BackColor;
-        if (e.Item.Tag is CategoryHeader)
-            back = AppTheme.PrimaryLight;
 
         using (var brush = new SolidBrush(back))
             e.Graphics.FillRectangle(brush, e.Bounds);
 
         if (e.ColumnIndex == ColStars && e.Item.Tag is ServiceOptimizeRow row)
         {
-            // 裁剪在本列内绘制，避免画出列宽被邻列背景盖住
-            RecommendLevelUi.DrawStarsInBounds(e.Graphics, row.OptimizeLevel, e.Bounds, paddingLeft: 4);
+            // 裁剪在本列内绘制，避免画出列宽被邻列背景盖住；按处置建议强度显示星级
+            RecommendLevelUi.DrawStarsInBounds(e.Graphics, row.AdviceLevel, e.Bounds, paddingLeft: 4);
             return;
         }
-
-        if (e.ColumnIndex == ColStars && e.Item.Tag is CategoryHeader)
-            return;
 
         var text = e.SubItem?.Text ?? "";
         if (text.Length == 0) return;
@@ -680,13 +590,13 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         if (fore.IsEmpty) fore = e.Item.ForeColor;
         if (fore.IsEmpty) fore = AppTheme.TextMain;
 
-        var font = e.Item.Tag is CategoryHeader ? _headerFont : _list.Font;
+        var font = _list.Font;
         var state = e.Graphics.Save();
         try
         {
             e.Graphics.SetClip(e.Bounds);
             var rect = new Rectangle(e.Bounds.X + 2, e.Bounds.Y, e.Bounds.Width - 4, e.Bounds.Height);
-            // 显示名：自动换行；分类头与其它列仍单行省略
+            // 显示名：自动换行；其它列仍单行省略
             var flags = e.ColumnIndex == ColName && e.Item.Tag is ServiceOptimizeRow
                 ? TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix
                   | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
@@ -735,68 +645,9 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         return row;
     }
 
-    private void OnListMouseClick(object? sender, MouseEventArgs e)
-    {
-        if (e.Button != MouseButtons.Left) return;
-        var hit = _list.HitTest(e.Location);
-        if (hit.Item?.Tag is CategoryHeader header)
-            ToggleCategory(header.Category);
-    }
-
     private void OnListMouseDoubleClick(object? sender, MouseEventArgs e)
     {
-        var hit = _list.HitTest(e.Location);
-        if (hit.Item?.Tag is CategoryHeader header)
-        {
-            ToggleCategory(header.Category);
-            return;
-        }
         ApplyRecommendSelected();
-    }
-
-    private void OnListKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.KeyCode != Keys.Left && e.KeyCode != Keys.Right && e.KeyCode != Keys.Space)
-            return;
-        if (_list.SelectedItems.Count != 1) return;
-        if (_list.SelectedItems[0].Tag is not CategoryHeader header) return;
-        if (e.KeyCode == Keys.Left)
-        {
-            _collapsedCategories.Add(header.Category);
-            ApplyFilter();
-            e.Handled = true;
-        }
-        else if (e.KeyCode == Keys.Right)
-        {
-            _collapsedCategories.Remove(header.Category);
-            ApplyFilter();
-            e.Handled = true;
-        }
-        else
-        {
-            ToggleCategory(header.Category);
-            e.Handled = true;
-        }
-    }
-
-    private void ToggleCategory(string category)
-    {
-        if (!_collapsedCategories.Add(category))
-            _collapsedCategories.Remove(category);
-        ApplyFilter();
-    }
-
-    private void CollapseAllCategories()
-    {
-        foreach (var c in _items.Select(x => x.Entry.Category).Distinct())
-            _collapsedCategories.Add(c);
-        ApplyFilter();
-    }
-
-    private void ExpandAllCategories()
-    {
-        _collapsedCategories.Clear();
-        ApplyFilter();
     }
 
     private ContextMenuStrip BuildContextMenu()
@@ -811,9 +662,6 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(AppLang.L("备份当前服务状态", "Backup current services"), null, (_, _) => BackupCurrentState());
         menu.Items.Add(AppLang.L("从备份还原…", "Restore from backup…"), null, (_, _) => RestoreFromBackup());
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(AppLang.L("折叠全部分类", "Collapse all"), null, (_, _) => CollapseAllCategories());
-        menu.Items.Add(AppLang.L("展开全部分类", "Expand all"), null, (_, _) => ExpandAllCategories());
         menu.Opening += (_, _) =>
         {
             var rows = SelectedRows().ToList();
@@ -852,7 +700,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
 
         _detail.Text = AppLang.Lf("{0}  ·  {1}  ·  {2}",
             "{0}  ·  {1}  ·  {2}",
-            RecommendLevelUi.Title(item.OptimizeLevel),
+            RecommendLevelUi.Title(item.AdviceLevel),
             item.AdviceTag,
             item.AdviceNote)
             + "\r\n"
