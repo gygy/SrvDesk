@@ -20,7 +20,7 @@ internal sealed class MainForm : Form
         [AppLang.L("自动安装", "Auto install"), AppLang.L("仅通知下载", "Notify only")], optimizedIndex: 1);
     private readonly SettingRow _sysMain = Row(AppLang.L("禁用 SysMain 超级预读", "Disable SysMain"), AppLang.L("自动", "Automatic"), SettingCatalog.DisableSysMain);
     private readonly SettingRow _visualPerf = Choice(AppLang.L("视觉效果", "Visual effects"), AppLang.L("系统自选", "Let Windows decide"), SettingCatalog.VisualBestPerf,
-        [AppLang.L("系统自选", "Let Windows decide"), AppLang.L("最佳性能", "Best performance")], optimizedIndex: 1);
+        [AppLang.L("系统自选", "Let Windows decide"), AppLang.L("省资源可读", "Lean & readable")], optimizedIndex: 1);
     private readonly SettingRow _powerThrottle = Row(AppLang.L("关闭 CPU 电源节流", "Disable CPU power throttling"), AppLang.L("开启", "On"), SettingCatalog.PowerThrottlingOff);
     private readonly SettingRow _boostMode = Row(AppLang.L("显示处理器性能提升模式", "Show processor boost mode"), AppLang.L("隐藏", "Hidden"), SettingCatalog.ShowProcessorBoostMode);
     private readonly SettingRow _hibernate = Row(AppLang.L("关闭休眠释放磁盘空间", "Disable hibernation"), AppLang.L("开启", "On"), SettingCatalog.DisableHibernate);

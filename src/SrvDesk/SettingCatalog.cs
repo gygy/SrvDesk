@@ -108,11 +108,11 @@ internal static class SettingCatalog
         recommend: RecommendLevel.Suggested);
 
     public static readonly SettingHelpInfo VisualBestPerf = H(
-        L("关闭窗口动画、阴影等视觉效果，设为最佳性能。", "Turn off window animations/shadows and set visual effects for best performance."),
-        L("VisualFXSetting 设为性能优先，减少 DWM 合成开销。", "Set VisualFXSetting to performance to reduce DWM composition cost."),
-        L("远程桌面与低配环境更流畅，降低 GPU/CPU 占用。", "Smoother on RDP and low-end hardware; less GPU/CPU use."),
-        L("若在意美观可关闭；远程办公或老硬件推荐开启。", "Turn off if you prefer looks; recommended for RDP or older hardware."),
-        L("注销或重启资源管理器后完全生效。", "Fully applies after logoff or Explorer restart."),
+        L("自定义视觉效果：开字体平滑/缩略图/拖动内容/阴影，关动画。", "Custom visual effects: font smoothing/thumbnails/drag contents/shadows on; animations off."),
+        L("VisualFXSetting=3；FontSmoothing、IconsOnly、DragFullWindows、ListviewShadow 等。", "VisualFXSetting=3; FontSmoothing, IconsOnly, DragFullWindows, ListviewShadow, etc."),
+        L("Server/VM 更省资源，界面仍清晰可读。", "Leaner on Server/VMs while staying readable."),
+        L("若要系统完全自选外观，改回「系统自选」。", "Choose “Let Windows decide” for stock appearance."),
+        L("写入后会重启资源管理器；个别项注销后完全生效。", "Restarts Explorer after write; some items fully apply after logoff."),
         SettingScope.DesktopExperience);
 
     public static readonly SettingHelpInfo PowerThrottlingOff = H(

@@ -77,8 +77,24 @@ internal static class SettingRecipeCatalog
 
         Add(SettingCatalog.DisableSysMain, ActionScript.Service("SysMain", enableMeansStart: false));
 
-        Add(SettingCatalog.VisualBestPerf, ActionScript.DwordToggle(true,
-            @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2, 3));
+        Add(SettingCatalog.VisualBestPerf, ActionScript.Mixed(
+            ActionScript.WrapReg(
+                ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"),
+                    ActionScript.Dword("VisualFXSetting", 3)) +
+                ActionScript.Block(ActionScript.HkCu(@"Control Panel\Desktop"),
+                    ActionScript.Sz("FontSmoothing", "2") +
+                    ActionScript.Dword("FontSmoothingType", 2) +
+                    ActionScript.Sz("DragFullWindows", "1") +
+                    ActionScript.Sz("MinAnimate", "0")) +
+                ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"),
+                    ActionScript.Dword("IconsOnly", 0) +
+                    ActionScript.Dword("ListviewShadow", 1) +
+                    ActionScript.Dword("TaskbarAnimations", 0) +
+                    ActionScript.Dword("ListviewAlphaSelect", 0) +
+                    ActionScript.Dword("DisablePreviewDesktop", 1))),
+            ActionScript.WrapReg(
+                ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"),
+                    ActionScript.Dword("VisualFXSetting", 0)))));
 
         Add(SettingCatalog.PowerThrottlingOff, ActionScript.DwordToggle(false,
             @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1, 0));

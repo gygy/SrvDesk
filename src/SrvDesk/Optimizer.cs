@@ -339,7 +339,7 @@ internal static class Optimizer
             DisableDeliveryOpt = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 100),
             WuNotifyOnly = DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", 2),
             DisableSysMain = ServiceStartEquals("SysMain", 4),
-            VisualBestPerf = DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 2),
+            VisualBestPerf = IsVisualEffectsBalanced(),
             PowerThrottlingOff = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1),
             ShowProcessorBoostMode = DwordEquals(Hive.HkLm, ProcessorBoostModeKey, "Attributes", 2),
             DisableHibernate = DwordEquals(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled", 0),
@@ -538,8 +538,7 @@ internal static class Optimizer
         Do(Ch(x => x.WuNotifyOnly), "更新通知", () =>
             SetDword(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", s.WuNotifyOnly ? 2 : 4));
         Do(Ch(x => x.DisableSysMain), "SysMain", () => SetService("SysMain", !s.DisableSysMain, disableWhenOff: true));
-        Do(Ch(x => x.VisualBestPerf), "视觉效果", () =>
-            SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", s.VisualBestPerf ? 2 : 3));
+        Do(Ch(x => x.VisualBestPerf), "视觉效果", () => ApplyVisualEffectsBalanced(s.VisualBestPerf));
         Do(Ch(x => x.PowerThrottlingOff), "电源节流", () =>
             SetDword(Hive.HkLm, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", s.PowerThrottlingOff ? 1 : 0));
         Do(Ch(x => x.ShowProcessorBoostMode), "处理器提升模式可见", () =>
@@ -821,13 +820,84 @@ internal static class Optimizer
             && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", 0);
     }
 
-    private static bool AreTipsDisabled() =>
-        DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338388Enabled", 0)
-        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", 0)
-        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", 0);
+    /// <summary>
+    /// Server「省资源可读」视觉效果：自定义；开字体平滑/缩略图/拖动内容/阴影；关动画。
+    /// </summary>
+    private static bool IsVisualEffectsBalanced()
+    {
+        if (!DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", 3))
+            return false;
+        var font = GetValue(Hive.HkCu, @"Control Panel\Desktop", "FontSmoothing") as string;
+        if (font != "2") return false;
+        var drag = GetValue(Hive.HkCu, @"Control Panel\Desktop", "DragFullWindows") as string;
+        if (drag != "1") return false;
+        // IconsOnly=1 表示只用图标；0 或缺省 = 缩略图
+        if (DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "IconsOnly", 1))
+            return false;
+        if (!DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ListviewShadow", 1))
+            return false;
+        var minAnimate = GetValue(Hive.HkCu, @"Control Panel\Desktop", "MinAnimate") as string;
+        if (minAnimate != "0") return false;
+        return true;
+    }
 
-    private static void SetShortcutArrow(bool show) =>
-        Win11DesktopTweaks.SetShortcutArrowHidden(!show);
+    private static void ApplyVisualEffectsBalanced(bool enable)
+    {
+        const string desktop = @"Control Panel\Desktop";
+        const string adv = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
+        const string vfx = @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects";
+        const uint spif = 0x01 | 0x02; // SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+
+        if (!enable)
+        {
+            // 系统自选
+            SetDword(Hive.HkCu, vfx, "VisualFXSetting", 0);
+            ApplyLog.Write("视觉效果：已改回「让 Windows 选择最佳外观设置」");
+            return;
+        }
+
+        // 自定义
+        SetDword(Hive.HkCu, vfx, "VisualFXSetting", 3);
+
+        // 1) 平滑屏幕字体边缘（ClearType）
+        SetString(Hive.HkCu, desktop, "FontSmoothing", "2");
+        SetDword(Hive.HkCu, desktop, "FontSmoothingType", 2);
+        SystemParametersInfo(0x004B /* SPI_SETFONTSMOOTHING */, 1, IntPtr.Zero, spif);
+        SystemParametersInfo(0x200B /* SPI_SETFONTSMOOTHINGTYPE */, 0, new IntPtr(2), spif);
+
+        // 2) 显示缩略图，而不是图标
+        SetDword(Hive.HkCu, adv, "IconsOnly", 0);
+
+        // 3) 拖动时显示窗口内容
+        SetString(Hive.HkCu, desktop, "DragFullWindows", "1");
+        SystemParametersInfo(0x0025 /* SPI_SETDRAGFULLWINDOWS */, 1, IntPtr.Zero, spif);
+
+        // 4) 桌面图标标签阴影
+        SetDword(Hive.HkCu, adv, "ListviewShadow", 1);
+
+        // 5) 窗口下阴影
+        SystemParametersInfoBool(0x1025 /* SPI_SETDROPSHADOW */, true, spif);
+
+        // 其余动画/特效关掉（省资源）
+        SetString(Hive.HkCu, desktop, "MinAnimate", "0");
+        SetDword(Hive.HkCu, adv, "TaskbarAnimations", 0);
+        SetDword(Hive.HkCu, adv, "ListviewAlphaSelect", 0);
+        SystemParametersInfo(0x1003 /* SPI_SETMENUANIMATION */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1013 /* SPI_SETMENUFADE */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1005 /* SPI_SETCOMBOBOXANIMATION */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1007 /* SPI_SETLISTBOXSMOOTHSCROLLING */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1015 /* SPI_SETSELECTIONFADE */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1017 /* SPI_SETTOOLTIPANIMATION */, 0, IntPtr.Zero, spif);
+        SystemParametersInfo(0x1019 /* SPI_SETTOOLTIPFADE */, 0, IntPtr.Zero, spif);
+        SystemParametersInfoBool(0x101B /* SPI_SETCURSORSHADOW */, false, spif);
+
+        // 关闭「启用速览」
+        SetDword(Hive.HkCu, adv, "DisablePreviewDesktop", 1);
+
+        ApplyLog.Write("视觉效果：自定义（字体平滑+缩略图+拖动内容+阴影；动画关闭）");
+        try { DesktopQuickActions.RestartExplorer(); }
+        catch (Exception ex) { ApplyLog.Write("重启资源管理器：" + ex.Message); }
+    }
 
     private static void SetAnimations(bool enable)
     {
@@ -835,6 +905,26 @@ internal static class Optimizer
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", enable ? 1 : 0);
         SetDword(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ListviewAlphaSelect", enable ? 1 : 0);
     }
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref int pvParam, uint fWinIni);
+
+    private static void SystemParametersInfoBool(uint action, bool value, uint spif)
+    {
+        var v = value ? 1 : 0;
+        SystemParametersInfo(action, 0, ref v, spif);
+    }
+
+    private static bool AreTipsDisabled() =>
+        DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338388Enabled", 0)
+        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338389Enabled", 0)
+        && DwordEquals(Hive.HkCu, @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SoftLandingEnabled", 0);
+
+    private static void SetShortcutArrow(bool show) =>
+        Win11DesktopTweaks.SetShortcutArrowHidden(!show);
 
     private static bool IsTaskbarClockEnhanced()
     {
