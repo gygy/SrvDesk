@@ -1194,6 +1194,10 @@ internal static class CommonSoftwareHelper
         Report(onProgress, "正在静默安装离线包…", 65);
         ApplyLog.Write("离线安装：" + dest + " " + args);
 
+        // 天翼等：先结束客户端，避免安装程序弹出「请先关闭」并在后台卡死
+        if (item.Id.Equals("tianyiyun", StringComparison.OrdinalIgnoreCase))
+            SuppressPostInstallLaunch(item);
+
         var code = -1;
         foreach (var one in attempts)
         {
@@ -1266,6 +1270,10 @@ internal static class CommonSoftwareHelper
                 list.Add("/quiet /norestart");
             return list;
         }
+
+        // NSIS（天翼等）只认 /S；再试 /VERYSILENT 可能弹未知参数框，Hidden 下会一直卡住
+        if (string.Equals(primary.Trim(), "/S", StringComparison.OrdinalIgnoreCase))
+            return list;
 
         if (list.All(a => a.IndexOf("VERYSILENT", StringComparison.OrdinalIgnoreCase) < 0))
             list.Add("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART");
