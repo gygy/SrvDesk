@@ -1007,6 +1007,69 @@ internal static class CommonSoftwareHelper
             + Path.GetFileNameWithoutExtension(exeName) + "。";
     }
 
+    /// <summary>
+    /// 从 zip（如 WGestures / winget 嵌套 MSI）解出首个 .exe/.msi 安装包到下载目录。
+    /// </summary>
+    private static string? TryExtractInstallerFromZip(string zipPath, string itemId)
+    {
+        try
+        {
+            using var zip = ZipFile.OpenRead(zipPath);
+            var entries = zip.Entries
+                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                .Where(e =>
+                {
+                    var n = e.Name;
+                    if (n.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    if (!n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    // 仅把带 setup/install 的 exe 当安装包，避免误跑便携主程序
+                    return n.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0
+                           || n.IndexOf("install", StringComparison.OrdinalIgnoreCase) >= 0
+                           || n.StartsWith("Install ", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderByDescending(e => e.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(e =>
+                {
+                    var n = e.Name;
+                    if (n.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0) return 3;
+                    if (n.IndexOf("install", StringComparison.OrdinalIgnoreCase) >= 0) return 2;
+                    if (n.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0) return 1;
+                    return 0;
+                })
+                .ThenByDescending(e => e.Length)
+                .ToList();
+
+            if (entries.Count == 0) return null;
+
+            // 优先 x64 MSI/EXE
+            var pick = entries.FirstOrDefault(e =>
+                           e.Name.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0
+                           || e.FullName.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0)
+                       ?? entries[0];
+
+            var safeName = Path.GetFileName(pick.Name);
+            if (string.IsNullOrWhiteSpace(safeName)) return null;
+            var dest = Path.Combine(DownloadDir, itemId + "-nested-" + safeName);
+            Directory.CreateDirectory(DownloadDir);
+            pick.ExtractToFile(dest, overwrite: true);
+            if (!File.Exists(dest) || new FileInfo(dest).Length < 50_000)
+            {
+                try { File.Delete(dest); } catch { /* ignore */ }
+                return null;
+            }
+
+            ApplyLog.Write("已从压缩包解出安装程序：" + dest);
+            return dest;
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("解压安装包失败：" + ex.Message);
+            return null;
+        }
+    }
+
     private static string ResolvePortableExeName(CommonSoftwareItem item)
     {
         if (item.DetectExeNames.Length > 0)
@@ -1185,7 +1248,22 @@ internal static class CommonSoftwareHelper
         DownloadInstaller(url, dest, minBytes: 80_000, onProgress, percentBase: 5, percentSpan: 55);
 
         if (dest.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            return InstallPortableFromZip(item, dest, onProgress);
+        {
+            if (item.OfflinePortable)
+                return InstallPortableFromZip(item, dest, onProgress);
+
+            var nested = TryExtractInstallerFromZip(dest, item.Id);
+            if (string.IsNullOrWhiteSpace(nested))
+            {
+                // 无安装包时再按便携处理（如 SpaceSniffer）
+                var portable = InstallPortableFromZip(item, dest, onProgress);
+                if (portable != null) return portable;
+                ApplyLog.Write("压缩包内未找到安装程序：" + dest);
+                return null;
+            }
+
+            dest = nested!;
+        }
 
         var args = string.IsNullOrWhiteSpace(item.OfflineInstallArgs)
             ? OfficialInstallerResolver.GuessSilentArgs(url)
