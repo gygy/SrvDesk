@@ -903,9 +903,9 @@ internal static class SettingCatalog
         L("隐藏任务栏 Copilot。", "Hide Copilot on the taskbar."), L("TaskbarCo=0。", "TaskbarCo=0."), L("减少入口干扰。", "Fewer distracting entry points."), L("Win11 有效。", "Effective on Win11."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo HideWindowsInkWorkspace = H(
         L("隐藏任务栏「Windows Ink 工作区 / 笔菜单」按钮。", "Hide the Windows Ink Workspace / Pen menu button on the taskbar."),
-        L("PenWorkspace\\PenWorkspaceButtonDesiredVisibility=0，并重启资源管理器。", "PenWorkspace\\PenWorkspaceButtonDesiredVisibility=0, then restart Explorer."),
+        L("策略 AllowWindowsInkWorkspace=0 + PenWorkspaceButtonDesiredVisibility=0，并重启资源管理器。", "Policy AllowWindowsInkWorkspace=0 + PenWorkspaceButtonDesiredVisibility=0, then restart Explorer."),
         L("无手写笔时去掉多余托盘入口，任务栏更干净。", "Removes a tray entry you rarely need without a pen; cleaner taskbar."),
-        L("强烈推荐隐藏；使用手写笔时再关闭本项。无笔的 Server 上「显示」也可能仍无图标（系统限制）。", "Strongly recommended hidden; turn off if you use a pen. On Server without a pen, Show may still show nothing (OS limit)."),
+        L("强烈推荐隐藏。若曾用任务栏右键打开，请在本工具勾选隐藏后点「应用到系统」（会对照真实注册表强制同步）。", "Strongly recommended hidden. If you turned it on via taskbar right-click, check Hide here and Apply (syncs against live registry)."),
         L("切换后自动重启资源管理器生效。", "Takes effect after Explorer restarts automatically."),
         W10De,
         uiPlace: L("任务栏右键 → 显示 Windows Ink 工作区按钮", "Taskbar right-click → Show Windows Ink Workspace button"),

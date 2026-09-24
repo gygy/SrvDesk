@@ -660,8 +660,15 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn", 0, 1));
         Add(SettingCatalog.HideTaskbarCopilot, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarCo", 0, 1));
-        Add(SettingCatalog.HideWindowsInkWorkspace, ActionScript.DwordToggle(true,
-            @"Software\Microsoft\Windows\CurrentVersion\PenWorkspace", "PenWorkspaceButtonDesiredVisibility", 0, 1));
+        Add(SettingCatalog.HideWindowsInkWorkspace, ActionScript.Reg(
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace"),
+                ActionScript.Dword("AllowWindowsInkWorkspace", 0)) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\PenWorkspace"),
+                ActionScript.Dword("PenWorkspaceButtonDesiredVisibility", 0)),
+            ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace"),
+                ActionScript.DeleteValue("AllowWindowsInkWorkspace")) +
+            ActionScript.Block(ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\PenWorkspace"),
+                ActionScript.Dword("PenWorkspaceButtonDesiredVisibility", 1))));
         Add(SettingCatalog.DisableCloudSearch, ActionScript.DwordToggle(false,
             @"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCloudSearch", 0, 1));
         Add(SettingCatalog.DisableWebsiteLangList, ActionScript.DwordToggle(true,

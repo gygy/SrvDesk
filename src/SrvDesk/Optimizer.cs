@@ -740,6 +740,7 @@ internal static class Optimizer
             || b.HideTaskbarChat != s.HideTaskbarChat
             || b.HideTaskbarCopilot != s.HideTaskbarCopilot
             || b.HideWindowsInkWorkspace != s.HideWindowsInkWorkspace
+            || s.HideWindowsInkWorkspace != EasySettingsTweaks.IsWindowsInkWorkspaceHidden()
             || b.NotepadWordWrap != s.NotepadWordWrap
             || b.NotepadStatusBar != s.NotepadStatusBar
             || b.DisableCloudSearch != s.DisableCloudSearch

@@ -71,11 +71,22 @@ internal static class EasySettingsTweaks
             SetDword(Hive.HkCu, ExplorerAdv, "TaskbarCo", want);
             if (cur != want) restartExplorer = true;
         }
-        if (Take("HideWindowsInkWorkspace", x => x.HideWindowsInkWorkspace))
+
+        // Ink：对照「当前注册表」而非 UI 基线。任务栏右键可单独改显示，导致界面仍勾「隐藏」却跳过写入。
         {
-            var before = IsWindowsInkWorkspaceHidden();
-            SetWindowsInkWorkspaceHidden(s.HideWindowsInkWorkspace, restartExplorer: false);
-            if (before != s.HideWindowsInkWorkspace) restartExplorer = true;
+            var liveHidden = IsWindowsInkWorkspaceHidden();
+            if (s.HideWindowsInkWorkspace != liveHidden)
+            {
+                ApplyLog.DebugField("HideWindowsInkWorkspace", liveHidden, s.HideWindowsInkWorkspace);
+                SetWindowsInkWorkspaceHidden(s.HideWindowsInkWorkspace, restartExplorer: false);
+                restartExplorer = true;
+            }
+            else if (baseline is not null && baseline.HideWindowsInkWorkspace != s.HideWindowsInkWorkspace)
+            {
+                // UI 相对基线有动且已与注册表一致：再写一遍并刷新托盘，避免壳层缓存
+                SetWindowsInkWorkspaceHidden(s.HideWindowsInkWorkspace, restartExplorer: false);
+                restartExplorer = true;
+            }
         }
         if (Take("NotepadWordWrap", x => x.NotepadWordWrap))
             SetDword(Hive.HkCu, NotepadKey, "fWrap", s.NotepadWordWrap ? 1 : 0);
@@ -90,19 +101,31 @@ internal static class EasySettingsTweaks
     /// <summary>隐藏/显示任务栏 Windows Ink 工作区（笔菜单）按钮；默认重启资源管理器使托盘立即刷新。</summary>
     public static void SetWindowsInkWorkspaceHidden(bool hide, bool restartExplorer = true)
     {
-        // 去掉策略覆盖，否则 DesiredVisibility 写了也不反映到托盘/设置页
-        try { DeleteValue(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace", "AllowWindowsInkWorkspace"); }
-        catch { /* 无权限或键不存在时忽略 */ }
+        const string inkPolicy = @"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace";
+        if (hide)
+        {
+            // 策略关闭整项，避免仅改 DesiredVisibility 时托盘仍被壳层拉起
+            SetDword(Hive.HkLm, inkPolicy, "AllowWindowsInkWorkspace", 0);
+            SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
+        }
+        else
+        {
+            DeleteValue(Hive.HkLm, inkPolicy, "AllowWindowsInkWorkspace");
+            SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 1);
+        }
 
-        SetDword(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", hide ? 0 : 1);
         DesktopQuickActions.NotifyShellChanged();
         if (restartExplorer)
             DesktopQuickActions.RestartExplorer();
     }
 
-    public static bool IsWindowsInkWorkspaceHidden() =>
-        // 缺省视为未强制隐藏（与 Win10/Server「显示」菜单未勾选但键未建时一致，便于顾问推荐写入 0）
-        DwordEquals(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
+    public static bool IsWindowsInkWorkspaceHidden()
+    {
+        // 策略关闭视为已隐藏；否则看托盘 DesiredVisibility（0=隐藏，缺省/其它=未隐藏）
+        if (DwordEquals(Hive.HkLm, @"SOFTWARE\Policies\Microsoft\WindowsInkWorkspace", "AllowWindowsInkWorkspace", 0))
+            return true;
+        return DwordEquals(Hive.HkCu, PenWorkspace, "PenWorkspaceButtonDesiredVisibility", 0);
+    }
 
     public static void ApplyPrivacyBits(Optimizer.State s, Optimizer.State? baseline = null)
     {
