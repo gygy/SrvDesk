@@ -1206,6 +1206,7 @@ internal static class CommonSoftwareHelper
         InvalidateStatusCache();
         if (code == 0)
         {
+            SuppressPostInstallLaunch(item);
             Report(onProgress, "安装完成", 100);
             return "";
         }
@@ -1214,12 +1215,32 @@ internal static class CommonSoftwareHelper
         var status = Query(item);
         if (status.Installed)
         {
+            SuppressPostInstallLaunch(item);
             Report(onProgress, "安装完成（需按提示重启时请自行安排）", 100);
             return code != 0 ? "安装已完成；退出码 " + code + "（如提示重启请自行安排）。" : "";
         }
 
         ApplyLog.Write("离线安装退出码：" + code);
         return null;
+    }
+
+    /// <summary>部分安装包静默后仍会拉起客户端并弹浏览器（如天翼登录页），安装阶段先关掉。</summary>
+    private static void SuppressPostInstallLaunch(CommonSoftwareItem item)
+    {
+        if (!item.Id.Equals("tianyiyun", StringComparison.OrdinalIgnoreCase))
+            return;
+        try
+        {
+            Thread.Sleep(1_200);
+            foreach (var name in new[] { "eCloud", "ecloud", "Cloud189" })
+            {
+                foreach (var p in Process.GetProcessesByName(name))
+                {
+                    try { p.Kill(); } catch { /* ignore */ }
+                }
+            }
+        }
+        catch { /* ignore */ }
     }
 
     private static List<string> BuildSilentArgAttempts(string dest, string primary)
@@ -1267,7 +1288,39 @@ internal static class CommonSoftwareHelper
     {
         if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
-        return Run(dest, args, timeoutMs: 600_000);
+        // NSIS/Inno 等安装包：切勿重定向 stdout/stderr，否则易管道堵死卡到超时，
+        // 随后误走「打开官网」；天翼云盘即因此超时（退出码 -2）。
+        return RunWindowlessNoRedirect(dest, args, timeoutMs: 600_000);
+    }
+
+    /// <summary>静默跑 EXE 安装包：无窗口、不重定向输出。</summary>
+    private static int RunWindowlessNoRedirect(string file, string args, int timeoutMs = 600_000)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = file,
+            Arguments = args,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(file) is { Length: > 0 } d
+                ? d
+                : Environment.CurrentDirectory,
+        };
+        using var p = Process.Start(psi)
+            ?? throw new InvalidOperationException("无法启动 " + file);
+        if (!p.WaitForExit(Math.Max(5_000, timeoutMs)))
+        {
+            try
+            {
+                p.Kill();
+                p.WaitForExit(5_000);
+            }
+            catch { /* ignore */ }
+            ApplyLog.Write("进程超时已终止：" + file + "（" + timeoutMs + "ms）");
+            return -2;
+        }
+
+        return p.ExitCode;
     }
 
     /// <summary>
@@ -1948,9 +2001,21 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
 
     public static void OpenDownloadPage(CommonSoftwareItem item)
     {
+        // 天翼/海康等：必须自动下载安装，禁止回退开浏览器
+        if (PreferOfficialApiNow(item)
+            || item.Id.Equals("tianyiyun", StringComparison.OrdinalIgnoreCase)
+            || (item.DownloadUrl ?? "").IndexOf("cloud.189.cn", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            ApplyLog.Write("跳过打开下载页（应自动安装）：" + item.Title);
+            return;
+        }
+
+        var url = (item.DownloadUrl ?? "").Trim();
+        if (url.Length == 0) return;
+
         Process.Start(new ProcessStartInfo
         {
-            FileName = item.DownloadUrl,
+            FileName = url,
             UseShellExecute = true,
         });
         ApplyLog.Write("打开下载页：" + item.Title);
