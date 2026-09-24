@@ -183,6 +183,9 @@ internal sealed class CommonSoftwareDialog : Form
             {
                 _selectedCategoryKey = CategoryDefs[_categoryMenu.SelectedIndex].Key;
                 BuildList();
+                // 切分类时立刻用缓存刷状态，避免新行一直停在「检测中…」
+                foreach (var row in _rows.Values)
+                    row.RefreshStatus();
             }
         };
     }
@@ -469,6 +472,17 @@ internal sealed class CommonSoftwareDialog : Form
         _wingetHint.Text = "正在检测软件状态…";
         var gen = ++_statusLoadGen;
         var done = false;
+
+        try
+        {
+            if (forceRefresh)
+                CommonSoftwareHelper.InvalidateStatusCache();
+            // 立刻给出可点的状态，后台再校正，避免一直「检测中…」
+            CommonSoftwareHelper.EnsureStatusCacheSkeleton(CommonSoftwareCatalog.All);
+            RefreshAll();
+        }
+        catch { /* ignore */ }
+
         System.Threading.Tasks.Task.Run(() =>
         {
             try
@@ -491,8 +505,8 @@ internal sealed class CommonSoftwareDialog : Form
             }
         });
 
-        // 看门狗：最长约 12s 必须结束「检测中」，避免个别探测挂死 UI
-        System.Threading.Tasks.Task.Delay(12_000).ContinueWith(_ =>
+        // 看门狗：最长约 6s 再刷一次（防后台挂死）
+        System.Threading.Tasks.Task.Delay(6_000).ContinueWith(_ =>
         {
             if (done || gen != _statusLoadGen) return;
             CommonSoftwareHelper.EnsureStatusCacheSkeleton(CommonSoftwareCatalog.All);
@@ -511,8 +525,8 @@ internal sealed class CommonSoftwareDialog : Form
 
     private void RefreshAll()
     {
-        // 不每次重置探测：重复 Probe winget 很慢；安装/修复后再 Reset
-        var wingetOk = CommonSoftwareHelper.IsWingetAvailable();
+        // UI 线程禁止慢探测 winget
+        var wingetOk = CommonSoftwareHelper.IsWingetAvailableCached();
         _installWingetBtn.Visible = !wingetOk;
         _wingetHint.Text = wingetOk
             ? "已检测到 winget · 可静默安装"

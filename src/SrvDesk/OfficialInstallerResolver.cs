@@ -86,6 +86,20 @@ internal static class OfficialInstallerResolver
             }
         }
 
+        var wingetId = (item.WingetId ?? "").Trim();
+        if (wingetId.Length > 0 && wingetId.IndexOf('.') > 0 && !LooksLikeStoreProductId(wingetId))
+        {
+            try
+            {
+                var fromWingetPkgs = TryResolveFromWingetPkgs(wingetId, item.InstallerLinkPattern);
+                if (fromWingetPkgs.Length > 0) return fromWingetPkgs;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("winget-pkgs 解析失败 " + wingetId + "：" + ex.Message);
+            }
+        }
+
         var repo = (item.GitHubRepo ?? "").Trim();
         if (repo.Length == 0)
             repo = TryParseGithubRepo(item.DownloadUrl);
@@ -113,6 +127,9 @@ internal static class OfficialInstallerResolver
 
         return "";
     }
+
+    private static bool LooksLikeStoreProductId(string id) =>
+        id.Length >= 12 && id.IndexOf('.') < 0;
 
     /// <summary>同一地址会持续指向最新包（版本号不写在 URL 里）。</summary>
     public static bool IsFreshLatestUrl(string? url)
@@ -215,6 +232,112 @@ internal static class OfficialInstallerResolver
         if (Uri.TryCreate(apiUrl, UriKind.Absolute, out var apiUri))
             host = apiUri.Host;
         return PickBest(urls, pattern, host);
+    }
+
+    /// <summary>
+    /// 从 microsoft/winget-pkgs 清单解析最新安装包直链（QQ 等 SPA 官网页解析不到时用）。
+    /// PackageIdentifier 如 Tencent.QQ.NT → manifests/t/Tencent/QQ/NT
+    /// </summary>
+    private static string TryResolveFromWingetPkgs(string wingetId, string? pattern)
+    {
+        var dir = WingetPkgsManifestDir(wingetId);
+        if (dir.Length == 0) return "";
+
+        var api = "https://api.github.com/repos/microsoft/winget-pkgs/contents/" + dir;
+        var listing = FetchText(api, accept: "application/vnd.github+json");
+        if (string.IsNullOrWhiteSpace(listing)) return "";
+
+        var versions = new List<string>();
+        foreach (Match m in Regex.Matches(listing, "\"name\"\\s*:\\s*\"([^\"]+)\""))
+        {
+            var name = m.Groups[1].Value;
+            if (name.Length == 0) continue;
+            // 只要版本目录（数字开头），跳过子包名如 NT
+            if (name[0] < '0' || name[0] > '9') continue;
+            versions.Add(name);
+        }
+
+        if (versions.Count == 0) return "";
+        versions.Sort(CompareWingetVersionDesc);
+        var latest = versions[0];
+
+        var versionApi = api + "/" + Uri.EscapeDataString(latest);
+        var filesJson = FetchText(versionApi, accept: "application/vnd.github+json");
+        if (string.IsNullOrWhiteSpace(filesJson)) return "";
+
+        string? installerYamlUrl = null;
+        foreach (Match m in Regex.Matches(
+                     filesJson,
+                     "\"name\"\\s*:\\s*\"([^\"]+\\.installer\\.yaml)\"[\\s\\S]{0,400}?\"download_url\"\\s*:\\s*\"([^\"]+)\""))
+        {
+            installerYamlUrl = UnescapeJson(m.Groups[2].Value);
+            break;
+        }
+
+        if (string.IsNullOrWhiteSpace(installerYamlUrl))
+        {
+            // 宽松回退：任意 download_url 指向 installer.yaml
+            foreach (Match m in Regex.Matches(filesJson, "\"download_url\"\\s*:\\s*\"(https:[^\"]+installer\\.yaml)\""))
+            {
+                installerYamlUrl = UnescapeJson(m.Groups[1].Value);
+                break;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(installerYamlUrl)) return "";
+        var yaml = FetchText(installerYamlUrl!);
+        if (string.IsNullOrWhiteSpace(yaml)) return "";
+
+        var urls = new List<string>();
+        foreach (Match m in Regex.Matches(yaml, @"InstallerUrl:\s*(\S+)"))
+        {
+            var u = m.Groups[1].Value.Trim().Trim('"', '\'');
+            if (u.Length > 0) urls.Add(u);
+        }
+
+        var prefer = (pattern ?? "").Trim();
+        if (prefer.Length == 0)
+            prefer = @"x64|win64|amd64";
+        var picked = PickBest(urls, prefer, wingetId);
+        if (picked.Length > 0)
+        {
+            ApplyLog.Write("winget-pkgs 最新包：" + wingetId + " @ " + latest + " → " + picked);
+            return picked;
+        }
+
+        // 没有匹配时：优先带 x64 的
+        foreach (var u in urls)
+        {
+            if (u.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0
+                || u.IndexOf("win64", StringComparison.OrdinalIgnoreCase) >= 0)
+                return u;
+        }
+
+        return urls.Count > 0 ? urls[0] : "";
+    }
+
+    private static string WingetPkgsManifestDir(string wingetId)
+    {
+        var parts = wingetId.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return "";
+        var publisher = parts[0];
+        if (publisher.Length == 0) return "";
+        var rest = string.Join("/", parts, 1, parts.Length - 1);
+        return "manifests/" + char.ToLowerInvariant(publisher[0]) + "/" + publisher + "/" + rest;
+    }
+
+    private static int CompareWingetVersionDesc(string a, string b)
+    {
+        if (Version.TryParse(NormalizeVersion(a), out var va) && Version.TryParse(NormalizeVersion(b), out var vb))
+            return vb.CompareTo(va);
+        return string.Compare(b, a, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeVersion(string raw)
+    {
+        var parts = raw.Split('.');
+        if (parts.Length <= 4) return raw;
+        return string.Join(".", parts[0], parts[1], parts[2], parts[3]);
     }
 
     private static string TryExtractByClientType(string json, string? pattern)

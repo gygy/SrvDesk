@@ -70,6 +70,26 @@ internal static class CommonSoftwareHelper
         return _wingetPath is not null;
     }
 
+    /// <summary>仅看已缓存结果，绝不在 UI 线程触发 where/PowerShell 慢探测。</summary>
+    public static bool IsWingetAvailableCached()
+    {
+        if (_wingetPath is not null) return true;
+        if (!_wingetDiscoveryDone)
+        {
+            // 只跑快路径，避免打开窗口时卡在「检测中」
+            foreach (var candidate in DiscoverWingetCandidatesFast())
+            {
+                if (!ProbeWinget(candidate)) continue;
+                _wingetPath = candidate;
+                _wingetDiscoveryDone = true;
+                ApplyLog.Write("检测到 winget：" + candidate);
+                return true;
+            }
+        }
+
+        return _wingetPath is not null;
+    }
+
     public static void ResetWingetDiscovery()
     {
         _wingetPath = null;
@@ -495,23 +515,23 @@ internal static class CommonSoftwareHelper
     /// <summary>一次扫描卸载注册表，缓存全部常用软件安装状态（打开窗口时后台调用）。</summary>
     public static void PrefetchStatuses(IReadOnlyList<CommonSoftwareItem> items)
     {
+        // 先放空骨架，UI 立刻可从「检测中」落到「未安装」，避免慢探测拖死界面
         var map = new Dictionary<string, CommonSoftwareStatus>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in items)
+            map[item.Id] = new CommonSoftwareStatus();
+        lock (StatusCacheLock)
+            _statusCache = map;
+
         foreach (var item in items)
         {
             if (item.IsWingetBootstrap)
             {
-                // 轻量探测即可；完整探测留给 IsWingetAvailable，避免打开窗口卡死
                 map[item.Id] = QueryWingetStatus();
                 continue;
             }
 
             if (item.IsScoopBootstrap)
-            {
                 map[item.Id] = QueryScoopStatus();
-                continue;
-            }
-
-            map[item.Id] = new CommonSoftwareStatus();
         }
 
         // 倒排：DisplayName → 命中项，避免「每个卸载项 × 全部软件」双重循环过慢
@@ -553,7 +573,7 @@ internal static class CommonSoftwareHelper
         foreach (var item in pending.ToArray())
         {
             if (string.IsNullOrWhiteSpace(item.AppxPackageName)) continue;
-            var appx = QueryAppxStatus(item.AppxPackageName);
+            var appx = QueryAppxStatus(item.AppxPackageName, allowPowerShell: false);
             if (!appx.Installed) continue;
             map[item.Id] = appx;
             pending.Remove(item);
@@ -561,7 +581,8 @@ internal static class CommonSoftwareHelper
 
         foreach (var item in pending)
         {
-            var byExe = QueryByExeNames(item);
+            // Prefetch 禁用 where.exe：条目多时会卡数十秒，PATH 直查足够
+            var byExe = QueryByExeNames(item, allowWhere: false);
             if (byExe.Installed) map[item.Id] = byExe;
         }
 
@@ -633,15 +654,19 @@ internal static class CommonSoftwareHelper
         return new CommonSoftwareStatus();
     }
 
-    private static CommonSoftwareStatus QueryAppxStatus(string packageName)
+    private static CommonSoftwareStatus QueryAppxStatus(string packageName, bool allowPowerShell = true)
     {
+        var fromReg = QueryAppxStatusFromRegistry(packageName);
+        if (fromReg.Installed) return fromReg;
+        if (!allowPowerShell) return new CommonSoftwareStatus();
+
         try
         {
             var output = RunCapture("powershell.exe",
                 "-NoProfile -Command \"Get-AppxPackage -Name '" +
                 packageName.Replace("'", "''") +
                 "*' | Select-Object -First 1 -ExpandProperty Version\"",
-                timeoutMs: 12_000);
+                timeoutMs: 6_000);
             output = output.Trim();
             if (output.Length == 0) return new CommonSoftwareStatus();
             return new CommonSoftwareStatus { Installed = true, Version = output };
@@ -650,6 +675,37 @@ internal static class CommonSoftwareHelper
         {
             return new CommonSoftwareStatus();
         }
+    }
+
+    private static CommonSoftwareStatus QueryAppxStatusFromRegistry(string packageName)
+    {
+        if (string.IsNullOrWhiteSpace(packageName)) return new CommonSoftwareStatus();
+        var needle = packageName.Trim();
+        try
+        {
+            foreach (var root in new[]
+                     {
+                         @"SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Applications",
+                         @"SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications",
+                     })
+            {
+                using var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                    .OpenSubKey(root);
+                if (key is null) continue;
+                foreach (var name in key.GetSubKeyNames())
+                {
+                    if (name.IndexOf(needle, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    // 包名形如 Publisher.Name_version_arch__publisherid
+                    var ver = "";
+                    var parts = name.Split('_');
+                    if (parts.Length >= 2) ver = parts[1];
+                    return new CommonSoftwareStatus { Installed = true, Version = ver };
+                }
+            }
+        }
+        catch { /* ignore */ }
+
+        return new CommonSoftwareStatus();
     }
 
     public static string Install(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
@@ -759,7 +815,27 @@ internal static class CommonSoftwareHelper
         catch (Exception ex)
         {
             ApplyLog.Write("官网自动安装失败：" + ex.Message);
-            Report(onProgress, "官网自动安装失败，打开下载页…", 90);
+            Report(onProgress, "官网自动安装失败…", 90);
+        }
+
+        // 经典版 CDN 早已下线：改装当前 QQ NT，避免打开官网白跑一趟
+        if (item.Id.Equals("qq-classic", StringComparison.OrdinalIgnoreCase))
+        {
+            var nt = CommonSoftwareCatalog.Find("qq-nt");
+            if (nt is not null)
+            {
+                Report(onProgress, "经典版安装包已下线，改装 QQ 全新体验版…", 72);
+                ApplyLog.Write("QQ 经典版不可用，改装 QQ NT");
+                return Install(nt, onProgress);
+            }
+        }
+
+        // QQ：禁止打开官网（SPA/直链会变），给出可重试提示
+        if (item.Id.StartsWith("qq-", StringComparison.OrdinalIgnoreCase)
+            || (item.WingetId ?? "").StartsWith("Tencent.QQ", StringComparison.OrdinalIgnoreCase))
+        {
+            Report(onProgress, "自动安装未成功", 100);
+            return "腾讯 QQ 自动安装未成功（网络或安装包校验失败）。请稍后重试，或检查 winget 源。未打开官网。";
         }
 
         Report(onProgress, "打开官方下载页…", 95);
@@ -904,7 +980,7 @@ internal static class CommonSoftwareHelper
         return item.Id + ".exe";
     }
 
-    private static CommonSoftwareStatus QueryByExeNames(CommonSoftwareItem item)
+    private static CommonSoftwareStatus QueryByExeNames(CommonSoftwareItem item, bool allowWhere = true)
     {
         if (item.DetectExeNames.Length == 0)
             return new CommonSoftwareStatus();
@@ -939,9 +1015,11 @@ internal static class CommonSoftwareHelper
                 };
             }
 
+            if (!allowWhere) continue;
+
             try
             {
-                var whereHit = RunCapture("where.exe", name, timeoutMs: 5_000)
+                var whereHit = RunCapture("where.exe", name, timeoutMs: 2_000)
                     .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(l => l.Trim().Trim('"'))
                     .FirstOrDefault(File.Exists);
@@ -1827,39 +1905,85 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
 
     private static CommonSoftwareStatus QueryWingetStatus()
     {
-        if (!IsWingetAvailable())
+        // 状态扫描只用快路径，避免 where/PowerShell 把「检测中」拖死
+        if (IsWingetAvailableCached())
         {
-            // 包已装但别名坏了：再尝试直接定位 WindowsApps 内 winget.exe
-            var direct = TryGetAppxWingetPath();
-            if (!string.IsNullOrWhiteSpace(direct) && ProbeWinget(direct!))
+            var version = CachedWingetVersion();
+            return new CommonSoftwareStatus
             {
-                _wingetPath = direct;
-                _wingetDiscoveryDone = true;
-                var ver = CachedWingetVersion();
-                return new CommonSoftwareStatus
-                {
-                    Installed = true,
-                    Version = ver.Length > 0 ? "v" + ver : "已就绪",
-                };
-            }
-
-            if (IsAppInstallerPackagePresent())
-            {
-                return new CommonSoftwareStatus
-                {
-                    Installed = false,
-                    Version = "需修复 winget（点「修复安装」）",
-                };
-            }
-            return new CommonSoftwareStatus();
+                Installed = true,
+                Version = version.Length > 0 ? "v" + version : "已就绪",
+            };
         }
 
-        var version = CachedWingetVersion();
-        return new CommonSoftwareStatus
+        var direct = TryGetAppxWingetPathFast();
+        if (!string.IsNullOrWhiteSpace(direct) && ProbeWinget(direct!))
         {
-            Installed = true,
-            Version = version.Length > 0 ? "v" + version : "已就绪",
-        };
+            _wingetPath = direct;
+            _wingetDiscoveryDone = true;
+            var ver = CachedWingetVersion();
+            return new CommonSoftwareStatus
+            {
+                Installed = true,
+                Version = ver.Length > 0 ? "v" + ver : "已就绪",
+            };
+        }
+
+        if (IsAppInstallerPackagePresentFast())
+        {
+            return new CommonSoftwareStatus
+            {
+                Installed = false,
+                Version = "需修复 winget（点「修复安装」）",
+            };
+        }
+
+        return new CommonSoftwareStatus();
+    }
+
+    /// <summary>仅注册表，不跑 PowerShell。</summary>
+    private static string? TryGetAppxWingetPathFast()
+    {
+        try
+        {
+            using var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                .OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Applications");
+            if (key is null) return null;
+            foreach (var name in key.GetSubKeyNames())
+            {
+                if (name.IndexOf("Microsoft.DesktopAppInstaller_", StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+                using var sub = key.OpenSubKey(name);
+                var loc = sub?.GetValue("Path") as string
+                    ?? sub?.GetValue("InstallLocation") as string;
+                if (string.IsNullOrWhiteSpace(loc)) continue;
+                var path = Path.Combine(loc!, "winget.exe");
+                if (File.Exists(path)) return path;
+            }
+        }
+        catch { /* ignore */ }
+
+        return null;
+    }
+
+    private static bool IsAppInstallerPackagePresentFast()
+    {
+        try
+        {
+            using var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                .OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Applications");
+            if (key is null) return false;
+            foreach (var name in key.GetSubKeyNames())
+            {
+                if (name.IndexOf("Microsoft.DesktopAppInstaller_", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+
+        return File.Exists(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Microsoft", "WindowsApps", "winget.exe"));
     }
 
     private static CommonSoftwareStatus QueryScoopStatus()
