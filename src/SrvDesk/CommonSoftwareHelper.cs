@@ -838,6 +838,15 @@ internal static class CommonSoftwareHelper
             return "腾讯 QQ 自动安装未成功（网络或安装包校验失败）。请稍后重试，或检查 winget 源。未打开官网。";
         }
 
+        // iCloud：旁加载失败时勿打开官网/旧 EXE；提示把离线包放入目录即可重试
+        if (item.Id.Equals("icloud", StringComparison.OrdinalIgnoreCase))
+        {
+            var dir = Path.Combine(DownloadDir, "icloud-appx");
+            Report(onProgress, "自动安装未成功", 100);
+            return "iCloud 离线 Appx 安装未成功。可将 VCLibs.140 / WindowsAppRuntime / AppleInc.iCloud_*.Appx 放入：\r\n"
+                + dir + "\r\n后重试「一键安装」。未打开官网。";
+        }
+
         Report(onProgress, "打开官方下载页…", 95);
         OpenDownloadPage(item);
         return IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId)
@@ -1221,12 +1230,27 @@ internal static class CommonSoftwareHelper
         Directory.CreateDirectory(dir);
 
         Report(onProgress, "解析商店 Appx 直链（离线自动安装）…", 8);
-        var files = ResolveStoreAppxFiles(productId, packageName);
-        if (files.Count == 0)
+        List<StoreAppxFile> files;
+        try
         {
-            // 复用已下载到目录的包（与用户手工放置的文件兼容）
-            files = DiscoverLocalAppxFiles(dir, packageName);
+            files = ResolveStoreAppxFiles(productId, packageName);
         }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("解析商店直链失败，改用本地包：" + ex.Message);
+            files = [];
+        }
+
+        // 合并目录内已有包（支持手工放入 window_iCloud_offline 那套）
+        foreach (var local in DiscoverLocalAppxFiles(dir, packageName))
+        {
+            if (files.Any(f => f.FileName.Equals(local.FileName, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            files.Add(local);
+        }
+
+        if (files.Count == 0)
+            files = DiscoverLocalAppxFiles(dir, packageName);
 
         if (files.Count == 0)
             throw new InvalidOperationException("未能解析到 Appx 安装包，请检查网络或将 .Appx/.Msix 放入：" + dir);
@@ -1263,11 +1287,16 @@ internal static class CommonSoftwareHelper
 
         var deps = localPaths
             .Where(p => !p.Equals(main, StringComparison.OrdinalIgnoreCase))
+            .Where(p => IsModernAppxFramework(Path.GetFileName(p)))
             .OrderBy(AppxInstallOrder)
             .ToList();
 
-        Report(onProgress, "正在离线安装 Appx（含依赖）…", 72);
-        ApplyLog.Write("离线 Appx 安装：" + main + " deps=" + deps.Count);
+        // 商店列表偶发只带 VCLibs.120；现版本 iCloud 需要 140 + WindowsAppRuntime
+        EnsureModernAppxFrameworks(dir, deps, onProgress);
+
+        Report(onProgress, "正在离线安装 Appx（先框架、后主包）…", 72);
+        ApplyLog.Write("离线 Appx 安装：" + main + " deps=" + deps.Count
+            + " [" + string.Join(", ", deps.Select(Path.GetFileName)) + "]");
         AddAppxPackageWithDependencies(main, deps);
 
         InvalidateStatusCache();
@@ -1286,11 +1315,104 @@ internal static class CommonSoftwareHelper
     private static int AppxInstallOrder(string path)
     {
         var name = Path.GetFileName(path);
-        if (name.StartsWith("Microsoft.VCLibs.140.00.UWPDesktop", StringComparison.OrdinalIgnoreCase)) return 2;
-        if (name.StartsWith("Microsoft.VCLibs", StringComparison.OrdinalIgnoreCase)) return 1;
+        // 与手工成功顺序一致：VCLibs.140.UWPDesktop → VCLibs.140 → WindowsAppRuntime → Xaml
+        if (name.StartsWith("Microsoft.VCLibs.140.00.UWPDesktop", StringComparison.OrdinalIgnoreCase)) return 1;
+        if (name.StartsWith("Microsoft.VCLibs.140", StringComparison.OrdinalIgnoreCase)) return 2;
         if (name.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0) return 3;
         if (name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0) return 4;
         return 10;
+    }
+
+    /// <summary>现版本 UWP（iCloud 15.x）可用的框架；排除已废弃的 VCLibs.120（会导致 0x80073CF3）。</summary>
+    private static bool IsModernAppxFramework(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return false;
+        if (fileName.IndexOf("VCLibs.120", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+        if (fileName.StartsWith("Microsoft.VCLibs.140", StringComparison.OrdinalIgnoreCase)) return true;
+        if (fileName.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        if (fileName.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        return false;
+    }
+
+    /// <summary>缺 VCLibs.140 / WindowsAppRuntime 时从 aka.ms 或已有下载目录补齐。</summary>
+    private static void EnsureModernAppxFrameworks(
+        string dir,
+        List<string> deps,
+        Action<SoftwareInstallProgress>? onProgress)
+    {
+        Directory.CreateDirectory(dir);
+
+        bool Has(string needle) =>
+            deps.Any(p => Path.GetFileName(p).IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)
+            || Directory.EnumerateFiles(dir).Any(p =>
+                Path.GetFileName(p).IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
+                && LooksLikeBinaryPackage(p));
+
+        void AddLocal(string path)
+        {
+            if (!File.Exists(path) || !LooksLikeBinaryPackage(path)) return;
+            if (deps.Any(d => d.Equals(path, StringComparison.OrdinalIgnoreCase))) return;
+            deps.Add(path);
+        }
+
+        // 先收纳目录里已有的现代框架（含用户手工拷贝的离线包）
+        foreach (var path in Directory.EnumerateFiles(dir))
+        {
+            var name = Path.GetFileName(path);
+            if (!IsModernAppxFramework(name)) continue;
+            if (!LooksLikeBinaryPackage(path)) continue;
+            AddLocal(path);
+        }
+
+        if (!Has("VCLibs.140.00.UWPDesktop") && !Has("VCLibs.x64.14.00.Desktop"))
+        {
+            Report(onProgress, "补齐 VCLibs 140 UWPDesktop…", 68);
+            var dest = Path.Combine(dir, "Microsoft.VCLibs.x64.14.00.Desktop.appx");
+            try
+            {
+                DownloadPackage(
+                    "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx",
+                    dest,
+                    minBytes: 50_000,
+                    onProgress,
+                    percentBase: 66,
+                    percentSpan: 2);
+                AddLocal(dest);
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("补齐 VCLibs.140.UWPDesktop 失败：" + ex.Message);
+            }
+        }
+
+        if (!Has("VCLibs.140.00_") && !Has("Microsoft.VCLibs.x64.14.00.appx")
+            && !deps.Any(p =>
+            {
+                var n = Path.GetFileName(p);
+                return n.StartsWith("Microsoft.VCLibs.140.00_", StringComparison.OrdinalIgnoreCase)
+                       && n.IndexOf("UWPDesktop", StringComparison.OrdinalIgnoreCase) < 0;
+            }))
+        {
+            Report(onProgress, "补齐 VCLibs 140…", 69);
+            var dest = Path.Combine(dir, "Microsoft.VCLibs.x64.14.00.appx");
+            try
+            {
+                DownloadPackage(
+                    "https://aka.ms/Microsoft.VCLibs.x64.14.00.appx",
+                    dest,
+                    minBytes: 50_000,
+                    onProgress,
+                    percentBase: 68,
+                    percentSpan: 2);
+                AddLocal(dest);
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("补齐 VCLibs.140 失败：" + ex.Message);
+            }
+        }
+
+        deps.Sort((a, b) => AppxInstallOrder(a).CompareTo(AppxInstallOrder(b)));
     }
 
     private static void EnsureAppxSideloadAllowed()
@@ -1412,7 +1534,8 @@ internal static class CommonSoftwareHelper
         }
 
         bool IsUsefulDep(string name) =>
-            name.StartsWith("Microsoft.VCLibs", StringComparison.OrdinalIgnoreCase)
+            // 只用 VCLibs.140；VCLibs.120 塞进 DependencyPath 会报 0x80073CF3「提供了未使用的框架」
+            name.StartsWith("Microsoft.VCLibs.140", StringComparison.OrdinalIgnoreCase)
             || name.IndexOf("WindowsAppRuntime", StringComparison.OrdinalIgnoreCase) >= 0
             || name.IndexOf("UI.Xaml", StringComparison.OrdinalIgnoreCase) >= 0
             || name.StartsWith(mainPackageName, StringComparison.OrdinalIgnoreCase);
@@ -1443,25 +1566,33 @@ internal static class CommonSoftwareHelper
 
     private static void AddAppxPackageWithDependencies(string mainPath, List<string> dependencyPaths)
     {
-        var mainEsc = mainPath.Replace("'", "''");
-        string script;
-        if (dependencyPaths.Count == 0)
+        // 与手工成功路径一致：框架逐个 Add-AppxPackage，最后再装主包。
+        // 不要把未声明/未使用的框架塞进 -DependencyPath（Server 上易 0x80073CF3）。
+        foreach (var dep in dependencyPaths.OrderBy(AppxInstallOrder))
         {
-            script = $@"
-$ErrorActionPreference = 'Stop'
-Add-AppxPackage -Path '{mainEsc}'
-";
-        }
-        else
-        {
-            var deps = string.Join(",", dependencyPaths.Select(p => "'" + p.Replace("'", "''") + "'"));
-            script = $@"
-$ErrorActionPreference = 'Stop'
-$deps = @({deps})
-Add-AppxPackage -Path '{mainEsc}' -DependencyPath $deps -ErrorAction Stop
-";
+            try
+            {
+                AddAppxPackage(dep, provisioned: false);
+                ApplyLog.Write("Appx 框架已装：" + Path.GetFileName(dep));
+            }
+            catch (Exception ex)
+            {
+                if (IsAlreadyInstalledAppxOutput(LastPowerShellOutput))
+                {
+                    ApplyLog.Write("Appx 框架已存在：" + Path.GetFileName(dep));
+                    continue;
+                }
+
+                ApplyLog.Write("Appx 框架安装：" + Path.GetFileName(dep) + " → " + ex.Message);
+                // 继续装其它框架；主包可能仍能装上
+            }
         }
 
+        var mainEsc = mainPath.Replace("'", "''");
+        var script = $@"
+$ErrorActionPreference = 'Stop'
+Add-AppxPackage -Path '{mainEsc}' -ForceApplicationShutdown -ForceUpdateFromAnyVersion -ErrorAction Stop
+";
         var code = RunPowerShell(script, timeoutMs: 600_000);
         if (code != 0 && !IsAlreadyInstalledAppxOutput(LastPowerShellOutput))
             throw new InvalidOperationException(FormatAppxFailure("Add-AppxPackage", code, mainPath));
