@@ -1157,26 +1157,49 @@ internal static class CommonSoftwareHelper
     private static List<string> BuildSilentArgAttempts(string dest, string primary)
     {
         var list = new List<string>();
-        if (!string.IsNullOrWhiteSpace(primary)) list.Add(primary);
+        if (!string.IsNullOrWhiteSpace(primary)) list.Add(primary.Trim());
         var msi = dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase);
         if (msi)
         {
-            if (!list.Contains("/qn /norestart")) list.Add("/qn /norestart");
+            if (list.All(a => a.IndexOf("/qn", StringComparison.OrdinalIgnoreCase) < 0))
+                list.Add("/qn /norestart");
+            return list;
+        }
+
+        // Burn/WiX/MSI 引导包（如 iCloudSetup）：只用 /quiet|/passive|/qn。
+        // 切勿再试 /VERYSILENT、/S —— 会被转给 msiexec 弹出「Windows Installer」帮助窗卡住。
+        if (LooksLikeMsiOrBurnSilentArgs(primary))
+        {
+            if (list.All(a => a.IndexOf("/passive", StringComparison.OrdinalIgnoreCase) < 0))
+                list.Add("/passive /norestart");
+            if (list.All(a => a.IndexOf("/quiet", StringComparison.OrdinalIgnoreCase) < 0
+                              && a.IndexOf("/qn", StringComparison.OrdinalIgnoreCase) < 0))
+                list.Add("/quiet /norestart");
             return list;
         }
 
         if (list.All(a => a.IndexOf("VERYSILENT", StringComparison.OrdinalIgnoreCase) < 0))
             list.Add("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART");
-        if (list.All(a => a != "/S"))
+        if (list.All(a => !string.Equals(a.Trim(), "/S", StringComparison.OrdinalIgnoreCase)))
             list.Add("/S");
         return list;
+    }
+
+    private static bool LooksLikeMsiOrBurnSilentArgs(string? args)
+    {
+        var a = (args ?? "").Trim();
+        if (a.Length == 0) return false;
+        return a.IndexOf("/quiet", StringComparison.OrdinalIgnoreCase) >= 0
+               || a.IndexOf("/passive", StringComparison.OrdinalIgnoreCase) >= 0
+               || a.IndexOf("/qn", StringComparison.OrdinalIgnoreCase) >= 0
+               || a.IndexOf("/qb", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static int RunInstaller(string dest, string args)
     {
         if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
-        return Run(dest, args);
+        return Run(dest, args, timeoutMs: 600_000);
     }
 
     /// <summary>

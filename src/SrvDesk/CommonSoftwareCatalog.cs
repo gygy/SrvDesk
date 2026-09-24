@@ -533,15 +533,14 @@ internal static class CommonSoftwareCatalog
             offlineInstallArgs: "/S",
             installerLinkPattern: @"TELEPC|eCloud.*\.exe|Cloud189.*\.exe|天翼云盘.*\.exe",
             latestApiUrl: "https://cloud.189.cn/api/portal/listClients.action?pcClientType="),
-        // Server 无商店：离线自动安装（Appx 旁加载 → EXE 回退）
-        Item("icloud", "iCloud for Windows（离线自动安装）", "网盘", "Apple.iCloud",
+        // iCloud：优先商店 Appx 旁加载；失败再 winget（含依赖）；最后才用 2020 旧版 EXE（Burn，仅 /quiet）
+        Item("icloud", "iCloud for Windows", "网盘", "Apple.iCloud",
             ["iCloud"], "https://support.apple.com/zh-cn/103232", essential: false,
             storeProductId: "9PKTQ5699M62",
             appxPackageName: "AppleInc.iCloud",
             preferAppxSideload: true,
             offlineInstallerUrl: "https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe",
-            offlineInstallArgs: "/quiet /norestart",
-            preferOfflineInstall: true),
+            offlineInstallArgs: "/quiet /norestart"),
 
         // 微软运行库：按需勾选。多数软件只需 2015–2022 x64；装 32 位软件再补 x86
         Item("vcredist-2022-x64", "Visual C++ 2015–2022 (x64) · 推荐", "微软运行库",
