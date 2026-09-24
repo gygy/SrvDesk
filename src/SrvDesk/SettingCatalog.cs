@@ -99,13 +99,13 @@ internal static class SettingCatalog
         L("策略立即写入；Windows Update 下次检查时生效。", "Policy is written immediately; applies on the next Windows Update check."));
 
     public static readonly SettingHelpInfo DisableSysMain = H(
-        L("禁用 SysMain（原 Superfetch）超级预读服务。", "Disable the SysMain (formerly Superfetch) prefetch service."),
-        L("停止并禁用 SysMain 服务，减少 SSD 上不必要的预读。", "Stop and disable SysMain to cut unnecessary SSD prefetch."),
-        L("降低磁盘占用与后台 I/O，SSD/虚拟机环境更安静。", "Lower disk use and background I/O; quieter on SSD/VMs."),
-        L("机械硬盘且内存较小可保留；虚拟机可关；物理 SSD 个人用途按需（高级）。",
-            "Keep on small-RAM HDDs; OK off on VMs; optional on physical SSD desktops."),
+        L("禁用 SysMain / Superfetch（超级预读）服务。", "Disable the SysMain / Superfetch prefetch service."),
+        L("停止并禁用 SysMain 服务，减少不必要的预读 I/O。", "Stop and disable SysMain to cut unnecessary prefetch I/O."),
+        L("降低磁盘占用与后台读写，SSD/台式/虚拟机都更安静。", "Lower disk use and background I/O; quieter on SSD/desktop/VM."),
+        L("强烈推荐关闭；仅机械盘且内存很小、确需系统预读时再开。",
+            "Strongly recommended off; enable only on small-RAM HDDs that need prefetch."),
         L("服务停止后立即生效。", "Takes effect as soon as the service stops."),
-        recommend: RecommendLevel.Suggested);
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo VisualBestPerf = H(
         L("自定义视觉效果：开字体平滑/缩略图/拖动内容/阴影，关动画。", "Custom visual effects: font smoothing/thumbnails/drag contents/shadows on; animations off."),
@@ -291,10 +291,12 @@ internal static class SettingCatalog
     public static readonly SettingHelpInfo EnableSearch = H(
         L("启用 Windows Search 索引服务。", "Enable the Windows Search indexing service."),
         L("WSearch 服务自动启动。", "Set WSearch to start automatically."),
-        L("开始菜单与资源管理器搜索更快，支持内容索引。", "Faster Start/Explorer search with content indexing."),
-        L("极弱配置或几乎不用搜索可关；日常使用推荐开启。", "OK off on very weak hardware or if unused; recommended for daily use."),
+        L("开始菜单与资源管理器可内容索引（占 CPU/磁盘）。", "Start/Explorer content indexing (CPU/disk cost)."),
+        L("强烈推荐保持关闭；文件搜索用 Everything 等代替。仅确需系统索引时再开。",
+            "Strongly recommended keep off; use Everything etc. Enable only if you need system indexing."),
         L("索引建立需时；服务启动后生效。", "Indexing takes time; applies after the service starts."),
-        SettingScope.DesktopExperience);
+        SettingScope.DesktopExperience,
+        recommend: RecommendLevel.Optional);
 
     public static readonly SettingHelpInfo DisableWebSearch = H(
         L("开始菜单搜索仅本地，不查 Bing 网络。", "Start search stays local; no Bing web results."),
@@ -749,9 +751,11 @@ internal static class SettingCatalog
         L("卸载/禁用 SearchEngine 可选功能并停止 WSearch 服务。", "Disable SearchEngine optional feature and stop WSearch."),
         L("DISM Disable-Feature SearchEngine + WSearch 禁用。", "DISM Disable-Feature SearchEngine + disable WSearch."),
         L("比仅停服务更彻底，减少索引磁盘占用。", "More thorough than stopping the service alone; less index disk use."),
-        L("与「启用 Windows 搜索」冲突：开启本项时搜索服务不会启动。", "Conflicts with Enable Windows Search: WSearch will not start while this is on."),
+        L("强烈推荐关闭索引；与「启用 Windows 搜索」冲突：开启本项时搜索服务不会启动。",
+            "Strongly recommended to kill indexing; conflicts with Enable Windows Search (WSearch will not start while on)."),
         L("DISM 完成后建议重启。", "Reboot recommended after DISM finishes."),
-        SettingScope.ServerExclusive);
+        SettingScope.ServerExclusive,
+        recommend: RecommendLevel.Strong);
 
     public static readonly SettingHelpInfo EnableDesktopMediaFeatures = H(
         L("开启 Server 桌面媒体组件：MediaFoundation、DirectPlay、WLAN 等。", "Enable Server desktop media features: MediaFoundation, DirectPlay, WLAN, etc."),

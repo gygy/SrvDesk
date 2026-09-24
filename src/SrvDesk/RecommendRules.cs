@@ -24,14 +24,6 @@ internal static class RecommendRules
         if (IsAggressivePerf(help))
             return DemoteAggressive(help.Recommend, facts);
 
-        // —— SysMain：物理机默认不推；虚拟机可推荐 ——
-        if (ReferenceEquals(help, SettingCatalog.DisableSysMain))
-        {
-            if (facts.IsVirtualMachine)
-                return RecommendLevel.Strong;
-            return RecommendLevel.Suggested; // 高级：SSD 可选
-        }
-
         // —— 产品指定：强烈推荐（列表 + 优化顾问同步） ——
         if (IsProductMust(help))
             return RecommendLevel.Must;
@@ -93,23 +85,11 @@ internal static class RecommendRules
             return RecommendLevel.Optional;
 
         var name = serviceName ?? "";
-        // Windows Search：Server 桌面 / 客户端个人用途不作为强推关闭
-        if (name.Equals("WSearch", StringComparison.OrdinalIgnoreCase))
-        {
-            if (facts is { IsServer: true, HasDesktopExperience: true })
-                return RecommendLevel.Optional; // 应保留 → 顾问不列
-            if (facts is { IsServer: false })
-                return RecommendLevel.Suggested; // 高级
-            return RecommendLevel.Strong;
-        }
-
-        // SysMain：与开关策略一致
-        if (name.Equals("SysMain", StringComparison.OrdinalIgnoreCase))
-        {
-            if (facts?.IsVirtualMachine == true)
-                return RecommendLevel.Strong;
-            return RecommendLevel.Suggested;
-        }
+        // Windows Search / 索引、SysMain / Superfetch：全场景强烈推荐关闭
+        if (name.Equals("WSearch", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("cisvc", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("SysMain", StringComparison.OrdinalIgnoreCase))
+            return want == ServiceRecommend.Disable ? RecommendLevel.Must : RecommendLevel.Strong;
 
         // 安全/垃圾类：强烈推荐关闭
         if (IsMustDisableService(name))
@@ -125,7 +105,10 @@ internal static class RecommendRules
     }
 
     private static bool IsMustDisableService(string name) =>
-        name.Equals("RemoteRegistry", StringComparison.OrdinalIgnoreCase)
+        name.Equals("WSearch", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("cisvc", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("SysMain", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("RemoteRegistry", StringComparison.OrdinalIgnoreCase)
         || name.Equals("Fax", StringComparison.OrdinalIgnoreCase)
         || name.Equals("WMPNetworkSvc", StringComparison.OrdinalIgnoreCase)
         || name.Equals("RemoteAccess", StringComparison.OrdinalIgnoreCase)
@@ -177,7 +160,8 @@ internal static class RecommendRules
         || ReferenceEquals(help, SettingCatalog.DisableStartNotifyNewApps)
         || ReferenceEquals(help, SettingCatalog.RestrictNullSessionShares)
         || ReferenceEquals(help, SettingCatalog.RestrictAnonymousEnum)
-        || ReferenceEquals(help, SettingCatalog.DisableTelemetryScheduledTasks);
+        || ReferenceEquals(help, SettingCatalog.DisableTelemetryScheduledTasks)
+        || ReferenceEquals(help, SettingCatalog.DisableSysMain);
 
     private static bool IsAggressivePerf(SettingHelpInfo help) =>
         ReferenceEquals(help, SettingCatalog.EnableTcpBbr2)

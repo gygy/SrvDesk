@@ -607,8 +607,11 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
                 return string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase);
             case ColStars:
             {
-                var c = ((int)a.OptimizeLevel).CompareTo((int)b.OptimizeLevel);
-                return c != 0 ? c : a.RecommendScore.CompareTo(b.RecommendScore);
+                // 自然序：星级低→高；列头默认降序（_sortAscending=false）即强烈推荐在前
+                var c = ((int)a.AdviceLevel).CompareTo((int)b.AdviceLevel);
+                if (c != 0) return c;
+                c = a.RecommendScore.CompareTo(b.RecommendScore);
+                return c != 0 ? c : string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase);
             }
             case ColTag:
                 return string.Compare(a.AdviceTag, b.AdviceTag, StringComparison.Ordinal);

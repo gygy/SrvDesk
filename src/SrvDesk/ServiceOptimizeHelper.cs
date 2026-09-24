@@ -61,6 +61,12 @@ internal sealed class ServiceOptimizeRow
         _ => 0,
     };
 
+    /// <summary>处置建议的推荐强度（与是否已达标无关，用于列表排序）。</summary>
+    public RecommendLevel AdviceLevel =>
+        Recommend == ServiceRecommend.Keep
+            ? RecommendLevel.Optional
+            : RecommendRules.ResolveService(ActualServiceName, Recommend, null);
+
     /// <summary>与桌面优化「推荐值」同一套星级：按 OS/场景解析后的「仍需优化」强度。</summary>
     public RecommendLevel OptimizeLevel => OptimizeLevelFor(null);
 
@@ -230,12 +236,16 @@ internal static class ServiceOptimizeHelper
         return rows;
     }
 
-    /// <summary>推荐值高优先；当前已禁用的排后面；同组内可优化优先。</summary>
+    /// <summary>推荐强度高优先（强烈推荐在前）；当前已禁用排后面；同组内可优化优先。</summary>
     public static int CompareRows(ServiceOptimizeRow a, ServiceOptimizeRow b)
     {
         var aDis = a.StartType == ServiceStartTypeKind.Disabled ? 1 : 0;
         var bDis = b.StartType == ServiceStartTypeKind.Disabled ? 1 : 0;
         if (aDis != bDis) return aDis.CompareTo(bDis);
+
+        // 强烈推荐(Must) → 推荐(Strong) → 高级(Suggested) → 不推
+        var byLevel = ((int)b.AdviceLevel).CompareTo((int)a.AdviceLevel);
+        if (byLevel != 0) return byLevel;
 
         var score = b.RecommendScore.CompareTo(a.RecommendScore);
         if (score != 0) return score;
