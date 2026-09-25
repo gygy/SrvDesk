@@ -21,12 +21,29 @@ internal sealed class SettingUiMeta
     public Func<Optimizer.State, string>? FormatValue { get; set; }
 }
 
-/// <summary>一键快速恢复 / 导入配置前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>
+/// <summary>
+/// 导入/一键恢复挑选：左侧仅显示有变更的栏目（对齐主界面侧栏风格），
+/// 右侧按分区列出对应开关/设置条目。
+/// </summary>
 internal sealed class QuickRestorePreviewDialog : Form
 {
-    private readonly ListView _list = new();
+    private readonly ListBox _nav = new();
+    private readonly Panel _rightHost = new();
+    private readonly Panel _scroll = new();
+    private readonly Label _pageTitle = new();
     private readonly TextBox _detail = new();
+    private readonly ToolTip _tip = new()
+    {
+        AutoPopDelay = 25000,
+        InitialDelay = 350,
+        ReshowDelay = 150,
+        ShowAlways = true,
+    };
     private readonly List<PreviewLine> _lines;
+    private readonly List<string> _navTitles = [];
+    private readonly int[] _navCounts = [];
+    private int _navHover = -1;
+    private PreviewLine? _focusLine;
 
     public IReadOnlyList<PreviewLine> SelectedLines =>
         _lines.Where(x => x.Selected).ToList();
@@ -37,10 +54,24 @@ internal sealed class QuickRestorePreviewDialog : Form
         string? windowTitle = null,
         string? confirmButtonText = null)
     {
-        _ = sourcePath; // 调用方仍传入路径，界面不再展示以免干扰
+        _ = sourcePath;
         _lines = lines.Select(x => x.Clone()).ToList();
         foreach (var line in _lines)
             line.Selected = true;
+
+        // 左侧只保留「至少有一条变更」的栏目，顺序与条目首次出现一致
+        foreach (var line in _lines)
+        {
+            var nav = string.IsNullOrWhiteSpace(line.Nav)
+                ? AppLang.L("其它", "Other")
+                : line.Nav;
+            line.Nav = nav;
+            if (!_navTitles.Contains(nav))
+                _navTitles.Add(nav);
+        }
+        _navCounts = new int[_navTitles.Count];
+        for (var i = 0; i < _navTitles.Count; i++)
+            _navCounts[i] = _lines.Count(x => x.Nav == _navTitles[i]);
 
         Text = windowTitle ?? AppLang.L("一键快速恢复 · 挑选变更", "One-click restore · Pick changes");
         AppBrand.ApplyWindowIcon(this);
@@ -51,125 +82,23 @@ internal sealed class QuickRestorePreviewDialog : Form
         AutoScaleMode = AutoScaleMode.None;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        ClientSize = UiScale.Size(1040, 640);
-        MinimumSize = UiScale.Size(900, 560);
-
-        var body = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(UiScale.S(16), UiScale.S(12), UiScale.S(16), UiScale.S(8)),
-            BackColor = AppTheme.Surface,
-        };
-
-        _list.Dock = DockStyle.Fill;
-        _list.View = View.Details;
-        _list.FullRowSelect = true;
-        _list.GridLines = false;
-        _list.HideSelection = false;
-        _list.MultiSelect = true;
-        _list.CheckBoxes = true;
-        _list.BorderStyle = BorderStyle.FixedSingle;
-        _list.BackColor = AppTheme.SurfaceCard;
-        _list.ForeColor = AppTheme.TextMain;
-        _list.Font = UiFit.UiFont;
-        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(72));
-        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(120));
-        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(140));
-        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(200));
-        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(260));
-        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(100));
-        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(100));
-        _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
-        _list.ItemChecked += (_, e) =>
-        {
-            if (e.Item?.Tag is PreviewLine line)
-                line.Selected = e.Item.Checked;
-        };
-        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
-
-        var tip = new ToolTip
-        {
-            AutoPopDelay = 25000,
-            InitialDelay = 350,
-            ReshowDelay = 150,
-            ShowAlways = true,
-            IsBalloon = false,
-        };
-        var lastTipKey = "";
-        _list.MouseMove += (_, e) =>
-        {
-            var hit = _list.HitTest(e.Location);
-            if (hit.Item?.Tag is PreviewLine line && hit.SubItem is not null)
-            {
-                var subIdx = hit.Item.SubItems.IndexOf(hit.SubItem);
-                if (subIdx == 4) // 含义
-                {
-                    var text = MeaningTipText(line);
-                    var key = hit.Item.Index + "|" + text;
-                    if (key != lastTipKey)
-                    {
-                        lastTipKey = key;
-                        tip.SetToolTip(_list, text);
-                    }
-                    return;
-                }
-            }
-
-            if (lastTipKey.Length > 0)
-            {
-                lastTipKey = "";
-                tip.SetToolTip(_list, "");
-            }
-        };
-        _list.MouseLeave += (_, _) =>
-        {
-            lastTipKey = "";
-            tip.SetToolTip(_list, "");
-        };
-
-        foreach (var line in _lines)
-        {
-            var row = new ListViewItem(KindLabel(line.Kind))
-            {
-                Checked = true,
-                Tag = line,
-                ForeColor = KindColor(line.Kind),
-            };
-            row.SubItems.Add(line.Nav);
-            row.SubItems.Add(line.Section);
-            row.SubItems.Add(line.Title);
-            row.SubItems.Add(line.Meaning);
-            row.SubItems.Add(line.Current);
-            row.SubItems.Add(line.Target);
-            _list.Items.Add(row);
-        }
-
-        if (_lines.Count == 0)
-        {
-            var empty = new ListViewItem(AppLang.L("提示", "Note"));
-            empty.SubItems.Add("—");
-            empty.SubItems.Add("—");
-            empty.SubItems.Add(AppLang.L("与当前机器无差异", "No diffs vs this PC"));
-            empty.SubItems.Add(AppLang.L("可仍写入脚本/方案（若配置含有）", "Scripts/packs may still apply"));
-            empty.SubItems.Add("—");
-            empty.SubItems.Add("—");
-            _list.Items.Add(empty);
-        }
+        ClientSize = UiScale.Size(1080, 680);
+        MinimumSize = UiScale.Size(920, 560);
 
         var footerH = UiFit.ControlHeight() + UiScale.S(20);
-        var detailH = Math.Max(UiScale.S(100), UiFit.LineHeight() * 3 + UiScale.S(20));
+        var detailH = Math.Max(UiScale.S(88), UiFit.LineHeight() * 3 + UiScale.S(16));
         var south = new Panel
         {
             Dock = DockStyle.Bottom,
             Height = detailH + footerH,
-            BackColor = AppTheme.Surface,
-            Padding = new Padding(0, UiScale.S(8), 0, 0),
+            BackColor = AppTheme.SurfaceCard,
+            Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(4)),
         };
 
         _detail.Multiline = true;
         _detail.ReadOnly = true;
         _detail.BorderStyle = BorderStyle.None;
-        _detail.BackColor = AppTheme.Surface;
+        _detail.BackColor = AppTheme.SurfaceCard;
         _detail.ForeColor = AppTheme.TextMain;
         _detail.Font = UiFit.UiFont;
         _detail.TabStop = false;
@@ -183,8 +112,8 @@ internal sealed class QuickRestorePreviewDialog : Form
             Height = footerH,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Padding = new Padding(0, UiScale.S(8), 0, 0),
-            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, UiScale.S(6), 0, 0),
+            BackColor = AppTheme.SurfaceCard,
         };
         UiBuffer.ConfigureNoScrollRow(footer);
 
@@ -223,62 +152,304 @@ internal sealed class QuickRestorePreviewDialog : Form
         footer.Controls.Add(ok);
         footer.Controls.Add(allOff);
         footer.Controls.Add(allOn);
-
         south.Controls.Add(_detail);
         south.Controls.Add(footer);
 
-        body.Controls.Add(_list);
-        body.Controls.Add(south);
-        Controls.Add(body);
+        var split = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0),
+        };
+
+        var sidebar = NavMenuStyle.CreateSidebar(_navTitles, withIcon: true);
+        sidebar.Dock = DockStyle.Left;
+        NavMenuStyle.Apply(_nav);
+        _nav.Items.AddRange(_navTitles.Cast<object>().ToArray());
+        _nav.DrawItem += DrawNavItem;
+        _nav.SelectedIndexChanged += (_, _) => ShowNav(_nav.SelectedIndex);
+        NavMenuStyle.BindHover(_nav, () => _navHover, v => _navHover = v);
+        sidebar.Controls.Add(_nav);
+
+        _rightHost.Dock = DockStyle.Fill;
+        _rightHost.BackColor = AppTheme.Surface;
+        _rightHost.Padding = new Padding(UiScale.S(12), UiScale.S(8), UiScale.S(12), UiScale.S(8));
+
+        _pageTitle.Dock = DockStyle.Top;
+        _pageTitle.AutoSize = false;
+        _pageTitle.Height = Math.Max(UiScale.S(36), UiFit.ControlHeight(UiFit.UiFontBold()));
+        _pageTitle.Font = UiFit.UiFontBold();
+        _pageTitle.ForeColor = AppTheme.TextHeader;
+        _pageTitle.TextAlign = ContentAlignment.MiddleLeft;
+        _pageTitle.BackColor = AppTheme.Surface;
+
+        _scroll.Dock = DockStyle.Fill;
+        _scroll.AutoScroll = true;
+        _scroll.BackColor = AppTheme.Surface;
+        _scroll.Padding = new Padding(0, UiScale.S(4), 0, 0);
+
+        _rightHost.Controls.Add(_scroll);
+        _rightHost.Controls.Add(_pageTitle);
+        _rightHost.Resize += (_, _) =>
+        {
+            if (_nav.SelectedIndex >= 0)
+                ShowNav(_nav.SelectedIndex);
+        };
+
+        split.Controls.Add(_rightHost);
+        split.Controls.Add(sidebar);
+
+        Controls.Add(split);
+        Controls.Add(south);
 
         CancelButton = cancel;
         Load += (_, _) =>
         {
-            UiBuffer.FitListViewColumn(_list, 4, UiScale.S(180));
-            if (_list.Items.Count > 0 && _list.Items[0].Tag is PreviewLine)
-                _list.Items[0].Selected = true;
+            if (_nav.Items.Count > 0)
+                _nav.SelectedIndex = 0;
             else
-                UpdateDetail();
+                ShowEmpty();
         };
-        Resize += (_, _) =>
+    }
+
+    private void DrawNavItem(object? sender, DrawItemEventArgs e)
+    {
+        if (e.Index < 0 || e.Index >= _navTitles.Count) return;
+        var title = _navTitles[e.Index];
+        NavMenuStyle.DrawItem(
+            e,
+            title,
+            _nav.Font ?? UiFit.UiFont,
+            e.Index == _navHover,
+            separator: false,
+            matchCount: e.Index < _navCounts.Length ? _navCounts[e.Index] : -1,
+            icon: IconForNav(title));
+    }
+
+    private static Image IconForNav(string title)
+    {
+        if (title == AppLang.L("Server专属", "Server only")
+            || title == AppLang.L("服务器用途", "Server profile"))
+            return MenuIcons.ServerRoles;
+        if (title == AppLang.L("账户策略", "Account policy"))
+            return MenuIcons.Autologon;
+        if (title == AppLang.L("账户与登录", "Account & sign-in"))
+            return MenuIcons.Identity;
+        if (title == AppLang.L("资源管理器", "File Explorer"))
+            return MenuIcons.NavExplorer;
+        if (title == AppLang.L("桌面外观", "Desktop look"))
+            return MenuIcons.DesktopMaintenance;
+        if (title == AppLang.L("远程与网络", "Remote & network"))
+            return MenuIcons.NavNetwork;
+        if (title == AppLang.L("隐私与体验", "Privacy & UX"))
+            return MenuIcons.NavPrivacy;
+        if (title == AppLang.L("性能及安全", "Performance & security"))
+            return MenuIcons.SecurityCenter;
+        if (title == AppLang.L("登录启动项", "Startup apps"))
+            return MenuIcons.TaskScheduler;
+        if (title == AppLang.L("电源与后台", "Power & background"))
+            return MenuIcons.ShutdownTimer;
+        if (title == AppLang.L("高级设置", "Advanced settings"))
+            return MenuIcons.Advanced;
+        if (title == AppLang.L("右键菜单", "Context menu"))
+            return MenuIcons.ContextMenu;
+        if (title == AppLang.L("服务优化", "Service optimize"))
+            return MenuIcons.ComputerMgmt;
+        if (title == AppLang.L("DNS 设置", "DNS settings"))
+            return MenuIcons.NavDns;
+        if (title == AppLang.L("自定义配置", "Custom config"))
+            return MenuIcons.Script;
+        if (title == AppLang.L("配置脚本", "Config scripts"))
+            return MenuIcons.Script;
+        return MenuIcons.Quick;
+    }
+
+    private void ShowEmpty()
+    {
+        _pageTitle.Text = AppLang.L("无差异项", "No changes");
+        _scroll.Controls.Clear();
+        _detail.Text = "";
+    }
+
+    private void ShowNav(int index)
+    {
+        _scroll.SuspendLayout();
+        _scroll.Controls.Clear();
+        _focusLine = null;
+        _detail.Text = "";
+
+        if (index < 0 || index >= _navTitles.Count)
         {
-            try { UiBuffer.FitListViewColumn(_list, 4, UiScale.S(180)); }
-            catch { /* ignore */ }
+            _scroll.ResumeLayout();
+            ShowEmpty();
+            return;
+        }
+
+        var nav = _navTitles[index];
+        var pageLines = _lines.Where(x => x.Nav == nav).ToList();
+        _pageTitle.Text = AppLang.Lf("{0}（{1}）", "{0} ({1})", nav, pageLines.Count);
+
+        var y = 0;
+        var width = Math.Max(UiScale.S(480), _scroll.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - UiScale.S(8));
+        string? lastSection = null;
+
+        foreach (var line in pageLines)
+        {
+            if (!string.Equals(lastSection, line.Section, StringComparison.Ordinal))
+            {
+                lastSection = line.Section;
+                var head = BuildSectionHeader(line.Section, width);
+                head.Location = new Point(0, y);
+                _scroll.Controls.Add(head);
+                y += head.Height + UiScale.S(4);
+            }
+
+            var row = BuildEntryRow(line, width);
+            row.Location = new Point(0, y);
+            _scroll.Controls.Add(row);
+            y += row.Height + UiScale.S(2);
+        }
+
+        _scroll.ResumeLayout();
+        if (pageLines.Count > 0)
+            FocusLine(pageLines[0]);
+    }
+
+    private Control BuildSectionHeader(string section, int width)
+    {
+        var h = Math.Max(UiScale.S(32), UiFit.LineHeight(UiFit.UiFontBold()) + UiScale.S(10));
+        var head = new BufferedPanel
+        {
+            Size = new Size(width, h),
+            BackColor = AppTheme.GroupBg,
         };
+        var label = new Label
+        {
+            Text = string.IsNullOrWhiteSpace(section) ? AppLang.L("未分组", "Ungrouped") : section,
+            Dock = DockStyle.Fill,
+            Font = UiFit.UiFontBold(),
+            ForeColor = AppTheme.TextHeader,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(UiScale.S(12), 0, 0, 0),
+            BackColor = Color.Transparent,
+        };
+        head.Controls.Add(label);
+        return head;
+    }
+
+    private Control BuildEntryRow(PreviewLine line, int width)
+    {
+        var rowH = Math.Max(UiScale.S(56), UiFit.LineHeight() * 2 + UiScale.S(18));
+        var wrap = new BufferedPanel
+        {
+            Size = new Size(width, rowH),
+            BackColor = AppTheme.SurfaceCard,
+            Cursor = Cursors.Hand,
+            Tag = line,
+        };
+
+        var check = new CheckBox
+        {
+            Checked = line.Selected,
+            AutoSize = false,
+            Size = new Size(UiScale.S(22), UiScale.S(22)),
+            Location = new Point(UiScale.S(10), (rowH - UiScale.S(22)) / 2),
+            BackColor = Color.Transparent,
+            FlatStyle = FlatStyle.System,
+        };
+        check.CheckedChanged += (_, _) => { line.Selected = check.Checked; };
+
+        var title = new SingleLineLabel
+        {
+            Text = line.Title,
+            Font = SettingListLayout.ItemFont,
+            ForeColor = KindColor(line.Kind),
+            Location = new Point(UiScale.S(40), UiScale.S(8)),
+            Size = new Size(Math.Max(80, width - UiScale.S(280)), UiFit.LineHeight()),
+            BackColor = Color.Transparent,
+        };
+
+        var meaning = new SingleLineLabel
+        {
+            Text = line.Meaning,
+            Font = UiFit.UiFontSmall,
+            ForeColor = AppTheme.TextMute,
+            Location = new Point(UiScale.S(40), UiScale.S(8) + UiFit.LineHeight() + UiScale.S(2)),
+            Size = new Size(Math.Max(80, width - UiScale.S(280)), UiFit.LineHeight(UiFit.UiFontSmall)),
+            BackColor = Color.Transparent,
+        };
+        _tip.SetToolTip(meaning, MeaningTipText(line));
+        _tip.SetToolTip(title, MeaningTipText(line));
+
+        var delta = new Label
+        {
+            AutoSize = false,
+            TextAlign = ContentAlignment.MiddleRight,
+            Font = UiFit.UiFontSmall,
+            ForeColor = AppTheme.TextMain,
+            BackColor = Color.Transparent,
+            Text = AppLang.Lf("{0}  →  {1}", "{0}  →  {1}", line.Current, line.Target),
+            Size = new Size(UiScale.S(220), rowH - UiScale.S(8)),
+            Location = new Point(width - UiScale.S(232), UiScale.S(4)),
+        };
+
+        void SelectMe(object? _, EventArgs __)
+        {
+            FocusLine(line);
+            wrap.BackColor = AppTheme.PrimaryPale;
+        }
+
+        wrap.Click += SelectMe;
+        title.Click += SelectMe;
+        meaning.Click += SelectMe;
+        delta.Click += SelectMe;
+        wrap.Controls.Add(check);
+        wrap.Controls.Add(title);
+        wrap.Controls.Add(meaning);
+        wrap.Controls.Add(delta);
+
+        wrap.Resize += (_, _) =>
+        {
+            var w = wrap.ClientSize.Width;
+            title.Width = Math.Max(80, w - UiScale.S(280));
+            meaning.Width = title.Width;
+            delta.Left = w - UiScale.S(232);
+        };
+
+        return wrap;
+    }
+
+    private void FocusLine(PreviewLine line)
+    {
+        _focusLine = line;
+        foreach (Control c in _scroll.Controls)
+        {
+            if (c.Tag is PreviewLine)
+                c.BackColor = ReferenceEquals(c.Tag, line) ? AppTheme.PrimaryPale : AppTheme.SurfaceCard;
+        }
+
+        _detail.Text = AppLang.Lf(
+            "【{0} · {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
+            "[{0} · {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
+            line.Nav, line.Section, line.Title, MeaningTipText(line), line.Current, line.Target);
+        _detail.SelectionStart = 0;
+        _detail.SelectionLength = 0;
+    }
+
+    private void RefreshNavBadges()
+    {
+        for (var i = 0; i < _navTitles.Count; i++)
+            _navCounts[i] = _lines.Count(x => x.Nav == _navTitles[i] && x.Selected);
+        _nav.Invalidate();
     }
 
     private void SetAllChecked(bool on)
     {
-        _list.BeginUpdate();
-        try
-        {
-            foreach (ListViewItem row in _list.Items)
-            {
-                if (row.Tag is not PreviewLine) continue;
-                row.Checked = on;
-            }
-        }
-        finally
-        {
-            _list.EndUpdate();
-        }
-    }
-
-    private void UpdateDetail()
-    {
-        if (_list.SelectedItems.Count == 0 || _list.SelectedItems[0].Tag is not PreviewLine line)
-        {
-            _detail.Text = "";
-            return;
-        }
-
-        var body = MeaningTipText(line);
-        _detail.Text = AppLang.Lf(
-            "【{0} · {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
-            "[{0} · {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
-            line.Nav, line.Section, line.Title, body, line.Current, line.Target);
-        _detail.SelectionStart = 0;
-        _detail.SelectionLength = 0;
+        foreach (var line in _lines)
+            line.Selected = on;
+        // 重建当前页勾选状态
+        ShowNav(_nav.SelectedIndex);
+        RefreshNavBadges();
     }
 
     private static string MeaningTipText(PreviewLine line)
@@ -495,17 +666,6 @@ internal sealed class QuickRestorePreviewDialog : Form
         if (string.IsNullOrWhiteSpace(text)) return false;
         return text.IndexOf(AppLang.L("开启", "On"), StringComparison.OrdinalIgnoreCase) >= 0;
     }
-
-    private static string KindLabel(PreviewKind k) => k switch
-    {
-        PreviewKind.ToggleOn => AppLang.L("开启", "On"),
-        PreviewKind.ToggleOff => AppLang.L("关闭", "Off"),
-        PreviewKind.Property => AppLang.L("调整", "Set"),
-        PreviewKind.ServiceDisable => AppLang.L("禁服务", "Disable"),
-        PreviewKind.ServiceAuto => AppLang.L("改自动", "Auto"),
-        PreviewKind.ServiceManual => AppLang.L("改手动", "Manual"),
-        _ => AppLang.L("其它", "Other"),
-    };
 
     private static Color KindColor(PreviewKind k) => k switch
     {
