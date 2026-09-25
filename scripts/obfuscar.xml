@@ -35,5 +35,7 @@
 
     <!-- 预设/导入导出：反射 Optimizer.State 公共字段名 -->
     <SkipType name="SrvDesk.Optimizer/State" skipProperties="true" skipFields="true" skipMethods="true" />
+    <!-- 导入预览：用 Catalog 字段名对齐 State 键 → 侧栏栏目/分区/项目名 -->
+    <SkipType name="SrvDesk.SettingCatalog" skipProperties="true" skipFields="true" skipMethods="true" />
   </Module>
 </Obfuscator>

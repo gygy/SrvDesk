@@ -1,12 +1,15 @@
 namespace SrvDesk;
 
-/// <summary>侧栏栏目元数据：对齐主界面分组，供一键恢复预览使用。</summary>
+/// <summary>侧栏栏目元数据：对齐主界面左侧菜单 + 右侧条目，供一键恢复/导入预览使用。</summary>
 internal sealed class SettingUiMeta
 {
     public string Nav { get; set; } = "";
     public string Section { get; set; } = "";
     public string Title { get; set; } = "";
+    /// <summary>列表「含义」列：与右侧面板 Summary 一致。</summary>
     public string Meaning { get; set; } = "";
+    /// <summary>选中行详情：作用 + 好处（对齐右侧精简说明）。</summary>
+    public string MeaningFull { get; set; } = "";
 }
 
 /// <summary>一键快速恢复 / 导入配置前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>

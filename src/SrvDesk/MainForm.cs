@@ -1625,7 +1625,10 @@ internal sealed class MainForm : Form
         RunQuickRestore(bundle, dlg.FileName, selected);
     }
 
-    /// <summary>主界面侧栏栏目 → 状态字段，供恢复预览对齐「栏目/分区/项目名」。</summary>
+    /// <summary>
+    /// 主界面侧栏栏目 → 状态字段名，供恢复/导入预览对齐「左侧菜单 + 右侧条目」。
+    /// 含义优先用 Summary（与右侧说明面板一致），完整说明放 MeaningFull。
+    /// </summary>
     private Dictionary<string, SettingUiMeta> BuildSettingUiMeta()
     {
         var byHelp = new Dictionary<SettingHelpInfo, SettingUiMeta>();
@@ -1635,29 +1638,46 @@ internal sealed class MainForm : Form
             {
                 foreach (var row in rows)
                 {
-                    var meaning = row.Help.Summary;
-                    if (!string.IsNullOrWhiteSpace(row.Help.Purpose))
-                        meaning = row.Help.Purpose;
                     byHelp[row.Help] = new SettingUiMeta
                     {
                         Nav = nav,
                         Section = section,
                         Title = row.ItemText,
-                        Meaning = meaning,
+                        Meaning = row.Help.Summary,
+                        MeaningFull = FormatSettingMeaningFull(row.Help),
                     };
                 }
             }
         }
 
         var map = new Dictionary<string, SettingUiMeta>(StringComparer.Ordinal);
-        foreach (var f in typeof(SettingCatalog).GetFields(
-                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+        // 以 Optimizer.State 字段名为准（导出 JSON 键）；Catalog 同名字段取 Help 再对齐侧栏
+        foreach (var stateField in typeof(Optimizer.State).GetFields(
+                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
         {
-            if (f.GetValue(null) is not SettingHelpInfo help) continue;
+            if (stateField.FieldType != typeof(bool) && stateField.FieldType != typeof(int))
+                continue;
+            var key = stateField.Name;
+            var catalogField = typeof(SettingCatalog).GetField(key,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (catalogField?.GetValue(null) is not SettingHelpInfo help) continue;
             if (!byHelp.TryGetValue(help, out var meta)) continue;
-            map[f.Name] = meta;
+            map[key] = meta;
         }
         return map;
+    }
+
+    /// <summary>与右侧 HelpDetailPanel 精简说明同构：作用 + 好处。</summary>
+    private static string FormatSettingMeaningFull(SettingHelpInfo help)
+    {
+        var what = (help.Purpose ?? "").Trim();
+        var benefit = (help.Benefit ?? "").Trim();
+        if (what.Length == 0) return benefit.Length > 0 ? benefit : (help.Summary ?? "");
+        if (benefit.Length == 0) return what;
+        if (what.EndsWith("。", StringComparison.Ordinal) || what.EndsWith(".", StringComparison.Ordinal)
+            || what.EndsWith("；", StringComparison.Ordinal) || what.EndsWith(";", StringComparison.Ordinal))
+            return what + benefit;
+        return what + AppLang.L("。", ". ") + benefit;
     }
 
     private void RunQuickRestore(
