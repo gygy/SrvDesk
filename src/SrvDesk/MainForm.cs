@@ -2241,7 +2241,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        const int headerH = 34;
+        const int headerH = 38;
         var rowH = SettingListLayout.RowHeight;
         var totalVisible = 0;
         foreach (var sec in _activeSections)
@@ -2788,7 +2788,7 @@ internal sealed class MainForm : Form
 
     private Panel BuildGroupSection(string title, SettingRow[] rows)
     {
-        const int headerH = 34;
+        const int headerH = 38;
         var rowH = SettingListLayout.RowHeight;
         var expanded = true;
         var section = new BufferedPanel
@@ -2812,7 +2812,7 @@ internal sealed class MainForm : Form
             Location = new Point(UiScale.S(12), UiScale.S(8)),
             AutoSize = true,
             ForeColor = AppTheme.PrimaryDark,
-            Font = new Font(UiFit.UiFontFamily, 8F),
+            Font = new Font(UiFit.UiFontFamily, UiFit.DesignFontScopePt),
             BackColor = Color.Transparent,
         };
         var titleLabel = new Label
@@ -4376,7 +4376,7 @@ internal sealed class MainForm : Form
                 _choice = new ComboBox
                 {
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    Font = new Font(UiFit.UiFontFamily, 8.25F),
+                    Font = UiFit.UiFontSmall,
                     FlatStyle = FlatStyle.Flat,
                     IntegralHeight = false,
                     Cursor = Cursors.Hand,

@@ -78,6 +78,47 @@ internal sealed class QuickRestorePreviewDialog : Form
         };
         _list.SelectedIndexChanged += (_, _) => UpdateDetail();
 
+        // 「含义」列裁切时，悬停弹出完整说明（Summary + 作用/好处）
+        var tip = new ToolTip
+        {
+            AutoPopDelay = 25000,
+            InitialDelay = 350,
+            ReshowDelay = 150,
+            ShowAlways = true,
+            IsBalloon = false,
+        };
+        var lastTipKey = "";
+        _list.MouseMove += (_, e) =>
+        {
+            var hit = _list.HitTest(e.Location);
+            if (hit.Item?.Tag is PreviewLine line && hit.SubItem is not null)
+            {
+                var subIdx = hit.Item.SubItems.IndexOf(hit.SubItem);
+                if (subIdx == 4) // 含义
+                {
+                    var text = MeaningTipText(line);
+                    var key = hit.Item.Index + "|" + text;
+                    if (key != lastTipKey)
+                    {
+                        lastTipKey = key;
+                        tip.SetToolTip(_list, text);
+                    }
+                    return;
+                }
+            }
+
+            if (lastTipKey.Length > 0)
+            {
+                lastTipKey = "";
+                tip.SetToolTip(_list, "");
+            }
+        };
+        _list.MouseLeave += (_, _) =>
+        {
+            lastTipKey = "";
+            tip.SetToolTip(_list, "");
+        };
+
         foreach (var line in _lines)
         {
             var row = new ListViewItem(KindLabel(line.Kind))
@@ -209,11 +250,24 @@ internal sealed class QuickRestorePreviewDialog : Form
             return;
         }
 
-        var body = string.IsNullOrWhiteSpace(line.MeaningFull) ? line.Meaning : line.MeaningFull;
+        var body = MeaningTipText(line);
         _detail.Text = AppLang.Lf(
             "【{0} · {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
             "[{0} · {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
             line.Nav, line.Section, line.Title, body, line.Current, line.Target);
+    }
+
+    private static string MeaningTipText(PreviewLine line)
+    {
+        var summary = (line.Meaning ?? "").Trim();
+        var full = (line.MeaningFull ?? "").Trim();
+        if (full.Length == 0) return summary;
+        if (summary.Length == 0) return full;
+        if (string.Equals(summary, full, StringComparison.Ordinal)) return full;
+        // Meaning 可能被 Compact 截断；完整说明优先用 MeaningFull，并带上未截断摘要
+        if (full.StartsWith(summary.TrimEnd('…', '.'), StringComparison.Ordinal))
+            return full;
+        return summary + "\r\n" + full;
     }
 
     public static List<PreviewLine> Compute(
@@ -240,7 +294,7 @@ internal sealed class QuickRestorePreviewDialog : Form
                     Nav = meta.Nav,
                     Section = meta.Section,
                     Title = meta.Title,
-                    Meaning = Compact(meta.Meaning, 48),
+                    Meaning = meta.Meaning,
                     MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
                     Current = BoolText(cur),
                     Target = BoolText(kv.Value),
@@ -267,7 +321,7 @@ internal sealed class QuickRestorePreviewDialog : Form
                     Nav = meta.Nav,
                     Section = meta.Section,
                     Title = meta.Title,
-                    Meaning = Compact(meta.Meaning, 48),
+                    Meaning = meta.Meaning,
                     MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
                     Current = FormatExtra(e.Key!, curText),
                     Target = FormatExtra(e.Key!, impText),

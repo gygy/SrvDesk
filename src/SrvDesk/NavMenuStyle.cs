@@ -3,9 +3,9 @@ namespace SrvDesk;
 /// <summary>主窗与子窗共用的左侧导航：宽度、行高、选中/悬停绘制一致。</summary>
 internal static class NavMenuStyle
 {
-    public static int SidebarWidth => UiScale.S(200);
-    public static int ItemHeight => UiScale.S(40);
-    public static int IconSize => Math.Max(16, UiScale.S(16));
+    public static int SidebarWidth => UiScale.S(220);
+    public static int ItemHeight => UiScale.S(44);
+    public static int IconSize => Math.Max(18, UiScale.S(18));
 
     /// <summary>
     /// 按全部标签完整文案（含选中加粗、图标槽）计算侧栏最小宽度，

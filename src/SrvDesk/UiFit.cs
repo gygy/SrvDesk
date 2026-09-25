@@ -48,9 +48,9 @@ internal static class UiFit
     /// 界面基准字号（逻辑 pt）。PerMonitorV2 下 GDI 已按显示器 DPI 光栅化，
     /// 勿再乘 UiScale.Factor，否则高 DPI 会二次放大。换屏时 ResetCachedFonts 重建即可。
     /// </summary>
-    public const float DesignFontPt = 10F;
-    public const float DesignFontSmallPt = 9F;
-    public const float DesignFontScopePt = 8.5F;
+    public const float DesignFontPt = 11.5F;
+    public const float DesignFontSmallPt = 10.5F;
+    public const float DesignFontScopePt = 9.5F;
 
     public static Font UiFont => _ui ??= new Font(UiFontFamily, DesignFontPt);
     public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, DesignFontSmallPt);
