@@ -1531,7 +1531,8 @@ internal sealed class MainForm : Form
         using var dlg = new SaveFileDialog
         {
             Filter = AppLang.L("SrvDesk 配置 (*.json)|*.json", "SrvDesk profile (*.json)|*.json"),
-            FileName = AppLang.L("SrvDesk-配置.json", "SrvDesk-profile.json"),
+            FileName = AppLang.Lf("SrvDesk-配置-{0}.json", "SrvDesk-profile-{0}.json",
+                DateTime.Now.ToString("yyyyMMdd-HHmmss")),
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
