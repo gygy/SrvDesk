@@ -1602,16 +1602,38 @@ internal sealed class MainForm : Form
 
             if (parts.Count == 0) return;
 
+            var importedToggles = parts.Contains(AppLang.L("开关", "Toggles"));
             _status.Text = AppLang.L("已导入", "Imported ") + string.Join(AppLang.L("、", ", "), parts) + "：" + dlg.FileName
-                           + (parts.Contains(AppLang.L("开关", "Toggles"))
-                               ? AppLang.L("（开关需点「应用到系统」生效）", " (toggles need Apply)")
+                           + (importedToggles
+                               ? AppLang.L("（可一键应用到系统）", " (can one-click Apply)")
                                : "");
             ApplyLog.Write(AppLang.L("导入配置 ", "Import profile ") + dlg.FileName + " [" + string.Join(",", parts) + "]");
+
+            // 跨机恢复：导入开关后立刻询问是否写入系统（脚本/方案已在上面落盘）
+            if (importedToggles)
+                OfferOneClickApplyAfterImport();
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, AppLang.L("导入失败", "Import failed"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    /// <summary>导入配置后一键写回本机（相对基线差分）。</summary>
+    private void OfferOneClickApplyAfterImport()
+    {
+        var ask = MessageBox.Show(this,
+            AppLang.L(
+                "配置已导入到界面。\r\n\r\n是否立即一键应用到系统？\r\n\r\n是 = 写入本机（建议先看变更计划）\r\n否 = 仅导入，稍后手动点「应用到系统」",
+                "Profile loaded into the UI.\r\n\r\nApply to this PC now?\r\n\r\nYes = write now (change plan may show)\r\nNo = import only; Apply later"),
+            AppLang.L("一键快速恢复", "One-click restore"),
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button1);
+        if (ask != DialogResult.Yes) return;
+
+        // 直接走主设置写入，不依赖当前是否在嵌入页
+        ApplyRecommended();
     }
 
     private void RefreshAfterProfileImport()
