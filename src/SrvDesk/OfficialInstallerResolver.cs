@@ -143,6 +143,8 @@ internal static class OfficialInstallerResolver
         if (u.IndexOf("dldir1", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (u.IndexOf("channel=release", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (u.IndexOf("download.xnview.com", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        if (u.IndexOf("downloadHr", StringComparison.OrdinalIgnoreCase) >= 0
+            && u.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         return false;
     }
 
@@ -477,6 +479,10 @@ internal static class OfficialInstallerResolver
     {
         var path = uri.AbsolutePath;
         if (path.IndexOf("downloadFile.action", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        // 火绒个人版：downloadHr60.php?pro=hr60 → 301 到版本化 exe
+        if (path.IndexOf("downloadHr", StringComparison.OrdinalIgnoreCase) >= 0
+            && uri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
             return true;
         if (uri.Host.IndexOf("download.cloud.189.cn", StringComparison.OrdinalIgnoreCase) >= 0
             && uri.Query.IndexOf("sig=", StringComparison.OrdinalIgnoreCase) >= 0)
