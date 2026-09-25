@@ -16,6 +16,7 @@ internal sealed class SettingUiMeta
 internal sealed class QuickRestorePreviewDialog : Form
 {
     private readonly ListView _list = new();
+    private readonly Label _detail = new();
     private readonly List<PreviewLine> _lines;
 
     public IReadOnlyList<PreviewLine> SelectedLines =>
@@ -41,8 +42,8 @@ internal sealed class QuickRestorePreviewDialog : Form
         AutoScaleMode = AutoScaleMode.None;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        ClientSize = UiScale.Size(980, 560);
-        MinimumSize = UiScale.Size(860, 480);
+        ClientSize = UiScale.Size(1000, 600);
+        MinimumSize = UiScale.Size(880, 520);
 
         var body = new Panel
         {
@@ -62,19 +63,20 @@ internal sealed class QuickRestorePreviewDialog : Form
         _list.BackColor = AppTheme.SurfaceCard;
         _list.ForeColor = AppTheme.TextMain;
         _list.Font = UiFit.UiFont;
-        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(80));
-        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(110));
-        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(130));
-        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(220));
-        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(240));
-        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(80));
-        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(80));
+        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(120));
+        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(140));
+        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(200));
+        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(260));
+        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(72));
         _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
         _list.ItemChecked += (_, e) =>
         {
             if (e.Item?.Tag is PreviewLine line)
                 line.Selected = e.Item.Checked;
         };
+        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
 
         foreach (var line in _lines)
         {
@@ -104,6 +106,15 @@ internal sealed class QuickRestorePreviewDialog : Form
             empty.SubItems.Add("—");
             _list.Items.Add(empty);
         }
+
+        // 选中行说明：对齐主界面右侧条目（栏目/分区/项目名 + Summary + 作用）
+        _detail.Dock = DockStyle.Bottom;
+        _detail.AutoSize = false;
+        _detail.Height = UiScale.S(88);
+        _detail.Padding = new Padding(0, UiScale.S(8), 0, 0);
+        _detail.ForeColor = AppTheme.TextMain;
+        _detail.Font = UiFit.UiFont;
+        _detail.Text = "";
 
         var footer = new FlowLayoutPanel
         {
@@ -153,14 +164,22 @@ internal sealed class QuickRestorePreviewDialog : Form
         footer.Controls.Add(allOn);
 
         body.Controls.Add(_list);
+        body.Controls.Add(_detail);
         body.Controls.Add(footer);
         Controls.Add(body);
 
         CancelButton = cancel;
-        Load += (_, _) => UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160));
+        Load += (_, _) =>
+        {
+            UiBuffer.FitListViewColumn(_list, 4, UiScale.S(180));
+            if (_list.Items.Count > 0 && _list.Items[0].Tag is PreviewLine)
+                _list.Items[0].Selected = true;
+            else
+                UpdateDetail();
+        };
         Resize += (_, _) =>
         {
-            try { UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160)); }
+            try { UiBuffer.FitListViewColumn(_list, 4, UiScale.S(180)); }
             catch { /* ignore */ }
         };
     }
@@ -180,6 +199,21 @@ internal sealed class QuickRestorePreviewDialog : Form
         {
             _list.EndUpdate();
         }
+    }
+
+    private void UpdateDetail()
+    {
+        if (_list.SelectedItems.Count == 0 || _list.SelectedItems[0].Tag is not PreviewLine line)
+        {
+            _detail.Text = "";
+            return;
+        }
+
+        var body = string.IsNullOrWhiteSpace(line.MeaningFull) ? line.Meaning : line.MeaningFull;
+        _detail.Text = AppLang.Lf(
+            "【{0} · {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
+            "[{0} · {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
+            line.Nav, line.Section, line.Title, body, line.Current, line.Target);
     }
 
     public static List<PreviewLine> Compute(
@@ -206,8 +240,8 @@ internal sealed class QuickRestorePreviewDialog : Form
                     Nav = meta.Nav,
                     Section = meta.Section,
                     Title = meta.Title,
-                    Meaning = Compact(meta.Meaning, 36),
-                    MeaningFull = meta.Meaning,
+                    Meaning = Compact(meta.Meaning, 48),
+                    MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
                     Current = BoolText(cur),
                     Target = BoolText(kv.Value),
                     Selected = true,
@@ -233,8 +267,8 @@ internal sealed class QuickRestorePreviewDialog : Form
                     Nav = meta.Nav,
                     Section = meta.Section,
                     Title = meta.Title,
-                    Meaning = Compact(meta.Meaning, 36),
-                    MeaningFull = meta.Meaning,
+                    Meaning = Compact(meta.Meaning, 48),
+                    MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
                     Current = FormatExtra(e.Key!, curText),
                     Target = FormatExtra(e.Key!, impText),
                     Selected = true,
@@ -382,7 +416,7 @@ internal sealed class QuickRestorePreviewDialog : Form
         if (uiMeta.TryGetValue(key, out var m))
             return m;
 
-        // 常见别名
+        // 常见别名（State 字段名 ↔ 界面 Catalog）
         if (string.Equals(key, "UacNotifyLevel", StringComparison.Ordinal)
             && uiMeta.TryGetValue("DisableUac", out m))
             return m;
@@ -390,32 +424,56 @@ internal sealed class QuickRestorePreviewDialog : Form
             && uiMeta.TryGetValue("HighPerfPower", out m))
             return m;
 
-        var title = TitleFromCatalog(key);
+        // 未挂到侧栏时：仍尽量用 Catalog.Summary，避免只显示英文字段名
+        if (TryCatalogHelp(key, out var help))
+        {
+            return new SettingUiMeta
+            {
+                Nav = AppLang.L("优化开关", "Toggles"),
+                Section = AppLang.L("未分组", "Ungrouped"),
+                Title = Compact(help!.Summary, 28),
+                Meaning = help.Summary,
+                MeaningFull = FormatCatalogMeaningFull(help),
+            };
+        }
+
         return new SettingUiMeta
         {
             Nav = AppLang.L("优化开关", "Toggles"),
             Section = AppLang.L("未分组", "Ungrouped"),
-            Title = title,
-            Meaning = title,
+            Title = key,
+            Meaning = key,
+            MeaningFull = key,
         };
     }
 
-    private static string TitleFromCatalog(string key)
+    private static bool TryCatalogHelp(string key, out SettingHelpInfo? help)
     {
+        help = null;
         try
         {
             var f = typeof(SettingCatalog).GetField(key,
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            if (f?.GetValue(null) is SettingHelpInfo help && !string.IsNullOrWhiteSpace(help.Summary))
-                return Compact(help.Summary, 28);
+            if (f?.GetValue(null) is SettingHelpInfo h)
+            {
+                help = h;
+                return true;
+            }
         }
         catch { /* ignore */ }
+        return false;
+    }
 
-        return key switch
-        {
-            "UacNotifyLevel" => AppLang.L("UAC 通知级别", "UAC notify level"),
-            _ => key,
-        };
+    private static string FormatCatalogMeaningFull(SettingHelpInfo help)
+    {
+        var what = (help.Purpose ?? "").Trim();
+        var benefit = (help.Benefit ?? "").Trim();
+        if (what.Length == 0) return benefit.Length > 0 ? benefit : (help.Summary ?? "");
+        if (benefit.Length == 0) return what;
+        if (what.EndsWith("。", StringComparison.Ordinal) || what.EndsWith(".", StringComparison.Ordinal)
+            || what.EndsWith("；", StringComparison.Ordinal) || what.EndsWith(";", StringComparison.Ordinal))
+            return what + benefit;
+        return what + AppLang.L("。", ". ") + benefit;
     }
 
     private static string KindLabel(PreviewKind k) => k switch
