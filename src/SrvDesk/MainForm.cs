@@ -1819,76 +1819,145 @@ internal sealed class MainForm : Form
             InitialDirectory = ProfileStore.DefaultProfileDir(),
         };
         if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        OptProfileBundle bundle;
         try
         {
-            var bundle = ProfileStore.LoadBundle(dlg.FileName);
-            var parts = new List<string>();
-            if (bundle.HasSettings)
-            {
-                var diffs = ProfileImportDiffDialog.Compute(CaptureState(), bundle.State);
-                if (diffs.Count > 0)
-                {
-                    using var confirm = new ProfileImportDiffDialog(diffs);
-                    if (confirm.ShowDialog(this) != DialogResult.Yes)
-                    {
-                        if (!bundle.HasScriptOverrides && !bundle.HasCustomPacks && !bundle.HasServices
-                            && !bundle.HasServerProfile)
-                            return;
-                        // 跳过开关，仍可导入其它部分
-                    }
-                    else
-                    {
-                        Bind(bundle.State);
-                        _uiDirty = true;
-                        parts.Add(AppLang.L("开关", "Toggles"));
-                    }
-                }
-                else
-                {
-                    Bind(bundle.State);
-                    _uiDirty = true;
-                    parts.Add(AppLang.L("开关", "Toggles"));
-                }
-            }
+            UseWaitCursor = true;
+            _status.Text = AppLang.L("正在分析相对本机的差异…", "Analyzing diffs vs this PC…");
+            Application.DoEvents();
+            bundle = ProfileStore.LoadBundle(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            UseWaitCursor = false;
+            MessageBox.Show(ex.Message, AppLang.L("导入失败", "Import failed"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        List<QuickRestorePreviewDialog.PreviewLine> preview;
+        try
+        {
+            Optimizer.State current;
+            try { current = Optimizer.Read(fullScan: false); }
+            catch { current = CaptureState(); }
+            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMeta());
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _status.Text = "";
+        }
+
+        IReadOnlyList<QuickRestorePreviewDialog.PreviewLine> selected;
+        using (var previewDlg = new QuickRestorePreviewDialog(
+                   preview,
+                   dlg.FileName,
+                   AppLang.L("导入配置 · 挑选变更", "Import profile · Pick changes"),
+                   AppLang.L("导入勾选项", "Import checked")))
+        {
+            if (previewDlg.ShowDialog(this) != DialogResult.Yes)
+                return;
+            selected = previewDlg.SelectedLines;
+        }
+
+        if (preview.Count > 0 && selected.Count == 0)
+            return;
+
+        // 无差异但仍可能整包导入（旧逻辑：无 diff 时仍 Bind）：此处 preview 为空则直接载入开关
+        if (preview.Count == 0 && bundle.HasSettings)
+        {
+            Bind(bundle.State);
+            _uiDirty = true;
             if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
+                ProfileStore.ApplyLocalData(bundle);
+            if (bundle.HasServerProfile)
+                ProfileStore.ApplyServerProfile(bundle);
+            _status.Text = AppLang.L("已导入（与当前无开关差异）：", "Imported (no toggle diffs): ") + dlg.FileName;
+            OfferOneClickApplyAfterImport();
+            return;
+        }
+
+        try
+        {
+            var parts = new List<string>();
+            var wantScripts = selected.Any(x => x.OtherId == "ScriptOverrides");
+            var wantPacks = selected.Any(x => x.OtherId == "CustomPacks");
+            var wantLevel = selected.Any(x => x.OtherId == "OptimizationLevel");
+            var wantRoles = selected.Any(x => x.OtherId == "ServerRoles");
+            var settingKeys = new HashSet<string>(
+                selected.Where(x => !string.IsNullOrEmpty(x.StateKey)).Select(x => x.StateKey!),
+                StringComparer.Ordinal);
+            var serviceNames = new HashSet<string>(
+                selected.Where(x => !string.IsNullOrEmpty(x.ServiceName)).Select(x => x.ServiceName!),
+                StringComparer.OrdinalIgnoreCase);
+
+            if ((wantScripts && bundle.HasScriptOverrides) || (wantPacks && bundle.HasCustomPacks))
             {
-                var tip = AppLang.L("将写入本机保存的配置脚本覆盖与自定义方案，覆盖现有本地内容。是否继续？", "This will overwrite local script overrides and custom packs. Continue?");
-                if (MessageBox.Show(this, tip, AppLang.L("导入配置", "Import profile"),
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                ProfileStore.ApplyLocalData(new OptProfileBundle
                 {
-                    if (parts.Count > 0)
-                        _status.Text = AppLang.L("已导入开关到界面（未导入脚本）：", "Imported toggles to UI (scripts skipped): ") + dlg.FileName;
-                    // 不 return：仍可询问服务
-                }
-                else
-                {
-                    ProfileStore.ApplyLocalData(bundle);
-                    if (bundle.HasScriptOverrides) parts.Add(AppLang.L("脚本覆盖", "Script overrides"));
-                    if (bundle.HasCustomPacks) parts.Add(AppLang.L("自定义方案", "Custom packs"));
-                    RefreshAfterProfileImport();
-                }
+                    HasScriptOverrides = wantScripts && bundle.HasScriptOverrides,
+                    ScriptOverrides = bundle.ScriptOverrides,
+                    HasCustomPacks = wantPacks && bundle.HasCustomPacks,
+                    CustomPacks = bundle.CustomPacks,
+                    CustomPacksLastId = bundle.CustomPacksLastId,
+                });
+                if (wantScripts && bundle.HasScriptOverrides) parts.Add(AppLang.L("脚本覆盖", "Script overrides"));
+                if (wantPacks && bundle.HasCustomPacks) parts.Add(AppLang.L("自定义方案", "Custom packs"));
+                RefreshAfterProfileImport();
             }
 
-            if (bundle.HasServerProfile)
+            if ((wantLevel || wantRoles) && bundle.HasServerProfile)
             {
-                ProfileStore.ApplyServerProfile(bundle);
+                var data = ServerProfile.Load();
+                if (wantRoles && bundle.ServerRoles.HasValue)
+                    data.Roles = bundle.ServerRoles.Value;
+                if (wantLevel && bundle.OptimizationLevel.HasValue)
+                    data.OptimizationLevel = Math.Max(0, Math.Min(3, bundle.OptimizationLevel.Value));
+                data.ProfileConfigured = true;
+                ServerProfile.Save(data);
                 parts.Add(AppLang.L("服务器用途/优化等级", "Server profile / level"));
             }
 
-            if (bundle.HasServices && bundle.Services is { Count: > 0 })
+            if (settingKeys.Count > 0 && bundle.HasSettings)
             {
-                var tip = AppLang.Lf(
-                    "配置含 {0} 个服务启动类型。是否一并还原到本机？\r\n（本机没有的服务会跳过）",
-                    "Profile contains {0} service start types. Restore them too?\r\n(Missing services on this PC are skipped)",
-                    bundle.Services.Count);
-                if (MessageBox.Show(this, tip, AppLang.L("导入配置", "Import profile"),
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                Optimizer.State baseState;
+                try { baseState = Optimizer.Read(fullScan: false); }
+                catch { baseState = CaptureState(); }
+
+                var map = StateMapper.ToMap(baseState);
+                var impMap = StateMapper.ToMap(bundle.State);
+                foreach (var key in settingKeys)
                 {
-                    try { ServiceSnapshotStore.EnsureAutoBackupBeforeChange(); }
-                    catch { /* ignore */ }
-                    var svc = ServiceSnapshotStore.RestoreEntries(bundle.Services);
-                    parts.Add(AppLang.Lf("服务 {0} 项", "Services {0}", svc.Applied));
+                    if (impMap.TryGetValue(key, out var v))
+                        map[key] = v;
                 }
+                StateMapper.ApplyMap(baseState, map);
+
+                var impExtra = StateMapper.ToExtra(bundle.State)
+                    .Where(e => e.Key is not null && settingKeys.Contains(e.Key)
+                                && string.Equals(e.Kind, "int", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (impExtra.Count > 0)
+                    StateMapper.ApplyExtra(baseState, impExtra);
+
+                if (settingKeys.Contains("UacNotifyLevel") || settingKeys.Contains("DisableUac"))
+                    baseState.DisableUac = baseState.UacNotifyLevel == 2;
+
+                Bind(baseState);
+                _uiDirty = true;
+                parts.Add(AppLang.L("开关", "Toggles"));
+            }
+
+            if (serviceNames.Count > 0 && bundle.HasServices && bundle.Services is { Count: > 0 })
+            {
+                try { ServiceSnapshotStore.EnsureAutoBackupBeforeChange(); }
+                catch { /* ignore */ }
+                var entries = bundle.Services
+                    .Where(x => x.Name is not null && serviceNames.Contains(x.Name))
+                    .ToList();
+                var svc = ServiceSnapshotStore.RestoreEntries(entries);
+                parts.Add(AppLang.Lf("服务 {0} 项", "Services {0}", svc.Applied));
             }
 
             if (parts.Count == 0) return;

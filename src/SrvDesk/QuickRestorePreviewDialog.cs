@@ -20,13 +20,17 @@ internal sealed class QuickRestorePreviewDialog : Form
     public IReadOnlyList<PreviewLine> SelectedLines =>
         _lines.Where(x => x.Selected).ToList();
 
-    public QuickRestorePreviewDialog(IReadOnlyList<PreviewLine> lines, string sourcePath)
+    public QuickRestorePreviewDialog(
+        IReadOnlyList<PreviewLine> lines,
+        string sourcePath,
+        string? windowTitle = null,
+        string? confirmButtonText = null)
     {
         _lines = lines.Select(x => x.Clone()).ToList();
         foreach (var line in _lines)
             line.Selected = true;
 
-        Text = AppLang.L("一键快速恢复 · 挑选变更", "One-click restore · Pick changes");
+        Text = windowTitle ?? AppLang.L("一键快速恢复 · 挑选变更", "One-click restore · Pick changes");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -149,7 +153,8 @@ internal sealed class QuickRestorePreviewDialog : Form
         UiFit.FitButton(cancel, padding: 28);
         cancel.DialogResult = DialogResult.Cancel;
 
-        var ok = ThemedSettingsChrome.CreateButton(AppLang.L("恢复勾选项", "Restore checked"), true);
+        var ok = ThemedSettingsChrome.CreateButton(
+            confirmButtonText ?? AppLang.L("恢复勾选项", "Restore checked"), true);
         UiFit.FitButton(ok, padding: 28);
         ok.Margin = new Padding(UiScale.S(8), 0, 0, 0);
         ok.Click += (_, _) =>
