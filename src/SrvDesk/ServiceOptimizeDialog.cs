@@ -15,6 +15,8 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     private bool _warmLoadSkip;
     private bool _showMissing;
     private readonly ToolTip _listTip = new();
+    /// <summary>工具栏按钮抢焦点时 ListView 可能暂时无 SelectedItems，用上次有效选择兜底。</summary>
+    private List<ServiceOptimizeRow> _stickySelection = [];
 
     /// <summary>-1=默认（按推荐强度，已禁用靠后）；否则为列索引。</summary>
     private int _sortColumn = -1;
@@ -87,7 +89,12 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         _list.Columns.Add(AppLang.L("推荐值", "Recommend"), RecommendLevelUi.PreferredColumnWidth);
         _list.Columns.Add(AppLang.L("说明", "Note"), UiScale.S(180));
         _list.Columns.Add(AppLang.L("服务名", "Service"), UiScale.S(110));
-        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
+        _list.SelectedIndexChanged += (_, _) =>
+        {
+            RememberStickySelection();
+            UpdateDetail();
+        };
+        _list.MouseUp += (_, _) => RememberStickySelection();
         _list.MouseDoubleClick += OnListMouseDoubleClick;
         _list.ColumnClick += OnColumnClick;
         _list.DrawColumnHeader += (_, e) => e.DrawDefault = true;
@@ -435,7 +442,13 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
     {
         var b = ThemedSettingsChrome.CreateButton(text, primary);
         UiFit.FitButton(b, height, minWidth: 64, padding: 24);
-        b.Click += (_, _) => click();
+        // MouseDown 时 ListView 可能尚未丢选中，先固化粘性选择
+        b.MouseDown += (_, _) => RememberStickySelection();
+        b.Click += (_, _) =>
+        {
+            RememberStickySelection();
+            click();
+        };
         return b;
     }
 
@@ -487,15 +500,38 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
 
         filtered.Sort(CompareVisible);
 
+        var keepIds = new HashSet<string>(
+            SelectedRows().Select(x => x.ActualServiceName),
+            StringComparer.OrdinalIgnoreCase);
+        if (keepIds.Count == 0)
+        {
+            foreach (var s in _stickySelection)
+                keepIds.Add(s.ActualServiceName);
+        }
+
         _list.BeginUpdate();
         _list.Items.Clear();
         var shown = 0;
         var optimizable = 0;
+        ListViewItem? firstRestore = null;
         foreach (var item in filtered)
         {
-            _list.Items.Add(MakeRow(item));
+            var row = MakeRow(item);
+            _list.Items.Add(row);
             shown++;
             if (item.CanOptimize) optimizable++;
+            if (keepIds.Contains(item.ActualServiceName))
+            {
+                row.Selected = true;
+                firstRestore ??= row;
+            }
+        }
+
+        if (firstRestore is not null)
+        {
+            try { firstRestore.EnsureVisible(); }
+            catch { /* ignore */ }
+            RememberStickySelection();
         }
 
         _list.EndUpdate();
@@ -677,13 +713,41 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         return menu;
     }
 
-    private IEnumerable<ServiceOptimizeRow> SelectedRows()
+    private void RememberStickySelection()
     {
+        var current = new List<ServiceOptimizeRow>();
         foreach (ListViewItem row in _list.SelectedItems)
         {
             if (row.Tag is ServiceOptimizeRow item)
-                yield return item;
+                current.Add(item);
         }
+
+        if (current.Count > 0)
+            _stickySelection = current;
+        else if (_list.FocusedItem?.Tag is ServiceOptimizeRow one)
+            _stickySelection = [one];
+    }
+
+    private IEnumerable<ServiceOptimizeRow> SelectedRows()
+    {
+        var fromList = new List<ServiceOptimizeRow>();
+        foreach (ListViewItem row in _list.SelectedItems)
+        {
+            if (row.Tag is ServiceOptimizeRow item)
+                fromList.Add(item);
+        }
+
+        if (fromList.Count > 0)
+            return fromList;
+
+        // 点工具栏按钮后 SelectedItems 偶发为空，用粘性选择
+        if (_stickySelection.Count > 0)
+            return _stickySelection;
+
+        if (_list.FocusedItem?.Tag is ServiceOptimizeRow focused)
+            return [focused];
+
+        return [];
     }
 
     private void UpdateDetail()
@@ -693,8 +757,8 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
 
         if (item is null)
         {
-            _detail.Text = AppLang.L("列表按分类折叠；右键可操作。点分类行可展开/收起。",
-                "Grouped by category; right-click for actions. Click a category row to expand/collapse.");
+            _detail.Text = AppLang.L("按推荐强度排序；选中一行后可用工具栏或右键操作。",
+                "Sorted by recommendation; select a row, then use toolbar or right-click.");
             return;
         }
 
