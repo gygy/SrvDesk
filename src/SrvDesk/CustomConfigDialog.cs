@@ -13,6 +13,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
     private CustomPackIndex _index = new();
     private CustomPackDetail? _current;
     private bool _suppressPackSelect;
+    private readonly ListViewStickySelection<CustomPackItem> _sticky;
 
     public CustomConfigDialog()
     {
@@ -26,6 +27,8 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         MinimumSize = new Size(780, 480);
         ForeColor = AppTheme.TextMain;
         KeyPreview = true;
+
+        _sticky = new ListViewStickySelection<CustomPackItem>(_items);
 
         _btnNewPack = CompactBtn("新建", "新建方案", NewPack);
         _btnRenamePack = CompactBtn("重命名", "重命名当前方案", RenamePack);
@@ -163,7 +166,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         var b = ThemedSettingsChrome.CreateButton(text, false);
         UiFit.FitButton(b, UiFit.ControlHeight(b.Font), minWidth: 64, padding: 20);
         b.Margin = new Padding(0, 0, 8, 0);
-        b.Click += (_, _) => click();
+        _sticky.BindToolbarButton(b, click);
         _tip.SetToolTip(b, tip);
         return b;
     }
@@ -488,14 +491,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ReloadItems();
     }
 
-    private IEnumerable<CustomPackItem> SelectedItems()
-    {
-        foreach (ListViewItem row in _items.SelectedItems)
-        {
-            if (row.Tag is CustomPackItem item)
-                yield return item;
-        }
-    }
+    private IEnumerable<CustomPackItem> SelectedItems() => _sticky.Get();
 
     private void SelectItemById(string itemId)
     {

@@ -35,10 +35,12 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     private List<ContextMenuEntry> _items = [];
     private bool _scanLoaded;
     private Button[] _scanButtons = [];
+    private readonly ListViewStickySelection<ContextMenuEntry> _sticky;
 
     public ContextMenuSettingsDialog(Action? onChanged = null)
     {
         _onChanged = onChanged;
+        _sticky = new ListViewStickySelection<ContextMenuEntry>(_list);
         Text = AppLang.L("右键菜单", "Context menu");
         AppBrand.ApplyWindowIcon(this);
         AutoScaleMode = AutoScaleMode.None;
@@ -400,7 +402,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         UiFit.FitButton(b, height, minWidth: 64, padding: 22);
-        b.Click += (_, _) => click();
+        _sticky.BindToolbarButton(b, click);
         return b;
     }
 
@@ -497,14 +499,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         _list.EndUpdate();
     }
 
-    private IEnumerable<ContextMenuEntry> SelectedEntries()
-    {
-        foreach (ListViewItem row in _list.SelectedItems)
-        {
-            if (row.Tag is ContextMenuEntry e)
-                yield return e;
-        }
-    }
+    private IEnumerable<ContextMenuEntry> SelectedEntries() => _sticky.Get();
 
     private void ToggleSelected()
     {

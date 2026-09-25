@@ -5,6 +5,7 @@ internal sealed class CustomSoftwareManageDialog : Form
 {
     private readonly ListView _list = new();
     private readonly List<CustomSoftwareStore.CustomSoftwareEntry> _items;
+    private readonly ListViewStickySelection<CustomSoftwareStore.CustomSoftwareEntry> _sticky;
 
     public CustomSoftwareManageDialog()
     {
@@ -21,6 +22,7 @@ internal sealed class CustomSoftwareManageDialog : Form
         ShowInTaskbar = false;
 
         _items = CustomSoftwareStore.Load();
+        _sticky = new ListViewStickySelection<CustomSoftwareStore.CustomSoftwareEntry>(_list);
 
         var hint = new Label
         {
@@ -60,12 +62,12 @@ internal sealed class CustomSoftwareManageDialog : Form
         var edit = ThemedSettingsChrome.CreateButton("编辑", false);
         UiFit.FitButton(edit, padding: 28);
         edit.Margin = new Padding(UiScale.S(8), 0, 0, 0);
-        edit.Click += (_, _) => EditSelected();
+        _sticky.BindToolbarButton(edit, EditSelected);
 
         var remove = ThemedSettingsChrome.CreateButton("删除", false);
         UiFit.FitButton(remove, padding: 28);
         remove.Margin = new Padding(UiScale.S(8), 0, 0, 0);
-        remove.Click += (_, _) => RemoveSelected();
+        _sticky.BindToolbarButton(remove, RemoveSelected);
 
         var close = ThemedSettingsChrome.CreateButton("关闭", false);
         UiFit.FitButton(close, padding: 28);
@@ -116,12 +118,12 @@ internal sealed class CustomSoftwareManageDialog : Form
 
     private void EditSelected()
     {
-        if (_list.SelectedItems.Count == 0)
+        var entry = _sticky.Get().FirstOrDefault();
+        if (entry is null)
         {
             MessageBox.Show(this, "请先选择一项。", "自定义软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        var entry = (CustomSoftwareStore.CustomSoftwareEntry)_list.SelectedItems[0].Tag!;
         if (!PromptEdit(entry, out var title, out var wingetId)) return;
         try
         {
@@ -139,8 +141,8 @@ internal sealed class CustomSoftwareManageDialog : Form
 
     private void RemoveSelected()
     {
-        if (_list.SelectedItems.Count == 0) return;
-        var entry = (CustomSoftwareStore.CustomSoftwareEntry)_list.SelectedItems[0].Tag!;
+        var entry = _sticky.Get().FirstOrDefault();
+        if (entry is null) return;
         if (MessageBox.Show(this, $"删除自定义项「{entry.Title}」？", "自定义软件",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;

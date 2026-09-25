@@ -752,6 +752,7 @@ internal sealed class ScheduledTaskDialog : Form
 {
     private List<ScheduledTaskAdvice> _items = [];
     private readonly ListView _list = new();
+    private readonly ListViewStickySelection<ScheduledTaskAdvice> _sticky;
 
     public ScheduledTaskDialog()
     {
@@ -763,12 +764,14 @@ internal sealed class ScheduledTaskDialog : Form
         ClientSize = UiScale.Size(960, 640);
         MinimumSize = UiScale.Size(820, 540);
         Font = UiFit.UiFont;
+        _sticky = new ListViewStickySelection<ScheduledTaskAdvice>(_list);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         _list.Dock = DockStyle.Fill;
         _list.View = View.Details;
         _list.FullRowSelect = true;
         _list.MultiSelect = true;
+        _list.HideSelection = false;
         _list.BackColor = AppTheme.SurfaceCard;
         _list.Columns.Add(AppLang.L("分类", "Bucket"), 90);
         _list.Columns.Add(AppLang.L("任务", "Task"), 300);
@@ -791,11 +794,11 @@ internal sealed class ScheduledTaskDialog : Form
         var disable = ThemedSettingsChrome.CreateButton(AppLang.L("禁用所选（仅允许项）", "Disable selected (allowed)"), true);
         UiFit.FitButton(disable, padding: 28);
         disable.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
-        disable.Click += (_, _) => ToggleSelected(false);
+        _sticky.BindToolbarButton(disable, () => ToggleSelected(false));
         var enable = ThemedSettingsChrome.CreateButton(AppLang.L("启用所选", "Enable selected"), false);
         UiFit.FitButton(enable, padding: 28);
         enable.Margin = new Padding(UiScale.S(8), 0, 0, UiScale.S(4));
-        enable.Click += (_, _) => ToggleSelected(true);
+        _sticky.BindToolbarButton(enable, () => ToggleSelected(true));
         var disableTelem = ThemedSettingsChrome.CreateButton(
             AppLang.L("禁用遥测建议项", "Disable telemetry set"), false);
         UiFit.FitButton(disableTelem, padding: 28);
@@ -857,9 +860,8 @@ internal sealed class ScheduledTaskDialog : Form
 
     private void ToggleSelected(bool enable)
     {
-        foreach (ListViewItem row in _list.SelectedItems)
+        foreach (var t in _sticky.Get())
         {
-            if (row.Tag is not ScheduledTaskAdvice t) continue;
             if (!enable && !t.CanToggle)
             {
                 MessageBox.Show(this, AppLang.L("该项不允许禁用：", "Not allowed to disable: ") + t.Path,

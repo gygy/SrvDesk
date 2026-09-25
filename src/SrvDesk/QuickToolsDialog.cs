@@ -7,10 +7,12 @@ internal sealed class QuickToolsDialog : Form
     private readonly TextBox _search = new();
     private readonly Label _count = new();
     private List<QuickTool> _tools = [];
+    private readonly ListViewStickySelection<QuickTool> _sticky;
 
     public QuickToolsDialog(SystemFacts facts)
     {
         _facts = facts;
+        _sticky = new ListViewStickySelection<QuickTool>(_list);
         Text = AppLang.L("快速工具", "Quick tools");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -82,7 +84,7 @@ internal sealed class QuickToolsDialog : Form
         UiBuffer.ConfigureNoScrollRow(actions);
         var openBtn = ThemedSettingsChrome.CreateButton(AppLang.L("打开", "Open"), true);
         UiFit.FitButton(openBtn, padding: 28);
-        openBtn.Click += (_, _) => OpenSelected();
+        _sticky.BindToolbarButton(openBtn, OpenSelected);
         actions.Controls.Add(openBtn);
 
         body.Controls.Add(_list);
@@ -137,9 +139,9 @@ internal sealed class QuickToolsDialog : Form
 
     private void OpenSelected()
     {
-        if (_list.SelectedItems.Count == 0) return;
-        if (_list.SelectedItems[0].Tag is QuickTool tool)
-            QuickToolsLauncher.Launch(tool, this);
+        var tool = _sticky.Get().FirstOrDefault();
+        if (tool is null) return;
+        QuickToolsLauncher.Launch(tool, this);
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

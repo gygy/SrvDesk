@@ -8,6 +8,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     private readonly Label _count = new();
     private readonly ComboBox _filter = new();
     private List<StartupEntry> _items = [];
+    private readonly ListViewStickySelection<StartupEntry> _sticky;
 
     private static readonly string[] Filters = ["全部", "当前用户", "所有用户", "已禁用"];
 
@@ -23,6 +24,8 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         ClientSize = new Size(920, 580);
         MinimumSize = new Size(760, 480);
         ForeColor = AppTheme.TextMain;
+
+        _sticky = new ListViewStickySelection<StartupEntry>(_list);
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = AppTheme.Surface, Padding = new Padding(12, 10, 12, 8) };
         var tools = BuildToolStrip();
@@ -183,7 +186,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
     {
         var b = ThemedSettingsChrome.CreateButton(text, false);
         UiFit.FitButton(b, height, minWidth: 64, padding: 24);
-        b.Click += (_, _) => click();
+        _sticky.BindToolbarButton(b, click);
         return b;
     }
 
@@ -232,8 +235,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         UpdateDetail();
     }
 
-    private StartupEntry? Selected() =>
-        _list.SelectedItems.Count > 0 ? _list.SelectedItems[0].Tag as StartupEntry : null;
+    private StartupEntry? Selected() => _sticky.Get().FirstOrDefault();
 
     private void UpdateDetail()
     {
