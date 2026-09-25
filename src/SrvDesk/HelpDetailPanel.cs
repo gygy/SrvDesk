@@ -76,7 +76,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
 
         _title.SetBounds(PadX, 30, 280, 40);
         _title.ForeColor = AppTheme.PrimaryDeep;
-        _title.Font = UiFit.UiFontBold(UiFit.DesignFontPt + 0.5F);
+        _title.Font = UiFit.UiFontPageTitle;
         _title.BackColor = Color.Transparent;
         _title.AutoEllipsis = false;
 
@@ -156,7 +156,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
         _recipeHost.Visible = false;
 
         _recipeCaption.Text = AppLang.L("配置脚本", "Config script");
-        _recipeCaption.Font = UiFit.UiFontBold(UiFit.DesignFontSmallPt);
+        _recipeCaption.Font = UiFit.UiFontSection;
         _recipeCaption.ForeColor = AppTheme.PrimaryDeep;
         _recipeCaption.BackColor = Color.Transparent;
         _recipeCaption.AutoSize = true;
@@ -336,7 +336,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                 Text = head,
                 AutoSize = false,
                 ForeColor = AppTheme.PrimaryDeep,
-                Font = UiFit.UiFontBold(UiFit.DesignFontSmallPt),
+                Font = UiFit.UiFontSection,
                 BackColor = Color.Transparent,
                 Tag = "h",
             });
@@ -719,7 +719,7 @@ internal sealed class HelpDetailPanel : BufferedPanel
                     Text = head,
                     AutoSize = false,
                     ForeColor = AppTheme.PrimaryDeep,
-                    Font = UiFit.UiFontBold(UiFit.DesignFontSmallPt),
+                    Font = UiFit.UiFontSection,
                     BackColor = Color.Transparent,
                     Tag = "h",
                 });

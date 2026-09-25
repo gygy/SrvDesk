@@ -4,33 +4,31 @@ namespace SrvDesk;
 internal static class NavMenuStyle
 {
     public static int SidebarWidth => UiScale.S(220);
-    public static int ItemHeight => UiScale.S(44);
+    /// <summary>一级菜单行高：14px 字 + 22px 行高配套。</summary>
+    public static int ItemHeight => Math.Max(UiScale.S(40), UiFit.LineHeight(UiFit.UiFontNav) + UiScale.S(16));
     public static int IconSize => Math.Max(18, UiScale.S(18));
 
     /// <summary>
-    /// 按全部标签完整文案（含选中加粗、图标槽）计算侧栏最小宽度，
+    /// 按全部标签完整文案（含一级 Medium、图标槽）计算侧栏最小宽度，
     /// 避免启动时只露出半截字或省略号。
     /// </summary>
     public static int PreferredWidth(IEnumerable<string> labels, bool withIcon = true)
     {
-        var font = UiFit.UiFont;
-        using var bold = UiFit.UiFontBold(font.SizeInPoints);
+        var font = UiFit.UiFontNav;
         var maxText = 0;
         foreach (var raw in labels)
         {
             var t = raw?.Trim() ?? "";
             if (t.Length == 0) continue;
             maxText = Math.Max(maxText, UiFit.TextWidth(t, font));
-            maxText = Math.Max(maxText, UiFit.TextWidth(t, bold));
         }
 
         if (maxText <= 0)
-            maxText = UiFit.TextWidth("自定义配置", bold);
+            maxText = UiFit.TextWidth("自定义配置", font);
 
         var left = UiScale.S(12);
         if (withIcon)
             left += IconSize + UiScale.S(8);
-        // 右侧内边距 + ClearType/选中条余量；预留纵向滚动条，避免项多时把字挤成「网络/专…」
         var right = UiScale.S(16) + Math.Max(UiScale.S(10), UiFit.LineHeight(font) / 3)
                     + SystemInformation.VerticalScrollBarWidth;
         return Math.Max(UiScale.S(148), left + maxText + right);
@@ -48,7 +46,7 @@ internal static class NavMenuStyle
         menu.BorderStyle = BorderStyle.None;
         menu.BackColor = AppTheme.NavBg;
         menu.ForeColor = AppTheme.TextMain;
-        menu.Font = UiFit.UiFont;
+        menu.Font = UiFit.UiFontNav;
         menu.IntegralHeight = false;
         menu.DrawMode = DrawMode.OwnerDrawFixed;
         menu.ItemHeight = ItemHeight;
@@ -96,20 +94,15 @@ internal static class NavMenuStyle
 
         if (selected)
         {
+            // 3～4px 左侧指示条；选中态不靠加粗，保持 14 Medium + 背景
             using var accent = new SolidBrush(Color.FromArgb(255, 255, 255));
-            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 10, 3, e.Bounds.Height - 20);
+            var barW = Math.Max(3, UiScale.S(3));
+            e.Graphics.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + 10, barW, e.Bounds.Height - 20);
         }
 
-        Font? bold = null;
         try
         {
-            var use = font ?? UiFit.UiFont;
-            if (selected)
-            {
-                bold = new Font(use, FontStyle.Bold);
-                use = bold;
-            }
-
+            var use = font ?? UiFit.UiFontNav;
             e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             var fore = selected ? AppTheme.TextOnPrimary : AppTheme.TextMain;
@@ -147,7 +140,7 @@ internal static class NavMenuStyle
             var badgeW = 0;
             if (badge.Length > 0)
             {
-                var badgeSize = TextRenderer.MeasureText(e.Graphics, badge, use, Size.Empty,
+                var badgeSize = TextRenderer.MeasureText(e.Graphics, badge, UiFit.UiFontScope, Size.Empty,
                     TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
                 badgeW = Math.Max(UiScale.S(18), badgeSize.Width + UiScale.S(8));
             }
@@ -179,15 +172,15 @@ internal static class NavMenuStyle
                 TextRenderer.DrawText(
                     e.Graphics,
                     badge,
-                    use,
+                    UiFit.UiFontScope,
                     badgeRect,
                     badgeFore,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
             }
         }
-        finally
+        catch
         {
-            bold?.Dispose();
+            /* ignore draw failures */
         }
     }
 }

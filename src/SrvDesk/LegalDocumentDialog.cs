@@ -18,7 +18,7 @@ internal sealed class LegalDocumentDialog : Form
         ClientSize = new Size(640, 480);
         MinimumSize = new Size(480, 360);
         BackColor = AppTheme.SurfaceCard;
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
         ShowInTaskbar = false;
 
         var box = new TextBox
@@ -30,7 +30,7 @@ internal sealed class LegalDocumentDialog : Form
             BorderStyle = BorderStyle.FixedSingle,
             BackColor = AppTheme.Surface,
             ForeColor = AppTheme.TextMain,
-            Font = new Font("Microsoft YaHei UI", 9.5F),
+            Font = UiFit.UiFontSmall,
             Text = body,
             Dock = DockStyle.Fill,
             Margin = new Padding(0),

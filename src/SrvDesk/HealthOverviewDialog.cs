@@ -38,7 +38,7 @@ internal sealed class HealthOverviewDialog : Form
         };
 
         var head = new Panel { Dock = DockStyle.Top, Height = UiScale.S(56), BackColor = AppTheme.SurfaceCard };
-        _summary.Font = UiFit.UiFontBold(14f);
+        _summary.Font = UiFit.UiFontPageTitle;
         _summary.ForeColor = AppTheme.Primary;
         _summary.Location = new Point(16, 16);
         _summary.AutoSize = true;
@@ -228,7 +228,7 @@ internal sealed class HealthOverviewDialog : Form
             Location = new Point(UiScale.S(12), UiScale.S(9)),
             AutoSize = true,
             ForeColor = AppTheme.PrimaryDark,
-            Font = new Font(UiFit.UiFontFamily, 8F),
+            Font = UiFit.UiFontScope,
             BackColor = Color.Transparent,
         };
         var titleLabel = new Label

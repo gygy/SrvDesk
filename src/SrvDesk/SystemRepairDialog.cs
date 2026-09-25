@@ -90,7 +90,7 @@ internal sealed class SystemRepairDialog : Form
         _log.ReadOnly = true;
         _log.ScrollBars = ScrollBars.Both;
         _log.Dock = DockStyle.Fill;
-        _log.Font = new Font("Consolas", 9f);
+        _log.Font = UiFit.UiFontCode(9.75f);
         _log.BackColor = AppTheme.SurfaceCard;
         _log.ForeColor = AppTheme.TextMain;
         _log.BorderStyle = BorderStyle.FixedSingle;

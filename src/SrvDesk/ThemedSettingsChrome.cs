@@ -144,7 +144,7 @@ internal static class ThemedSettingsChrome
             Location = new Point(54, 6),
             Size = new Size(520, 24),
             ForeColor = AppTheme.TextOnPrimary,
-            Font = UiFit.UiFontBold(12.5F),
+            Font = UiFit.UiFontSection,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
             AutoEllipsis = false,
@@ -302,7 +302,7 @@ internal static class ThemedSettingsChrome
 
     public static Button CreateButton(string text, bool primary)
     {
-        var font = UiFit.UiFont;
+        var font = UiFit.UiFontButton;
         var b = new FlatChromeButton
         {
             Text = text,
@@ -345,7 +345,7 @@ internal static class ThemedSettingsChrome
     /// <summary>带标题分区：高度随正文自适应，标题与首行不重叠。</summary>
     public static (Panel Card, FlowLayoutPanel Body) CreateSectionShell(string title, int minHeight = 0)
     {
-        var titleFont = UiFit.UiFontBold(10F);
+        var titleFont = UiFit.UiFontSection;
         var headerH = Math.Max(UiScale.S(30), UiFit.LineHeight(titleFont) + UiScale.S(12));
 
         var card = new BufferedPanel

@@ -15,13 +15,13 @@ internal sealed class SupportDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(400, 220);
         BackColor = AppTheme.SurfaceCard;
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
         ShowInTaskbar = false;
 
         var title = new Label
         {
             Text = $"{AppBrand.ShortName}  v{AppBrand.VersionText}",
-            Font = new Font("Microsoft YaHei UI", 12F, FontStyle.Bold),
+            Font = UiFit.UiFontSection,
             ForeColor = AppTheme.PrimaryDeep,
             AutoSize = true,
             Location = new Point(28, 28),
@@ -46,7 +46,7 @@ internal sealed class SupportDialog : Form
         {
             Text = AppBrand.Author,
             ForeColor = AppTheme.TextMain,
-            Font = new Font("Microsoft YaHei UI", 9.75F, FontStyle.Bold),
+            Font = UiFit.UiFontButton,
             AutoSize = true,
             Location = new Point(88, 99),
         };

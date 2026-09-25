@@ -2,22 +2,35 @@ using System.Runtime.CompilerServices;
 
 namespace SrvDesk;
 
-/// <summary>按实际文字宽度计算控件尺寸，避免中文被裁成半个字。</summary>
+/// <summary>
+/// 界面度量与字体层级（Windows 桌面管理软件）：
+/// 基础 14px / Segoe UI（中文回退 YaHei UI）；勿对逻辑 pt 再乘 DPI（PerMonitorV2）。
+/// </summary>
 internal static class UiFit
 {
     private static Font? _ui;
     private static Font? _uiSmall;
     private static Font? _uiScope;
+    private static Font? _menu;
+    private static Font? _nav;
+    private static Font? _navSecondary;
+    private static Font? _section;
+    private static Font? _pageTitle;
+    private static Font? _button;
+    private static Font? _tableHeader;
     private static string? _family;
+    private static string? _semiboldFamily;
     private static readonly ConditionalWeakTable<Button, object> CenteredPaintHooked = new();
 
-    /// <summary>优先雅黑 UI；Server 精简环境可能缺失，依次回退。</summary>
+    /// <summary>
+    /// 字体栈：Segoe UI → Microsoft YaHei UI → Microsoft YaHei。
+    /// </summary>
     public static string UiFontFamily
     {
         get
         {
             if (_family is not null) return _family;
-            foreach (var name in new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "Tahoma" })
+            foreach (var name in new[] { "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "Tahoma" })
             {
                 if (FontFamilyExists(name))
                 {
@@ -27,6 +40,36 @@ internal static class UiFit
             }
             _family = SystemFonts.MessageBoxFont?.FontFamily.Name ?? "Microsoft Sans Serif";
             return _family;
+        }
+    }
+
+    /// <summary>代码/脚本编辑器字体，与 UI 分离。</summary>
+    public static string CodeFontFamily
+    {
+        get
+        {
+            foreach (var name in new[] { "Cascadia Code", "Cascadia Mono", "Consolas", "Courier New" })
+            {
+                if (FontFamilyExists(name)) return name;
+            }
+            return "Consolas";
+        }
+    }
+
+    private static string? SemiboldFamily
+    {
+        get
+        {
+            if (_semiboldFamily is not null)
+                return _semiboldFamily.Length == 0 ? null : _semiboldFamily;
+            if (string.Equals(UiFontFamily, "Segoe UI", StringComparison.OrdinalIgnoreCase)
+                && FontFamilyExists("Segoe UI Semibold"))
+            {
+                _semiboldFamily = "Segoe UI Semibold";
+                return _semiboldFamily;
+            }
+            _semiboldFamily = "";
+            return null;
         }
     }
 
@@ -44,30 +87,73 @@ internal static class UiFit
         return false;
     }
 
-    /// <summary>
-    /// 界面基准字号（逻辑 pt）。PerMonitorV2 下 GDI 已按显示器 DPI 光栅化，
-    /// 勿再乘 UiScale.Factor，否则高 DPI 会二次放大。换屏时 ResetCachedFonts 重建即可。
-    /// </summary>
-    public const float DesignFontPt = 11.5F;
-    public const float DesignFontSmallPt = 10.5F;
-    public const float DesignFontScopePt = 9.5F;
+    /// <summary>设计稿 px → 逻辑 pt（96DPI：pt = px × 72/96）。</summary>
+    public static float PxToPt(float px) =>
+        (float)Math.Round(px * 72f / 96f, 2);
 
-    public static Font UiFont => _ui ??= new Font(UiFontFamily, DesignFontPt);
-    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, DesignFontSmallPt);
-    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, DesignFontScopePt);
+    // 14px→10.5 / 13px→9.75 / 12px→9 / 16px→12 / 20px→15
+    public const float DesignFontPt = 10.5F;
+    public const float DesignFontSmallPt = 9.75F;
+    public const float DesignFontScopePt = 9.0F;
+    public const float DesignFontSectionPt = 12.0F;
+    public const float DesignFontPageTitlePt = 15.0F;
 
-    public static Font UiFontBold(float size = DesignFontPt) =>
-        new(UiFontFamily, size, FontStyle.Bold);
+    /// <summary>正文 14 Regular。</summary>
+    public static Font UiFont => _ui ??= Make(DesignFontPt, FontStyle.Regular);
+    /// <summary>描述 / 二级 13 Regular。</summary>
+    public static Font UiFontSmall => _uiSmall ??= Make(DesignFontSmallPt, FontStyle.Regular);
+    /// <summary>辅助 / Badge 12 Regular。</summary>
+    public static Font UiFontScope => _uiScope ??= Make(DesignFontScopePt, FontStyle.Regular);
+    /// <summary>顶栏菜单 14 Regular。</summary>
+    public static Font UiFontMenu => _menu ??= Make(DesignFontPt, FontStyle.Regular);
+    /// <summary>左侧一级 14 Medium；选中靠背景条，不再加粗。</summary>
+    public static Font UiFontNav => _nav ??= MakeMedium(DesignFontPt);
+    /// <summary>左侧二级 13 Regular。</summary>
+    public static Font UiFontNavSecondary => _navSecondary ??= Make(DesignFontSmallPt, FontStyle.Regular);
+    /// <summary>分区标题 16 Semibold。</summary>
+    public static Font UiFontSection => _section ??= MakeSemibold(DesignFontSectionPt);
+    /// <summary>页面标题 20 Semibold。</summary>
+    public static Font UiFontPageTitle => _pageTitle ??= MakeSemibold(DesignFontPageTitlePt);
+    /// <summary>按钮 / Tab 14 Medium。</summary>
+    public static Font UiFontButton => _button ??= MakeMedium(DesignFontPt);
+    /// <summary>表格表头 13 Medium。</summary>
+    public static Font UiFontTableHeader => _tableHeader ??= MakeMedium(DesignFontSmallPt);
 
-    /// <summary>DPI / 换屏后丢弃缓存字体，下次访问按新显示器重建。</summary>
+    /// <summary>兼容旧调用：指定 pt 的 SemiBold/Bold。</summary>
+    public static Font UiFontBold(float size = DesignFontPt) => MakeSemibold(size);
+
+    public static Font UiFontCode(float pt = 9.75f) =>
+        new(CodeFontFamily, pt, FontStyle.Regular);
+
+    private static Font Make(float pt, FontStyle style) => new(UiFontFamily, pt, style);
+
+    private static Font MakeMedium(float pt) =>
+        SemiboldFamily is { } sb ? new Font(sb, pt, FontStyle.Regular) : Make(pt, FontStyle.Regular);
+
+    private static Font MakeSemibold(float pt) =>
+        SemiboldFamily is { } sb ? new Font(sb, pt, FontStyle.Regular) : Make(pt, FontStyle.Bold);
+
+    /// <summary>DPI / 换屏后丢弃缓存字体。</summary>
     public static void ResetCachedFonts()
     {
-        try { _ui?.Dispose(); } catch { /* ignore */ }
-        try { _uiSmall?.Dispose(); } catch { /* ignore */ }
-        try { _uiScope?.Dispose(); } catch { /* ignore */ }
-        _ui = null;
-        _uiSmall = null;
-        _uiScope = null;
+        DisposeFont(ref _ui);
+        DisposeFont(ref _uiSmall);
+        DisposeFont(ref _uiScope);
+        DisposeFont(ref _menu);
+        DisposeFont(ref _nav);
+        DisposeFont(ref _navSecondary);
+        DisposeFont(ref _section);
+        DisposeFont(ref _pageTitle);
+        DisposeFont(ref _button);
+        DisposeFont(ref _tableHeader);
+        _family = null;
+        _semiboldFamily = null;
+    }
+
+    private static void DisposeFont(ref Font? f)
+    {
+        try { f?.Dispose(); } catch { /* ignore */ }
+        f = null;
     }
 
     /// <summary>标签单行省略（按钮请用 PaintFlatButtonFace，勿带 EndEllipsis）。</summary>
@@ -78,25 +164,38 @@ internal static class UiFit
         | TextFormatFlags.NoPadding
         | TextFormatFlags.PreserveGraphicsClipping;
 
-    /// <summary>测量用：保留字墨溢出边距，避免雅黑/高 DPI 量偏窄。</summary>
+    /// <summary>测量用：保留字墨溢出边距，避免高 DPI 量偏窄。</summary>
     private static readonly TextFormatFlags MeasureFlags =
         TextFormatFlags.SingleLine
         | TextFormatFlags.NoPrefix
         | TextFormatFlags.GlyphOverhangPadding;
 
+    /// <summary>舒适行高（12→18 / 13→20 / 14→22 / 16→24 / 20→28），不低于实测字形。</summary>
     public static int LineHeight(Font? font = null)
     {
         var f = font ?? UiFont;
-        var h = TextRenderer.MeasureText("国Agyp", f, new Size(1024, 256), MeasureFlags).Height;
-        return Math.Max(f.Height, Math.Max(14, h));
+        var measured = TextRenderer.MeasureText("国Agyp", f, new Size(1024, 256), MeasureFlags).Height;
+        var comfort = ComfortLineHeightDesignPx(f.SizeInPoints);
+        return Math.Max(f.Height, Math.Max(measured, UiScale.S(comfort)));
+    }
+
+    public static int ComfortLineHeightDesignPx(float sizeInPoints)
+    {
+        var px = sizeInPoints * 96f / 72f;
+        if (px <= 12.5f) return 18;
+        if (px <= 13.5f) return 20;
+        if (px <= 15.0f) return 22;
+        if (px <= 17.0f) return 24;
+        if (px <= 21.0f) return 28;
+        return 32;
     }
 
     /// <summary>
     /// 按钮 / 下拉 / 单行输入的最小可视高度。
-    /// Flat + 雅黑在偏矮高度时常裁掉字脚；副屏 DPI 变化后更明显。
+    /// Flat 中文字体在偏矮高度时常裁掉字脚；副屏 DPI 变化后更明显。
     /// </summary>
     public static int ControlHeight(Font? font = null, int designMin = 34) =>
-        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(20));
+        Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(12));
 
     public static int TextWidth(string text, Font? font = null) =>
         TextRenderer.MeasureText(text ?? "", font ?? UiFont, new Size(int.MaxValue, 256), MeasureFlags).Width;
@@ -104,15 +203,14 @@ internal static class UiFit
     /// <summary>按钮宽度：文字宽 + 内边距 + 安全边，且不小于 minWidth。</summary>
     public static int ButtonWidth(string text, Font? font = null, int minWidth = 72, int padding = 28)
     {
-        var f = font ?? UiFont;
-        // LineHeight/3：ClearType / 副屏 DPI 下 Measure 仍可能略窄
+        var f = font ?? UiFontButton;
         var slack = Math.Max(UiScale.S(8), LineHeight(f) / 3);
         return Math.Max(UiScale.S(minWidth), TextWidth(text, f) + UiScale.S(padding) + slack);
     }
 
     public static Size ButtonSize(string text, int height = 34, Font? font = null, int minWidth = 72, int padding = 28)
     {
-        var f = font ?? UiFont;
+        var f = font ?? UiFontButton;
         var h = Math.Max(height, ControlHeight(f));
         return new(ButtonWidth(text, f, minWidth, padding), h);
     }
@@ -121,7 +219,9 @@ internal static class UiFit
     public static void FitButton(Button b, int? height = null, int minWidth = 72, int padding = 28)
     {
         if (b is null || string.IsNullOrEmpty(b.Text)) return;
-        var f = b.Font ?? UiFont;
+        if (b.Font is null || ReferenceEquals(b.Font, SystemFonts.DefaultFont) || ReferenceEquals(b.Font, UiFont))
+            b.Font = UiFontButton;
+        var f = b.Font ?? UiFontButton;
         var h = Math.Max(height ?? 0, ControlHeight(f));
         b.Size = ButtonSize(b.Text, h, f, minWidth, padding);
         b.TextAlign = ContentAlignment.MiddleCenter;

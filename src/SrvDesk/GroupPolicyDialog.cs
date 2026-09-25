@@ -35,7 +35,7 @@ internal sealed class GroupPolicyDialog : Form
         _output.BorderStyle = BorderStyle.FixedSingle;
         _output.BackColor = AppTheme.SurfaceCard;
         _output.ForeColor = AppTheme.TextMain;
-        _output.Font = new Font("Consolas", 9F);
+        _output.Font = UiFit.UiFontCode(9.75f);
         _output.Text = "点击下方「强制更新组策略」执行 gpupdate /force，输出将显示在此处。";
 
         var actions = new FlowLayoutPanel

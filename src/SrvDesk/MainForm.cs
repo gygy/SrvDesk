@@ -2878,12 +2878,7 @@ internal sealed class MainForm : Form
             Location = new Point(x, 0),
             Size = new Size(w, UiScale.S(36)),
             ForeColor = AppTheme.TextHeader,
-            Font = UiFit.UiFontBold(),
-            TextAlign = align,
-            BackColor = Color.Transparent,
-        };
-
-    /// <summary>分区内按推荐强度降序：必优化 → 强烈推荐 → 建议优化 → 可选；同级按标题。</summary>
+            Font = UiFit.UiFontTableHeader,
     private static SettingRow[] OrderRowsByRecommend(SettingRow[] rows)
     {
         var ordered = (SettingRow[])rows.Clone();
@@ -2923,7 +2918,7 @@ internal sealed class MainForm : Form
             Location = new Point(UiScale.S(12), UiScale.S(8)),
             AutoSize = true,
             ForeColor = AppTheme.PrimaryDark,
-            Font = new Font(UiFit.UiFontFamily, UiFit.DesignFontScopePt),
+            Font = UiFit.UiFontScope,
             BackColor = Color.Transparent,
         };
         var titleLabel = new Label
@@ -2932,7 +2927,7 @@ internal sealed class MainForm : Form
             Location = new Point(UiScale.S(32), 0),
             Size = new Size(section.Width - UiScale.S(120), headerH),
             ForeColor = AppTheme.TextHeader,
-            Font = UiFit.UiFontBold(),
+            Font = UiFit.UiFontSection,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
         };
@@ -3114,7 +3109,7 @@ internal sealed class MainForm : Form
         b.AutoSize = false;
         b.Margin = new Padding(8, 0, 0, 0);
         b.FlatStyle = FlatStyle.Flat;
-        b.Font = UiFit.UiFontBold();
+        b.Font = UiFit.UiFontButton;
         b.ForeColor = fore;
         b.Cursor = Cursors.Hand;
         b.UseCompatibleTextRendering = false;
@@ -3139,7 +3134,7 @@ internal sealed class MainForm : Form
 
     private void FitBottomActionButtons()
     {
-        var h = UiFit.ControlHeight(UiFit.UiFontBold());
+        var h = UiFit.ControlHeight(UiFit.UiFontButton);
         if (_refreshBottom is not null)
             UiFit.FitButton(_refreshBottom, h, padding: 28);
         UiFit.FitButton(_restore, h, padding: 28);
@@ -3161,7 +3156,7 @@ internal sealed class MainForm : Form
         NavMenuStyle.DrawItem(
             e,
             MenuItems[e.Index],
-            Font,
+            UiFit.UiFontNav,
             e.Index == _menuHover,
             separator: MenuItems[e.Index] == AppLang.L("性能及安全", "Performance & security"),
             matchCount: badge,

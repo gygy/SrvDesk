@@ -30,7 +30,7 @@ internal sealed class ScriptSyntaxEditor : RichTextBox
         WordWrap = false;
         AcceptsTab = true;
         BorderStyle = BorderStyle.FixedSingle;
-        Font = new Font("Consolas", 9F);
+        Font = UiFit.UiFontCode(9.75f);
         BackColor = Color.FromArgb(252, 253, 255);
         ForeColor = ColDefault;
         ScrollBars = RichTextBoxScrollBars.Both;

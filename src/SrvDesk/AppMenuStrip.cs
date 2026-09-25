@@ -48,7 +48,7 @@ internal sealed class AppMenuStrip : MenuStrip
 
     public AppMenuStrip()
     {
-        Font = UiFit.UiFont;
+        Font = UiFit.UiFontMenu;
         BackColor = AppTheme.SurfaceCard;
         ForeColor = AppTheme.TextMain;
         Renderer = new ToolStripProfessionalRenderer(new AppMenuColorTable());

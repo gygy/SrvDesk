@@ -177,8 +177,8 @@ internal sealed class QuickRestorePreviewDialog : Form
 
         _pageTitle.Dock = DockStyle.Top;
         _pageTitle.AutoSize = false;
-        _pageTitle.Height = Math.Max(UiScale.S(36), UiFit.ControlHeight(UiFit.UiFontBold()));
-        _pageTitle.Font = UiFit.UiFontBold();
+        _pageTitle.Height = Math.Max(UiScale.S(40), UiFit.LineHeight(UiFit.UiFontPageTitle) + UiScale.S(12));
+        _pageTitle.Font = UiFit.UiFontPageTitle;
         _pageTitle.ForeColor = AppTheme.TextHeader;
         _pageTitle.TextAlign = ContentAlignment.MiddleLeft;
         _pageTitle.BackColor = AppTheme.Surface;
@@ -317,7 +317,7 @@ internal sealed class QuickRestorePreviewDialog : Form
 
     private Control BuildSectionHeader(string section, int width)
     {
-        var h = Math.Max(UiScale.S(32), UiFit.LineHeight(UiFit.UiFontBold()) + UiScale.S(10));
+        var h = Math.Max(UiScale.S(34), UiFit.LineHeight(UiFit.UiFontSection) + UiScale.S(10));
         var head = new BufferedPanel
         {
             Size = new Size(width, h),
@@ -327,7 +327,7 @@ internal sealed class QuickRestorePreviewDialog : Form
         {
             Text = string.IsNullOrWhiteSpace(section) ? AppLang.L("未分组", "Ungrouped") : section,
             Dock = DockStyle.Fill,
-            Font = UiFit.UiFontBold(),
+            Font = UiFit.UiFontSection,
             ForeColor = AppTheme.TextHeader,
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(UiScale.S(12), 0, 0, 0),
