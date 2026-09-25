@@ -5,6 +5,7 @@ internal sealed class AppMenuStrip : MenuStrip
 {
     public ToolStripMenuItem FileImport { get; }
     public ToolStripMenuItem FileExport { get; }
+    public ToolStripMenuItem FileQuickRestore { get; }
     public ToolStripMenuItem FileSettings { get; }
     public ToolStripMenuItem FileExit { get; }
     public ToolStripMenuItem ToolSystemInfo { get; }
@@ -57,10 +58,14 @@ internal sealed class AppMenuStrip : MenuStrip
         var file = new ToolStripMenuItem(AppLang.L("文件(&F)", "File(&F)"));
         FileImport = Item(AppLang.L("导入配置(&O)...", "Import profile(&O)..."), MenuIcons.Import, Keys.Control | Keys.O);
         FileExport = Item(AppLang.L("导出配置(&S)...", "Export profile(&S)..."), MenuIcons.Export, Keys.Control | Keys.S);
+        FileQuickRestore = Item(AppLang.L("一键快速恢复(&R)...", "One-click restore(&R)..."), MenuIcons.Restore, Keys.Control | Keys.R);
+        FileQuickRestore.ToolTipText = AppLang.L(
+            "导入配置并立即写入：优化开关、服务启动类型、用途等级、脚本与自定义方案",
+            "Import and apply: toggles, service start types, profile level, scripts and packs");
         FileSettings = Item(AppLang.L("程序设置(&P)...", "Settings(&P)..."), MenuIcons.Advanced);
         FileExit = Item(AppLang.L("退出(&X)", "Exit(&X)"), MenuIcons.PanelClose, Keys.Alt | Keys.F4);
         file.DropDownItems.AddRange([
-            FileImport, FileExport, new ToolStripSeparator(), FileSettings,
+            FileQuickRestore, FileImport, FileExport, new ToolStripSeparator(), FileSettings,
             new ToolStripSeparator(), FileExit,
         ]);
 

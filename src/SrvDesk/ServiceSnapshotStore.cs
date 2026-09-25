@@ -342,6 +342,13 @@ internal static class ServiceSnapshotStore
         return list;
     }
 
+    /// <summary>供配置导出嵌入：本机全部服务启动类型（不落盘）。</summary>
+    public static List<ServiceSnapshotEntry> CaptureEntriesForExport() => CaptureEntries();
+
+    /// <summary>把导出的服务列表还原到本机（缺服务则跳过）。</summary>
+    public static ServiceSnapshotRestoreResult RestoreEntries(IEnumerable<ServiceSnapshotEntry> entries) =>
+        Restore(new ServiceSnapshotFile { Services = entries.ToList() });
+
     private static void TrimOld()
     {
         try

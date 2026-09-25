@@ -699,6 +699,7 @@ internal sealed class MainForm : Form
     {
         _appMenu.FileImport.Click += (_, _) => ImportProfile();
         _appMenu.FileExport.Click += (_, _) => ExportProfile();
+        _appMenu.FileQuickRestore.Click += (_, _) => QuickRestoreProfile();
         _appMenu.FileSettings.Click += (_, _) => ShowAppSettings();
         _appMenu.FileExit.Click += (_, _) => Close();
         _appMenu.ToolSystemInfo.Click += (_, _) => ShowSystemInfo();
@@ -1536,13 +1537,176 @@ internal sealed class MainForm : Form
         if (dlg.ShowDialog() != DialogResult.OK) return;
         try
         {
+            UseWaitCursor = true;
+            _status.Text = AppLang.L("正在导出（含服务快照）…", "Exporting (including services)…");
+            Application.DoEvents();
             ProfileStore.Save(dlg.FileName, CaptureState(), AppLang.L("用户导出", "User export"));
-            _status.Text = AppLang.L("已导出全部配置（开关 + 脚本覆盖 + 自定义方案）：", "Exported full profile (toggles + scripts + packs): ") + dlg.FileName;
+            _status.Text = AppLang.L(
+                "已导出完整配置（开关 + 服务启动类型 + 用途等级 + 脚本 + 自定义方案）：",
+                "Exported full profile (toggles + services + level + scripts + packs): ")
+                + dlg.FileName;
             ApplyLog.Write(AppLang.L("导出配置 ", "Export profile ") + dlg.FileName);
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, AppLang.L("导出失败", "Export failed"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            UseWaitCursor = false;
+        }
+    }
+
+    /// <summary>
+    /// 一键快速恢复：选配置文件 → 一次确认 → 写入开关/服务/用途/脚本/方案。
+    /// </summary>
+    private void QuickRestoreProfile()
+    {
+        if (!AdminHelper.IsRunningAsAdministrator())
+        {
+            MessageBox.Show(this,
+                AppLang.L("请以管理员身份运行后再一键恢复。", "Run as administrator before one-click restore."),
+                AppLang.L("一键快速恢复", "One-click restore"),
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var dlg = new OpenFileDialog
+        {
+            Filter = AppLang.L("SrvDesk 配置 (*.json)|*.json", "SrvDesk profile (*.json)|*.json"),
+            InitialDirectory = ProfileStore.DefaultProfileDir(),
+            Title = AppLang.L("选择要恢复的配置", "Select profile to restore"),
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        OptProfileBundle bundle;
+        try
+        {
+            UseWaitCursor = true;
+            _status.Text = AppLang.L("正在分析相对本机的差异…", "Analyzing diffs vs this PC…");
+            Application.DoEvents();
+            bundle = ProfileStore.LoadBundle(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            UseWaitCursor = false;
+            MessageBox.Show(this, ex.Message, AppLang.L("一键快速恢复", "One-click restore"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        List<QuickRestorePreviewDialog.PreviewLine> preview;
+        try
+        {
+            // 对照本机真实状态（非仅界面勾选），避免误报
+            Optimizer.State current;
+            try { current = Optimizer.Read(fullScan: false); }
+            catch { current = CaptureState(); }
+            preview = QuickRestorePreviewDialog.Compute(current, bundle);
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _status.Text = "";
+        }
+
+        using (var previewDlg = new QuickRestorePreviewDialog(preview, dlg.FileName))
+        {
+            if (previewDlg.ShowDialog(this) != DialogResult.Yes)
+                return;
+        }
+
+        RunQuickRestore(bundle, dlg.FileName);
+    }
+
+    private void RunQuickRestore(OptProfileBundle bundle, string sourcePath)
+    {
+        var report = new List<string>();
+        try
+        {
+            UseWaitCursor = true;
+            _status.Text = AppLang.L("一键恢复：写入本地脚本/方案…", "Quick restore: local scripts/packs…");
+            Application.DoEvents();
+
+            if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
+            {
+                ProfileStore.ApplyLocalData(bundle);
+                if (bundle.HasScriptOverrides) report.Add(AppLang.L("脚本覆盖", "Script overrides"));
+                if (bundle.HasCustomPacks) report.Add(AppLang.L("自定义方案", "Custom packs"));
+                RefreshAfterProfileImport();
+            }
+
+            if (bundle.HasServerProfile)
+            {
+                ProfileStore.ApplyServerProfile(bundle);
+                report.Add(AppLang.L("服务器用途/优化等级", "Server profile / level"));
+            }
+
+            if (bundle.HasSettings)
+            {
+                _status.Text = AppLang.L("一键恢复：载入优化开关…", "Quick restore: load toggles…");
+                Application.DoEvents();
+                Bind(bundle.State);
+                _uiDirty = true;
+                report.Add(AppLang.L("优化开关", "Optimization toggles"));
+
+                _status.Text = AppLang.L("一键恢复：应用到系统…", "Quick restore: apply to system…");
+                Application.DoEvents();
+                if (!ApplyRecommended())
+                {
+                    MessageBox.Show(this,
+                        AppLang.L("优化开关已载入界面，但「应用到系统」已取消或失败。可稍后手动点「应用到系统」。",
+                            "Toggles loaded into UI, but Apply was cancelled or failed. You can Apply manually later."),
+                        AppLang.L("一键快速恢复", "One-click restore"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // 仍继续尝试服务
+                }
+                else
+                    report.Add(AppLang.L("已写入系统开关", "Toggles written"));
+            }
+
+            if (bundle.HasServices && bundle.Services is { Count: > 0 })
+            {
+                _status.Text = AppLang.L("一键恢复：还原服务启动类型…", "Quick restore: restore services…");
+                Application.DoEvents();
+                try
+                {
+                    ServiceSnapshotStore.EnsureAutoBackupBeforeChange();
+                }
+                catch { /* 不阻断 */ }
+
+                var svc = ServiceSnapshotStore.RestoreEntries(bundle.Services);
+                report.Add(AppLang.Lf(
+                    "服务：成功 {0} / 跳过 {1} / 失败 {2}",
+                    "Services: applied {0} / skipped {1} / failed {2}",
+                    svc.Applied, svc.Skipped, svc.Failed));
+                if (svc.Errors.Count > 0)
+                    report.Add(string.Join("\r\n", svc.Errors.Take(6)));
+
+                // 刷新服务优化页缓存
+                if (_pageCache.TryGetValue(AppLang.L("服务优化", "Service optimize"), out var page)
+                    && page is IEmbeddedSettingsPage embedded)
+                    embedded.RefreshFromSystem();
+            }
+
+            var summary = string.Join("\r\n· ", report);
+            _status.Text = AppLang.L("一键快速恢复完成：", "One-click restore done: ") + sourcePath;
+            ApplyLog.Write(AppLang.L("一键快速恢复 ", "One-click restore ") + sourcePath + " | " + string.Join("; ", report));
+            MessageBox.Show(this,
+                AppLang.L("恢复完成：\r\n\r\n· ", "Restore finished:\r\n\r\n· ") + summary
+                + AppLang.L("\r\n\r\n部分项可能需注销或重启后完全生效。",
+                    "\r\n\r\nSome items may need sign-out or reboot to fully take effect."),
+                AppLang.L("一键快速恢复", "One-click restore"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, AppLang.L("一键快速恢复失败", "One-click restore failed"),
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            UseWaitCursor = false;
         }
     }
 
@@ -1566,9 +1730,10 @@ internal sealed class MainForm : Form
                     using var confirm = new ProfileImportDiffDialog(diffs);
                     if (confirm.ShowDialog(this) != DialogResult.Yes)
                     {
-                        if (!bundle.HasScriptOverrides && !bundle.HasCustomPacks)
+                        if (!bundle.HasScriptOverrides && !bundle.HasCustomPacks && !bundle.HasServices
+                            && !bundle.HasServerProfile)
                             return;
-                        // 跳过开关，仍可导入脚本/自定义方案
+                        // 跳过开关，仍可导入其它部分
                     }
                     else
                     {
@@ -1592,12 +1757,37 @@ internal sealed class MainForm : Form
                 {
                     if (parts.Count > 0)
                         _status.Text = AppLang.L("已导入开关到界面（未导入脚本）：", "Imported toggles to UI (scripts skipped): ") + dlg.FileName;
-                    return;
+                    // 不 return：仍可询问服务
                 }
-                ProfileStore.ApplyLocalData(bundle);
-                if (bundle.HasScriptOverrides) parts.Add(AppLang.L("脚本覆盖", "Script overrides"));
-                if (bundle.HasCustomPacks) parts.Add(AppLang.L("自定义方案", "Custom packs"));
-                RefreshAfterProfileImport();
+                else
+                {
+                    ProfileStore.ApplyLocalData(bundle);
+                    if (bundle.HasScriptOverrides) parts.Add(AppLang.L("脚本覆盖", "Script overrides"));
+                    if (bundle.HasCustomPacks) parts.Add(AppLang.L("自定义方案", "Custom packs"));
+                    RefreshAfterProfileImport();
+                }
+            }
+
+            if (bundle.HasServerProfile)
+            {
+                ProfileStore.ApplyServerProfile(bundle);
+                parts.Add(AppLang.L("服务器用途/优化等级", "Server profile / level"));
+            }
+
+            if (bundle.HasServices && bundle.Services is { Count: > 0 })
+            {
+                var tip = AppLang.Lf(
+                    "配置含 {0} 个服务启动类型。是否一并还原到本机？\r\n（本机没有的服务会跳过）",
+                    "Profile contains {0} service start types. Restore them too?\r\n(Missing services on this PC are skipped)",
+                    bundle.Services.Count);
+                if (MessageBox.Show(this, tip, AppLang.L("导入配置", "Import profile"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    try { ServiceSnapshotStore.EnsureAutoBackupBeforeChange(); }
+                    catch { /* ignore */ }
+                    var svc = ServiceSnapshotStore.RestoreEntries(bundle.Services);
+                    parts.Add(AppLang.Lf("服务 {0} 项", "Services {0}", svc.Applied));
+                }
             }
 
             if (parts.Count == 0) return;
@@ -1609,7 +1799,6 @@ internal sealed class MainForm : Form
                                : "");
             ApplyLog.Write(AppLang.L("导入配置 ", "Import profile ") + dlg.FileName + " [" + string.Join(",", parts) + "]");
 
-            // 跨机恢复：导入开关后立刻询问是否写入系统（脚本/方案已在上面落盘）
             if (importedToggles)
                 OfferOneClickApplyAfterImport();
         }
@@ -1619,20 +1808,18 @@ internal sealed class MainForm : Form
         }
     }
 
-    /// <summary>导入配置后一键写回本机（相对基线差分）。</summary>
+    /// <summary>导入配置后一键写回本机（相对基线差分）。完整跨机恢复请用「一键快速恢复」。</summary>
     private void OfferOneClickApplyAfterImport()
     {
         var ask = MessageBox.Show(this,
             AppLang.L(
-                "配置已导入到界面。\r\n\r\n是否立即一键应用到系统？\r\n\r\n是 = 写入本机（建议先看变更计划）\r\n否 = 仅导入，稍后手动点「应用到系统」",
-                "Profile loaded into the UI.\r\n\r\nApply to this PC now?\r\n\r\nYes = write now (change plan may show)\r\nNo = import only; Apply later"),
-            AppLang.L("一键快速恢复", "One-click restore"),
+                "配置已导入到界面。\r\n\r\n是否立即将优化开关应用到系统？\r\n（完整跨机恢复含服务等，请用「文件 → 一键快速恢复」）\r\n\r\n是 = 写入开关\r\n否 = 稍后手动应用",
+                "Profile loaded into the UI.\r\n\r\nApply optimization toggles now?\r\n(For full restore including services, use File → One-click restore)\r\n\r\nYes = write toggles\r\nNo = Apply later"),
+            AppLang.L("应用到系统", "Apply to system"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question,
             MessageBoxDefaultButton.Button1);
         if (ask != DialogResult.Yes) return;
-
-        // 直接走主设置写入，不依赖当前是否在嵌入页
         ApplyRecommended();
     }
 
@@ -3732,10 +3919,9 @@ internal sealed class MainForm : Form
         ApplyRecommended();
     }
 
-    private void ApplyRecommended()
+    private bool ApplyRecommended()
     {
-        if (!RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written.")))
-            return;
+        return RunApply(AppLang.L("正在写入系统…", "Writing to system…"), AppLang.L("已写入本次改动。", "Changes written."));
         // 改名请从左侧「账户与登录」单独操作，不再每次追加
     }
 
