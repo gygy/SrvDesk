@@ -351,6 +351,14 @@ internal class FlatChromeButton : Button
         UpdateStyles();
     }
 
+    /// <summary>工具栏按钮可关 Selectable，避免抢 ListView 焦点导致丢选中。</summary>
+    public void SetSelectable(bool selectable)
+    {
+        SetStyle(ControlStyles.Selectable, selectable);
+        TabStop = selectable;
+        UpdateStyles();
+    }
+
     protected override void OnPaintBackground(PaintEventArgs pevent)
     {
         // 由 OnPaint 统一填底，避免闪烁与双重绘制

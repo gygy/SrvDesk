@@ -334,6 +334,14 @@ internal static class ThemedSettingsChrome
         return b;
     }
 
+    /// <summary>列表旁工具栏：不抢焦点，避免点「禁用/启用」时 ListView 丢 SelectedItems。</summary>
+    public static void PreventFocusSteal(Button button)
+    {
+        button.TabStop = false;
+        if (button is FlatChromeButton flat)
+            flat.SetSelectable(false);
+    }
+
     /// <summary>带标题分区：高度随正文自适应，标题与首行不重叠。</summary>
     public static (Panel Card, FlowLayoutPanel Body) CreateSectionShell(string title, int minHeight = 0)
     {
