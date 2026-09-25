@@ -45,6 +45,7 @@ internal static class UiScale
     public static void OnHostDpiChanged(Control? host)
     {
         Reset();
+        UiFit.ResetCachedFonts();
         if (host is null) return;
         try
         {

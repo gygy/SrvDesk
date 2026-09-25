@@ -44,11 +44,32 @@ internal static class UiFit
         return false;
     }
 
-    public static Font UiFont => _ui ??= new Font(UiFontFamily, 9F);
-    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, 8.5F);
-    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, 8F);
+    /// <summary>设计稿字号（96 DPI）；实际创建时乘 UiScale.Factor，配合 AutoScaleMode.None。</summary>
+    public const float DesignFontPt = 10F;
+    public const float DesignFontSmallPt = 9F;
+    public const float DesignFontScopePt = 8.5F;
 
-    public static Font UiFontBold(float size = 9F) => new(UiFontFamily, size, FontStyle.Bold);
+    /// <summary>按当前显示器 DPI 换算字号（96DPI 基准）。</summary>
+    public static float ScaledPt(float designPt) =>
+        Math.Max(8F, (float)Math.Round(designPt * UiScale.Factor, 1));
+
+    public static Font UiFont => _ui ??= new Font(UiFontFamily, ScaledPt(DesignFontPt));
+    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, ScaledPt(DesignFontSmallPt));
+    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, ScaledPt(DesignFontScopePt));
+
+    public static Font UiFontBold(float designSize = DesignFontPt) =>
+        new(UiFontFamily, ScaledPt(designSize), FontStyle.Bold);
+
+    /// <summary>DPI / 换屏后丢弃缓存字体，下次访问按新 Factor 重建。</summary>
+    public static void ResetCachedFonts()
+    {
+        try { _ui?.Dispose(); } catch { /* ignore */ }
+        try { _uiSmall?.Dispose(); } catch { /* ignore */ }
+        try { _uiScope?.Dispose(); } catch { /* ignore */ }
+        _ui = null;
+        _uiSmall = null;
+        _uiScope = null;
+    }
 
     /// <summary>标签单行省略（按钮请用 PaintFlatButtonFace，勿带 EndEllipsis）。</summary>
     public static readonly TextFormatFlags SingleLineFlags =

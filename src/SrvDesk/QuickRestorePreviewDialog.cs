@@ -9,12 +9,10 @@ internal sealed class SettingUiMeta
     public string Meaning { get; set; } = "";
 }
 
-/// <summary>一键快速恢复前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>
+/// <summary>一键快速恢复 / 导入配置前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>
 internal sealed class QuickRestorePreviewDialog : Form
 {
     private readonly ListView _list = new();
-    private readonly Label _detail = new();
-    private readonly Label _summary = new();
     private readonly List<PreviewLine> _lines;
 
     public IReadOnlyList<PreviewLine> SelectedLines =>
@@ -26,6 +24,7 @@ internal sealed class QuickRestorePreviewDialog : Form
         string? windowTitle = null,
         string? confirmButtonText = null)
     {
+        _ = sourcePath; // 调用方仍传入路径，界面不再展示以免干扰
         _lines = lines.Select(x => x.Clone()).ToList();
         foreach (var line in _lines)
             line.Selected = true;
@@ -38,41 +37,14 @@ internal sealed class QuickRestorePreviewDialog : Form
         ShowInTaskbar = false;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        ClientSize = UiScale.Size(980, 640);
-        MinimumSize = UiScale.Size(860, 560);
+        ClientSize = UiScale.Size(980, 560);
+        MinimumSize = UiScale.Size(860, 480);
 
         var body = new Panel
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(UiScale.S(16), UiScale.S(12), UiScale.S(16), UiScale.S(8)),
             BackColor = AppTheme.Surface,
-        };
-
-        _summary.Dock = DockStyle.Top;
-        _summary.AutoSize = false;
-        _summary.Height = UiScale.S(56);
-        _summary.ForeColor = AppTheme.TextMain;
-        RefreshSummary();
-
-        var pathLbl = new Label
-        {
-            Dock = DockStyle.Top,
-            AutoSize = false,
-            Height = UiScale.S(24),
-            AutoEllipsis = true,
-            Text = AppLang.L("来源：", "From: ") + sourcePath,
-            ForeColor = AppTheme.TextMute,
-        };
-
-        var hint = new Label
-        {
-            Dock = DockStyle.Top,
-            AutoSize = false,
-            Height = UiScale.S(24),
-            Text = AppLang.L(
-                "「栏目 / 分区」对应主界面左侧；可取消勾选不想改的项。选中一行可看下方说明。",
-                "Column/Section match the left nav. Uncheck items to skip. Select a row for details."),
-            ForeColor = AppTheme.TextMute,
         };
 
         _list.Dock = DockStyle.Fill;
@@ -86,21 +58,19 @@ internal sealed class QuickRestorePreviewDialog : Form
         _list.BackColor = AppTheme.SurfaceCard;
         _list.ForeColor = AppTheme.TextMain;
         _list.Font = UiFit.UiFont;
-        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(72));
-        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(100));
-        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(120));
-        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(200));
-        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(220));
-        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(72));
-        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(80));
+        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(110));
+        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(130));
+        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(220));
+        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(240));
+        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(80));
+        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(80));
         _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
         _list.ItemChecked += (_, e) =>
         {
             if (e.Item?.Tag is PreviewLine line)
                 line.Selected = e.Item.Checked;
-            RefreshSummary();
         };
-        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
 
         foreach (var line in _lines)
         {
@@ -130,13 +100,6 @@ internal sealed class QuickRestorePreviewDialog : Form
             empty.SubItems.Add("—");
             _list.Items.Add(empty);
         }
-
-        _detail.Dock = DockStyle.Bottom;
-        _detail.AutoSize = false;
-        _detail.Height = UiScale.S(72);
-        _detail.Padding = new Padding(0, UiScale.S(6), 0, 0);
-        _detail.ForeColor = AppTheme.TextMain;
-        _detail.Text = AppLang.L("选中一行查看完整说明。", "Select a row to see full description.");
 
         var footer = new FlowLayoutPanel
         {
@@ -186,20 +149,11 @@ internal sealed class QuickRestorePreviewDialog : Form
         footer.Controls.Add(allOn);
 
         body.Controls.Add(_list);
-        body.Controls.Add(_detail);
         body.Controls.Add(footer);
-        body.Controls.Add(hint);
-        body.Controls.Add(pathLbl);
-        body.Controls.Add(_summary);
         Controls.Add(body);
 
         CancelButton = cancel;
-        Load += (_, _) =>
-        {
-            UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160));
-            if (_list.Items.Count > 0)
-                _list.Items[0].Selected = true;
-        };
+        Load += (_, _) => UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160));
         Resize += (_, _) =>
         {
             try { UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160)); }
@@ -222,32 +176,6 @@ internal sealed class QuickRestorePreviewDialog : Form
         {
             _list.EndUpdate();
         }
-        RefreshSummary();
-    }
-
-    private void RefreshSummary()
-    {
-        var n = _lines.Count(x => x.Selected);
-        _summary.Text = AppLang.Lf(
-            "相对当前电脑共 {0} 项可改；已勾选 {1} 项。栏目/分区与主界面左侧一致。",
-            "{0} change(s) vs this PC; {1} checked. Columns match the left nav.",
-            _lines.Count, n);
-    }
-
-    private void UpdateDetail()
-    {
-        if (_list.SelectedItems.Count == 0 || _list.SelectedItems[0].Tag is not PreviewLine line)
-        {
-            _detail.Text = AppLang.L("选中一行查看完整说明。", "Select a row to see full description.");
-            return;
-        }
-
-        _detail.Text = AppLang.Lf(
-            "【{0} / {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
-            "[{0} / {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
-            line.Nav, line.Section, line.Title,
-            string.IsNullOrWhiteSpace(line.MeaningFull) ? line.Meaning : line.MeaningFull,
-            line.Current, line.Target);
     }
 
     public static List<PreviewLine> Compute(
