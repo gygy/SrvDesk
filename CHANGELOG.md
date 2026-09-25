@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.164] - 2026-09-25
+
+### Changed
+
+- UI base font 15px → 16px (Segoe UI hierarchy)
+
 ## [1.0.163] - 2026-09-25
 
 ### Changed
