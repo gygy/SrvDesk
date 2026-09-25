@@ -1,19 +1,21 @@
-﻿# SrvDesk v1.0.150
+﻿# SrvDesk v1.0.159
 
 ## 中文
 
-- 一键快速恢复：导出含服务启动类型与用途等级；恢复前展示相对本机的变更预览（开启/关闭开关、禁用/调整服务）
-- 导出配置默认文件名带日期时间（SrvDesk-配置-yyyyMMdd-HHmmss.json）
-- 服务优化等列表：工具栏按钮不抢焦点，避免点「禁用」提示未选择
-- 安全中心：禁用时尝试自动关闭篡改防护
+- 导入/一键恢复「挑选变更」改为与主界面一致的左侧栏目 + 右侧条目
+- 左侧仅显示有变更的栏目，右侧按分区列出对应开关/设置
+- 含义悬停可看全文；界面字号加大
+- 一条设置对应一行（UAC、电源计划等不再拆成多个内部字段）
+- 交付包轻度混淆（Obfuscar）
 
-下载：单文件轻度混淆 SrvDesk.exe，请以管理员身份运行。
+下载：单文件 `SrvDesk.exe`，请以管理员身份运行。本公开仓不含源码。
 
 ## English
 
-- One-click restore: profile includes service start types and server profile; preview diffs vs this PC before apply
-- Export filename includes timestamp by default
-- ListView toolbar buttons no longer steal focus (fixes false select-first prompts)
-- Security Center: try to disable Tamper Protection when turning off Defender-related services
+- Import / one-click restore picker uses main-window style: left nav + right rows
+- Left nav lists only categories that have changes
+- Hover tooltip for full meaning; larger UI fonts
+- One UI setting per row (no splitting UAC / power plan into internal fields)
+- Lightly obfuscated release build
 
-Download obfuscated SrvDesk.exe and run as Administrator.
+Download `SrvDesk.exe` and run as Administrator. This public repo has no source code.
