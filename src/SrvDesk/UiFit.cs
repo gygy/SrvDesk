@@ -44,23 +44,22 @@ internal static class UiFit
         return false;
     }
 
-    /// <summary>设计稿字号（96 DPI）；实际创建时乘 UiScale.Factor，配合 AutoScaleMode.None。</summary>
+    /// <summary>
+    /// 界面基准字号（逻辑 pt）。PerMonitorV2 下 GDI 已按显示器 DPI 光栅化，
+    /// 勿再乘 UiScale.Factor，否则高 DPI 会二次放大。换屏时 ResetCachedFonts 重建即可。
+    /// </summary>
     public const float DesignFontPt = 10F;
     public const float DesignFontSmallPt = 9F;
     public const float DesignFontScopePt = 8.5F;
 
-    /// <summary>按当前显示器 DPI 换算字号（96DPI 基准）。</summary>
-    public static float ScaledPt(float designPt) =>
-        Math.Max(8F, (float)Math.Round(designPt * UiScale.Factor, 1));
+    public static Font UiFont => _ui ??= new Font(UiFontFamily, DesignFontPt);
+    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, DesignFontSmallPt);
+    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, DesignFontScopePt);
 
-    public static Font UiFont => _ui ??= new Font(UiFontFamily, ScaledPt(DesignFontPt));
-    public static Font UiFontSmall => _uiSmall ??= new Font(UiFontFamily, ScaledPt(DesignFontSmallPt));
-    public static Font UiFontScope => _uiScope ??= new Font(UiFontFamily, ScaledPt(DesignFontScopePt));
+    public static Font UiFontBold(float size = DesignFontPt) =>
+        new(UiFontFamily, size, FontStyle.Bold);
 
-    public static Font UiFontBold(float designSize = DesignFontPt) =>
-        new(UiFontFamily, ScaledPt(designSize), FontStyle.Bold);
-
-    /// <summary>DPI / 换屏后丢弃缓存字体，下次访问按新 Factor 重建。</summary>
+    /// <summary>DPI / 换屏后丢弃缓存字体，下次访问按新显示器重建。</summary>
     public static void ResetCachedFonts()
     {
         try { _ui?.Dispose(); } catch { /* ignore */ }

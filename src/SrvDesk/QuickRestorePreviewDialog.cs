@@ -35,6 +35,7 @@ internal sealed class QuickRestorePreviewDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
+        AutoScaleMode = AutoScaleMode.None;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
         ClientSize = UiScale.Size(980, 560);
