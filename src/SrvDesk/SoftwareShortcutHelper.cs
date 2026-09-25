@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -38,7 +39,7 @@ internal static class SoftwareShortcutHelper
                     if (File.Exists(lnk))
                     {
                         // 已存在且指向同一目标则跳过
-                        if (ShortcutPointsTo(lnk, target))
+                        if (ShortcutPointsTo(lnk, target!))
                             continue;
                     }
 
@@ -130,13 +131,11 @@ internal static class SoftwareShortcutHelper
     private static IEnumerable<string> AddYield(string? path, HashSet<string> seen)
     {
         if (string.IsNullOrWhiteSpace(path)) yield break;
-        try
-        {
-            var full = Path.GetFullPath(path);
-            if (seen.Add(full))
-                yield return full;
-        }
-        catch { /* ignore */ }
+        string full;
+        try { full = Path.GetFullPath(path); }
+        catch { yield break; }
+        if (seen.Add(full))
+            yield return full;
     }
 
     private static string? TryGetInteractiveUserProfile()
@@ -314,7 +313,7 @@ internal static class SoftwareShortcutHelper
 
     private static string? TryFindFromUninstallRegistry(CommonSoftwareItem item)
     {
-        foreach (var keyPath in new (RegistryHive Hive, string Sub)[]
+        foreach (var keyPath in new[]
                  {
                      (RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
                      (RegistryHive.LocalMachine, @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
@@ -323,8 +322,8 @@ internal static class SoftwareShortcutHelper
         {
             try
             {
-                using var baseKey = RegistryKey.OpenBaseKey(keyPath.Hive, RegistryView.Registry64);
-                using var uninstall = baseKey.OpenSubKey(keyPath.SubKey);
+                using var baseKey = RegistryKey.OpenBaseKey(keyPath.Item1, RegistryView.Registry64);
+                using var uninstall = baseKey.OpenSubKey(keyPath.Item2);
                 if (uninstall is null) continue;
                 foreach (var subName in uninstall.GetSubKeyNames())
                 {

@@ -512,6 +512,22 @@ internal static class CommonSoftwareHelper
             _statusCache = null;
     }
 
+    /// <summary>安装成功收尾：刷新状态缓存 + 补建桌面/开始菜单快捷方式。</summary>
+    private static string FinishInstallSuccess(
+        CommonSoftwareItem item,
+        Action<SoftwareInstallProgress>? onProgress,
+        string message = "")
+    {
+        InvalidateStatusCache();
+        var tip = SoftwareShortcutHelper.EnsureShortcuts(item);
+        Report(onProgress, "安装完成", 100);
+        if (string.IsNullOrWhiteSpace(message))
+            return string.IsNullOrWhiteSpace(tip) ? "" : tip;
+        if (string.IsNullOrWhiteSpace(tip))
+            return message;
+        return message.TrimEnd() + "\r\n" + tip;
+    }
+
     /// <summary>一次扫描卸载注册表，缓存全部常用软件安装状态（打开窗口时后台调用）。</summary>
     public static void PrefetchStatuses(IReadOnlyList<CommonSoftwareItem> items)
     {
@@ -777,17 +793,9 @@ internal static class CommonSoftwareHelper
             // 源自动更新已在设置中关闭，避免每次 install 先同步索引
             var code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: true), onProgress);
             if (code == 0)
-            {
-                Report(onProgress, "安装完成", 100);
-                InvalidateStatusCache();
-                return "";
-            }
+                return FinishInstallSuccess(item, onProgress);
             if (code == -1978335189) // 0x8A150013 already installed
-            {
-                Report(onProgress, "已安装", 100);
-                InvalidateStatusCache();
-                return "软件已安装或无需重复安装。";
-            }
+                return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。");
 
             // PreferAppx/Offline 的包跳过 msstore，避免 Server 挂死
             if (!SkipMsStoreRetry(item))
@@ -795,17 +803,9 @@ internal static class CommonSoftwareHelper
                 Report(onProgress, "winget 源未命中，改用默认源重试…", 8);
                 code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: false), onProgress);
                 if (code == 0)
-                {
-                    Report(onProgress, "安装完成", 100);
-                    InvalidateStatusCache();
-                    return "";
-                }
+                    return FinishInstallSuccess(item, onProgress);
                 if (code == -1978335189)
-                {
-                    Report(onProgress, "已安装", 100);
-                    InvalidateStatusCache();
-                    return "软件已安装或无需重复安装。";
-                }
+                    return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。");
             }
         }
 
@@ -978,11 +978,10 @@ internal static class CommonSoftwareHelper
         EnsureUserPathContains(toolDir);
         PrependProcessPath(toolDir);
 
-        InvalidateStatusCache();
-        Report(onProgress, "安装完成", 100);
         ApplyLog.Write("便携安装：" + dest);
-        return "已安装到 " + dest + "，并已加入用户 PATH。请新开终端后使用 "
-            + Path.GetFileNameWithoutExtension(exeName) + "。";
+        return FinishInstallSuccess(item, onProgress,
+            "已安装到 " + dest + "，并已加入用户 PATH。请新开终端后使用 "
+            + Path.GetFileNameWithoutExtension(exeName) + "。");
     }
 
     /// <summary>解压便携 zip（如 rg），把主程序放到工具目录并加入用户 PATH。</summary>
@@ -1011,11 +1010,10 @@ internal static class CommonSoftwareHelper
 
         EnsureUserPathContains(toolDir);
         PrependProcessPath(toolDir);
-        InvalidateStatusCache();
-        Report(onProgress, "安装完成", 100);
         ApplyLog.Write("便携解压：" + Path.Combine(toolDir, exeName));
-        return "已安装到 " + Path.Combine(toolDir, exeName) + "，并已加入用户 PATH。请新开终端后使用 "
-            + Path.GetFileNameWithoutExtension(exeName) + "。";
+        return FinishInstallSuccess(item, onProgress,
+            "已安装到 " + Path.Combine(toolDir, exeName) + "，并已加入用户 PATH。请新开终端后使用 "
+            + Path.GetFileNameWithoutExtension(exeName) + "。");
     }
 
     /// <summary>
@@ -1316,8 +1314,7 @@ internal static class CommonSoftwareHelper
         if (code == 0)
         {
             SuppressPostInstallLaunch(item);
-            Report(onProgress, "安装完成", 100);
-            return "";
+            return FinishInstallSuccess(item, onProgress);
         }
 
         // 部分安装程序用非 0 表示需重启等；若已能检测到则视为成功
@@ -1325,8 +1322,8 @@ internal static class CommonSoftwareHelper
         if (status.Installed)
         {
             SuppressPostInstallLaunch(item);
-            Report(onProgress, "安装完成（需按提示重启时请自行安排）", 100);
-            return code != 0 ? "安装已完成；退出码 " + code + "（如提示重启请自行安排）。" : "";
+            return FinishInstallSuccess(item, onProgress,
+                code != 0 ? "安装已完成；退出码 " + code + "（如提示重启请自行安排）。" : "");
         }
 
         ApplyLog.Write("离线安装退出码：" + code);
