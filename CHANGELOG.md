@@ -4,6 +4,17 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.167] - 2026-09-25
+
+### Added
+
+- After common-software install, create Desktop / Start Menu shortcuts for all users and the interactive login user
+
+### Fixed
+
+- Huorong silent install (resolve download redirect; do not only open homepage)
+- Security Center disable access-denied handling; Edge uninstall UI freezes
+
 ## [1.0.164] - 2026-09-25
 
 ### Changed
