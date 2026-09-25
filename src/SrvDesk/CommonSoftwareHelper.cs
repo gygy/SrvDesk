@@ -891,8 +891,18 @@ internal static class CommonSoftwareHelper
     {
         var url = OfficialInstallerResolver.TryResolve(item);
         if (string.IsNullOrWhiteSpace(url)) return null;
+
+        // 火绒等 opaque「最新」接口：解析到真正 .exe 后再装（避免与 OfflineInstallerUrl 相同而直接放弃）
+        if (OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url))
+        {
+            var resolved = OfficialInstallerResolver.TryResolveRedirect(url);
+            if (!string.IsNullOrWhiteSpace(resolved))
+                url = resolved!;
+        }
+
         if (string.Equals(url.Trim(), item.OfflineInstallerUrl?.Trim(), StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl))
+            && !string.IsNullOrWhiteSpace(item.OfflineInstallerUrl)
+            && !OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(item.OfflineInstallerUrl))
             return null; // 已经用这条直链试过了
 
         ApplyLog.Write("官网最新包：" + item.Title + " → " + url);
@@ -929,7 +939,8 @@ internal static class CommonSoftwareHelper
     private static bool PreferOfficialApiNow(CommonSoftwareItem item) =>
         !string.IsNullOrWhiteSpace(item.LatestApiUrl)
         || item.Id.Equals("tianyiyun", StringComparison.OrdinalIgnoreCase)
-        || item.Id.Equals("hikconnect", StringComparison.OrdinalIgnoreCase);
+        || item.Id.Equals("hikconnect", StringComparison.OrdinalIgnoreCase)
+        || item.Id.Equals("huorong", StringComparison.OrdinalIgnoreCase);
 
     private static bool SkipMsStoreRetry(CommonSoftwareItem item) =>
         item.PreferOfflineInstall
@@ -1121,7 +1132,7 @@ internal static class CommonSoftwareHelper
                 };
             }
 
-            // 常见安装目录（天翼 eCloud 等不在 PATH）
+            // 常见安装目录（天翼 eCloud、火绒 Sysdiag 等不在 PATH）
             foreach (var root in new[]
                      {
                          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
@@ -1135,6 +1146,9 @@ internal static class CommonSoftwareHelper
                              Path.Combine(root, "ecloud", "ecloud", name),
                              Path.Combine(root, "eCloud", name),
                              Path.Combine(root, item.Id, name),
+                             Path.Combine(root, "Huorong", "Sysdiag", "bin", name),
+                             Path.Combine(root, "Huorong", "SysDiag", "bin", name),
+                             Path.Combine(root, "火绒安全软件", name),
                          })
                 {
                     if (!File.Exists(sub)) continue;
@@ -1233,6 +1247,19 @@ internal static class CommonSoftwareHelper
     {
         var url = item.OfflineInstallerUrl.Trim();
         if (url.Length == 0) return null;
+
+        // 火绒 downloadHr60.php 等：先解析 301 到真正的 .exe，避免下到无效页或回退开官网
+        if (OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url))
+        {
+            Report(onProgress, "正在解析安装包直链…", 3);
+            var resolved = OfficialInstallerResolver.TryResolveRedirect(url);
+            if (!string.IsNullOrWhiteSpace(resolved)
+                && !string.Equals(resolved, url, StringComparison.OrdinalIgnoreCase))
+            {
+                ApplyLog.Write("离线包跳转：" + url + " → " + resolved);
+                url = resolved!;
+            }
+        }
 
         Directory.CreateDirectory(DownloadDir);
         Uri uri;
@@ -3681,12 +3708,9 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", BrowserUa);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
-        if (OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url)
-            || (Uri.TryCreate(url, UriKind.Absolute, out var dlUri)
-                && dlUri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0))
-        {
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://cloud.189.cn/");
-        }
+        var referer = DownloadRefererFor(url);
+        if (referer is not null)
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", referer);
 
         using var resp = client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead)
             .GetAwaiter().GetResult();
@@ -3720,15 +3744,25 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
             curl = "curl.exe";
 
         // -L 跟随跳转；-A 浏览器 UA；大包（天翼 ~270MB）放宽到 30 分钟
-        var referer = OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url)
-            ? " -e \"https://cloud.189.cn/\" "
-            : " ";
+        var referer = DownloadRefererFor(url);
+        var refererArg = referer is null ? " " : " -e \"" + referer + "\" ";
         var args =
             "-L --retry 3 --connect-timeout 20 --max-time 1800 " +
-            "-A \"" + BrowserUa + "\"" + referer +
+            "-A \"" + BrowserUa + "\"" + refererArg +
             "-o \"" + dest + "\" \"" + url + "\"";
         var code = Run(curl, args, timeoutMs: 1_850_000);
         return code == 0 && File.Exists(dest) && new FileInfo(dest).Length > 0;
+    }
+
+    private static string? DownloadRefererFor(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
+        if (uri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "https://www.huorong.cn/";
+        if (uri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0
+            || OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url))
+            return "https://cloud.189.cn/";
+        return null;
     }
 
     private static bool TryDownloadWebClient(

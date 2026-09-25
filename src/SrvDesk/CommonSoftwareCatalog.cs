@@ -219,7 +219,7 @@ internal static class CommonSoftwareCatalog
             offlineInstallArgs: "/S",
             installerLinkPattern: @"geek\.exe|geekuninstaller.*\.exe"),
         Item("huorong", "火绒安全软件", "工具", "",
-            ["火绒安全软件", "火绒"], "https://www.huorong.cn/", essential: false,
+            ["火绒安全软件", "火绒"], "https://www.huorong.cn/product/downloadHr60.php?pro=hr60&plat=x64UrlAll", essential: false,
             offlineInstallerUrl: "https://www.huorong.cn/product/downloadHr60.php?pro=hr60&plat=x64UrlAll",
             offlineInstallArgs: "/S",
             preferOfflineInstall: true,

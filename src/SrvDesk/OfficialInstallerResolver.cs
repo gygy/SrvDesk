@@ -475,6 +475,88 @@ internal static class OfficialInstallerResolver
         return LooksLikeOpaqueInstallerDownload(uri);
     }
 
+    /// <summary>
+    /// 跟随 301/302 Location 解析最终安装包地址（如火绒 downloadHr60.php → sysdiag-all-x64-….exe）。
+    /// 失败返回空串。
+    /// </summary>
+    public static string TryResolveRedirect(string? url, int maxHops = 6)
+    {
+        var current = (url ?? "").Trim();
+        if (current.Length == 0) return "";
+        if (!Uri.TryCreate(current, UriKind.Absolute, out _)) return "";
+
+        ConfigureHttps();
+        for (var hop = 0; hop < Math.Max(1, maxHops); hop++)
+        {
+            try
+            {
+                var next = TryReadRedirectLocation(current, preferHead: true);
+                if (next is null)
+                    next = TryReadRedirectLocation(current, preferHead: false);
+                if (string.IsNullOrWhiteSpace(next))
+                    break; // 已到最终地址或无法继续
+                if (string.Equals(next, current, StringComparison.OrdinalIgnoreCase))
+                    break;
+                current = next!;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("解析下载跳转失败：" + ex.Message);
+                break;
+            }
+        }
+
+        return HasInstallerExtension(Uri.TryCreate(current, UriKind.Absolute, out var final)
+            ? final.AbsolutePath
+            : current)
+            ? current
+            : "";
+    }
+
+    /// <returns>下一跳 URL；空串表示当前已是最终地址（非 3xx）。</returns>
+    private static string? TryReadRedirectLocation(string current, bool preferHead)
+    {
+        var req = (HttpWebRequest)WebRequest.Create(current);
+        req.Method = preferHead ? "HEAD" : "GET";
+        req.AllowAutoRedirect = false;
+        req.Timeout = 20_000;
+        req.UserAgent = BrowserUa;
+        req.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+        // GET 时只要响应头，不读 body
+        if (!preferHead)
+            req.AddRange(0, 0);
+        if (Uri.TryCreate(current, UriKind.Absolute, out var curUri)
+            && curUri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
+            req.Referer = "https://www.huorong.cn/";
+        else if (LooksLikeOpaqueInstallerDownload(curUri!))
+            req.Referer = "https://cloud.189.cn/";
+
+        try
+        {
+            using var resp = (HttpWebResponse)req.GetResponse();
+            return ExtractRedirectTarget(resp, current);
+        }
+        catch (WebException ex) when (ex.Response is HttpWebResponse errResp)
+        {
+            using (errResp)
+            {
+                if (preferHead && (int)errResp.StatusCode is 403 or 405)
+                    return null; // 让调用方改用 GET
+                return ExtractRedirectTarget(errResp, current);
+            }
+        }
+    }
+
+    private static string? ExtractRedirectTarget(HttpWebResponse resp, string current)
+    {
+        var code = (int)resp.StatusCode;
+        if (code is < 300 or >= 400)
+            return ""; // 最终地址
+        var loc = resp.Headers["Location"];
+        if (string.IsNullOrWhiteSpace(loc)) return "";
+        return Uri.TryCreate(new Uri(current), loc, out var next) ? next.AbsoluteUri : "";
+    }
+
     private static bool LooksLikeOpaqueInstallerDownload(Uri uri)
     {
         var path = uri.AbsolutePath;
@@ -540,6 +622,11 @@ internal static class OfficialInstallerResolver
                 || refererUri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0))
         {
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://cloud.189.cn/");
+        }
+        else if (Uri.TryCreate(url, UriKind.Absolute, out var hrUri)
+                 && hrUri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://www.huorong.cn/");
         }
 
         var text = client.GetStringAsync(url).GetAwaiter().GetResult();
