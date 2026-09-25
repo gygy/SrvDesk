@@ -60,48 +60,77 @@ internal static class SecurityCenterHelper
         };
     }
 
-    public static void Disable()
+    public static string Disable()
     {
         ApplyLog.Write("禁用 Windows 安全中心 / Defender");
+        var notes = new List<string>();
 
         // 先关篡改防护，否则后续停 WinDefend / 写策略常被拒绝
-        TryDisableTamperProtection();
+        var tamperOff = TryDisableTamperProtection();
         Thread.Sleep(800);
 
-        SetDword(RegistryHive.LocalMachine, DefenderPolicy, "DisableAntiSpyware", 1);
-        SetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableRealtimeMonitoring", 1);
-        SetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableBehaviorMonitoring", 1);
-        SetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableOnAccessProtection", 1);
-        SetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableScanOnRealtimeEnable", 1);
+        TrySetDword(RegistryHive.LocalMachine, DefenderPolicy, "DisableAntiSpyware", 1, notes);
+        TrySetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableRealtimeMonitoring", 1, notes);
+        TrySetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableBehaviorMonitoring", 1, notes);
+        TrySetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableOnAccessProtection", 1, notes);
+        TrySetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableScanOnRealtimeEnable", 1, notes);
+        // 再经 SYSTEM 写一遍策略，绕开部分「拒绝访问」
+        TryWriteDefenderPoliciesAsSystem();
 
         foreach (var svc in RelatedServices)
-            TrySetService(svc, enable: false);
+            TrySetService(svc, enable: false, notes);
 
         TryDisableSecurityHealthRun();
+
+        var stillTamper = IsTamperProtectionOn();
         ApplyLog.Write("已写入禁用安全中心相关策略与服务；篡改防护="
-            + (IsTamperProtectionOn() ? "仍开启" : "已关闭"));
+            + (stillTamper ? "仍开启" : "已关闭"));
+
+        if (!tamperOff || stillTamper)
+        {
+            notes.Add("篡改防护仍开启时，停服务可能被系统拒绝；策略一般已写入。"
+                + "请重启后再打开本页点一次「禁用安全中心」。");
+        }
+
+        var s = Query();
+        if (s.LooksDisabled && !stillTamper)
+            return "已关闭篡改防护，并禁用安全中心相关组件。\r\n若托盘图标仍在，可注销或重启后再看。";
+        if (s.LooksDisabled && stillTamper)
+            return "已写入禁用策略与服务配置。\r\n\r\n"
+                + "当前篡改防护仍显示开启（新版 Windows 常需重启后策略才生效）。\r\n"
+                + "请重启后再打开本页点一次「禁用安全中心」，即可停掉 WinDefend。";
+        if (notes.Count > 0)
+            return "部分步骤未完全成功（常见原因：篡改防护拦截）。\r\n\r\n"
+                + string.Join("\r\n", notes)
+                + "\r\n\r\n建议：重启后再点一次「禁用安全中心」。";
+        return "已尝试禁用。请点「刷新状态」查看；若服务仍在运行，请重启后再试一次。";
     }
 
-    public static void Enable()
+    public static string Enable()
     {
         ApplyLog.Write("启用 Windows 安全中心 / Defender");
+        var notes = new List<string>();
 
-        DeleteValue(RegistryHive.LocalMachine, DefenderPolicy, "DisableAntiSpyware");
-        DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableRealtimeMonitoring");
-        DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableBehaviorMonitoring");
-        DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableOnAccessProtection");
-        DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableScanOnRealtimeEnable");
-        DeleteValue(RegistryHive.LocalMachine, DefenderFeaturesPolicy, "TamperProtection");
+        TryDeleteValue(RegistryHive.LocalMachine, DefenderPolicy, "DisableAntiSpyware", notes);
+        TryDeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableRealtimeMonitoring", notes);
+        TryDeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableBehaviorMonitoring", notes);
+        TryDeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableOnAccessProtection", notes);
+        TryDeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableScanOnRealtimeEnable", notes);
+        TryDeleteValue(RegistryHive.LocalMachine, DefenderFeaturesPolicy, "TamperProtection", notes);
 
         // 安全中心 / Health：自动；Defender：自动；网络检测：手动
-        TrySetService("wscsvc", enable: true, autoStart: true);
-        TrySetService("SecurityHealthService", enable: true, autoStart: true);
-        TrySetService("WinDefend", enable: true, autoStart: true);
-        TrySetService("WdNisSvc", enable: true, autoStart: false);
-        TrySetService("Sense", enable: true, autoStart: false);
+        TrySetService("wscsvc", enable: true, notes, autoStart: true);
+        TrySetService("SecurityHealthService", enable: true, notes, autoStart: true);
+        TrySetService("WinDefend", enable: true, notes, autoStart: true);
+        TrySetService("WdNisSvc", enable: true, notes, autoStart: false);
+        TrySetService("Sense", enable: true, notes, autoStart: false);
 
         // 不强制重开篡改防护，避免再次锁死；需要时用户可在 Windows 安全中心打开
         ApplyLog.Write("已恢复安全中心相关策略与服务");
+        if (notes.Count > 0)
+            return "已尝试启用安全中心。\r\n\r\n" + string.Join("\r\n", notes)
+                + "\r\n\r\n若服务未启动，请稍候再点「刷新状态」，或重启一次。";
+        return "已尝试启用安全中心。若服务未启动，请稍候再点「刷新状态」，或重启一次。";
     }
 
     /// <summary>
@@ -250,7 +279,7 @@ internal static class SecurityCenterHelper
         return k?.GetValue("Start") is int i ? i : -1;
     }
 
-    private static void TrySetService(string name, bool enable, bool autoStart = true)
+    private static void TrySetService(string name, bool enable, List<string>? notes = null, bool autoStart = true)
     {
         try
         {
@@ -263,11 +292,100 @@ internal static class SecurityCenterHelper
         }
 
         var startArg = enable ? (autoStart ? "auto" : "demand") : "disabled";
-        RunSc($"config {name} start= {startArg}");
-        if (enable)
-            RunSc($"start {name}");
-        else
-            RunSc($"stop {name}");
+        var configOk = RunSc($"config {name} start= {startArg}");
+        var runOk = enable
+            ? RunSc($"start {name}")
+            : RunSc($"stop {name}");
+
+        if (configOk && runOk)
+            return;
+
+        // 管理员仍被拒：改用 SYSTEM 计划任务再试一次
+        var asSystem = TrySetServiceAsSystem(name, enable, autoStart);
+        if (asSystem)
+            return;
+
+        var tip = enable
+            ? $"服务 {name} 未能启用（可能被保护）。"
+            : $"服务 {name} 未能停止/禁用（常见于篡改防护未关）。";
+        notes?.Add(tip);
+        ApplyLog.Write(tip + " sc-config=" + configOk + " sc-run=" + runOk);
+    }
+
+    private static bool TrySetServiceAsSystem(string name, bool enable, bool autoStart)
+    {
+        try
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "SrvDeskSvc");
+            Directory.CreateDirectory(dir);
+            var bat = Path.Combine(dir, "svc-" + name + ".cmd");
+            var log = Path.Combine(dir, "svc-" + name + ".log");
+            var startArg = enable ? (autoStart ? "auto" : "demand") : "disabled";
+            var action = enable ? "start" : "stop";
+            File.WriteAllText(bat,
+                "@echo off\r\n"
+                + "sc config " + name + " start= " + startArg + " > \"" + log + "\" 2>&1\r\n"
+                + "sc " + action + " " + name + " >> \"" + log + "\" 2>&1\r\n",
+                Encoding.ASCII);
+
+            const string taskName = "SrvDeskSecurityCenterSvc";
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            var create = RunProcess("schtasks.exe",
+                "/Create /TN \"" + taskName + "\" /RU SYSTEM /RL HIGHEST /SC ONCE /ST 23:59 /TR \"cmd /c \\\""
+                + bat + "\\\"\" /F",
+                20_000);
+            ApplyLog.Write("SYSTEM 改服务 " + name + " 建任务：" + create);
+            RunProcess("schtasks.exe", "/Run /TN \"" + taskName + "\"", 15_000);
+            Thread.Sleep(2_500);
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            if (File.Exists(log))
+                ApplyLog.Write("SYSTEM 改服务 " + name + "：" + File.ReadAllText(log).Trim());
+
+            // 成功标准：禁用后 Start=4；启用后非 4
+            var start = ReadStartType(name);
+            return enable ? start is 2 or 3 : start == 4;
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("SYSTEM 改服务失败 " + name + "：" + ex.Message);
+            return false;
+        }
+    }
+
+    private static void TryWriteDefenderPoliciesAsSystem()
+    {
+        try
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "SrvDeskTp");
+            Directory.CreateDirectory(dir);
+            var bat = Path.Combine(dir, "def-pol.cmd");
+            var log = Path.Combine(dir, "def-pol.log");
+            File.WriteAllText(bat,
+                "@echo off\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\" /v DisableAntiSpyware /t REG_DWORD /d 1 /f > \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >> \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\" /v DisableBehaviorMonitoring /t REG_DWORD /d 1 /f >> \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\" /v DisableOnAccessProtection /t REG_DWORD /d 1 /f >> \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\" /v DisableScanOnRealtimeEnable /t REG_DWORD /d 1 /f >> \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Features\" /v TamperProtection /t REG_DWORD /d 0 /f >> \"" + log + "\" 2>&1\r\n",
+                Encoding.ASCII);
+
+            const string taskName = "SrvDeskDisableDefenderPolicy";
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            RunProcess("schtasks.exe",
+                "/Create /TN \"" + taskName + "\" /RU SYSTEM /RL HIGHEST /SC ONCE /ST 23:59 /TR \"cmd /c \\\""
+                + bat + "\\\"\" /F",
+                20_000);
+            RunProcess("schtasks.exe", "/Run /TN \"" + taskName + "\"", 15_000);
+            Thread.Sleep(2_000);
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            if (File.Exists(log))
+                ApplyLog.Write("SYSTEM 写 Defender 策略：" + File.ReadAllText(log).Trim());
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("SYSTEM 写 Defender 策略失败：" + ex.Message);
+        }
     }
 
     private static void TrySetMpPreferenceDisableTamper(bool disable)
@@ -353,6 +471,45 @@ internal static class SecurityCenterHelper
         }
     }
 
+    private static void TrySetDword(RegistryHive hive, string key, string name, int value, List<string>? notes)
+    {
+        try
+        {
+            SetDword(hive, key, name, value);
+        }
+        catch (Exception ex)
+        {
+            var tip = "写入策略失败 " + name + "：" + FriendlyAccessMessage(ex);
+            notes?.Add(tip);
+            ApplyLog.Write(tip);
+        }
+    }
+
+    private static void TryDeleteValue(RegistryHive hive, string key, string name, List<string>? notes)
+    {
+        try
+        {
+            DeleteValue(hive, key, name);
+        }
+        catch (Exception ex)
+        {
+            var tip = "删除策略失败 " + name + "：" + FriendlyAccessMessage(ex);
+            notes?.Add(tip);
+            ApplyLog.Write(tip);
+        }
+    }
+
+    private static string FriendlyAccessMessage(Exception ex)
+    {
+        var m = ex.Message ?? "";
+        if (m.IndexOf("拒绝", StringComparison.Ordinal) >= 0
+            || m.IndexOf("denied", StringComparison.OrdinalIgnoreCase) >= 0
+            || m.IndexOf("Unauthorized", StringComparison.OrdinalIgnoreCase) >= 0
+            || ex is UnauthorizedAccessException)
+            return "被系统保护拦截（篡改防护/受保护服务），将改用 SYSTEM 写入或重启后再生效";
+        return m;
+    }
+
     private static void SetDword(RegistryHive hive, string key, string name, int value)
     {
         using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
@@ -399,20 +556,32 @@ internal static class SecurityCenterHelper
         }
     }
 
-    private static void RunSc(string args)
+    /// <returns>true 表示 sc 进程退出码为 0。</returns>
+    private static bool RunSc(string args)
     {
-        using var p = Process.Start(new ProcessStartInfo
+        try
         {
-            FileName = "sc.exe",
-            Arguments = args,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        });
-        if (p is null) return;
-        _ = p.StandardOutput.ReadToEnd();
-        _ = p.StandardError.ReadToEnd();
-        p.WaitForExit(30_000);
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = "sc.exe",
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            if (p is null) return false;
+            var o = p.StandardOutput.ReadToEnd();
+            var e = p.StandardError.ReadToEnd();
+            p.WaitForExit(30_000);
+            if (p.ExitCode != 0)
+                ApplyLog.Write("sc " + args + " → " + p.ExitCode + " " + (o + e).Trim());
+            return p.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("sc " + args + " 异常：" + ex.Message);
+            return false;
+        }
     }
 }

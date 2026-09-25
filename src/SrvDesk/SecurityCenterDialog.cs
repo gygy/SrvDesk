@@ -125,22 +125,24 @@ internal sealed class SecurityCenterDialog : Form
         try
         {
             Cursor = Cursors.WaitCursor;
-            SecurityCenterHelper.Disable();
+            UseWaitCursor = true;
+            Enabled = false;
+            var tip = SecurityCenterHelper.Disable();
             RefreshStatus();
-            var s = SecurityCenterHelper.Query();
-            var tip = s.TamperProtectionOn
-                ? "已写入关闭篡改防护的组策略，并禁用安全中心相关组件。\r\n\r\n"
-                  + "当前篡改防护仍显示开启（新版系统常需重启后策略才生效）。\r\n"
-                  + "请重启后再打开本页点一次「禁用安全中心」，即可停掉 WinDefend。"
-                : "已关闭篡改防护，并禁用安全中心相关组件。\r\n若托盘图标仍在，可注销或重启后再看。";
             MessageBox.Show(this, tip, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "禁用失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this,
+                "禁用过程出错：" + FriendlyError(ex) + "\r\n\r\n"
+                + "若提示拒绝访问，多半是篡改防护仍开。可先重启后再点一次「禁用安全中心」。",
+                "禁用失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            RefreshStatus();
         }
         finally
         {
+            Enabled = true;
+            UseWaitCursor = false;
             Cursor = Cursors.Default;
         }
     }
@@ -156,19 +158,34 @@ internal sealed class SecurityCenterDialog : Form
         try
         {
             Cursor = Cursors.WaitCursor;
-            SecurityCenterHelper.Enable();
+            UseWaitCursor = true;
+            Enabled = false;
+            var tip = SecurityCenterHelper.Enable();
             RefreshStatus();
-            MessageBox.Show(this, "已尝试启用安全中心。若服务未启动，请稍候再点「刷新状态」，或重启一次。",
-                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, tip, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "启用失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, "启用过程出错：" + FriendlyError(ex), "启用失败",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            RefreshStatus();
         }
         finally
         {
+            Enabled = true;
+            UseWaitCursor = false;
             Cursor = Cursors.Default;
         }
+    }
+
+    private static string FriendlyError(Exception ex)
+    {
+        var m = ex.Message ?? "";
+        if (m.IndexOf("拒绝", StringComparison.Ordinal) >= 0
+            || m.IndexOf("denied", StringComparison.OrdinalIgnoreCase) >= 0
+            || ex is UnauthorizedAccessException)
+            return "被系统保护拦截（篡改防护或受保护服务）。请重启后再试。";
+        return m;
     }
 
     private static Color StatusColor(string text) =>
