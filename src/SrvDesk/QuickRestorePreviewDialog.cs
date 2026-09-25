@@ -1,11 +1,32 @@
 namespace SrvDesk;
 
-/// <summary>一键快速恢复前：相对本机展示将开启/关闭的开关、将禁用/调整的服务等。</summary>
+/// <summary>侧栏栏目元数据：对齐主界面分组，供一键恢复预览使用。</summary>
+internal sealed class SettingUiMeta
+{
+    public string Nav { get; set; } = "";
+    public string Section { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Meaning { get; set; } = "";
+}
+
+/// <summary>一键快速恢复前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>
 internal sealed class QuickRestorePreviewDialog : Form
 {
+    private readonly ListView _list = new();
+    private readonly Label _detail = new();
+    private readonly Label _summary = new();
+    private readonly List<PreviewLine> _lines;
+
+    public IReadOnlyList<PreviewLine> SelectedLines =>
+        _lines.Where(x => x.Selected).ToList();
+
     public QuickRestorePreviewDialog(IReadOnlyList<PreviewLine> lines, string sourcePath)
     {
-        Text = AppLang.L("一键快速恢复 · 变更预览", "One-click restore · Preview");
+        _lines = lines.Select(x => x.Clone()).ToList();
+        foreach (var line in _lines)
+            line.Selected = true;
+
+        Text = AppLang.L("一键快速恢复 · 挑选变更", "One-click restore · Pick changes");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -13,8 +34,8 @@ internal sealed class QuickRestorePreviewDialog : Form
         ShowInTaskbar = false;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        ClientSize = UiScale.Size(820, 560);
-        MinimumSize = UiScale.Size(720, 480);
+        ClientSize = UiScale.Size(980, 640);
+        MinimumSize = UiScale.Size(860, 560);
 
         var body = new Panel
         {
@@ -23,73 +44,95 @@ internal sealed class QuickRestorePreviewDialog : Form
             BackColor = AppTheme.Surface,
         };
 
-        var onCount = lines.Count(x => x.Kind == PreviewKind.ToggleOn);
-        var offCount = lines.Count(x => x.Kind == PreviewKind.ToggleOff);
-        var propCount = lines.Count(x => x.Kind == PreviewKind.Property);
-        var disableSvc = lines.Count(x => x.Kind == PreviewKind.ServiceDisable);
-        var otherSvc = lines.Count(x => x.Kind is PreviewKind.ServiceAuto or PreviewKind.ServiceManual);
-        var other = lines.Count(x => x.Kind == PreviewKind.Other);
-
-        var summary = new Label
-        {
-            Dock = DockStyle.Top,
-            AutoSize = false,
-            Height = UiScale.S(72),
-            Text = AppLang.Lf(
-                "相对当前电脑将发生以下变更（共 {0} 项）：\r\n开启开关 {1} · 关闭开关 {2} · 其它属性 {3} · 禁用服务 {4} · 调整服务 {5}{6}\r\n确认后才会写入系统。",
-                "Relative to this PC ({0} change(s)):\r\nTurn on {1} · Turn off {2} · Other props {3} · Disable services {4} · Adjust services {5}{6}\r\nNothing is written until you confirm.",
-                lines.Count, onCount, offCount, propCount, disableSvc, otherSvc,
-                other > 0 ? AppLang.Lf(" · 其它 {0}", " · Other {0}", other) : ""),
-            ForeColor = AppTheme.TextMain,
-        };
+        _summary.Dock = DockStyle.Top;
+        _summary.AutoSize = false;
+        _summary.Height = UiScale.S(56);
+        _summary.ForeColor = AppTheme.TextMain;
+        RefreshSummary();
 
         var pathLbl = new Label
         {
             Dock = DockStyle.Top,
             AutoSize = false,
-            Height = UiScale.S(28),
+            Height = UiScale.S(24),
             AutoEllipsis = true,
             Text = AppLang.L("来源：", "From: ") + sourcePath,
             ForeColor = AppTheme.TextMute,
         };
 
-        var list = new ListView
+        var hint = new Label
         {
-            Dock = DockStyle.Fill,
-            View = View.Details,
-            FullRowSelect = true,
-            GridLines = false,
-            HideSelection = false,
-            MultiSelect = false,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = AppTheme.SurfaceCard,
-            ForeColor = AppTheme.TextMain,
-            Font = UiFit.UiFont,
+            Dock = DockStyle.Top,
+            AutoSize = false,
+            Height = UiScale.S(24),
+            Text = AppLang.L(
+                "「栏目 / 分区」对应主界面左侧；可取消勾选不想改的项。选中一行可看下方说明。",
+                "Column/Section match the left nav. Uncheck items to skip. Select a row for details."),
+            ForeColor = AppTheme.TextMute,
         };
-        list.Columns.Add(AppLang.L("类别", "Kind"), UiScale.S(110));
-        list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(280));
-        list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(120));
-        list.Columns.Add(AppLang.L("恢复为", "Restore to"), UiScale.S(120));
-        list.HandleCreated += (_, _) => UiBuffer.EnableListView(list);
 
-        foreach (var line in lines)
+        _list.Dock = DockStyle.Fill;
+        _list.View = View.Details;
+        _list.FullRowSelect = true;
+        _list.GridLines = false;
+        _list.HideSelection = false;
+        _list.MultiSelect = true;
+        _list.CheckBoxes = true;
+        _list.BorderStyle = BorderStyle.FixedSingle;
+        _list.BackColor = AppTheme.SurfaceCard;
+        _list.ForeColor = AppTheme.TextMain;
+        _list.Font = UiFit.UiFont;
+        _list.Columns.Add(AppLang.L("变更", "Change"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("栏目", "Column"), UiScale.S(100));
+        _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(120));
+        _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(200));
+        _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(220));
+        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(72));
+        _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
+        _list.ItemChecked += (_, e) =>
         {
-            var row = new ListViewItem(KindLabel(line.Kind)) { ForeColor = KindColor(line.Kind) };
+            if (e.Item?.Tag is PreviewLine line)
+                line.Selected = e.Item.Checked;
+            RefreshSummary();
+        };
+        _list.SelectedIndexChanged += (_, _) => UpdateDetail();
+
+        foreach (var line in _lines)
+        {
+            var row = new ListViewItem(KindLabel(line.Kind))
+            {
+                Checked = true,
+                Tag = line,
+                ForeColor = KindColor(line.Kind),
+            };
+            row.SubItems.Add(line.Nav);
+            row.SubItems.Add(line.Section);
             row.SubItems.Add(line.Title);
+            row.SubItems.Add(line.Meaning);
             row.SubItems.Add(line.Current);
             row.SubItems.Add(line.Target);
-            list.Items.Add(row);
+            _list.Items.Add(row);
         }
 
-        if (lines.Count == 0)
+        if (_lines.Count == 0)
         {
             var empty = new ListViewItem(AppLang.L("提示", "Note"));
-            empty.SubItems.Add(AppLang.L("与当前机器相比没有可写差异（脚本/方案仍可能覆盖本地）。",
-                "No writable diffs vs this PC (scripts/packs may still overwrite local)."));
             empty.SubItems.Add("—");
             empty.SubItems.Add("—");
-            list.Items.Add(empty);
+            empty.SubItems.Add(AppLang.L("与当前机器无差异", "No diffs vs this PC"));
+            empty.SubItems.Add(AppLang.L("可仍写入脚本/方案（若配置含有）", "Scripts/packs may still apply"));
+            empty.SubItems.Add("—");
+            empty.SubItems.Add("—");
+            _list.Items.Add(empty);
         }
+
+        _detail.Dock = DockStyle.Bottom;
+        _detail.AutoSize = false;
+        _detail.Height = UiScale.S(72);
+        _detail.Padding = new Padding(0, UiScale.S(6), 0, 0);
+        _detail.ForeColor = AppTheme.TextMain;
+        _detail.Text = AppLang.L("选中一行查看完整说明。", "Select a row to see full description.");
 
         var footer = new FlowLayoutPanel
         {
@@ -106,77 +149,165 @@ internal sealed class QuickRestorePreviewDialog : Form
         UiFit.FitButton(cancel, padding: 28);
         cancel.DialogResult = DialogResult.Cancel;
 
-        var ok = ThemedSettingsChrome.CreateButton(AppLang.L("确认并应用到系统", "Confirm & Apply"), true);
+        var ok = ThemedSettingsChrome.CreateButton(AppLang.L("恢复勾选项", "Restore checked"), true);
         UiFit.FitButton(ok, padding: 28);
-        ok.DialogResult = DialogResult.Yes;
         ok.Margin = new Padding(UiScale.S(8), 0, 0, 0);
-        ok.Enabled = true;
+        ok.Click += (_, _) =>
+        {
+            if (_lines.Count > 0 && !_lines.Any(x => x.Selected))
+            {
+                MessageBox.Show(this,
+                    AppLang.L("请至少勾选一项，或点取消。", "Check at least one item, or Cancel."),
+                    Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            DialogResult = DialogResult.Yes;
+            Close();
+        };
+
+        var allOff = ThemedSettingsChrome.CreateButton(AppLang.L("全不选", "None"), false);
+        UiFit.FitButton(allOff, padding: 22);
+        allOff.Margin = new Padding(UiScale.S(8), 0, 0, 0);
+        allOff.Click += (_, _) => SetAllChecked(false);
+
+        var allOn = ThemedSettingsChrome.CreateButton(AppLang.L("全选", "All"), false);
+        UiFit.FitButton(allOn, padding: 22);
+        allOn.Margin = new Padding(UiScale.S(8), 0, 0, 0);
+        allOn.Click += (_, _) => SetAllChecked(true);
 
         footer.Controls.Add(cancel);
         footer.Controls.Add(ok);
+        footer.Controls.Add(allOff);
+        footer.Controls.Add(allOn);
 
-        body.Controls.Add(list);
+        body.Controls.Add(_list);
+        body.Controls.Add(_detail);
         body.Controls.Add(footer);
+        body.Controls.Add(hint);
         body.Controls.Add(pathLbl);
-        body.Controls.Add(summary);
+        body.Controls.Add(_summary);
         Controls.Add(body);
 
-        AcceptButton = ok;
         CancelButton = cancel;
-        Load += (_, _) => UiBuffer.FitListViewColumn(list, 1, UiScale.S(200));
+        Load += (_, _) =>
+        {
+            UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160));
+            if (_list.Items.Count > 0)
+                _list.Items[0].Selected = true;
+        };
         Resize += (_, _) =>
         {
-            try { UiBuffer.FitListViewColumn(list, 1, UiScale.S(200)); }
+            try { UiBuffer.FitListViewColumn(_list, 4, UiScale.S(160)); }
             catch { /* ignore */ }
         };
     }
 
-    public static List<PreviewLine> Compute(Optimizer.State current, OptProfileBundle bundle)
+    private void SetAllChecked(bool on)
+    {
+        _list.BeginUpdate();
+        try
+        {
+            foreach (ListViewItem row in _list.Items)
+            {
+                if (row.Tag is not PreviewLine) continue;
+                row.Checked = on;
+            }
+        }
+        finally
+        {
+            _list.EndUpdate();
+        }
+        RefreshSummary();
+    }
+
+    private void RefreshSummary()
+    {
+        var n = _lines.Count(x => x.Selected);
+        _summary.Text = AppLang.Lf(
+            "相对当前电脑共 {0} 项可改；已勾选 {1} 项。栏目/分区与主界面左侧一致。",
+            "{0} change(s) vs this PC; {1} checked. Columns match the left nav.",
+            _lines.Count, n);
+    }
+
+    private void UpdateDetail()
+    {
+        if (_list.SelectedItems.Count == 0 || _list.SelectedItems[0].Tag is not PreviewLine line)
+        {
+            _detail.Text = AppLang.L("选中一行查看完整说明。", "Select a row to see full description.");
+            return;
+        }
+
+        _detail.Text = AppLang.Lf(
+            "【{0} / {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
+            "[{0} / {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
+            line.Nav, line.Section, line.Title,
+            string.IsNullOrWhiteSpace(line.MeaningFull) ? line.Meaning : line.MeaningFull,
+            line.Current, line.Target);
+    }
+
+    public static List<PreviewLine> Compute(
+        Optimizer.State current,
+        OptProfileBundle bundle,
+        IReadOnlyDictionary<string, SettingUiMeta>? uiMeta = null)
     {
         var lines = new List<PreviewLine>();
+        uiMeta ??= new Dictionary<string, SettingUiMeta>(StringComparer.Ordinal);
 
         if (bundle.HasSettings)
         {
             var curMap = StateMapper.ToMap(current);
             var impMap = StateMapper.ToMap(bundle.State);
-            foreach (var kv in impMap.OrderBy(x => TitleFor(x.Key), StringComparer.CurrentCultureIgnoreCase))
+            foreach (var kv in impMap)
             {
                 if (!curMap.TryGetValue(kv.Key, out var cur) || cur == kv.Value) continue;
-                var title = TitleFor(kv.Key);
-                if (kv.Value)
+                var meta = ResolveMeta(kv.Key, uiMeta);
+                var kind = kv.Value ? PreviewKind.ToggleOn : PreviewKind.ToggleOff;
+                lines.Add(new PreviewLine
                 {
-                    lines.Add(new PreviewLine(PreviewKind.ToggleOn, title,
-                        BoolText(false), BoolText(true)));
-                }
-                else
-                {
-                    lines.Add(new PreviewLine(PreviewKind.ToggleOff, title,
-                        BoolText(true), BoolText(false)));
-                }
+                    Kind = kind,
+                    StateKey = kv.Key,
+                    Nav = meta.Nav,
+                    Section = meta.Section,
+                    Title = meta.Title,
+                    Meaning = Compact(meta.Meaning, 36),
+                    MeaningFull = meta.Meaning,
+                    Current = BoolText(cur),
+                    Target = BoolText(kv.Value),
+                    Selected = true,
+                });
             }
 
             var curExtra = StateMapper.ToExtra(current)
                 .Where(e => string.Equals(e.Kind, "int", StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(e => e.Key!, e => e.Text ?? "", StringComparer.Ordinal);
             foreach (var e in StateMapper.ToExtra(bundle.State)
-                         .Where(x => string.Equals(x.Kind, "int", StringComparison.OrdinalIgnoreCase))
-                         .OrderBy(x => TitleFor(x.Key ?? ""), StringComparer.CurrentCultureIgnoreCase))
+                         .Where(x => string.Equals(x.Kind, "int", StringComparison.OrdinalIgnoreCase)))
             {
                 if (string.IsNullOrEmpty(e.Key)) continue;
                 curExtra.TryGetValue(e.Key!, out var curText);
                 curText ??= "";
                 var impText = e.Text ?? "";
                 if (string.Equals(curText, impText, StringComparison.Ordinal)) continue;
-                lines.Add(new PreviewLine(PreviewKind.Property, TitleFor(e.Key!),
-                    FormatExtra(e.Key!, curText), FormatExtra(e.Key!, impText)));
+                var meta = ResolveMeta(e.Key!, uiMeta);
+                lines.Add(new PreviewLine
+                {
+                    Kind = PreviewKind.Property,
+                    StateKey = e.Key!,
+                    Nav = meta.Nav,
+                    Section = meta.Section,
+                    Title = meta.Title,
+                    Meaning = Compact(meta.Meaning, 36),
+                    MeaningFull = meta.Meaning,
+                    Current = FormatExtra(e.Key!, curText),
+                    Target = FormatExtra(e.Key!, impText),
+                    Selected = true,
+                });
             }
         }
 
         if (bundle.HasServices && bundle.Services is { Count: > 0 })
         {
-            foreach (var e in bundle.Services
-                         .Where(x => !string.IsNullOrWhiteSpace(x.Name))
-                         .OrderBy(x => x.DisplayName ?? x.Name, StringComparer.CurrentCultureIgnoreCase))
+            foreach (var e in bundle.Services.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
             {
                 var name = e.Name!;
                 var target = ServiceSnapshotStore.ParseStartType(e.StartType);
@@ -186,21 +317,35 @@ internal sealed class QuickRestorePreviewDialog : Form
                     continue;
 
                 var currentStart = ServiceOptimizeHelper.ReadStartTypePublic(name);
-                if (currentStart == ServiceStartTypeKind.Missing) continue;
-                if (currentStart == target) continue;
+                if (currentStart is ServiceStartTypeKind.Missing || currentStart == target)
+                    continue;
 
-                var title = string.IsNullOrWhiteSpace(e.DisplayName)
-                    ? name
-                    : e.DisplayName + " (" + name + ")";
-                var curLabel = ServiceOptimizeHelper.StartTypeLabel(currentStart);
-                var tgtLabel = ServiceOptimizeHelper.StartTypeLabel(target);
+                var title = string.IsNullOrWhiteSpace(e.DisplayName) ? name : e.DisplayName!;
                 var kind = target switch
                 {
                     ServiceStartTypeKind.Disabled => PreviewKind.ServiceDisable,
                     ServiceStartTypeKind.Automatic => PreviewKind.ServiceAuto,
                     _ => PreviewKind.ServiceManual,
                 };
-                lines.Add(new PreviewLine(kind, title, curLabel, tgtLabel));
+                var meaning = AppLang.Lf(
+                    "将服务「{0}」的启动类型从「{1}」改为「{2}」。对应侧栏「服务优化」。",
+                    "Change service “{0}” start type from “{1}” to “{2}”. Matches Service optimize.",
+                    name,
+                    ServiceOptimizeHelper.StartTypeLabel(currentStart),
+                    ServiceOptimizeHelper.StartTypeLabel(target));
+                lines.Add(new PreviewLine
+                {
+                    Kind = kind,
+                    ServiceName = name,
+                    Nav = AppLang.L("服务优化", "Service optimize"),
+                    Section = AppLang.L("服务启动类型", "Start type"),
+                    Title = title,
+                    Meaning = Compact(meaning, 36),
+                    MeaningFull = meaning,
+                    Current = ServiceOptimizeHelper.StartTypeLabel(currentStart),
+                    Target = ServiceOptimizeHelper.StartTypeLabel(target),
+                    Selected = true,
+                });
             }
         }
 
@@ -210,48 +355,140 @@ internal sealed class QuickRestorePreviewDialog : Form
             if (bundle.OptimizationLevel.HasValue
                 && bundle.OptimizationLevel.Value != sp.OptimizationLevel)
             {
-                lines.Add(new PreviewLine(PreviewKind.Other,
-                    AppLang.L("优化等级", "Optimization level"),
-                    LevelText(sp.OptimizationLevel),
-                    LevelText(bundle.OptimizationLevel.Value)));
+                lines.Add(new PreviewLine
+                {
+                    Kind = PreviewKind.Other,
+                    OtherId = "OptimizationLevel",
+                    Nav = AppLang.L("服务器用途", "Server profile"),
+                    Section = AppLang.L("优化等级", "Level"),
+                    Title = AppLang.L("优化等级", "Optimization level"),
+                    Meaning = AppLang.L("控制可自动写入的风险档位（仅检测/保守/标准/激进）。",
+                        "Controls which risk level may be written (detect/conservative/standard/aggressive)."),
+                    MeaningFull = AppLang.L("控制可自动写入的风险档位（仅检测/保守/标准/激进）。",
+                        "Controls which risk level may be written (detect/conservative/standard/aggressive)."),
+                    Current = LevelText(sp.OptimizationLevel),
+                    Target = LevelText(bundle.OptimizationLevel.Value),
+                    Selected = true,
+                });
             }
             if (bundle.ServerRoles.HasValue && bundle.ServerRoles.Value != sp.Roles)
             {
-                lines.Add(new PreviewLine(PreviewKind.Other,
-                    AppLang.L("服务器用途", "Server roles"),
-                    sp.Roles.ToString(),
-                    bundle.ServerRoles.Value.ToString()));
+                lines.Add(new PreviewLine
+                {
+                    Kind = PreviewKind.Other,
+                    OtherId = "ServerRoles",
+                    Nav = AppLang.L("服务器用途", "Server profile"),
+                    Section = AppLang.L("角色勾选", "Roles"),
+                    Title = AppLang.L("服务器用途角色", "Server roles"),
+                    Meaning = AppLang.L("影响优化顾问与推荐保留的服务。",
+                        "Affects advisor tips and services kept by role."),
+                    MeaningFull = AppLang.L("影响优化顾问与推荐保留的服务。",
+                        "Affects advisor tips and services kept by role."),
+                    Current = sp.Roles.ToString(),
+                    Target = bundle.ServerRoles.Value.ToString(),
+                    Selected = true,
+                });
             }
         }
 
         if (bundle.HasScriptOverrides)
-            lines.Add(new PreviewLine(PreviewKind.Other,
-                AppLang.L("配置脚本覆盖", "Script overrides"),
-                AppLang.L("本机现有", "Local"),
-                AppLang.L("用配置覆盖", "Overwrite from profile")));
+        {
+            lines.Add(new PreviewLine
+            {
+                Kind = PreviewKind.Other,
+                OtherId = "ScriptOverrides",
+                Nav = AppLang.L("配置脚本", "Config scripts"),
+                Section = AppLang.L("脚本覆盖", "Overrides"),
+                Title = AppLang.L("配置脚本覆盖", "Script overrides"),
+                Meaning = AppLang.L("覆盖本机已保存的开启/关闭脚本正文。",
+                    "Overwrite saved on/off script bodies on this PC."),
+                MeaningFull = AppLang.L("覆盖本机已保存的开启/关闭脚本正文。",
+                    "Overwrite saved on/off script bodies on this PC."),
+                Current = AppLang.L("本机", "Local"),
+                Target = AppLang.L("导入", "Import"),
+                Selected = true,
+            });
+        }
         if (bundle.HasCustomPacks)
-            lines.Add(new PreviewLine(PreviewKind.Other,
-                AppLang.L("自定义方案", "Custom packs"),
-                AppLang.L("本机现有", "Local"),
-                AppLang.L("用配置覆盖", "Overwrite from profile")));
+        {
+            lines.Add(new PreviewLine
+            {
+                Kind = PreviewKind.Other,
+                OtherId = "CustomPacks",
+                Nav = AppLang.L("自定义配置", "Custom config"),
+                Section = AppLang.L("方案", "Packs"),
+                Title = AppLang.L("自定义方案", "Custom packs"),
+                Meaning = AppLang.L("用配置文件中的自定义方案替换本机方案。",
+                    "Replace local custom packs with those in the profile."),
+                MeaningFull = AppLang.L("用配置文件中的自定义方案替换本机方案。",
+                    "Replace local custom packs with those in the profile."),
+                Current = AppLang.L("本机", "Local"),
+                Target = AppLang.L("导入", "Import"),
+                Selected = true,
+            });
+        }
 
-        // 排序：开启 → 关闭 → 属性 → 禁用服务 → 自动 → 手动 → 其它
         lines.Sort((a, b) =>
         {
-            var c = a.Kind.CompareTo(b.Kind);
+            var c = string.Compare(a.Nav, b.Nav, StringComparison.CurrentCultureIgnoreCase);
+            if (c != 0) return c;
+            c = string.Compare(a.Section, b.Section, StringComparison.CurrentCultureIgnoreCase);
+            if (c != 0) return c;
+            c = a.Kind.CompareTo(b.Kind);
             return c != 0 ? c : string.Compare(a.Title, b.Title, StringComparison.CurrentCultureIgnoreCase);
         });
         return lines;
     }
 
+    private static SettingUiMeta ResolveMeta(string key, IReadOnlyDictionary<string, SettingUiMeta> uiMeta)
+    {
+        if (uiMeta.TryGetValue(key, out var m))
+            return m;
+
+        // 常见别名
+        if (string.Equals(key, "UacNotifyLevel", StringComparison.Ordinal)
+            && uiMeta.TryGetValue("DisableUac", out m))
+            return m;
+        if (string.Equals(key, "UltimatePerfPower", StringComparison.Ordinal)
+            && uiMeta.TryGetValue("HighPerfPower", out m))
+            return m;
+
+        var title = TitleFromCatalog(key);
+        return new SettingUiMeta
+        {
+            Nav = AppLang.L("优化开关", "Toggles"),
+            Section = AppLang.L("未分组", "Ungrouped"),
+            Title = title,
+            Meaning = title,
+        };
+    }
+
+    private static string TitleFromCatalog(string key)
+    {
+        try
+        {
+            var f = typeof(SettingCatalog).GetField(key,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (f?.GetValue(null) is SettingHelpInfo help && !string.IsNullOrWhiteSpace(help.Summary))
+                return Compact(help.Summary, 28);
+        }
+        catch { /* ignore */ }
+
+        return key switch
+        {
+            "UacNotifyLevel" => AppLang.L("UAC 通知级别", "UAC notify level"),
+            _ => key,
+        };
+    }
+
     private static string KindLabel(PreviewKind k) => k switch
     {
-        PreviewKind.ToggleOn => AppLang.L("开启开关", "Turn on"),
-        PreviewKind.ToggleOff => AppLang.L("关闭开关", "Turn off"),
-        PreviewKind.Property => AppLang.L("属性", "Property"),
-        PreviewKind.ServiceDisable => AppLang.L("禁用服务", "Disable svc"),
-        PreviewKind.ServiceAuto => AppLang.L("改为自动", "Set auto"),
-        PreviewKind.ServiceManual => AppLang.L("改为手动", "Set manual"),
+        PreviewKind.ToggleOn => AppLang.L("开启", "On"),
+        PreviewKind.ToggleOff => AppLang.L("关闭", "Off"),
+        PreviewKind.Property => AppLang.L("属性", "Prop"),
+        PreviewKind.ServiceDisable => AppLang.L("禁服务", "Disable"),
+        PreviewKind.ServiceAuto => AppLang.L("改自动", "Auto"),
+        PreviewKind.ServiceManual => AppLang.L("改手动", "Manual"),
         _ => AppLang.L("其它", "Other"),
     };
 
@@ -286,39 +523,17 @@ internal sealed class QuickRestorePreviewDialog : Form
                 "2" => AppLang.L("从不", "Never"),
                 _ => text,
             };
-        if (string.Equals(key, "FolderGroupBy", StringComparison.Ordinal)
-            || string.Equals(key, "FolderSortBy", StringComparison.Ordinal)
-            || string.Equals(key, "TaskbarSearchMode", StringComparison.Ordinal)
-            || string.Equals(key, "ShowDriveLetters", StringComparison.Ordinal))
-            return text;
         return text;
     }
 
-    private static string TitleFor(string key)
+    private static string Compact(string text, int max)
     {
-        if (string.IsNullOrEmpty(key)) return key;
-        try
-        {
-            var f = typeof(SettingCatalog).GetField(key,
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            if (f?.GetValue(null) is SettingHelpInfo help && !string.IsNullOrWhiteSpace(help.Summary))
-            {
-                var s = help.Summary.Trim();
-                var cut = s.IndexOfAny(['。', '；', '.', ';']);
-                if (cut > 4 && cut < 36) s = s.Substring(0, cut);
-                if (s.Length > 40) s = s.Substring(0, 39) + "…";
-                return s;
-            }
-        }
-        catch { /* ignore */ }
-
-        return key switch
-        {
-            "UacNotifyLevel" => AppLang.L("UAC 通知级别", "UAC notify level"),
-            "HighPerfPower" => AppLang.L("高性能电源", "High performance power"),
-            "UltimatePerfPower" => AppLang.L("卓越性能电源", "Ultimate performance power"),
-            _ => key,
-        };
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var t = text.Trim();
+        var cut = t.IndexOfAny(['。', '；', '.', ';']);
+        if (cut > 4 && cut < max) t = t.Substring(0, cut);
+        if (t.Length > max) t = t.Substring(0, max - 1) + "…";
+        return t;
     }
 
     internal enum PreviewKind
@@ -332,19 +547,35 @@ internal sealed class QuickRestorePreviewDialog : Form
         Other = 6,
     }
 
-    internal readonly struct PreviewLine
+    internal sealed class PreviewLine
     {
-        public PreviewKind Kind { get; }
-        public string Title { get; }
-        public string Current { get; }
-        public string Target { get; }
+        public PreviewKind Kind { get; set; }
+        public string Nav { get; set; } = "";
+        public string Section { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Meaning { get; set; } = "";
+        public string MeaningFull { get; set; } = "";
+        public string Current { get; set; } = "";
+        public string Target { get; set; } = "";
+        public string? StateKey { get; set; }
+        public string? ServiceName { get; set; }
+        public string? OtherId { get; set; }
+        public bool Selected { get; set; } = true;
 
-        public PreviewLine(PreviewKind kind, string title, string current, string target)
+        public PreviewLine Clone() => new()
         {
-            Kind = kind;
-            Title = title;
-            Current = current;
-            Target = target;
-        }
+            Kind = Kind,
+            Nav = Nav,
+            Section = Section,
+            Title = Title,
+            Meaning = Meaning,
+            MeaningFull = MeaningFull,
+            Current = Current,
+            Target = Target,
+            StateKey = StateKey,
+            ServiceName = ServiceName,
+            OtherId = OtherId,
+            Selected = Selected,
+        };
     }
 }

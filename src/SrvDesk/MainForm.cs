@@ -1603,7 +1603,7 @@ internal sealed class MainForm : Form
             Optimizer.State current;
             try { current = Optimizer.Read(fullScan: false); }
             catch { current = CaptureState(); }
-            preview = QuickRestorePreviewDialog.Compute(current, bundle);
+            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMeta());
         }
         finally
         {
@@ -1611,72 +1611,164 @@ internal sealed class MainForm : Form
             _status.Text = "";
         }
 
+        IReadOnlyList<QuickRestorePreviewDialog.PreviewLine> selected;
         using (var previewDlg = new QuickRestorePreviewDialog(preview, dlg.FileName))
         {
             if (previewDlg.ShowDialog(this) != DialogResult.Yes)
                 return;
+            selected = previewDlg.SelectedLines;
         }
 
-        RunQuickRestore(bundle, dlg.FileName);
+        if (selected.Count == 0 && preview.Count > 0)
+            return;
+
+        RunQuickRestore(bundle, dlg.FileName, selected);
     }
 
-    private void RunQuickRestore(OptProfileBundle bundle, string sourcePath)
+    /// <summary>主界面侧栏栏目 → 状态字段，供恢复预览对齐「栏目/分区/项目名」。</summary>
+    private Dictionary<string, SettingUiMeta> BuildSettingUiMeta()
+    {
+        var byHelp = new Dictionary<SettingHelpInfo, SettingUiMeta>();
+        foreach (var (nav, sections) in _groups)
+        {
+            foreach (var (section, rows) in sections)
+            {
+                foreach (var row in rows)
+                {
+                    var meaning = row.Help.Summary;
+                    if (!string.IsNullOrWhiteSpace(row.Help.Purpose))
+                        meaning = row.Help.Purpose;
+                    byHelp[row.Help] = new SettingUiMeta
+                    {
+                        Nav = nav,
+                        Section = section,
+                        Title = row.ItemText,
+                        Meaning = meaning,
+                    };
+                }
+            }
+        }
+
+        var map = new Dictionary<string, SettingUiMeta>(StringComparer.Ordinal);
+        foreach (var f in typeof(SettingCatalog).GetFields(
+                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+        {
+            if (f.GetValue(null) is not SettingHelpInfo help) continue;
+            if (!byHelp.TryGetValue(help, out var meta)) continue;
+            map[f.Name] = meta;
+        }
+        return map;
+    }
+
+    private void RunQuickRestore(
+        OptProfileBundle bundle,
+        string sourcePath,
+        IReadOnlyList<QuickRestorePreviewDialog.PreviewLine> selected)
     {
         var report = new List<string>();
+        var wantScripts = selected.Any(x => x.OtherId == "ScriptOverrides");
+        var wantPacks = selected.Any(x => x.OtherId == "CustomPacks");
+        var wantLevel = selected.Any(x => x.OtherId == "OptimizationLevel");
+        var wantRoles = selected.Any(x => x.OtherId == "ServerRoles");
+        var settingKeys = new HashSet<string>(
+            selected.Where(x => !string.IsNullOrEmpty(x.StateKey)).Select(x => x.StateKey!),
+            StringComparer.Ordinal);
+        var serviceNames = new HashSet<string>(
+            selected.Where(x => !string.IsNullOrEmpty(x.ServiceName)).Select(x => x.ServiceName!),
+            StringComparer.OrdinalIgnoreCase);
+
         try
         {
             UseWaitCursor = true;
-            _status.Text = AppLang.L("一键恢复：写入本地脚本/方案…", "Quick restore: local scripts/packs…");
-            Application.DoEvents();
 
-            if (bundle.HasScriptOverrides || bundle.HasCustomPacks)
+            if ((wantScripts && bundle.HasScriptOverrides) || (wantPacks && bundle.HasCustomPacks))
             {
-                ProfileStore.ApplyLocalData(bundle);
-                if (bundle.HasScriptOverrides) report.Add(AppLang.L("脚本覆盖", "Script overrides"));
-                if (bundle.HasCustomPacks) report.Add(AppLang.L("自定义方案", "Custom packs"));
+                _status.Text = AppLang.L("一键恢复：写入本地脚本/方案…", "Quick restore: local scripts/packs…");
+                Application.DoEvents();
+                var partial = new OptProfileBundle
+                {
+                    HasScriptOverrides = wantScripts && bundle.HasScriptOverrides,
+                    ScriptOverrides = bundle.ScriptOverrides,
+                    HasCustomPacks = wantPacks && bundle.HasCustomPacks,
+                    CustomPacks = bundle.CustomPacks,
+                    CustomPacksLastId = bundle.CustomPacksLastId,
+                };
+                ProfileStore.ApplyLocalData(partial);
+                if (partial.HasScriptOverrides) report.Add(AppLang.L("脚本覆盖", "Script overrides"));
+                if (partial.HasCustomPacks) report.Add(AppLang.L("自定义方案", "Custom packs"));
                 RefreshAfterProfileImport();
             }
 
-            if (bundle.HasServerProfile)
+            if ((wantLevel || wantRoles) && bundle.HasServerProfile)
             {
-                ProfileStore.ApplyServerProfile(bundle);
+                var data = ServerProfile.Load();
+                if (wantRoles && bundle.ServerRoles.HasValue)
+                    data.Roles = bundle.ServerRoles.Value;
+                if (wantLevel && bundle.OptimizationLevel.HasValue)
+                    data.OptimizationLevel = Math.Max(0, Math.Min(3, bundle.OptimizationLevel.Value));
+                data.ProfileConfigured = true;
+                ServerProfile.Save(data);
                 report.Add(AppLang.L("服务器用途/优化等级", "Server profile / level"));
             }
 
-            if (bundle.HasSettings)
+            if (settingKeys.Count > 0 && bundle.HasSettings)
             {
-                _status.Text = AppLang.L("一键恢复：载入优化开关…", "Quick restore: load toggles…");
+                _status.Text = AppLang.L("一键恢复：载入勾选的优化开关…", "Quick restore: load checked toggles…");
                 Application.DoEvents();
-                Bind(bundle.State);
+
+                Optimizer.State baseState;
+                try { baseState = Optimizer.Read(fullScan: false); }
+                catch { baseState = CaptureState(); }
+
+                var map = StateMapper.ToMap(baseState);
+                var impMap = StateMapper.ToMap(bundle.State);
+                foreach (var key in settingKeys)
+                {
+                    if (impMap.TryGetValue(key, out var v))
+                        map[key] = v;
+                }
+                StateMapper.ApplyMap(baseState, map);
+
+                // int 属性
+                var impExtra = StateMapper.ToExtra(bundle.State)
+                    .Where(e => e.Key is not null && settingKeys.Contains(e.Key)
+                                && string.Equals(e.Kind, "int", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (impExtra.Count > 0)
+                    StateMapper.ApplyExtra(baseState, impExtra);
+
+                if (settingKeys.Contains("UacNotifyLevel") || settingKeys.Contains("DisableUac"))
+                    baseState.DisableUac = baseState.UacNotifyLevel == 2;
+
+                Bind(baseState);
                 _uiDirty = true;
-                report.Add(AppLang.L("优化开关", "Optimization toggles"));
+                report.Add(AppLang.Lf("优化开关 {0} 项", "Toggles {0}", settingKeys.Count));
 
                 _status.Text = AppLang.L("一键恢复：应用到系统…", "Quick restore: apply to system…");
                 Application.DoEvents();
                 if (!ApplyRecommended())
                 {
                     MessageBox.Show(this,
-                        AppLang.L("优化开关已载入界面，但「应用到系统」已取消或失败。可稍后手动点「应用到系统」。",
-                            "Toggles loaded into UI, but Apply was cancelled or failed. You can Apply manually later."),
+                        AppLang.L("勾选开关已载入界面，但「应用到系统」已取消或失败。可稍后手动点「应用到系统」。",
+                            "Checked toggles loaded into UI, but Apply was cancelled or failed. You can Apply manually later."),
                         AppLang.L("一键快速恢复", "One-click restore"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    // 仍继续尝试服务
                 }
                 else
                     report.Add(AppLang.L("已写入系统开关", "Toggles written"));
             }
 
-            if (bundle.HasServices && bundle.Services is { Count: > 0 })
+            if (serviceNames.Count > 0 && bundle.HasServices && bundle.Services is { Count: > 0 })
             {
-                _status.Text = AppLang.L("一键恢复：还原服务启动类型…", "Quick restore: restore services…");
+                _status.Text = AppLang.L("一键恢复：还原勾选的服务…", "Quick restore: restore checked services…");
                 Application.DoEvents();
-                try
-                {
-                    ServiceSnapshotStore.EnsureAutoBackupBeforeChange();
-                }
+                try { ServiceSnapshotStore.EnsureAutoBackupBeforeChange(); }
                 catch { /* 不阻断 */ }
 
-                var svc = ServiceSnapshotStore.RestoreEntries(bundle.Services);
+                var entries = bundle.Services
+                    .Where(x => x.Name is not null && serviceNames.Contains(x.Name))
+                    .ToList();
+                var svc = ServiceSnapshotStore.RestoreEntries(entries);
                 report.Add(AppLang.Lf(
                     "服务：成功 {0} / 跳过 {1} / 失败 {2}",
                     "Services: applied {0} / skipped {1} / failed {2}",
@@ -1684,10 +1776,18 @@ internal sealed class MainForm : Form
                 if (svc.Errors.Count > 0)
                     report.Add(string.Join("\r\n", svc.Errors.Take(6)));
 
-                // 刷新服务优化页缓存
                 if (_pageCache.TryGetValue(AppLang.L("服务优化", "Service optimize"), out var page)
                     && page is IEmbeddedSettingsPage embedded)
                     embedded.RefreshFromSystem();
+            }
+
+            if (report.Count == 0)
+            {
+                MessageBox.Show(this,
+                    AppLang.L("没有勾选可写入的项。", "Nothing checked to write."),
+                    AppLang.L("一键快速恢复", "One-click restore"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
 
             var summary = string.Join("\r\n· ", report);
