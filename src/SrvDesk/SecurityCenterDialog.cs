@@ -6,6 +6,7 @@ internal sealed class SecurityCenterDialog : Form
     private readonly Label _wsc = MakeValueLabel();
     private readonly Label _defender = MakeValueLabel();
     private readonly Label _policy = MakeValueLabel();
+    private readonly Label _tamper = MakeValueLabel();
     private readonly Label _summary = new();
 
     public SecurityCenterDialog()
@@ -15,8 +16,8 @@ internal sealed class SecurityCenterDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = UiScale.Size(820, 560);
-        MinimumSize = UiScale.Size(780, 520);
+        ClientSize = UiScale.Size(820, 600);
+        MinimumSize = UiScale.Size(780, 560);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.Padding = new Padding(UiScale.S(20), UiScale.S(14), UiScale.S(20), UiScale.S(10));
@@ -29,6 +30,7 @@ internal sealed class SecurityCenterDialog : Form
         stack.Controls.Add(MakeRow("安全中心服务 (wscsvc)", _wsc));
         stack.Controls.Add(MakeRow("Microsoft Defender (WinDefend)", _defender));
         stack.Controls.Add(MakeRow("组策略 / 禁用防间谍软件", _policy));
+        stack.Controls.Add(MakeRow("篡改防护 (Tamper Protection)", _tamper));
 
         var rowH = Math.Max(UiScale.S(36), UiFit.ControlHeight(UiFit.UiFontBold()) + UiScale.S(8));
         _summary.AutoSize = false;
@@ -98,6 +100,10 @@ internal sealed class SecurityCenterDialog : Form
         _defender.ForeColor = StatusColor(s.DefenderText);
         _policy.Text = s.PolicyText;
         _policy.ForeColor = s.LooksDisabled ? Color.FromArgb(180, 80, 40) : Color.FromArgb(40, 140, 70);
+        _tamper.Text = s.TamperText;
+        _tamper.ForeColor = s.TamperProtectionOn
+            ? Color.FromArgb(180, 80, 40)
+            : Color.FromArgb(40, 140, 70);
         _summary.Text = s.Summary;
         _summary.ForeColor = s.LooksDisabled ? Color.FromArgb(180, 80, 40) : AppTheme.PrimaryDeep;
     }
@@ -111,7 +117,8 @@ internal sealed class SecurityCenterDialog : Form
         }
 
         var answer = MessageBox.Show(this,
-            "将禁用安全中心与 Defender 相关服务/策略。\r\n\r\n可能导致系统提示「病毒和威胁防护已关闭」。是否继续？",
+            "将先尝试关闭篡改防护，再禁用安全中心与 Defender 相关服务/策略。\r\n\r\n"
+            + "可能导致系统提示「病毒和威胁防护已关闭」。是否继续？",
             Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (answer != DialogResult.Yes) return;
 
@@ -120,8 +127,13 @@ internal sealed class SecurityCenterDialog : Form
             Cursor = Cursors.WaitCursor;
             SecurityCenterHelper.Disable();
             RefreshStatus();
-            MessageBox.Show(this, "已禁用安全中心相关组件。若托盘图标仍在，可注销或重启后再看。",
-                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var s = SecurityCenterHelper.Query();
+            var tip = s.TamperProtectionOn
+                ? "已写入关闭篡改防护的组策略，并禁用安全中心相关组件。\r\n\r\n"
+                  + "当前篡改防护仍显示开启（新版系统常需重启后策略才生效）。\r\n"
+                  + "请重启后再打开本页点一次「禁用安全中心」，即可停掉 WinDefend。"
+                : "已关闭篡改防护，并禁用安全中心相关组件。\r\n若托盘图标仍在，可注销或重启后再看。";
+            MessageBox.Show(this, tip, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {

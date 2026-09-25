@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.ServiceProcess;
+using System.Text;
 using Microsoft.Win32;
 
 namespace SrvDesk;
@@ -9,7 +10,9 @@ internal sealed class SecurityCenterStatus
     public string WscText { get; set; } = "未知";
     public string DefenderText { get; set; } = "未知";
     public string PolicyText { get; set; } = "未知";
+    public string TamperText { get; set; } = "未知";
     public bool LooksDisabled { get; set; }
+    public bool TamperProtectionOn { get; set; }
     public string Summary { get; set; } = "";
 }
 
@@ -17,6 +20,8 @@ internal sealed class SecurityCenterStatus
 internal static class SecurityCenterHelper
 {
     private const string DefenderPolicy = @"SOFTWARE\Policies\Microsoft\Windows Defender";
+    private const string DefenderFeaturesPolicy = @"SOFTWARE\Policies\Microsoft\Windows Defender\Features";
+    private const string DefenderFeatures = @"SOFTWARE\Microsoft\Windows Defender\Features";
     private const string RealtimePolicy = @"SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection";
 
     private static readonly string[] RelatedServices =
@@ -33,6 +38,7 @@ internal static class SecurityCenterHelper
         var wsc = DescribeService("wscsvc");
         var defender = DescribeService("WinDefend");
         var policyOff = IsPolicyDisabled();
+        var tamperOn = IsTamperProtectionOn();
         var servicesOff = IsServiceDisabledOrMissing("wscsvc") && IsServiceDisabledOrMissing("WinDefend");
         var looksDisabled = policyOff || servicesOff;
 
@@ -41,14 +47,26 @@ internal static class SecurityCenterHelper
             WscText = wsc,
             DefenderText = defender,
             PolicyText = policyOff ? "已通过策略禁用" : "未禁用（策略默认）",
+            TamperText = DescribeTamperProtection(tamperOn),
+            TamperProtectionOn = tamperOn,
             LooksDisabled = looksDisabled,
-            Summary = looksDisabled ? "当前偏向已禁用" : "当前偏向已启用",
+            Summary = looksDisabled
+                ? (tamperOn
+                    ? "当前偏向已禁用（篡改防护仍开，可能拦停服务；可再点禁用或重启）"
+                    : "当前偏向已禁用")
+                : (tamperOn
+                    ? "当前偏向已启用（含篡改防护）"
+                    : "当前偏向已启用"),
         };
     }
 
     public static void Disable()
     {
         ApplyLog.Write("禁用 Windows 安全中心 / Defender");
+
+        // 先关篡改防护，否则后续停 WinDefend / 写策略常被拒绝
+        TryDisableTamperProtection();
+        Thread.Sleep(800);
 
         SetDword(RegistryHive.LocalMachine, DefenderPolicy, "DisableAntiSpyware", 1);
         SetDword(RegistryHive.LocalMachine, RealtimePolicy, "DisableRealtimeMonitoring", 1);
@@ -60,7 +78,8 @@ internal static class SecurityCenterHelper
             TrySetService(svc, enable: false);
 
         TryDisableSecurityHealthRun();
-        ApplyLog.Write("已写入禁用安全中心相关策略与服务");
+        ApplyLog.Write("已写入禁用安全中心相关策略与服务；篡改防护="
+            + (IsTamperProtectionOn() ? "仍开启" : "已关闭"));
     }
 
     public static void Enable()
@@ -72,6 +91,7 @@ internal static class SecurityCenterHelper
         DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableBehaviorMonitoring");
         DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableOnAccessProtection");
         DeleteValue(RegistryHive.LocalMachine, RealtimePolicy, "DisableScanOnRealtimeEnable");
+        DeleteValue(RegistryHive.LocalMachine, DefenderFeaturesPolicy, "TamperProtection");
 
         // 安全中心 / Health：自动；Defender：自动；网络检测：手动
         TrySetService("wscsvc", enable: true, autoStart: true);
@@ -80,7 +100,49 @@ internal static class SecurityCenterHelper
         TrySetService("WdNisSvc", enable: true, autoStart: false);
         TrySetService("Sense", enable: true, autoStart: false);
 
+        // 不强制重开篡改防护，避免再次锁死；需要时用户可在 Windows 安全中心打开
         ApplyLog.Write("已恢复安全中心相关策略与服务");
+    }
+
+    /// <summary>
+    /// 尽量关闭篡改防护：组策略 + PowerShell + SYSTEM 写注册表（后者在部分版本会被拒）。
+    /// </summary>
+    public static bool TryDisableTamperProtection()
+    {
+        ApplyLog.Write("尝试关闭篡改防护 (Tamper Protection)");
+
+        // 1) 组策略：可写，重启/刷新后通常生效
+        try
+        {
+            SetDword(RegistryHive.LocalMachine, DefenderFeaturesPolicy, "TamperProtection", 0);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("篡改防护策略写入失败：" + ex.Message);
+        }
+
+        // 2) 官方偏好接口（部分 SKU 返回 E_NOTIMPL）
+        TrySetMpPreferenceDisableTamper(true);
+
+        // 3) SYSTEM 身份写 Features\TamperProtection（旧版可用；新版常拒绝）
+        TryWriteTamperProtectionAsSystem(0);
+
+        // 4) 当前进程再试一次（若已被允许）
+        try
+        {
+            SetDword(RegistryHive.LocalMachine, DefenderFeatures, "TamperProtection", 0);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("直接写 Features\\TamperProtection：" + ex.Message);
+        }
+
+        Thread.Sleep(400);
+        var stillOn = IsTamperProtectionOn();
+        ApplyLog.Write(stillOn
+            ? "篡改防护仍显示开启（已写策略；可重启后再禁用一次）"
+            : "篡改防护已关闭");
+        return !stillOn;
     }
 
     public static void OpenWindowsSecurity()
@@ -133,11 +195,39 @@ internal static class SecurityCenterHelper
         }
     }
 
-    private static bool IsPolicyDisabled()
+    private static string DescribeTamperProtection(bool on)
     {
-        using var k = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
-            .OpenSubKey(DefenderPolicy);
-        return k?.GetValue("DisableAntiSpyware") is int i && i == 1;
+        var policy = ReadDword(DefenderFeaturesPolicy, "TamperProtection");
+        if (on)
+            return policy is 0
+                ? "开启（策略已关，重启后可能生效）"
+                : "开启";
+        return "已关闭";
+    }
+
+    private static bool IsPolicyDisabled() =>
+        ReadDword(DefenderPolicy, "DisableAntiSpyware") == 1;
+
+    /// <summary>Features\\TamperProtection：0/4=关，1/5=开（常见取值）。</summary>
+    private static bool IsTamperProtectionOn()
+    {
+        var v = ReadDword(DefenderFeatures, "TamperProtection");
+        if (v is null) return false;
+        return v is not 0 and not 4;
+    }
+
+    private static int? ReadDword(string key, string name)
+    {
+        try
+        {
+            using var k = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                .OpenSubKey(key);
+            return k?.GetValue(name) is int i ? i : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static bool IsServiceDisabledOrMissing(string name)
@@ -149,7 +239,7 @@ internal static class SecurityCenterHelper
         }
         catch
         {
-            return true; // 不存在视为「不在工作」
+            return true;
         }
     }
 
@@ -165,7 +255,7 @@ internal static class SecurityCenterHelper
         try
         {
             using var sc = new ServiceController(name);
-            _ = sc.DisplayName; // 探测是否存在
+            _ = sc.DisplayName;
         }
         catch
         {
@@ -178,6 +268,69 @@ internal static class SecurityCenterHelper
             RunSc($"start {name}");
         else
             RunSc($"stop {name}");
+    }
+
+    private static void TrySetMpPreferenceDisableTamper(bool disable)
+    {
+        try
+        {
+            var flag = disable ? "$true" : "$false";
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"try { Set-MpPreference -DisableTamperProtection "
+                    + flag + " -ErrorAction Stop; exit 0 } catch { exit 1 }\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return;
+            _ = p.StandardOutput.ReadToEnd();
+            _ = p.StandardError.ReadToEnd();
+            p.WaitForExit(45_000);
+            ApplyLog.Write("Set-MpPreference -DisableTamperProtection 退出码 " + p.ExitCode);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("Set-MpPreference：" + ex.Message);
+        }
+    }
+
+    private static void TryWriteTamperProtectionAsSystem(int value)
+    {
+        try
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "SrvDeskTp");
+            Directory.CreateDirectory(dir);
+            var bat = Path.Combine(dir, "tp.cmd");
+            var log = Path.Combine(dir, "tp.log");
+            File.WriteAllText(bat,
+                "@echo off\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows Defender\\Features\" /v TamperProtection /t REG_DWORD /d "
+                + value + " /f > \"" + log + "\" 2>&1\r\n"
+                + "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Features\" /v TamperProtection /t REG_DWORD /d "
+                + value + " /f >> \"" + log + "\" 2>&1\r\n",
+                Encoding.ASCII);
+
+            const string taskName = "SrvDeskDisableTamperProtection";
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            var create = RunProcess("schtasks.exe",
+                "/Create /TN \"" + taskName + "\" /RU SYSTEM /RL HIGHEST /SC ONCE /ST 23:59 /TR \"cmd /c \\\""
+                + bat + "\\\"\" /F",
+                20_000);
+            ApplyLog.Write("计划任务创建篡改防护：" + create);
+            RunProcess("schtasks.exe", "/Run /TN \"" + taskName + "\"", 15_000);
+            Thread.Sleep(2_500);
+            RunProcess("schtasks.exe", "/Delete /TN \"" + taskName + "\" /F", 15_000);
+            if (File.Exists(log))
+                ApplyLog.Write("SYSTEM 写篡改防护：" + File.ReadAllText(log).Trim());
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("SYSTEM 写篡改防护失败：" + ex.Message);
+        }
     }
 
     private static void TryDisableSecurityHealthRun()
@@ -221,6 +374,31 @@ internal static class SecurityCenterHelper
         k.DeleteValue(name, throwOnMissingValue: false);
     }
 
+    private static string RunProcess(string file, string args, int timeoutMs)
+    {
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = file,
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            if (p is null) return "start-failed";
+            var o = p.StandardOutput.ReadToEnd();
+            var e = p.StandardError.ReadToEnd();
+            p.WaitForExit(timeoutMs);
+            return (o + e).Trim();
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
     private static void RunSc(string args)
     {
         using var p = Process.Start(new ProcessStartInfo
@@ -236,6 +414,5 @@ internal static class SecurityCenterHelper
         _ = p.StandardOutput.ReadToEnd();
         _ = p.StandardError.ReadToEnd();
         p.WaitForExit(30_000);
-        // 1056 已运行、1062 未启动、1060 不存在：忽略
     }
 }
