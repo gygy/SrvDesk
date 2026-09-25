@@ -1,6 +1,6 @@
 namespace SrvDesk;
 
-/// <summary>侧栏栏目元数据：对齐主界面左侧菜单 + 右侧条目，供一键恢复/导入预览使用。</summary>
+/// <summary>侧栏条目元数据：一条 = 主界面右侧一个开关/下拉，供导入预览对齐。</summary>
 internal sealed class SettingUiMeta
 {
     public string Nav { get; set; } = "";
@@ -10,6 +10,15 @@ internal sealed class SettingUiMeta
     public string Meaning { get; set; } = "";
     /// <summary>选中行详情：作用 + 好处（对齐右侧精简说明）。</summary>
     public string MeaningFull { get; set; } = "";
+    /// <summary>Catalog 字段名（通常与 State 主键同名）。</summary>
+    public string CatalogKey { get; set; } = "";
+    /// <summary>勾选本行时要写入的全部 State 字段（含互斥附属键）。</summary>
+    public string[] StateKeys { get; set; } = [];
+    /// <summary>下拉选项文案；null 表示普通开关。</summary>
+    public string[]? ChoiceLabels { get; set; }
+    public int OptimizedIndex { get; set; } = 1;
+    /// <summary>把 State 格式化成与右侧「系统当前值」一致的文案。</summary>
+    public Func<Optimizer.State, string>? FormatValue { get; set; }
 }
 
 /// <summary>一键快速恢复 / 导入配置前：对齐侧栏栏目、说明含义，并允许勾选要写入的项。</summary>
