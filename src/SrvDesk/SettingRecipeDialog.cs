@@ -54,11 +54,11 @@ internal sealed class SettingRecipeDialog : Form
         top.Padding = Padding.Empty;
 
         _head.Text = itemTitle;
-        _head.Font = UiFit.UiFontBold(10F);
+        _head.Font = UiFit.UiFontSection;
         _head.ForeColor = AppTheme.PrimaryDeep;
         _head.AutoEllipsis = true;
         _head.AutoSize = false;
-        _head.Height = Math.Max(UiScale.S(28), UiFit.ControlHeight(UiFit.UiFontBold(10F)));
+        _head.Height = Math.Max(UiScale.S(28), UiFit.LineHeight(UiFit.UiFontSection) + UiScale.S(8));
         _head.TextAlign = ContentAlignment.MiddleLeft;
         _head.Margin = new Padding(0, 0, 0, UiScale.S(4));
 

@@ -251,7 +251,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         _autoStatus.Height = 22;
         _autoStatus.Margin = new Padding(0, 0, 0, 8);
         _autoStatus.ForeColor = AppTheme.TextHeader;
-        _autoStatus.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+        _autoStatus.Font = UiFit.UiFontButton;
 
         _keepPassword.Text = AppLang.L("保留现有密码（不改密码时勾选）", "Keep existing password");
         _keepPassword.AutoSize = true;
@@ -649,7 +649,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
             AutoSize = true,
             Location = new Point(110, 2),
             ForeColor = valueColor ?? AppTheme.TextHeader,
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            Font = UiFit.UiFontButton,
         });
         return row;
     }

@@ -83,7 +83,7 @@ internal sealed class ShutdownTimerDialog : Form
             Text = AppLang.L(" 配置 ", " Configuration "),
             Dock = DockStyle.Fill,
             ForeColor = AppTheme.TextHeader,
-            Font = UiFit.UiFontBold(9.5F),
+            Font = UiFit.UiFontSection,
             Padding = new Padding(UiScale.S(10), UiScale.S(8), UiScale.S(10), UiScale.S(8)),
         };
 

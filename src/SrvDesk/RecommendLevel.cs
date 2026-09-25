@@ -215,7 +215,7 @@ internal sealed class RecommendStarsRow : Control
 
         if (_text.Length == 0) return;
         var textX = RecommendLevelUi.StarsBlockWidth + 6;
-        using var font = new Font(UiFit.UiFontFamily, 8.5F);
+        var font = UiFit.UiFontScope;
         var color = AppTheme.TextMain;
         TextRenderer.DrawText(g, _text, font,
             new Rectangle(textX, 0, Math.Max(20, Width - textX), Height),

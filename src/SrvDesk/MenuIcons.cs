@@ -367,7 +367,7 @@ internal static class MenuIcons
     {
         using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
         g.FillEllipse(b, 2, 2, 12, 12);
-        using var f = new Font(UiFit.UiFontFamily, 8f, FontStyle.Bold);
+        using var f = new Font(UiFit.UiFontFamily, UiFit.DesignFontScopePt, FontStyle.Bold);
         using var w = new SolidBrush(Color.White);
         g.DrawString("i", f, w, 5, 1);
     }
@@ -376,7 +376,7 @@ internal static class MenuIcons
     {
         using var ring = new Pen(Color.FromArgb(0, 120, 215), 1.6f);
         g.DrawEllipse(ring, 2, 2, 12, 12);
-        using var f = new Font(UiFit.UiFontFamily, 8.5f, FontStyle.Bold);
+        using var f = new Font(UiFit.UiFontFamily, UiFit.DesignFontSmallPt, FontStyle.Bold);
         using var b = new SolidBrush(Color.FromArgb(0, 120, 215));
         g.DrawString("i", f, b, 5.2f, 1.2f);
     }

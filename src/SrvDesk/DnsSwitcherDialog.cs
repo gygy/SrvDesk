@@ -97,7 +97,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
             Text = "选择网卡",
             Dock = DockStyle.Top,
             Height = 24,
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+            Font = UiFit.UiFontButton,
             ForeColor = AppTheme.TextHeader,
         };
 

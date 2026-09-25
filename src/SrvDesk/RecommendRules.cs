@@ -85,13 +85,7 @@ internal static class RecommendRules
             return RecommendLevel.Optional;
 
         var name = serviceName ?? "";
-        // Windows Search / 索引、SysMain / Superfetch：全场景强烈推荐关闭
-        if (name.Equals("WSearch", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("cisvc", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("SysMain", StringComparison.OrdinalIgnoreCase))
-            return want == ServiceRecommend.Disable ? RecommendLevel.Must : RecommendLevel.Strong;
-
-        // 安全/垃圾类：强烈推荐关闭
+        // 产品指定：强烈推荐关闭（五星）
         if (IsMustDisableService(name))
             return want == ServiceRecommend.Disable ? RecommendLevel.Must : RecommendLevel.Strong;
 
@@ -105,10 +99,18 @@ internal static class RecommendRules
     }
 
     private static bool IsMustDisableService(string name) =>
+        // 索引 / 预读
         name.Equals("WSearch", StringComparison.OrdinalIgnoreCase)
         || name.Equals("cisvc", StringComparison.OrdinalIgnoreCase)
         || name.Equals("SysMain", StringComparison.OrdinalIgnoreCase)
+        // 远程注册表
         || name.Equals("RemoteRegistry", StringComparison.OrdinalIgnoreCase)
+        // 蓝牙（不用蓝牙设备时）
+        || name.Equals("bthserv", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("BTAGService", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("BluetoothUserService", StringComparison.OrdinalIgnoreCase)
+        // Windows Update（避免不必要自动更新；需补丁时再开）
+        || name.Equals("wuauserv", StringComparison.OrdinalIgnoreCase)
         || name.Equals("Fax", StringComparison.OrdinalIgnoreCase)
         || name.Equals("WMPNetworkSvc", StringComparison.OrdinalIgnoreCase)
         || name.Equals("RemoteAccess", StringComparison.OrdinalIgnoreCase)

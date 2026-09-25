@@ -565,7 +565,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
             MinimizeBox = false,
             MaximizeBox = false,
             ShowInTaskbar = false,
-            Font = new Font("Microsoft YaHei UI", 9F),
+            Font = UiFit.UiFont,
         };
         AppBrand.ApplyWindowIcon(dlg);
 
@@ -625,7 +625,7 @@ internal sealed class CustomPackItemEditDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(780, 560);
         MinimumSize = new Size(780, 480);
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
 
         var top = new Panel

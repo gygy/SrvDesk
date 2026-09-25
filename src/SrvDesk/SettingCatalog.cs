@@ -218,8 +218,9 @@ internal static class SettingCatalog
         L("禁用 Remote Registry 远程注册表服务。", "Disable the Remote Registry service."),
         L("停止 RemoteRegistry 服务并设为禁用。", "Stop RemoteRegistry and set it to Disabled."),
         L("减少远程篡改注册表的风险，符合安全加固惯例。", "Less risk of remote registry tampering; common hardening practice."),
-        L("需用远程注册表管理工具（regedit 连远程）时勿开启。", "Do not enable if you need remote regedit management."),
-        L("服务停止后生效。", "Takes effect after the service stops."));
+        L("强烈推荐关闭；仅需远程 regedit 管理时再开。", "Strongly recommended off; enable only if you need remote regedit."),
+        L("服务停止后生效。", "Takes effect after the service stops."),
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo DisablePrintSpooler = H(
         L("禁用 Print Spooler 打印后台服务。", "Disable the Print Spooler service."),
@@ -755,7 +756,7 @@ internal static class SettingCatalog
             "Strongly recommended to kill indexing; conflicts with Enable Windows Search (WSearch will not start while on)."),
         L("DISM 完成后建议重启。", "Reboot recommended after DISM finishes."),
         SettingScope.ServerExclusive,
-        recommend: RecommendLevel.Strong);
+        recommend: RecommendLevel.Must);
 
     public static readonly SettingHelpInfo EnableDesktopMediaFeatures = H(
         L("开启 Server 桌面媒体组件：MediaFoundation、DirectPlay、WLAN 等。", "Enable Server desktop media features: MediaFoundation, DirectPlay, WLAN, etc."),

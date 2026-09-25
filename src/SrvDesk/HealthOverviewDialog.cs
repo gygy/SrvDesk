@@ -427,7 +427,7 @@ internal sealed class HealthOverviewDialog : Form
             Location = new Point(x, 0),
             Size = new Size(w, h),
             ForeColor = fg,
-            Font = bold ? UiFit.UiFontBold(9f) : UiFit.UiFont,
+            Font = bold ? UiFit.UiFontButton : UiFit.UiFont,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = Color.Transparent,
             AutoEllipsis = true,

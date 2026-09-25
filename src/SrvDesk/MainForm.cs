@@ -2879,6 +2879,11 @@ internal sealed class MainForm : Form
             Size = new Size(w, UiScale.S(36)),
             ForeColor = AppTheme.TextHeader,
             Font = UiFit.UiFontTableHeader,
+            TextAlign = align,
+            BackColor = Color.Transparent,
+        };
+
+    /// <summary>分区内按推荐强度降序：必优化 → 强烈推荐 → 建议优化 → 可选；同级按标题。</summary>
     private static SettingRow[] OrderRowsByRecommend(SettingRow[] rows)
     {
         var ordered = (SettingRow[])rows.Clone();

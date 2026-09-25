@@ -50,7 +50,7 @@ internal sealed class AppSettingsDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        Font = new Font("Microsoft YaHei UI", 9F);
+        Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
 
         _hideIncompatible.Text = AppLang.L("启动时默认「隐藏不适用项」", "Hide incompatible items by default");
@@ -284,7 +284,7 @@ internal sealed class AppSettingsDialog : Form
     {
         Text = text,
         AutoSize = true,
-        Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+        Font = UiFit.UiFontSection,
         ForeColor = AppTheme.TextMain,
         Margin = new Padding(0, 8, 0, 6),
     };
