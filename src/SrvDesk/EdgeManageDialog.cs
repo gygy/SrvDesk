@@ -18,7 +18,11 @@ internal sealed class EdgeManageDialog : Form
     private readonly Button _btnInWv;
     private readonly Button _btnInCore;
     private readonly Button _btnInMissing;
+    private readonly ProgressBar _bar = new();
+    private readonly Label _progress = new();
+    private readonly List<Button> _actionButtons = [];
     private bool _loading;
+    private bool _busy;
 
     public EdgeManageDialog()
     {
@@ -28,14 +32,13 @@ internal sealed class EdgeManageDialog : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         Font = UiFit.UiFont;
-        ClientSize = UiScale.Size(780, 520);
-        MinimumSize = UiScale.Size(780, 520);
+        ClientSize = UiScale.Size(780, 560);
+        MinimumSize = UiScale.Size(780, 540);
 
         var body = ThemedSettingsChrome.CreateBodyPanel();
         body.AutoScroll = true;
         body.Padding = new Padding(UiScale.S(20), UiScale.S(14), UiScale.S(20), UiScale.S(10));
 
-        // Dock Fill 吃 Padding；禁止 Location(0,y) 贴左缘
         var stack = ThemedSettingsChrome.CreateToggleStack();
         stack.Dock = DockStyle.Top;
         stack.AutoSize = true;
@@ -54,7 +57,7 @@ internal sealed class EdgeManageDialog : Form
         _disableUpdate.Margin = new Padding(0, UiScale.S(10), 0, UiScale.S(4));
         _disableUpdate.CheckedChanged += (_, _) =>
         {
-            if (_loading) return;
+            if (_loading || _busy) return;
             if (!EnsureAdmin())
             {
                 _loading = true;
@@ -77,7 +80,7 @@ internal sealed class EdgeManageDialog : Form
 
         var hint = new SingleLineLabel
         {
-            Text = "卸载 WebView2 可能导致部分应用打不开。",
+            Text = "卸载 WebView2 可能导致部分应用打不开。卸载过程可能需数分钟，下方会显示进度。",
             ForeColor = AppTheme.TextMute,
             Font = UiFit.UiFontSmall,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -99,6 +102,25 @@ internal sealed class EdgeManageDialog : Form
         stack.Controls.Add(MakeSection("卸载", _btnUnEdge, _btnUnWv, _btnUnCore, _btnUnAll));
         stack.Controls.Add(MakeSection("安装 / 恢复", _btnInEdge, _btnInWv, _btnInCore, _btnInMissing));
 
+        var progressHost = new Panel
+        {
+            Height = UiScale.S(52),
+            Margin = new Padding(0, UiScale.S(8), 0, 0),
+            Dock = DockStyle.Top,
+        };
+        _bar.Dock = DockStyle.Top;
+        _bar.Height = UiScale.S(16);
+        _bar.Style = ProgressBarStyle.Marquee;
+        _bar.MarqueeAnimationSpeed = 0;
+        _progress.Dock = DockStyle.Fill;
+        _progress.ForeColor = AppTheme.TextMute;
+        _progress.Font = UiFit.UiFontSmall;
+        _progress.TextAlign = ContentAlignment.MiddleLeft;
+        _progress.Text = "就绪。";
+        progressHost.Controls.Add(_progress);
+        progressHost.Controls.Add(_bar);
+
+        body.Controls.Add(progressHost);
         body.Controls.Add(stack);
         body.Resize += (_, _) => ThemedSettingsChrome.StretchStackChildren(stack);
 
@@ -109,7 +131,19 @@ internal sealed class EdgeManageDialog : Form
             body,
             "",
             showHeader: false,
-            onRefresh: RefreshStatus);
+            onRefresh: () =>
+            {
+                if (!_busy) RefreshStatus();
+            });
+
+        FormClosing += (_, e) =>
+        {
+            if (!_busy) return;
+            e.Cancel = true;
+            MessageBox.Show(this,
+                "正在执行卸载/安装，请稍候完成后再关闭窗口。",
+                Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        };
 
         Load += (_, _) =>
         {
@@ -127,6 +161,8 @@ internal sealed class EdgeManageDialog : Form
         _loading = true;
         _disableUpdate.Checked = s.UpdatesDisabled;
         _loading = false;
+
+        if (_busy) return;
 
         _btnUnEdge.Enabled = s.Edge.Installed;
         _btnUnWv.Enabled = s.WebView2.Installed;
@@ -149,69 +185,87 @@ internal sealed class EdgeManageDialog : Form
 
     private void UninstallOne(EdgeComponentKind kind)
     {
-        if (!EnsureAdmin()) return;
+        if (!EnsureAdmin() || _busy) return;
         var name = KindName(kind);
         var tip = kind == EdgeComponentKind.WebView2
-            ? "卸载 WebView2 可能导致部分应用打不开。是否继续？"
-            : $"确定卸载 {name}？";
+            ? "卸载 WebView2 可能导致部分应用打不开。过程可能需数分钟，窗口会显示进度。是否继续？"
+            : $"确定卸载 {name}？\r\n过程可能需数分钟，窗口会显示进度。";
         if (MessageBox.Show(this, tip, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
             return;
 
-        RunAction(() => EdgeManageHelper.Uninstall(kind), "卸载失败");
+        _ = RunActionAsync(() => EdgeManageHelper.Uninstall(kind), "正在卸载 " + name + "…", "卸载失败");
     }
 
     private void UninstallAll()
     {
-        if (!EnsureAdmin()) return;
+        if (!EnsureAdmin() || _busy) return;
         if (MessageBox.Show(this,
-                "将依次卸载 Edge、WebView2、Edge Core。\r\nWebView2 卸载可能导致部分应用打不开。是否继续？",
+                "将依次卸载 Edge、WebView2、Edge Core。\r\nWebView2 卸载可能导致部分应用打不开。\r\n过程可能需数分钟，窗口会显示进度。是否继续？",
                 Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
             return;
 
-        RunAction(EdgeManageHelper.UninstallAll, "卸载失败");
+        _ = RunActionAsync(EdgeManageHelper.UninstallAll, "正在卸载 Edge 相关组件…", "卸载失败");
     }
 
     private void InstallOne(EdgeComponentKind kind)
     {
-        if (!EnsureAdmin()) return;
+        if (!EnsureAdmin() || _busy) return;
         var tip = kind == EdgeComponentKind.EdgeCore
             ? "Edge Core 无独立安装包时，将尝试通过安装 Microsoft Edge 来恢复。是否继续？"
             : $"确定安装/恢复 {KindName(kind)}？\r\n（优先 winget，失败则下载官方安装包，可能需要几分钟）";
         if (MessageBox.Show(this, tip, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
 
-        RunAction(() => EdgeManageHelper.Install(kind), "安装失败");
+        _ = RunActionAsync(() => EdgeManageHelper.Install(kind), "正在安装/恢复 " + KindName(kind) + "…", "安装失败");
     }
 
     private void InstallMissing()
     {
-        if (!EnsureAdmin()) return;
+        if (!EnsureAdmin() || _busy) return;
         if (MessageBox.Show(this,
                 "将安装当前未安装的 Edge 相关组件（优先 winget，失败则下载官方包）。是否继续？",
                 Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
 
-        RunAction(EdgeManageHelper.InstallMissing, "安装失败");
+        _ = RunActionAsync(EdgeManageHelper.InstallMissing, "正在恢复缺失项…", "安装失败");
     }
 
-    private void RunAction(Func<string> action, string failTitle)
+    private async Task RunActionAsync(Func<string> action, string busyText, string failTitle)
     {
+        if (_busy) return;
+        _busy = true;
+        SetBusyUi(true, busyText);
         try
         {
-            Cursor = Cursors.WaitCursor;
-            var msg = action();
+            var msg = await Task.Run(action).ConfigureAwait(true);
             RefreshStatus();
+            _progress.Text = "完成。";
             MessageBox.Show(this, msg, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
+            _progress.Text = "失败。";
             MessageBox.Show(this, ex.Message, failTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             RefreshStatus();
         }
         finally
         {
-            Cursor = Cursors.Default;
+            _busy = false;
+            SetBusyUi(false, "就绪。");
+            RefreshStatus();
         }
+    }
+
+    private void SetBusyUi(bool busy, string status)
+    {
+        UseWaitCursor = busy;
+        Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
+        _bar.MarqueeAnimationSpeed = busy ? 30 : 0;
+        _progress.Text = status;
+        _progress.ForeColor = busy ? AppTheme.PrimaryDeep : AppTheme.TextMute;
+        _disableUpdate.Enabled = !busy;
+        foreach (var b in _actionButtons)
+            b.Enabled = !busy;
     }
 
     private static string KindName(EdgeComponentKind kind) => kind switch
@@ -281,13 +335,14 @@ internal sealed class EdgeManageDialog : Form
         return panel;
     }
 
-    private static Control MakeSection(string caption, params Button[] buttons)
+    private Control MakeSection(string caption, params Button[] buttons)
     {
         var btnH = 0;
         foreach (var b in buttons)
         {
             UiFit.FitButton(b, padding: 28);
             btnH = Math.Max(btnH, b.Height);
+            _actionButtons.Add(b);
         }
         if (btnH <= 0) btnH = UiFit.ControlHeight();
 

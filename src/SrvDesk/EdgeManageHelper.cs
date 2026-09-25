@@ -649,19 +649,24 @@ internal static class EdgeManageHelper
 
     private static int RunSetup(string exe, string args)
     {
+        // 勿同时同步读 stdout+stderr：可能死锁；卸载也不需要捕获输出
         using var p = Process.Start(new ProcessStartInfo
         {
             FileName = exe,
             Arguments = args,
             UseShellExecute = false,
             CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
             WorkingDirectory = Path.GetDirectoryName(exe) ?? "",
         }) ?? throw new InvalidOperationException("无法启动 " + exe);
-        _ = p.StandardOutput.ReadToEnd();
-        _ = p.StandardError.ReadToEnd();
-        p.WaitForExit(300_000);
+
+        // Edge 卸载常需数分钟；最多等 15 分钟
+        if (!p.WaitForExit(900_000))
+        {
+            try { p.Kill(); } catch { /* ignore */ }
+            throw new System.TimeoutException("卸载超时（超过 15 分钟仍未结束）。可稍后在「应用和功能」中确认是否已卸完。");
+        }
         return p.ExitCode;
     }
 }
