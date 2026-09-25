@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.163] - 2026-09-25
+
+### Changed
+
+- UI base font 14px → 15px (Segoe UI hierarchy); control heights slightly taller
+- Service optimize: Search / Remote Registry / Bluetooth / Windows Update → strongly recommended off
+
 ## [1.0.66] - 2026-09-12
 
 ### Added

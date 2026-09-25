@@ -4,7 +4,7 @@ namespace SrvDesk;
 
 /// <summary>
 /// 界面度量与字体层级（Windows 桌面管理软件）：
-/// 基础 14px / Segoe UI（中文回退 YaHei UI）；勿对逻辑 pt 再乘 DPI（PerMonitorV2）。
+/// 基础 15px / Segoe UI（中文回退 YaHei UI）；勿对逻辑 pt 再乘 DPI（PerMonitorV2）。
 /// </summary>
 internal static class UiFit
 {
@@ -91,38 +91,38 @@ internal static class UiFit
     public static float PxToPt(float px) =>
         (float)Math.Round(px * 72f / 96f, 2);
 
-    // 14px→10.5 / 13px→9.75 / 12px→9 / 16px→12 / 20px→15
-    public const float DesignFontPt = 10.5F;
-    public const float DesignFontSmallPt = 9.75F;
-    public const float DesignFontScopePt = 9.0F;
-    public const float DesignFontSectionPt = 12.0F;
-    public const float DesignFontPageTitlePt = 15.0F;
+    // 15px→11.25 / 14px→10.5 / 13px→9.75 / 17px→12.75 / 21px→15.75
+    public const float DesignFontPt = 11.25F;
+    public const float DesignFontSmallPt = 10.5F;
+    public const float DesignFontScopePt = 9.75F;
+    public const float DesignFontSectionPt = 12.75F;
+    public const float DesignFontPageTitlePt = 15.75F;
 
-    /// <summary>正文 14 Regular。</summary>
+    /// <summary>正文 15 Regular。</summary>
     public static Font UiFont => _ui ??= Make(DesignFontPt, FontStyle.Regular);
-    /// <summary>描述 / 二级 13 Regular。</summary>
+    /// <summary>描述 / 二级 14 Regular。</summary>
     public static Font UiFontSmall => _uiSmall ??= Make(DesignFontSmallPt, FontStyle.Regular);
-    /// <summary>辅助 / Badge 12 Regular。</summary>
+    /// <summary>辅助 / Badge 13 Regular。</summary>
     public static Font UiFontScope => _uiScope ??= Make(DesignFontScopePt, FontStyle.Regular);
-    /// <summary>顶栏菜单 14 Regular。</summary>
+    /// <summary>顶栏菜单 15 Regular。</summary>
     public static Font UiFontMenu => _menu ??= Make(DesignFontPt, FontStyle.Regular);
-    /// <summary>左侧一级 14 Medium；选中靠背景条，不再加粗。</summary>
+    /// <summary>左侧一级 15 Medium；选中靠背景条，不再加粗。</summary>
     public static Font UiFontNav => _nav ??= MakeMedium(DesignFontPt);
-    /// <summary>左侧二级 13 Regular。</summary>
+    /// <summary>左侧二级 14 Regular。</summary>
     public static Font UiFontNavSecondary => _navSecondary ??= Make(DesignFontSmallPt, FontStyle.Regular);
-    /// <summary>分区标题 16 Semibold。</summary>
+    /// <summary>分区标题 17 Semibold。</summary>
     public static Font UiFontSection => _section ??= MakeSemibold(DesignFontSectionPt);
-    /// <summary>页面标题 20 Semibold。</summary>
+    /// <summary>页面标题 21 Semibold。</summary>
     public static Font UiFontPageTitle => _pageTitle ??= MakeSemibold(DesignFontPageTitlePt);
-    /// <summary>按钮 / Tab 14 Medium。</summary>
+    /// <summary>按钮 / Tab 15 Medium。</summary>
     public static Font UiFontButton => _button ??= MakeMedium(DesignFontPt);
-    /// <summary>表格表头 13 Medium。</summary>
+    /// <summary>表格表头 14 Medium。</summary>
     public static Font UiFontTableHeader => _tableHeader ??= MakeMedium(DesignFontSmallPt);
 
     /// <summary>兼容旧调用：指定 pt 的 SemiBold/Bold。</summary>
     public static Font UiFontBold(float size = DesignFontPt) => MakeSemibold(size);
 
-    public static Font UiFontCode(float pt = 9.75f) =>
+    public static Font UiFontCode(float pt = 10.5f) =>
         new(CodeFontFamily, pt, FontStyle.Regular);
 
     private static Font Make(float pt, FontStyle style) => new(UiFontFamily, pt, style);
@@ -170,7 +170,7 @@ internal static class UiFit
         | TextFormatFlags.NoPrefix
         | TextFormatFlags.GlyphOverhangPadding;
 
-    /// <summary>舒适行高（12→18 / 13→20 / 14→22 / 16→24 / 20→28），不低于实测字形。</summary>
+    /// <summary>舒适行高（13→20 / 14→22 / 15→24 / 17→26 / 21→30），不低于实测字形。</summary>
     public static int LineHeight(Font? font = null)
     {
         var f = font ?? UiFont;
@@ -184,17 +184,18 @@ internal static class UiFit
         var px = sizeInPoints * 96f / 72f;
         if (px <= 12.5f) return 18;
         if (px <= 13.5f) return 20;
-        if (px <= 15.0f) return 22;
-        if (px <= 17.0f) return 24;
-        if (px <= 21.0f) return 28;
-        return 32;
+        if (px <= 14.5f) return 22;
+        if (px <= 15.5f) return 24;
+        if (px <= 17.5f) return 26;
+        if (px <= 21.5f) return 30;
+        return 34;
     }
 
     /// <summary>
     /// 按钮 / 下拉 / 单行输入的最小可视高度。
     /// Flat 中文字体在偏矮高度时常裁掉字脚；副屏 DPI 变化后更明显。
     /// </summary>
-    public static int ControlHeight(Font? font = null, int designMin = 34) =>
+    public static int ControlHeight(Font? font = null, int designMin = 36) =>
         Math.Max(UiScale.S(designMin), LineHeight(font ?? UiFont) + UiScale.S(12));
 
     public static int TextWidth(string text, Font? font = null) =>
