@@ -25,7 +25,7 @@ internal sealed class SettingUiMeta
 internal sealed class QuickRestorePreviewDialog : Form
 {
     private readonly ListView _list = new();
-    private readonly Label _detail = new();
+    private readonly TextBox _detail = new();
     private readonly List<PreviewLine> _lines;
 
     public IReadOnlyList<PreviewLine> SelectedLines =>
@@ -51,8 +51,8 @@ internal sealed class QuickRestorePreviewDialog : Form
         AutoScaleMode = AutoScaleMode.None;
         Font = UiFit.UiFont;
         BackColor = AppTheme.Surface;
-        ClientSize = UiScale.Size(1000, 600);
-        MinimumSize = UiScale.Size(880, 520);
+        ClientSize = UiScale.Size(1040, 640);
+        MinimumSize = UiScale.Size(900, 560);
 
         var body = new Panel
         {
@@ -77,8 +77,8 @@ internal sealed class QuickRestorePreviewDialog : Form
         _list.Columns.Add(AppLang.L("分区", "Section"), UiScale.S(140));
         _list.Columns.Add(AppLang.L("项目", "Item"), UiScale.S(200));
         _list.Columns.Add(AppLang.L("含义", "Meaning"), UiScale.S(260));
-        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(72));
-        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(72));
+        _list.Columns.Add(AppLang.L("当前", "Current"), UiScale.S(100));
+        _list.Columns.Add(AppLang.L("恢复为", "To"), UiScale.S(100));
         _list.HandleCreated += (_, _) => UiBuffer.EnableListView(_list);
         _list.ItemChecked += (_, e) =>
         {
@@ -87,7 +87,6 @@ internal sealed class QuickRestorePreviewDialog : Form
         };
         _list.SelectedIndexChanged += (_, _) => UpdateDetail();
 
-        // 「含义」列裁切时，悬停弹出完整说明（Summary + 作用/好处）
         var tip = new ToolTip
         {
             AutoPopDelay = 25000,
@@ -157,19 +156,31 @@ internal sealed class QuickRestorePreviewDialog : Form
             _list.Items.Add(empty);
         }
 
-        // 选中行说明：对齐主界面右侧条目（栏目/分区/项目名 + Summary + 作用）
-        _detail.Dock = DockStyle.Bottom;
-        _detail.AutoSize = false;
-        _detail.Height = UiScale.S(88);
-        _detail.Padding = new Padding(0, UiScale.S(8), 0, 0);
+        var footerH = UiFit.ControlHeight() + UiScale.S(20);
+        var detailH = Math.Max(UiScale.S(100), UiFit.LineHeight() * 3 + UiScale.S(20));
+        var south = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = detailH + footerH,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, UiScale.S(8), 0, 0),
+        };
+
+        _detail.Multiline = true;
+        _detail.ReadOnly = true;
+        _detail.BorderStyle = BorderStyle.None;
+        _detail.BackColor = AppTheme.Surface;
         _detail.ForeColor = AppTheme.TextMain;
         _detail.Font = UiFit.UiFont;
+        _detail.TabStop = false;
+        _detail.ScrollBars = ScrollBars.Vertical;
+        _detail.Dock = DockStyle.Fill;
         _detail.Text = "";
 
         var footer = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = UiFit.ControlHeight() + UiScale.S(20),
+            Height = footerH,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             Padding = new Padding(0, UiScale.S(8), 0, 0),
@@ -213,9 +224,11 @@ internal sealed class QuickRestorePreviewDialog : Form
         footer.Controls.Add(allOff);
         footer.Controls.Add(allOn);
 
+        south.Controls.Add(_detail);
+        south.Controls.Add(footer);
+
         body.Controls.Add(_list);
-        body.Controls.Add(_detail);
-        body.Controls.Add(footer);
+        body.Controls.Add(south);
         Controls.Add(body);
 
         CancelButton = cancel;
@@ -264,6 +277,8 @@ internal sealed class QuickRestorePreviewDialog : Form
             "【{0} · {1}】{2}\r\n{3}\r\n当前：{4}  →  恢复为：{5}",
             "[{0} · {1}] {2}\r\n{3}\r\nCurrent: {4}  →  Restore to: {5}",
             line.Nav, line.Section, line.Title, body, line.Current, line.Target);
+        _detail.SelectionStart = 0;
+        _detail.SelectionLength = 0;
     }
 
     private static string MeaningTipText(PreviewLine line)
@@ -273,70 +288,55 @@ internal sealed class QuickRestorePreviewDialog : Form
         if (full.Length == 0) return summary;
         if (summary.Length == 0) return full;
         if (string.Equals(summary, full, StringComparison.Ordinal)) return full;
-        // Meaning 可能被 Compact 截断；完整说明优先用 MeaningFull，并带上未截断摘要
         if (full.StartsWith(summary.TrimEnd('…', '.'), StringComparison.Ordinal))
             return full;
         return summary + "\r\n" + full;
     }
 
+    /// <summary>
+    /// 按主界面「侧栏栏目 → 分区 → 右侧每个开关/下拉」逐条对比；一条 UI 对应一行，不拆附属 State 字段。
+    /// </summary>
     public static List<PreviewLine> Compute(
         Optimizer.State current,
         OptProfileBundle bundle,
-        IReadOnlyDictionary<string, SettingUiMeta>? uiMeta = null)
+        IReadOnlyList<SettingUiMeta>? uiRows = null)
     {
         var lines = new List<PreviewLine>();
-        uiMeta ??= new Dictionary<string, SettingUiMeta>(StringComparer.Ordinal);
+        uiRows ??= Array.Empty<SettingUiMeta>();
 
-        if (bundle.HasSettings)
+        if (bundle.HasSettings && uiRows.Count > 0)
         {
-            var curMap = StateMapper.ToMap(current);
-            var impMap = StateMapper.ToMap(bundle.State);
-            foreach (var kv in impMap)
+            foreach (var meta in uiRows)
             {
-                if (!curMap.TryGetValue(kv.Key, out var cur) || cur == kv.Value) continue;
-                var meta = ResolveMeta(kv.Key, uiMeta);
-                var kind = kv.Value ? PreviewKind.ToggleOn : PreviewKind.ToggleOff;
+                if (meta.StateKeys.Length == 0) continue;
+                var curText = meta.FormatValue?.Invoke(current) ?? "";
+                var impText = meta.FormatValue?.Invoke(bundle.State) ?? "";
+                if (string.Equals(curText, impText, StringComparison.Ordinal))
+                    continue;
+
+                var kind = meta.ChoiceLabels is { Length: > 0 }
+                    ? PreviewKind.Property
+                    : (LooksEnabled(impText) ? PreviewKind.ToggleOn : PreviewKind.ToggleOff);
+
                 lines.Add(new PreviewLine
                 {
                     Kind = kind,
-                    StateKey = kv.Key,
+                    StateKey = meta.StateKeys[0],
+                    StateKeys = meta.StateKeys.ToArray(),
                     Nav = meta.Nav,
                     Section = meta.Section,
                     Title = meta.Title,
                     Meaning = meta.Meaning,
                     MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
-                    Current = BoolText(cur),
-                    Target = BoolText(kv.Value),
+                    Current = curText,
+                    Target = impText,
                     Selected = true,
                 });
             }
-
-            var curExtra = StateMapper.ToExtra(current)
-                .Where(e => string.Equals(e.Kind, "int", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(e => e.Key!, e => e.Text ?? "", StringComparer.Ordinal);
-            foreach (var e in StateMapper.ToExtra(bundle.State)
-                         .Where(x => string.Equals(x.Kind, "int", StringComparison.OrdinalIgnoreCase)))
-            {
-                if (string.IsNullOrEmpty(e.Key)) continue;
-                curExtra.TryGetValue(e.Key!, out var curText);
-                curText ??= "";
-                var impText = e.Text ?? "";
-                if (string.Equals(curText, impText, StringComparison.Ordinal)) continue;
-                var meta = ResolveMeta(e.Key!, uiMeta);
-                lines.Add(new PreviewLine
-                {
-                    Kind = PreviewKind.Property,
-                    StateKey = e.Key!,
-                    Nav = meta.Nav,
-                    Section = meta.Section,
-                    Title = meta.Title,
-                    Meaning = meta.Meaning,
-                    MeaningFull = string.IsNullOrWhiteSpace(meta.MeaningFull) ? meta.Meaning : meta.MeaningFull,
-                    Current = FormatExtra(e.Key!, curText),
-                    Target = FormatExtra(e.Key!, impText),
-                    Selected = true,
-                });
-            }
+        }
+        else if (bundle.HasSettings)
+        {
+            AppendLegacyFieldDiffs(lines, current, bundle.State);
         }
 
         if (bundle.HasServices && bundle.Services is { Count: > 0 })
@@ -374,7 +374,7 @@ internal sealed class QuickRestorePreviewDialog : Form
                     Nav = AppLang.L("服务优化", "Service optimize"),
                     Section = AppLang.L("服务启动类型", "Start type"),
                     Title = title,
-                    Meaning = Compact(meaning, 36),
+                    Meaning = Compact(meaning, 48),
                     MeaningFull = meaning,
                     Current = ServiceOptimizeHelper.StartTypeLabel(currentStart),
                     Target = ServiceOptimizeHelper.StartTypeLabel(target),
@@ -462,88 +462,45 @@ internal sealed class QuickRestorePreviewDialog : Form
             });
         }
 
-        lines.Sort((a, b) =>
-        {
-            var c = string.Compare(a.Nav, b.Nav, StringComparison.CurrentCultureIgnoreCase);
-            if (c != 0) return c;
-            c = string.Compare(a.Section, b.Section, StringComparison.CurrentCultureIgnoreCase);
-            if (c != 0) return c;
-            c = a.Kind.CompareTo(b.Kind);
-            return c != 0 ? c : string.Compare(a.Title, b.Title, StringComparison.CurrentCultureIgnoreCase);
-        });
         return lines;
     }
 
-    private static SettingUiMeta ResolveMeta(string key, IReadOnlyDictionary<string, SettingUiMeta> uiMeta)
+    private static void AppendLegacyFieldDiffs(
+        List<PreviewLine> lines, Optimizer.State current, Optimizer.State imported)
     {
-        if (uiMeta.TryGetValue(key, out var m))
-            return m;
-
-        // 常见别名（State 字段名 ↔ 界面 Catalog）
-        if (string.Equals(key, "UacNotifyLevel", StringComparison.Ordinal)
-            && uiMeta.TryGetValue("DisableUac", out m))
-            return m;
-        if (string.Equals(key, "UltimatePerfPower", StringComparison.Ordinal)
-            && uiMeta.TryGetValue("HighPerfPower", out m))
-            return m;
-
-        // 未挂到侧栏时：仍尽量用 Catalog.Summary，避免只显示英文字段名
-        if (TryCatalogHelp(key, out var help))
+        var curMap = StateMapper.ToMap(current);
+        var impMap = StateMapper.ToMap(imported);
+        foreach (var kv in impMap)
         {
-            return new SettingUiMeta
+            if (!curMap.TryGetValue(kv.Key, out var cur) || cur == kv.Value) continue;
+            lines.Add(new PreviewLine
             {
+                Kind = kv.Value ? PreviewKind.ToggleOn : PreviewKind.ToggleOff,
+                StateKey = kv.Key,
+                StateKeys = [kv.Key],
                 Nav = AppLang.L("优化开关", "Toggles"),
                 Section = AppLang.L("未分组", "Ungrouped"),
-                Title = Compact(help!.Summary, 28),
-                Meaning = help.Summary,
-                MeaningFull = FormatCatalogMeaningFull(help),
-            };
+                Title = kv.Key,
+                Meaning = kv.Key,
+                MeaningFull = kv.Key,
+                Current = BoolText(cur),
+                Target = BoolText(kv.Value),
+                Selected = true,
+            });
         }
-
-        return new SettingUiMeta
-        {
-            Nav = AppLang.L("优化开关", "Toggles"),
-            Section = AppLang.L("未分组", "Ungrouped"),
-            Title = key,
-            Meaning = key,
-            MeaningFull = key,
-        };
     }
 
-    private static bool TryCatalogHelp(string key, out SettingHelpInfo? help)
+    private static bool LooksEnabled(string text)
     {
-        help = null;
-        try
-        {
-            var f = typeof(SettingCatalog).GetField(key,
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            if (f?.GetValue(null) is SettingHelpInfo h)
-            {
-                help = h;
-                return true;
-            }
-        }
-        catch { /* ignore */ }
-        return false;
-    }
-
-    private static string FormatCatalogMeaningFull(SettingHelpInfo help)
-    {
-        var what = (help.Purpose ?? "").Trim();
-        var benefit = (help.Benefit ?? "").Trim();
-        if (what.Length == 0) return benefit.Length > 0 ? benefit : (help.Summary ?? "");
-        if (benefit.Length == 0) return what;
-        if (what.EndsWith("。", StringComparison.Ordinal) || what.EndsWith(".", StringComparison.Ordinal)
-            || what.EndsWith("；", StringComparison.Ordinal) || what.EndsWith(";", StringComparison.Ordinal))
-            return what + benefit;
-        return what + AppLang.L("。", ". ") + benefit;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        return text.IndexOf(AppLang.L("开启", "On"), StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static string KindLabel(PreviewKind k) => k switch
     {
         PreviewKind.ToggleOn => AppLang.L("开启", "On"),
         PreviewKind.ToggleOff => AppLang.L("关闭", "Off"),
-        PreviewKind.Property => AppLang.L("属性", "Prop"),
+        PreviewKind.Property => AppLang.L("调整", "Set"),
         PreviewKind.ServiceDisable => AppLang.L("禁服务", "Disable"),
         PreviewKind.ServiceAuto => AppLang.L("改自动", "Auto"),
         PreviewKind.ServiceManual => AppLang.L("改手动", "Manual"),
@@ -557,10 +514,11 @@ internal sealed class QuickRestorePreviewDialog : Form
         PreviewKind.ServiceDisable => Color.FromArgb(180, 80, 40),
         PreviewKind.ServiceAuto => Color.FromArgb(40, 100, 160),
         PreviewKind.ServiceManual => Color.FromArgb(40, 100, 160),
+        PreviewKind.Property => Color.FromArgb(40, 100, 160),
         _ => AppTheme.TextMain,
     };
 
-    private static string BoolText(bool v) => v ? AppLang.L("开", "On") : AppLang.L("关", "Off");
+    private static string BoolText(bool v) => v ? AppLang.L("开启", "On") : AppLang.L("关闭", "Off");
 
     private static string LevelText(int level) => level switch
     {
@@ -570,19 +528,6 @@ internal sealed class QuickRestorePreviewDialog : Form
         3 => AppLang.L("激进", "Aggressive"),
         _ => level.ToString(),
     };
-
-    private static string FormatExtra(string key, string text)
-    {
-        if (string.Equals(key, "UacNotifyLevel", StringComparison.Ordinal))
-            return text switch
-            {
-                "0" => AppLang.L("始终通知", "Always"),
-                "1" => AppLang.L("默认", "Default"),
-                "2" => AppLang.L("从不", "Never"),
-                _ => text,
-            };
-        return text;
-    }
 
     private static string Compact(string text, int max)
     {
@@ -616,6 +561,7 @@ internal sealed class QuickRestorePreviewDialog : Form
         public string Current { get; set; } = "";
         public string Target { get; set; } = "";
         public string? StateKey { get; set; }
+        public string[] StateKeys { get; set; } = [];
         public string? ServiceName { get; set; }
         public string? OtherId { get; set; }
         public bool Selected { get; set; } = true;
@@ -631,6 +577,7 @@ internal sealed class QuickRestorePreviewDialog : Form
             Current = Current,
             Target = Target,
             StateKey = StateKey,
+            StateKeys = StateKeys.Length == 0 ? [] : StateKeys.ToArray(),
             ServiceName = ServiceName,
             OtherId = OtherId,
             Selected = Selected,

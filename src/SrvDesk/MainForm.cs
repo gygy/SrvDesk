@@ -1603,7 +1603,7 @@ internal sealed class MainForm : Form
             Optimizer.State current;
             try { current = Optimizer.Read(fullScan: false); }
             catch { current = CaptureState(); }
-            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMeta());
+            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMetaList());
         }
         finally
         {
@@ -1626,45 +1626,125 @@ internal sealed class MainForm : Form
     }
 
     /// <summary>
-    /// 主界面侧栏栏目 → 状态字段名，供恢复/导入预览对齐「左侧菜单 + 右侧条目」。
-    /// 含义优先用 Summary（与右侧说明面板一致），完整说明放 MeaningFull。
+    /// 按主界面侧栏顺序产出「右侧每个开关/下拉」一条元数据，供导入/快速恢复预览对齐。
     /// </summary>
-    private Dictionary<string, SettingUiMeta> BuildSettingUiMeta()
+    private List<SettingUiMeta> BuildSettingUiMetaList()
     {
-        var byHelp = new Dictionary<SettingHelpInfo, SettingUiMeta>();
+        var list = new List<SettingUiMeta>();
         foreach (var (nav, sections) in _groups)
         {
             foreach (var (section, rows) in sections)
             {
                 foreach (var row in rows)
                 {
-                    byHelp[row.Help] = new SettingUiMeta
+                    var catalog = CatalogFieldNameOf(row.Help);
+                    if (string.IsNullOrEmpty(catalog)) continue;
+                    var keys = ExpandStateKeys(catalog!);
+                    if (keys.Length == 0) continue;
+                    var labels = row.ChoiceLabels;
+                    var optIdx = row.OptimizedIndex;
+                    list.Add(new SettingUiMeta
                     {
                         Nav = nav,
                         Section = section,
                         Title = row.ItemText,
                         Meaning = row.Help.Summary,
                         MeaningFull = FormatSettingMeaningFull(row.Help),
-                    };
+                        CatalogKey = catalog!,
+                        StateKeys = keys,
+                        ChoiceLabels = labels,
+                        OptimizedIndex = optIdx,
+                        FormatValue = s => FormatSettingDisplay(catalog!, labels, optIdx, s),
+                    });
                 }
             }
         }
+        return list;
+    }
 
-        var map = new Dictionary<string, SettingUiMeta>(StringComparer.Ordinal);
-        // 以 Optimizer.State 字段名为准（导出 JSON 键）；Catalog 同名字段取 Help 再对齐侧栏
-        foreach (var stateField in typeof(Optimizer.State).GetFields(
-                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+    private static string? CatalogFieldNameOf(SettingHelpInfo help)
+    {
+        foreach (var f in typeof(SettingCatalog).GetFields(
+                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
         {
-            if (stateField.FieldType != typeof(bool) && stateField.FieldType != typeof(int))
-                continue;
-            var key = stateField.Name;
-            var catalogField = typeof(SettingCatalog).GetField(key,
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            if (catalogField?.GetValue(null) is not SettingHelpInfo help) continue;
-            if (!byHelp.TryGetValue(help, out var meta)) continue;
-            map[key] = meta;
+            if (f.GetValue(null) is SettingHelpInfo h && ReferenceEquals(h, help))
+                return f.Name;
         }
-        return map;
+        return null;
+    }
+
+    /// <summary>一个右侧条目可能对应多个互斥/同步的 State 字段。</summary>
+    private static string[] ExpandStateKeys(string catalogKey) => catalogKey switch
+    {
+        "DisableUac" => ["UacNotifyLevel", "DisableUac"],
+        "HighPerfPower" => ["HighPerfPower", "UltimatePerfPower"],
+        "HideTaskbarSearch" => ["TaskbarSearchMode", "TaskbarSearchBox"],
+        _ => [catalogKey],
+    };
+
+    private static string FormatSettingDisplay(
+        string catalogKey, string[]? labels, int optimizedIndex, Optimizer.State s)
+    {
+        if (labels is { Length: > 0 })
+        {
+            var idx = ReadChoiceIndexFromState(catalogKey, optimizedIndex, s);
+            if (idx >= 0 && idx < labels.Length)
+                return labels[idx];
+            return "—";
+        }
+
+        var map = StateMapper.ToMap(s);
+        if (map.TryGetValue(catalogKey, out var on))
+            return on ? AppLang.L("开启", "On") : AppLang.L("关闭", "Off");
+
+        var extra = StateMapper.ToExtra(s)
+            .FirstOrDefault(e => string.Equals(e.Key, catalogKey, StringComparison.Ordinal)
+                                 && string.Equals(e.Kind, "int", StringComparison.OrdinalIgnoreCase));
+        if (extra?.Text is { Length: > 0 } t)
+            return FormatExtraDisplay(catalogKey, t);
+        return "—";
+    }
+
+    private static int ReadChoiceIndexFromState(string catalogKey, int optimizedIndex, Optimizer.State s)
+    {
+        switch (catalogKey)
+        {
+            case "DisableUac":
+                return s.UacNotifyLevel is >= 0 and <= 2 ? s.UacNotifyLevel : (s.DisableUac ? 2 : 1);
+            case "HighPerfPower":
+                return s.UltimatePerfPower ? 2 : (s.HighPerfPower ? 1 : 0);
+            case "HideTaskbarSearch":
+                return s.TaskbarSearchMode is >= 0 and <= 2 ? s.TaskbarSearchMode : 1;
+            case "ShowDriveLettersMode":
+                return ClampIndex(s.ShowDriveLettersMode, 0, 2);
+            case "FolderGroupByMode":
+                return ClampIndex(s.FolderGroupByMode, 0, 4);
+            case "FolderSortByMode":
+                return ClampIndex(s.FolderSortByMode, 0, 5);
+            default:
+            {
+                var map = StateMapper.ToMap(s);
+                if (map.TryGetValue(catalogKey, out var on))
+                    return on ? optimizedIndex : (optimizedIndex == 0 ? 1 : 0);
+                return optimizedIndex == 0 ? 1 : 0;
+            }
+        }
+    }
+
+    private static int ClampIndex(int v, int min, int max) =>
+        v < min ? min : (v > max ? max : v);
+
+    private static string FormatExtraDisplay(string key, string text)
+    {
+        if (string.Equals(key, "UacNotifyLevel", StringComparison.Ordinal))
+            return text switch
+            {
+                "0" => AppLang.L("始终通知", "Always notify"),
+                "1" => AppLang.L("默认通知", "Default notify"),
+                "2" => AppLang.L("从不通知", "Never notify"),
+                _ => text,
+            };
+        return text;
     }
 
     /// <summary>与右侧 HelpDetailPanel 精简说明同构：作用 + 好处。</summary>
@@ -1680,6 +1760,23 @@ internal sealed class MainForm : Form
         return what + AppLang.L("。", ". ") + benefit;
     }
 
+    private static HashSet<string> CollectSettingKeys(
+        IReadOnlyList<QuickRestorePreviewDialog.PreviewLine> selected)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var x in selected)
+        {
+            if (x.StateKeys is { Length: > 0 })
+            {
+                foreach (var k in x.StateKeys)
+                    if (!string.IsNullOrEmpty(k)) keys.Add(k);
+            }
+            else if (!string.IsNullOrEmpty(x.StateKey))
+                keys.Add(x.StateKey!);
+        }
+        return keys;
+    }
+
     private void RunQuickRestore(
         OptProfileBundle bundle,
         string sourcePath,
@@ -1690,9 +1787,7 @@ internal sealed class MainForm : Form
         var wantPacks = selected.Any(x => x.OtherId == "CustomPacks");
         var wantLevel = selected.Any(x => x.OtherId == "OptimizationLevel");
         var wantRoles = selected.Any(x => x.OtherId == "ServerRoles");
-        var settingKeys = new HashSet<string>(
-            selected.Where(x => !string.IsNullOrEmpty(x.StateKey)).Select(x => x.StateKey!),
-            StringComparer.Ordinal);
+        var settingKeys = CollectSettingKeys(selected);
         var serviceNames = new HashSet<string>(
             selected.Where(x => !string.IsNullOrEmpty(x.ServiceName)).Select(x => x.ServiceName!),
             StringComparer.OrdinalIgnoreCase);
@@ -1759,6 +1854,15 @@ internal sealed class MainForm : Form
 
                 if (settingKeys.Contains("UacNotifyLevel") || settingKeys.Contains("DisableUac"))
                     baseState.DisableUac = baseState.UacNotifyLevel == 2;
+                if (settingKeys.Contains("TaskbarSearchMode") || settingKeys.Contains("TaskbarSearchBox"))
+                {
+                    if (baseState.TaskbarSearchMode is >= 0 and <= 2)
+                        baseState.TaskbarSearchBox = baseState.TaskbarSearchMode == 2;
+                }
+                if (settingKeys.Contains("UltimatePerfPower") && baseState.UltimatePerfPower)
+                    baseState.HighPerfPower = false;
+                else if (settingKeys.Contains("HighPerfPower") && baseState.HighPerfPower)
+                    baseState.UltimatePerfPower = false;
 
                 Bind(baseState);
                 _uiDirty = true;
@@ -1861,7 +1965,7 @@ internal sealed class MainForm : Form
             Optimizer.State current;
             try { current = Optimizer.Read(fullScan: false); }
             catch { current = CaptureState(); }
-            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMeta());
+            preview = QuickRestorePreviewDialog.Compute(current, bundle, BuildSettingUiMetaList());
         }
         finally
         {
@@ -1905,9 +2009,7 @@ internal sealed class MainForm : Form
             var wantPacks = selected.Any(x => x.OtherId == "CustomPacks");
             var wantLevel = selected.Any(x => x.OtherId == "OptimizationLevel");
             var wantRoles = selected.Any(x => x.OtherId == "ServerRoles");
-            var settingKeys = new HashSet<string>(
-                selected.Where(x => !string.IsNullOrEmpty(x.StateKey)).Select(x => x.StateKey!),
-                StringComparer.Ordinal);
+            var settingKeys = CollectSettingKeys(selected);
             var serviceNames = new HashSet<string>(
                 selected.Where(x => !string.IsNullOrEmpty(x.ServiceName)).Select(x => x.ServiceName!),
                 StringComparer.OrdinalIgnoreCase);
@@ -1963,6 +2065,15 @@ internal sealed class MainForm : Form
 
                 if (settingKeys.Contains("UacNotifyLevel") || settingKeys.Contains("DisableUac"))
                     baseState.DisableUac = baseState.UacNotifyLevel == 2;
+                if (settingKeys.Contains("TaskbarSearchMode") || settingKeys.Contains("TaskbarSearchBox"))
+                {
+                    if (baseState.TaskbarSearchMode is >= 0 and <= 2)
+                        baseState.TaskbarSearchBox = baseState.TaskbarSearchMode == 2;
+                }
+                if (settingKeys.Contains("UltimatePerfPower") && baseState.UltimatePerfPower)
+                    baseState.HighPerfPower = false;
+                else if (settingKeys.Contains("HighPerfPower") && baseState.HighPerfPower)
+                    baseState.UltimatePerfPower = false;
 
                 Bind(baseState);
                 _uiDirty = true;
@@ -4296,6 +4407,18 @@ internal sealed class MainForm : Form
         public RecommendLevel EffectiveRecommend => Help.EffectiveRecommend(SystemInfoHelper.Detect());
         public Action<SettingRow>? OnCheckedChanged { get; set; }
         public bool HasChoice => _choice is not null;
+        public int OptimizedIndex => _optimizedIndex;
+        public string[]? ChoiceLabels
+        {
+            get
+            {
+                if (_choice is null) return null;
+                var arr = new string[_choice.Items.Count];
+                for (var i = 0; i < _choice.Items.Count; i++)
+                    arr[i] = _choice.Items[i]?.ToString() ?? "";
+                return arr;
+            }
+        }
 
         public SettingRow(string item, string systemDefault, SettingHelpInfo help)
             : this(item, systemDefault, help, null, 1)
