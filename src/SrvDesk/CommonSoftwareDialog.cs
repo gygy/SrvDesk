@@ -22,11 +22,11 @@ internal sealed class CommonSoftwareDialog : Form
     private static readonly (string Key, string En)[] CategoryDefs =
     [
         ("全部", "All"),
-        ("必备", "Essentials"),
         ("驱动", "Drivers"),
         ("浏览器", "Browsers"),
         ("压缩", "Compression"),
         ("工具", "Tools"),
+        ("安全", "Security"),
         ("网络/专业", "Network / Pro"),
         ("微软", "Microsoft"),
         ("多媒体", "Media"),
@@ -83,8 +83,6 @@ internal sealed class CommonSoftwareDialog : Form
         var op = new ToolStripMenuItem("操作(&A)");
         var mInstallSelected = new ToolStripMenuItem("安装所选");
         mInstallSelected.Click += (_, _) => InstallSelected();
-        var mEssentials = new ToolStripMenuItem("安装系统必备");
-        mEssentials.Click += (_, _) => InstallEssentials();
         var mUpdates = new ToolStripMenuItem("检查软件更新");
         mUpdates.Click += (_, _) => CheckSoftwareUpdates();
         var mCustom = new ToolStripMenuItem("自定义软件...");
@@ -96,7 +94,7 @@ internal sealed class CommonSoftwareDialog : Form
             MessageBox.Show(this, "已清理下载临时目录。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         op.DropDownItems.AddRange([
-            mInstallSelected, mEssentials, new ToolStripSeparator(), mUpdates, mCustom, mClearCache
+            mInstallSelected, new ToolStripSeparator(), mUpdates, mCustom, mClearCache
         ]);
         var edit = new ToolStripMenuItem("编辑(&E)");
         var mSelectAll = new ToolStripMenuItem("全选当前");
@@ -307,7 +305,7 @@ internal sealed class CommonSoftwareDialog : Form
         selectMenu.Items.Add("全选当前分类", null, (_, _) => SetAllSelected(true));
         selectMenu.Items.Add("全不选", null, (_, _) => SetAllSelected(false));
         selectMenu.Items.Add(new ToolStripSeparator());
-        selectMenu.Items.Add("仅选必备", null, (_, _) => SelectBy(r => r.Item.Essential));
+        selectMenu.Items.Add("仅选安全", null, (_, _) => SelectBy(r => r.Item.Category == "安全"));
         selectMenu.Items.Add("仅选运行库推荐", null, (_, _) =>
             SelectBy(r => r.Item.Id.Equals("vcredist-2022-x64", StringComparison.OrdinalIgnoreCase)));
         selectMenu.Items.Add("仅选未安装", null, (_, _) => SelectBy(r => !r.IsInstalled));
@@ -885,7 +883,7 @@ internal sealed class CommonSoftwareDialog : Form
         if (!CommonSoftwareHelper.IsWingetAvailable())
         {
             MessageBox.Show(this,
-                "未检测到 winget，无法检查更新。\r\n请先在必备列表中安装/修复 winget。",
+                "未检测到 winget，无法检查更新。\r\n请先在「工具」分类中安装/修复 winget。",
                 "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -1088,39 +1086,6 @@ internal sealed class CommonSoftwareDialog : Form
             var text = $"并行 {finished}/{total} · {running}";
             Ui(() => SetInstallBusy(true, text, itemId: itemId, percent: overall));
         };
-    }
-
-    private void InstallEssentials()
-    {
-        if (_installBusy)
-        {
-            MessageBox.Show(this, "已有安装任务进行中，请稍候。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
-        var essentials = CommonSoftwareCatalog.All.Where(x => x.Essential).ToList();
-        var missing = essentials
-            .Where(x => x.IsWingetBootstrap
-                ? !CommonSoftwareHelper.IsWingetAvailable()
-                : !CommonSoftwareHelper.Query(x).Installed)
-            .OrderBy(x => x.IsWingetBootstrap ? 0 : 1)
-            .ToList();
-        if (missing.Count == 0)
-        {
-            MessageBox.Show(this, "系统必备软件均已安装。", "常用软件", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
-        var names = string.Join("\r\n", missing.Select(x => "· " + x.Title));
-        if (_askBeforeInstall.Checked)
-        {
-            var answer = MessageBox.Show(this,
-                $"将并行安装以下 {missing.Count} 款必备软件（最多 3 路）：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
-                "安装系统必备软件", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (answer != DialogResult.Yes) return;
-        }
-
-        RunBatchInstall(missing, "安装系统必备软件");
     }
 
     private static Label MakeHeaderCell(string text, int x, int w, int h, ContentAlignment align = ContentAlignment.MiddleLeft) =>

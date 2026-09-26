@@ -2163,7 +2163,7 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
     {
         _lastUpdates = [];
         if (!IsWingetAvailable())
-            throw new InvalidOperationException("未检测到 winget，请先在必备列表中安装/修复 winget。");
+            throw new InvalidOperationException("未检测到 winget，请先在「工具」分类中安装/修复 winget。");
 
         EnsureWingetSpeedSettings();
         Report(onProgress, "正在查询可更新软件…", 10);
