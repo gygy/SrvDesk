@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.ServiceProcess;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace SrvDesk;
@@ -259,38 +260,42 @@ internal static class EdgeManageHelper
         };
         if (id is null) return false;
 
+        var arch = ResolveOsEdgeArchitecture();
         try
         {
             CommonSoftwareHelper.EnsureWingetSpeedSettings();
             var winget = CommonSoftwareHelper.ResolveWingetPath();
-            ApplyLog.Write("winget 安装 " + id);
+            ApplyLog.Write("winget 安装 " + id + " --architecture " + arch);
+            var archArg = " --architecture " + arch;
             var args =
                 "install -e --id " + id + " --source winget --silent " +
-                "--accept-package-agreements --accept-source-agreements --disable-interactivity";
+                "--accept-package-agreements --accept-source-agreements --disable-interactivity" +
+                archArg;
             var code = RunProcess(winget, args, timeoutMs: 600_000);
             // 0 成功；-1978335189 = already installed
             if (code is 0 or -1978335189)
             {
                 message = kind == EdgeComponentKind.WebView2
-                    ? "已通过 winget 安装/恢复 Edge WebView2。"
-                    : "已通过 winget 安装/恢复 Microsoft Edge。";
-                ApplyLog.SystemChange(id, "winget 安装 Edge 组件", "未安装", "已安装");
+                    ? "已通过 winget 安装/恢复 Edge WebView2（" + ArchLabel(arch) + "）。"
+                    : "已通过 winget 安装/恢复 Microsoft Edge（" + ArchLabel(arch) + "）。";
+                ApplyLog.SystemChange(id, "winget 安装 Edge 组件 " + arch, "未安装", "已安装");
                 return true;
             }
 
-            // 再试默认源
+            // 再试默认源（仍强制架构）
             args =
                 "install -e --id " + id + " --silent " +
-                "--accept-package-agreements --accept-source-agreements --disable-interactivity";
+                "--accept-package-agreements --accept-source-agreements --disable-interactivity" +
+                archArg;
             code = RunProcess(winget, args, timeoutMs: 600_000);
             if (code is 0 or -1978335189)
             {
-                message = "已通过 winget 安装/恢复（默认源）。";
-                ApplyLog.SystemChange(id, "winget 安装 Edge 组件", "未安装", "已安装");
+                message = "已通过 winget 安装/恢复（默认源，" + ArchLabel(arch) + "）。";
+                ApplyLog.SystemChange(id, "winget 安装 Edge 组件 " + arch, "未安装", "已安装");
                 return true;
             }
 
-            ApplyLog.Write("winget 安装失败，退出码 " + code + "，改下载官方安装包。");
+            ApplyLog.Write("winget 安装失败，退出码 " + code + "，改下载官方 " + arch + " 安装包。");
             return false;
         }
         catch (Exception ex)
@@ -302,30 +307,48 @@ internal static class EdgeManageHelper
 
     private static string DownloadAndInstall(EdgeComponentKind kind)
     {
-        var (url, fileName, args, title) = kind switch
-        {
-            EdgeComponentKind.WebView2 => (
-                "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
-                "MicrosoftEdgeWebview2Setup.exe",
-                "/silent /install",
-                "Edge WebView2"),
-            _ => (
-                "https://go.microsoft.com/fwlink/?linkid=2109047&Channel=Stable&language=zh-cn",
-                "MicrosoftEdgeSetup.exe",
-                "",
-                "Microsoft Edge"),
-        };
-
+        var arch = ResolveOsEdgeArchitecture();
+        var title = kind == EdgeComponentKind.WebView2 ? "Edge WebView2" : "Microsoft Edge";
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SrvDesk", "edge-installers");
         Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, fileName);
 
-        ApplyLog.Write("下载 " + title + "：" + url);
+        string url;
+        string path;
+        string args;
+        bool useMsiexec = false;
+
+        if (kind == EdgeComponentKind.WebView2)
+        {
+            // Evergreen 独立安装包（按架构）；勿用会误判位数的通用 bootstrapper
+            url = arch switch
+            {
+                "arm64" => "https://go.microsoft.com/fwlink/?linkid=2124704",
+                "x86" => "https://go.microsoft.com/fwlink/?linkid=2124702",
+                _ => "https://go.microsoft.com/fwlink/?linkid=2124701",
+            };
+            path = Path.Combine(dir, "MicrosoftEdgeWebview2Setup-" + arch + ".exe");
+            args = "/silent /install";
+        }
+        else
+        {
+            // 企业版离线 MSI：按 OS 架构解析，避免通用 EdgeSetup 装成 x86
+            url = TryResolveEdgeEnterpriseMsiUrl(arch)
+                  ?? throw new InvalidOperationException(
+                      "无法从微软获取 Microsoft Edge " + ArchLabel(arch) +
+                      " 安装包地址。请检查网络后重试。");
+            var leaf = Path.GetFileName(new Uri(url).AbsolutePath);
+            if (string.IsNullOrWhiteSpace(leaf) || !leaf.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                leaf = "MicrosoftEdgeEnterprise-" + arch + ".msi";
+            path = Path.Combine(dir, leaf);
+            args = "/i \"" + path + "\" /qn /norestart ALLUSERS=1";
+            useMsiexec = true;
+        }
+
+        ApplyLog.Write("下载 " + title + "（" + arch + "）：" + url);
         try
         {
-            // TLS1.2：老系统默认可能不够
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             using var wc = new System.Net.WebClient();
             wc.Headers.Add("User-Agent", "SrvDesk/" + AppBrand.VersionText);
@@ -334,21 +357,98 @@ internal static class EdgeManageHelper
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                "下载 " + title + " 安装包失败：" + ex.Message +
+                "下载 " + title + "（" + ArchLabel(arch) + "）安装包失败：" + ex.Message +
                 "\r\n可检查网络，或手动打开微软下载页后安装。", ex);
         }
 
         if (!File.Exists(path) || new FileInfo(path).Length < 10_000)
             throw new InvalidOperationException("下载的安装包无效：" + path);
 
-        ApplyLog.Write("运行安装包：" + path + " " + args);
-        var code = RunSetup(path, args);
-        // Edge/WebView2 安装：0 成功；部分环境非 0 但仍在后台继续
-        if (code is not (0 or 19))
+        int code;
+        if (useMsiexec)
+        {
+            ApplyLog.Write("msiexec 安装 " + title + "（" + arch + "）：" + args);
+            code = RunProcess("msiexec.exe", args, timeoutMs: 900_000);
+        }
+        else
+        {
+            ApplyLog.Write("运行安装包：" + path + " " + args);
+            code = RunSetup(path, args);
+        }
+
+        if (code is not (0 or 19 or 3010))
             ApplyLog.Write(title + " 安装退出码 " + code + "（若稍后状态变为已安装可忽略）");
 
-        ApplyLog.SystemChange(path, "安装/恢复 " + title, "未安装", "已执行安装");
-        return title + " 安装命令已执行。若列表仍显示未安装，请稍等片刻后点刷新，或检查是否需重启。";
+        ApplyLog.SystemChange(path, "安装/恢复 " + title + " " + arch, "未安装", "已执行安装");
+        return title + "（" + ArchLabel(arch) + "）安装命令已执行。若列表仍显示未安装，请稍等片刻后点刷新，或检查是否需重启。";
+    }
+
+    /// <summary>本机原生架构：x64 / x86 / arm64（按操作系统位数，而非进程位数）。</summary>
+    internal static string ResolveOsEdgeArchitecture()
+    {
+        // WOW64 下 PROCESSOR_ARCHITECTURE 可能是 x86，真实位数在 PROCESSOR_ARCHITEW6432
+        var arch6432 = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432");
+        var arch = !string.IsNullOrWhiteSpace(arch6432)
+            ? arch6432
+            : (Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE") ?? "");
+
+        if (arch.Equals("ARM64", StringComparison.OrdinalIgnoreCase))
+            return "arm64";
+        if (arch.Equals("AMD64", StringComparison.OrdinalIgnoreCase)
+            || arch.Equals("x64", StringComparison.OrdinalIgnoreCase)
+            || Environment.Is64BitOperatingSystem)
+            return "x64";
+        return "x86";
+    }
+
+    private static string ArchLabel(string arch) => arch switch
+    {
+        "arm64" => "ARM64",
+        "x86" => "32 位",
+        _ => "64 位",
+    };
+
+    /// <summary>
+    /// 从微软企业版清单解析 Stable 通道、对应架构的离线 MSI 直链。
+    /// API：https://edgeupdates.microsoft.com/api/products?view=enterprise
+    /// </summary>
+    private static string? TryResolveEdgeEnterpriseMsiUrl(string arch)
+    {
+        try
+        {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            using var wc = new System.Net.WebClient();
+            wc.Headers.Add("User-Agent", "SrvDesk/" + AppBrand.VersionText);
+            wc.Headers.Add("Accept", "application/json");
+            var json = wc.DownloadString("https://edgeupdates.microsoft.com/api/products?view=enterprise");
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            // 只在 Stable 产品段内查找，避免命中 Beta/Dev
+            var stableAt = json.IndexOf("\"Product\":\"Stable\"", StringComparison.OrdinalIgnoreCase);
+            if (stableAt < 0)
+                stableAt = json.IndexOf("\"Product\": \"Stable\"", StringComparison.OrdinalIgnoreCase);
+            if (stableAt < 0) return null;
+
+            var nextProduct = json.IndexOf("\"Product\":", stableAt + 12, StringComparison.OrdinalIgnoreCase);
+            var section = nextProduct > stableAt
+                ? json.Substring(stableAt, nextProduct - stableAt)
+                : json.Substring(stableAt);
+
+            // "Platform":"Windows","Architecture":"x64", ... "Location":"https://...msi"
+            var archEsc = Regex.Escape(arch);
+            var m = Regex.Match(
+                section,
+                "\"Platform\"\\s*:\\s*\"Windows\"\\s*,\\s*\"Architecture\"\\s*:\\s*\"" + archEsc +
+                "\"[\\s\\S]*?\"Location\"\\s*:\\s*\"(https:[^\"]+?\\.msi)\"",
+                RegexOptions.IgnoreCase);
+            if (!m.Success) return null;
+            return m.Groups[1].Value.Replace("\\/", "/");
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("解析 Edge 企业版 MSI 失败：" + ex.Message);
+            return null;
+        }
     }
 
     private static int RunProcess(string file, string args, int timeoutMs = 120_000)
