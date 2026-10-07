@@ -528,6 +528,10 @@ internal static class OfficialInstallerResolver
         if (Uri.TryCreate(current, UriKind.Absolute, out var curUri)
             && curUri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
             req.Referer = "https://www.huorong.cn/";
+        else if (curUri is not null
+                 && (curUri.Host.IndexOf("claude.ai", StringComparison.OrdinalIgnoreCase) >= 0
+                     || curUri.Host.IndexOf("claude.com", StringComparison.OrdinalIgnoreCase) >= 0))
+            req.Referer = "https://claude.com/download";
         else if (LooksLikeOpaqueInstallerDownload(curUri!))
             req.Referer = "https://cloud.189.cn/";
 
@@ -568,6 +572,12 @@ internal static class OfficialInstallerResolver
             return true;
         if (uri.Host.IndexOf("download.cloud.189.cn", StringComparison.OrdinalIgnoreCase) >= 0
             && uri.Query.IndexOf("sig=", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        // Claude Desktop：…/win32/x64/msix|exe/latest/redirect → 307 到版本化包
+        if ((uri.Host.IndexOf("claude.ai", StringComparison.OrdinalIgnoreCase) >= 0
+             || uri.Host.IndexOf("claude.com", StringComparison.OrdinalIgnoreCase) >= 0)
+            && path.IndexOf("/api/desktop/", StringComparison.OrdinalIgnoreCase) >= 0
+            && path.IndexOf("/latest/redirect", StringComparison.OrdinalIgnoreCase) >= 0)
             return true;
         return false;
     }

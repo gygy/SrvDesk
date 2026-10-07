@@ -1,4 +1,4 @@
-# git-sync for G:\gitea\SrvDesk (included in Gitea-Git-AutoSync scheduled task)
+# Standard git-sync template for new g:\gitea projects (copy to scripts/git-sync.ps1)
 param(
     [string]$Message = "chore: sync workspace changes",
     [string]$RepoRoot = (Join-Path $PSScriptRoot "..")
@@ -8,9 +8,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $RepoRoot).Path
 Set-Location $Root
 
-$GiteaRemoteUrl = "ssh://git@192.168.80.3:8022/sheng/SrvDesk.git"
-$GithubRemoteUrl = "https://github.com/gygy/SrvDesk.git"
-$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { $GiteaRemoteUrl }
+$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { "ssh://git@192.168.80.3:8022/sheng/SrvDesk.git" }
 $Branch = if ($env:GIT_BRANCH) { $env:GIT_BRANCH } else { "main" }
 $SshKey = if ($env:GIT_SSH_KEY) { $env:GIT_SSH_KEY } else { Join-Path $env:USERPROFILE ".ssh\id_ed25519_gitea" }
 if (-not $env:GIT_SSH_COMMAND) {
@@ -18,7 +16,7 @@ if (-not $env:GIT_SSH_COMMAND) {
 }
 
 function Get-GitExe {
-    foreach ($c in @("git", "$env:ProgramFiles\Git\cmd\git.exe", "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe")) {
+    foreach ($c in @("git", "$env:ProgramFiles\Git\cmd\git.exe")) {
         if ($c -eq "git") {
             $cmd = Get-Command git -ErrorAction SilentlyContinue
             if ($cmd) { return $cmd.Source }
@@ -37,16 +35,6 @@ function Invoke-Git {
     if ($LASTEXITCODE -ne 0) { throw "git failed: $($GitArgs -join ' ')" }
 }
 
-$prevEa = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
-$originUrl = & $git @GitConfig remote get-url origin 2>$null
-$ErrorActionPreference = $prevEa
-if (-not $originUrl) {
-    Invoke-Git remote add origin $RemoteUrl
-} else {
-    Invoke-Git remote set-url origin $RemoteUrl
-}
-
 $status = & $git @GitConfig status --porcelain
 if ($status) {
     Invoke-Git add -A
@@ -54,5 +42,3 @@ if ($status) {
 }
 Invoke-Git push -u origin $Branch
 Write-Host "Pushed to origin/$Branch"
-
-& (Join-Path $PSScriptRoot "publish-github.ps1") -RepoRoot $Root

@@ -1266,7 +1266,15 @@ internal static class CommonSoftwareHelper
         var fileName = Path.GetFileName(uri.LocalPath);
         if (string.IsNullOrWhiteSpace(fileName)
             || !OfficialInstallerResolver.HasInstallerExtension(fileName))
-            fileName = item.Id + (url.IndexOf(".msi", StringComparison.OrdinalIgnoreCase) >= 0 ? "-setup.msi" : "-setup.exe");
+        {
+            if (url.IndexOf(".msix", StringComparison.OrdinalIgnoreCase) >= 0
+                || url.IndexOf("/msix/", StringComparison.OrdinalIgnoreCase) >= 0)
+                fileName = item.Id + "-setup.msix";
+            else if (url.IndexOf(".msi", StringComparison.OrdinalIgnoreCase) >= 0)
+                fileName = item.Id + "-setup.msi";
+            else
+                fileName = item.Id + "-setup.exe";
+        }
         var dest = Path.Combine(DownloadDir, fileName);
 
         Report(onProgress, "下载离线安装包…", 5);
@@ -1401,6 +1409,13 @@ internal static class CommonSoftwareHelper
         if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
 
+        // Claude Desktop 等：MSIX/Appx 旁加载
+        if (dest.EndsWith(".msix", StringComparison.OrdinalIgnoreCase)
+            || dest.EndsWith(".appx", StringComparison.OrdinalIgnoreCase)
+            || dest.EndsWith(".msixbundle", StringComparison.OrdinalIgnoreCase)
+            || dest.EndsWith(".appxbundle", StringComparison.OrdinalIgnoreCase))
+            return InstallLocalMsixPackage(dest);
+
         // 天翼：自绘壳忽略 /S，必须 UI 自动勾选协议并点安装
         var fileName = Path.GetFileName(dest) ?? "";
         if (fileName.StartsWith("tianyiyun", StringComparison.OrdinalIgnoreCase)
@@ -1409,6 +1424,20 @@ internal static class CommonSoftwareHelper
 
         // NSIS/Inno 等：切勿重定向 stdout/stderr，否则易管道堵死
         return RunWindowlessNoRedirect(dest, args, timeoutMs: 600_000);
+    }
+
+    private static int InstallLocalMsixPackage(string packagePath)
+    {
+        EnsureAppxSideloadAllowed();
+        var esc = packagePath.Replace("'", "''");
+        var script = $@"
+$ErrorActionPreference = 'Stop'
+Add-AppxPackage -Path '{esc}' -ForceApplicationShutdown -ForceUpdateFromAnyVersion -ErrorAction Stop
+";
+        var code = RunPowerShell(script, timeoutMs: 600_000);
+        if (code != 0 && IsAlreadyInstalledAppxOutput(LastPowerShellOutput))
+            return 0;
+        return code;
     }
 
     /// <summary>静默跑 EXE 安装包：隐藏窗口、不重定向输出（避免 NSIS 卡死）。</summary>
