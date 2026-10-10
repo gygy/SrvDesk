@@ -21,7 +21,7 @@ alwaysApply: true
 - `publish-github.ps1`：从 `main` 生成 `public` 分支，白名单推到 `github/main`
 
 GitHub 白名单：`README.md`、`README_en.md`、`README_cn.md`、`LICENSE`、`DISCLAIMER.md`、`PRIVACY.md`。  
-二进制只走 GitHub Releases（`SrvDesk.exe`）。
+二进制只走 GitHub Releases：`SrvDesk.exe`（便携）+ `SrvDesk-Setup.exe`（安装包，均基于已混淆构建）。
 
 ## 禁止
 

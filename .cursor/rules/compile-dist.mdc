@@ -3,20 +3,22 @@ description: 编译输出到 dist：每次必须轻度混淆，并递增版本�
 alwaysApply: true
 ---
 
-# 编译输出到 dist + Obfuscar + 升版本
+# 编译输出到 dist + Obfuscar + 升版本 + 安装包
 
-## 交付用 exe（默认，强制）
+## 交付物（默认，强制）
 
-凡编译给用户验证或交付的 `dist\SrvDesk.exe`，**必须同时满足**：
+凡编译给用户验证或交付，**必须同时满足**：
 
-1. **轻度混淆**（Obfuscar）
-2. **补丁版本号 +1**（改 `SrvDesk.csproj` 的 Version / FileVersion / InformationalVersion）
+1. **轻度混淆**（Obfuscar）后的 `dist\SrvDesk.exe`
+2. **安装包** `dist\SrvDesk-Setup.exe`（包装上述已混淆 exe；安装后默认创建桌面快捷方式）
+3. **补丁版本号 +1**（改 `SrvDesk.csproj` 的 Version / FileVersion / InformationalVersion）
 
 ```powershell
 .\scripts\publish.ps1
 ```
 
-- 脚本默认：`dotnet publish` → **Obfuscar** → 写入 `dist\`，并 **自动 bump 补丁版本**
+- 脚本默认：`dotnet publish` → **Obfuscar** → `dist\SrvDesk.exe` → **Inno Setup** → `dist\SrvDesk-Setup.exe`，并 **自动 bump 补丁版本**
+- 安装包**禁止**包装未混淆 exe（`-SkipObfuscate` 时不生成 Setup）
 - **禁止**默认加 `-NoBumpVersion`（仅用户明确说「不升版本」时才可加）
 - **禁止**默认加 `-SkipObfuscate`（仅调试排查混淆问题时才可临时使用，且勿当交付包）
 - **禁止**用 `WgHost.exe` 或其它临时程序名冒充交付包
@@ -24,7 +26,8 @@ alwaysApply: true
 
 ## dist 约定
 
-- 优先覆盖 `dist\SrvDesk.exe`；若被锁住则写成 `dist\SrvDesk-HHmmss.exe`
+- 优先覆盖 `dist\SrvDesk.exe` 与 `dist\SrvDesk-Setup.exe`
+- 若 exe 被锁住则写成 `dist\SrvDesk-HHmmss.exe`（仍尽量打 Setup）
 - 不要只把结果留在 `src\SrvDesk\bin\` 或 `obj\`
 - `dist/` 已 gitignore，不要提交进去
 

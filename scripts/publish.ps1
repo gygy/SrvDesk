@@ -1,7 +1,8 @@
 ﻿param(
     [string]$Configuration = "Release",
     [switch]$SkipObfuscate,
-    [switch]$NoBumpVersion
+    [switch]$NoBumpVersion,
+    [switch]$SkipInstaller
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,10 +12,13 @@ $repo = Split-Path $PSScriptRoot -Parent
 $proj = Join-Path $repo "src\SrvDesk\SrvDesk.csproj"
 $dist = Join-Path $repo "dist"
 $obfuscarXml = Join-Path $PSScriptRoot "obfuscar.xml"
+$issScript = Join-Path $PSScriptRoot "SrvDesk.iss"
 $toolsDir = Join-Path $repo "tools\obfuscar"
+$innoToolsDir = Join-Path $repo "tools\innosetup"
 $publishRaw = Join-Path $repo "artifacts\publish-raw"
 $obfIn = Join-Path $repo "artifacts\obfuscar-in"
 $obfOut = Join-Path $repo "artifacts\obfuscar-out"
+$appIcon = Join-Path $repo "src\SrvDesk\app.ico"
 
 function Get-ProjectVersion([string]$CsprojPath) {
     $raw = Get-Content -LiteralPath $CsprojPath -Raw -Encoding UTF8
@@ -176,6 +180,104 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
     Write-Host ("Obfuscated (light): {0}" -f $DestExe)
 }
 
+function Get-InnoCompiler {
+    foreach ($c in @(
+            (Join-Path $innoToolsDir "ISCC.exe"),
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+        )) {
+        if ($c -and (Test-Path -LiteralPath $c)) { return $c }
+    }
+    return $null
+}
+
+function Ensure-InnoSetup {
+    $existing = Get-InnoCompiler
+    if ($existing) { return $existing }
+
+    New-Item -ItemType Directory -Force -Path $innoToolsDir | Out-Null
+    $setup = Join-Path $repo "artifacts\innosetup-install.exe"
+    New-Item -ItemType Directory -Force -Path (Split-Path $setup -Parent) | Out-Null
+
+    $mirrors = @(
+        "https://jrsoftware.org/download.php/is.exe",
+        "https://files.jrsoftware.org/is/6/innosetup-6.4.3.exe",
+        "https://ghproxy.net/https://github.com/jrsoftware/issrc/releases/download/is-6_4_3/innosetup-6.4.3.exe"
+    )
+
+    Write-Host "Downloading Inno Setup 6 (for SrvDesk-Setup.exe)..."
+    $ok = $false
+    foreach ($url in $mirrors) {
+        try {
+            if (Test-Path $setup) { Remove-Item -LiteralPath $setup -Force -ErrorAction SilentlyContinue }
+            Write-Host ("  try: " + $url)
+            Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing -TimeoutSec 180
+            if ((Test-Path $setup) -and ((Get-Item $setup).Length -gt 1000000)) {
+                $ok = $true
+                break
+            }
+        }
+        catch {
+            Write-Warning ("Inno download failed: " + $_.Exception.Message)
+        }
+    }
+    if (-not $ok) {
+        throw "Cannot download Inno Setup. Install manually, or place ISCC.exe under tools\innosetup\"
+    }
+
+    Write-Host "Installing Inno Setup to tools\innosetup ..."
+    $args = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=`"$innoToolsDir`""
+    $p = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
+    if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) {
+        throw "Inno Setup silent install failed, exit $($p.ExitCode)"
+    }
+
+    $iscc = Get-InnoCompiler
+    if (-not $iscc) {
+        throw "ISCC.exe not found after Inno Setup install"
+    }
+    Remove-Item -LiteralPath $setup -Force -ErrorAction SilentlyContinue
+    return $iscc
+}
+
+function Invoke-BuildInstaller([string]$PayloadExe, [string]$Version) {
+    if (-not (Test-Path -LiteralPath $PayloadExe)) {
+        throw "Installer payload missing: $PayloadExe"
+    }
+    if (-not (Test-Path -LiteralPath $issScript)) {
+        throw "Inno script missing: $issScript"
+    }
+    if (-not (Test-Path -LiteralPath $appIcon)) {
+        throw "Setup icon missing: $appIcon"
+    }
+
+    $iscc = Ensure-InnoSetup
+    $outName = "SrvDesk-Setup"
+    $setupPath = Join-Path $dist ($outName + ".exe")
+    if (Test-Path $setupPath) {
+        Remove-Item -LiteralPath $setupPath -Force -ErrorAction SilentlyContinue
+    }
+
+    $defines = @(
+        "/DMyAppVersion=$Version",
+        ('/DMyAppSource="' + $PayloadExe + '"'),
+        ('/DMyAppIcon="' + $appIcon + '"'),
+        ('/DMyOutputDir="' + $dist + '"'),
+        "/DMyOutputName=$outName"
+    )
+
+    Write-Host ("Building installer from obfuscated payload: " + $PayloadExe)
+    & $iscc $defines $issScript 2>&1 | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) {
+        throw "ISCC failed with exit code $LASTEXITCODE"
+    }
+    if (-not (Test-Path -LiteralPath $setupPath)) {
+        throw "Installer output missing: $setupPath"
+    }
+    Write-Host ("Installer: {0} ({1} bytes)" -f $setupPath, (Get-Item $setupPath).Length)
+    return $setupPath
+}
+
 $code = Publish-ToDir $publishRaw
 if ($code -ne 0) {
     Write-Error "dotnet publish failed"
@@ -189,13 +291,15 @@ if ($null -eq $built) {
 }
 
 $destExe = Join-Path $dist "SrvDesk.exe"
+$obfuscatedPayload = $null
 try {
     if ($SkipObfuscate) {
         Copy-Item -LiteralPath $built.FullName -Destination $destExe -Force
-        Write-Host "SkipObfuscate: copied plain Release build"
+        Write-Host "SkipObfuscate: copied plain Release build (installer will NOT be built)"
     }
     else {
         Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $destExe
+        $obfuscatedPayload = $destExe
     }
 }
 catch {
@@ -209,6 +313,7 @@ catch {
     else {
         try {
             Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $fallback
+            $obfuscatedPayload = $fallback
         }
         catch {
             Copy-Item -LiteralPath $built.FullName -Destination $fallback -Force
@@ -216,20 +321,47 @@ catch {
         }
     }
     Write-Host ("Wrote: {0} ({1} bytes)" -f $fallback, (Get-Item $fallback).Length)
-    exit 0
+    if (-not $obfuscatedPayload) {
+        Write-Warning "No obfuscated payload; skip installer"
+        exit 0
+    }
+    $destExe = $obfuscatedPayload
 }
 
 Get-ChildItem -LiteralPath $dist -Filter "*.config" -ErrorAction SilentlyContinue | Remove-Item -Force
 Get-ChildItem -LiteralPath $dist -Filter "*.pdb" -ErrorAction SilentlyContinue | Remove-Item -Force
 Get-ChildItem -LiteralPath $dist -Filter "SrvDesk-*.exe" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike "SrvDesk-Setup*" } |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
-# Clean temp artifacts (keep tools\obfuscar cache)
+$ver = Get-ProjectVersion $proj
+$setupBuilt = $null
+if ($SkipInstaller) {
+    Write-Host "SkipInstaller: not building SrvDesk-Setup.exe"
+}
+elseif ($SkipObfuscate -or -not $obfuscatedPayload) {
+    Write-Warning "Installer requires light-obfuscated payload; skipped (do not ship plain build as Setup)."
+}
+else {
+    try {
+        $setupBuilt = Invoke-BuildInstaller -PayloadExe $obfuscatedPayload -Version $ver
+    }
+    catch {
+        Write-Error ("Installer build failed: " + $_.Exception.Message)
+        exit 1
+    }
+}
+
+# Clean temp artifacts (keep tools\obfuscar / tools\innosetup cache)
 Remove-Item -LiteralPath $publishRaw -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $obfIn -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $obfOut -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\obfuscar.generated.xml") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $repo "artifacts\innosetup-install.exe") -Force -ErrorAction SilentlyContinue
 
 $exe = Get-Item -LiteralPath $destExe
-$ver = Get-ProjectVersion $proj
 Write-Host ("Published: {0} ({1} bytes) v{2} [light obfuscation]" -f $exe.FullName, $exe.Length, $ver)
+if ($setupBuilt) {
+    $setupItem = Get-Item -LiteralPath $setupBuilt
+    Write-Host ("Published: {0} ({1} bytes) v{2} [setup + desktop shortcut]" -f $setupItem.FullName, $setupItem.Length, $ver)
+}
