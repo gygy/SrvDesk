@@ -48,16 +48,13 @@ MinVersion=6.1sp1
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-; checkedonce: default create desktop shortcut on first install
-Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加图标:"; Flags: checkedonce
-
 [Files]
 Source: "{#MyAppSource}"; DestDir: "{app}"; DestName: "SrvDesk.exe"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\SrvDesk"; Filename: "{app}\SrvDesk.exe"; Comment: "Windows 系统优化助手"
-Name: "{autodesktop}\SrvDesk"; Filename: "{app}\SrvDesk.exe"; Comment: "Windows 系统优化助手"; Tasks: desktopicon
+; 安装完成后始终创建桌面快捷方式
+Name: "{autodesktop}\SrvDesk"; Filename: "{app}\SrvDesk.exe"; Comment: "Windows 系统优化助手"
 
 [Run]
 Filename: "{app}\SrvDesk.exe"; Description: "立即运行 SrvDesk"; Flags: nowait postinstall skipifsilent shellexec
