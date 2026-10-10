@@ -516,10 +516,11 @@ internal static class CommonSoftwareHelper
     private static string FinishInstallSuccess(
         CommonSoftwareItem item,
         Action<SoftwareInstallProgress>? onProgress,
-        string message = "")
+        string message = "",
+        bool createShortcuts = true)
     {
         InvalidateStatusCache();
-        var tip = SoftwareShortcutHelper.EnsureShortcuts(item);
+        var tip = createShortcuts ? SoftwareShortcutHelper.EnsureShortcuts(item) : "";
         Report(onProgress, "安装完成", 100);
         if (string.IsNullOrWhiteSpace(message))
             return string.IsNullOrWhiteSpace(tip) ? "" : tip;
@@ -732,6 +733,17 @@ internal static class CommonSoftwareHelper
         if (item.IsScoopBootstrap)
             return InstallScoop(onProgress);
 
+        // 已安装则跳过，避免重复安装/重复桌面图标
+        InvalidateStatusCache();
+        var existing = Query(item);
+        if (existing.Installed)
+        {
+            Report(onProgress, "已安装，跳过", 100);
+            ApplyLog.Write("跳过（已安装）：" + item.Title
+                + (string.IsNullOrWhiteSpace(existing.Version) ? "" : " " + existing.Version));
+            return "已安装，已跳过（未重复安装）。";
+        }
+
         Report(onProgress, "准备安装 " + item.Title, 2);
         var preferOffline = PreferOfflineNow(item);
         var preferOfficialApi = PreferOfficialApiNow(item);
@@ -795,7 +807,7 @@ internal static class CommonSoftwareHelper
             if (code == 0)
                 return FinishInstallSuccess(item, onProgress);
             if (code == -1978335189) // 0x8A150013 already installed
-                return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。");
+                return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。", createShortcuts: false);
 
             // PreferAppx/Offline 的包跳过 msstore，避免 Server 挂死
             if (!SkipMsStoreRetry(item))
@@ -805,7 +817,7 @@ internal static class CommonSoftwareHelper
                 if (code == 0)
                     return FinishInstallSuccess(item, onProgress);
                 if (code == -1978335189)
-                    return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。");
+                    return FinishInstallSuccess(item, onProgress, "软件已安装或无需重复安装。", createShortcuts: false);
             }
         }
 
@@ -873,6 +885,14 @@ internal static class CommonSoftwareHelper
         {
             Report(onProgress, "自动安装未成功", 100);
             return item.Title + " 自动安装未成功（官网解析或下载/静默安装失败）。请检查网络后重试。未打开官网。";
+        }
+
+        // Claude / FileZilla：自动安装失败时勿只开官网（Claude 为 SPA；FileZilla 反爬加密页）
+        if (item.Id.Equals("claude-desktop", StringComparison.OrdinalIgnoreCase)
+            || item.Id.Equals("filezilla", StringComparison.OrdinalIgnoreCase))
+        {
+            Report(onProgress, "自动安装未成功", 100);
+            return item.Title + " 自动安装未成功（下载或安装失败）。请检查网络后重试。未打开官网。";
         }
 
         Report(onProgress, "打开官方下载页…", 95);
@@ -3785,8 +3805,19 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
         if (uri.Host.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0)
             return "https://www.huorong.cn/";
-        if (uri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0
-            || OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url))
+        if (uri.Host.IndexOf("claude.ai", StringComparison.OrdinalIgnoreCase) >= 0
+            || uri.Host.IndexOf("claude.com", StringComparison.OrdinalIgnoreCase) >= 0
+            || uri.Host.IndexOf("downloads.claude.ai", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "https://claude.com/download";
+        if (uri.Host.IndexOf("fossies.org", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "https://fossies.org/windows/misc/";
+        if (uri.Host.IndexOf("filezilla-project.org", StringComparison.OrdinalIgnoreCase) >= 0
+            || uri.Host.IndexOf("cdn.filezilla-project.org", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "https://filezilla-project.org/download.php?platform=win64";
+        if (uri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "https://cloud.189.cn/";
+        if (OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url)
+            && uri.Host.IndexOf("189.cn", StringComparison.OrdinalIgnoreCase) >= 0)
             return "https://cloud.189.cn/";
         return null;
     }
@@ -3827,11 +3858,19 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
     {
         try
         {
+            var ext = Path.GetExtension(path) ?? "";
+            // MSIX/Appx 实质为 ZIP（PK），不能按 MZ 校验
+            if (ext.Equals(".msix", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".appx", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".msixbundle", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".appxbundle", StringComparison.OrdinalIgnoreCase))
+                return LooksLikeBinaryPackage(path);
+
             using var fs = File.OpenRead(path);
             if (fs.Length < 2) return false;
             var b0 = fs.ReadByte();
             var b1 = fs.ReadByte();
-            // PE EXE: MZ；MSI 为复合文档，常见 D0 CF，此处放宽到非纯文本即可
+            // PE EXE: MZ；MSI 为复合文档，常见 D0 CF
             if (b0 == 'M' && b1 == 'Z') return true;
             if (b0 == 0xD0 && b1 == 0xCF) return true;
             return false;

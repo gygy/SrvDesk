@@ -28,20 +28,24 @@ internal static class SoftwareShortcutHelper
             if (title.Length == 0)
                 title = item.Id;
             var workDir = Path.GetDirectoryName(target) ?? "";
-            var created = 0;
+            var folders = EnumShortcutFolders().ToList();
 
-            foreach (var dir in EnumShortcutFolders())
+            // 任一桌面/开始菜单已有指向同一目标的快捷方式（含安装程序自建），则不再补建，避免重复图标
+            if (folders.Any(dir => FolderHasShortcutTo(dir, target!)))
+            {
+                ApplyLog.Write("快捷方式：已存在指向 " + target + "，跳过补建");
+                return "";
+            }
+
+            var created = 0;
+            foreach (var dir in folders)
             {
                 try
                 {
                     Directory.CreateDirectory(dir);
                     var lnk = Path.Combine(dir, title + ".lnk");
-                    if (File.Exists(lnk))
-                    {
-                        // 已存在且指向同一目标则跳过
-                        if (ShortcutPointsTo(lnk, target!))
-                            continue;
-                    }
+                    if (File.Exists(lnk) && ShortcutPointsTo(lnk, target!))
+                        continue;
 
                     CreateShortcut(lnk, target!, workDir, item.Title);
                     created++;
@@ -92,40 +96,52 @@ internal static class SoftwareShortcutHelper
     private static IEnumerable<string> EnumShortcutFolders()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // 所有用户：管理员安装后当前用户也能看到
-        foreach (var p in new[]
-                 {
-                     Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-                     Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
-                 })
-        {
-            foreach (var x in AddYield(p, seen))
-                yield return x;
-        }
-
-        // 当前进程用户（若非 SYSTEM）
-        foreach (var p in new[]
-                 {
-                     Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                     Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                 })
-        {
-            foreach (var x in AddYield(p, seen))
-                yield return x;
-        }
-
-        // 交互登录用户（提权后 Desktop 常指向 Administrator，这里补真正登录用户）
         var profile = TryGetInteractiveUserProfile();
+
+        // 桌面：只写一处，避免「公共桌面 + 用户桌面」同时出现两个相同图标
+        string? desktop = null;
+        if (!string.IsNullOrWhiteSpace(profile))
+            desktop = Path.Combine(profile!, "Desktop");
+        if (string.IsNullOrWhiteSpace(desktop) || !Directory.Exists(Path.GetDirectoryName(desktop!) ?? ""))
+            desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        if (string.IsNullOrWhiteSpace(desktop))
+            desktop = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
+        foreach (var x in AddYield(desktop, seen))
+            yield return x;
+
+        // 开始菜单：公共 + 交互用户（不重复显示在桌面）
+        foreach (var x in AddYield(
+                     Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), seen))
+            yield return x;
+
         if (!string.IsNullOrWhiteSpace(profile))
         {
-            foreach (var x in AddYield(Path.Combine(profile!, "Desktop"), seen))
-                yield return x;
             foreach (var x in AddYield(
                          Path.Combine(profile!, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs"),
                          seen))
                 yield return x;
         }
+        else
+        {
+            foreach (var x in AddYield(
+                         Environment.GetFolderPath(Environment.SpecialFolder.Programs), seen))
+                yield return x;
+        }
+    }
+
+    private static bool FolderHasShortcutTo(string dir, string target)
+    {
+        try
+        {
+            if (!Directory.Exists(dir)) return false;
+            foreach (var lnk in Directory.EnumerateFiles(dir, "*.lnk"))
+            {
+                if (ShortcutPointsTo(lnk, target))
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
     }
 
     private static IEnumerable<string> AddYield(string? path, HashSet<string> seen)

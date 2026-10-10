@@ -852,19 +852,32 @@ internal sealed class CommonSoftwareDialog : Form
             return;
         }
 
-        var selected = _rows.Values.Where(r => r.Selected).Select(r => r.Item).ToList();
-        if (selected.Count == 0)
+        var selectedRows = _rows.Values.Where(r => r.Selected).ToList();
+        if (selectedRows.Count == 0)
         {
             MessageBox.Show(this, "请先勾选要安装的软件。", "安装所选", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
-        var ordered = selected.OrderBy(x => x.IsWingetBootstrap ? 0 : 1).ToList();
+        var already = selectedRows.Where(r => r.IsInstalled).Select(r => r.Item).ToList();
+        var toInstall = selectedRows.Where(r => !r.IsInstalled).Select(r => r.Item).ToList();
+        if (toInstall.Count == 0)
+        {
+            MessageBox.Show(this,
+                "所选软件均已安装，无需重复安装。",
+                "安装所选", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var ordered = toInstall.OrderBy(x => x.IsWingetBootstrap ? 0 : 1).ToList();
         var names = string.Join("\r\n", ordered.Select(x => "· " + x.Title));
+        var skipTip = already.Count > 0
+            ? $"\r\n\r\n已跳过 {already.Count} 款已安装：" + string.Join("、", already.Select(x => x.Title))
+            : "";
         if (_askBeforeInstall.Checked)
         {
             var answer = MessageBox.Show(this,
-                $"将并行安装已选的 {ordered.Count} 款软件（最多 3 路同时进行；winget 包自动排队）：\r\n\r\n{names}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
+                $"将并行安装 {ordered.Count} 款未安装软件（最多 3 路同时进行；winget 包自动排队）：\r\n\r\n{names}{skipTip}\r\n\r\n安装期间可继续使用主窗口。是否继续？",
                 "安装所选", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
         }

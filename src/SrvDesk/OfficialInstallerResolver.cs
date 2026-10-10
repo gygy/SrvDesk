@@ -145,6 +145,10 @@ internal static class OfficialInstallerResolver
         if (u.IndexOf("download.xnview.com", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (u.IndexOf("downloadHr", StringComparison.OrdinalIgnoreCase) >= 0
             && u.IndexOf("huorong.cn", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        // Claude Desktop 官方 latest redirect
+        if (u.IndexOf("claude.ai/api/desktop/", StringComparison.OrdinalIgnoreCase) >= 0
+            && u.IndexOf("/latest/redirect", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
         return false;
     }
 

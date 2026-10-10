@@ -217,7 +217,7 @@ internal static class CommonSoftwareCatalog
             "https://claude.com/download",
             essential: false,
             offlineInstallerUrl: "https://claude.ai/api/desktop/win32/x64/msix/latest/redirect",
-            offlineInstallArgs: "--silent",
+            preferOfflineInstall: true,
             detectExeNames: ["Claude.exe"],
             appxPackageName: "Claude",
             installerLinkPattern: @"Claude-[a-f0-9]+\.(exe|msix)|Claude.*Setup.*\.exe"),
@@ -363,9 +363,11 @@ internal static class CommonSoftwareCatalog
             installerLinkPattern: @"peazip-.*\.(WINDOWS|WIN64).*\.exe|peazip.*\.exe"),
 
         // 网络/专业
+        // FileZilla 官网页反爬加密；用 Fossies 镜像目录解析最新 win64 安装包
         Item("filezilla", "FileZilla（FTP 客户端）", "网络/专业", "",
-            ["FileZilla"], "https://filezilla-project.org/download.php?show_all=1", essential: false,
+            ["FileZilla"], "https://fossies.org/windows/misc/", essential: false,
             offlineInstallArgs: "/S",
+            preferOfflineInstall: true,
             detectExeNames: ["filezilla.exe"],
             installerLinkPattern: @"FileZilla_\d[\d.]*_win64-setup\.exe"),
         Item("openvpn", "OpenVPN", "网络/专业", "OpenVPNTechnologies.OpenVPN",
