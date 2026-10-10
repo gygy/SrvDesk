@@ -3834,6 +3834,9 @@ Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller | Out-Null
         wc.Proxy.Credentials = CredentialCache.DefaultCredentials;
         wc.Headers[HttpRequestHeader.UserAgent] = BrowserUa;
         wc.Headers[HttpRequestHeader.Accept] = "*/*";
+        var referer = DownloadRefererFor(url);
+        if (referer is not null)
+            wc.Headers[HttpRequestHeader.Referer] = referer;
         var lastPct = -1;
         wc.DownloadProgressChanged += (_, e) =>
         {
