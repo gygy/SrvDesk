@@ -8,17 +8,17 @@ namespace SrvDesk;
 [DataContract]
 internal sealed class UserPlanIndex
 {
-    [DataMember] public List<UserPlanSummary> Plans { get; set; } = [];
-    [DataMember] public string? LastPlanId { get; set; }
+    [DataMember(Name = "Plans")] public List<UserPlanSummary> Plans { get; set; } = [];
+    [DataMember(Name = "LastPlanId")] public string? LastPlanId { get; set; }
 }
 
 [DataContract]
 internal sealed class UserPlanSummary
 {
-    [DataMember] public string Id { get; set; } = "";
-    [DataMember] public string Name { get; set; } = "";
-    [DataMember] public string UpdatedUtc { get; set; } = "";
-    [DataMember] public int ItemCount { get; set; }
+    [DataMember(Name = "Id")] public string Id { get; set; } = "";
+    [DataMember(Name = "Name")] public string Name { get; set; } = "";
+    [DataMember(Name = "UpdatedUtc")] public string UpdatedUtc { get; set; } = "";
+    [DataMember(Name = "ItemCount")] public int ItemCount { get; set; }
 
     public override string ToString() =>
         string.IsNullOrWhiteSpace(Name) ? AppLang.L("(未命名)", "(unnamed)") : Name;
@@ -27,9 +27,9 @@ internal sealed class UserPlanSummary
 [DataContract]
 internal sealed class UserPlanDetail
 {
-    [DataMember] public string Id { get; set; } = "";
-    [DataMember] public string Name { get; set; } = "";
-    [DataMember] public List<UserPlanItem> Items { get; set; } = [];
+    [DataMember(Name = "Id")] public string Id { get; set; } = "";
+    [DataMember(Name = "Name")] public string Name { get; set; } = "";
+    [DataMember(Name = "Items")] public List<UserPlanItem> Items { get; set; } = [];
 }
 
 /// <summary>
@@ -38,14 +38,14 @@ internal sealed class UserPlanDetail
 [DataContract]
 internal sealed class UserPlanItem
 {
-    [DataMember] public string Key { get; set; } = "";
+    [DataMember(Name = "Key")] public string Key { get; set; } = "";
     /// <summary>目标档位：与界面 ChoiceIndex 一致（开关项：优化档 / 非优化档）。</summary>
-    [DataMember] public int Value { get; set; }
-    [DataMember] public int OptimizedIndex { get; set; } = 1;
-    [DataMember] public string Title { get; set; } = "";
-    [DataMember] public string Module { get; set; } = "";
-    [DataMember] public string DesiredLabel { get; set; } = "";
-    [DataMember] public bool Enabled { get; set; } = true;
+    [DataMember(Name = "Value")] public int Value { get; set; }
+    [DataMember(Name = "OptimizedIndex")] public int OptimizedIndex { get; set; } = 1;
+    [DataMember(Name = "Title")] public string Title { get; set; } = "";
+    [DataMember(Name = "Module")] public string Module { get; set; } = "";
+    [DataMember(Name = "DesiredLabel")] public string DesiredLabel { get; set; } = "";
+    [DataMember(Name = "Enabled")] public bool Enabled { get; set; } = true;
 
     public int OffIndex => OptimizedIndex == 0 ? 1 : 0;
 }
@@ -53,10 +53,34 @@ internal sealed class UserPlanItem
 [DataContract]
 internal sealed class UserPlanExportFile
 {
-    [DataMember] public int Version { get; set; } = 1;
-    [DataMember] public string ExportedUtc { get; set; } = "";
-    [DataMember] public string? LastPlanId { get; set; }
-    [DataMember] public List<UserPlanDetail> Plans { get; set; } = [];
+    [DataMember(Name = "Version")] public int Version { get; set; } = 1;
+    [DataMember(Name = "ExportedUtc")] public string ExportedUtc { get; set; } = "";
+    [DataMember(Name = "LastPlanId")] public string? LastPlanId { get; set; }
+    [DataMember(Name = "Plans")] public List<UserPlanDetail> Plans { get; set; } = [];
+}
+
+/// <summary>
+/// 旧版轻度混淆曾把属性名改成 A/B/a…，导致换程序/测通后 index 对不上。
+/// 仅用于读盘迁移到稳定字段名。
+/// </summary>
+[DataContract]
+internal sealed class UserPlanLegacyObfDetail
+{
+    [DataMember(Name = "A")] public string? Id { get; set; }
+    [DataMember(Name = "a")] public string? Name { get; set; }
+    [DataMember(Name = "B")] public List<UserPlanLegacyObfItem>? Items { get; set; }
+}
+
+[DataContract]
+internal sealed class UserPlanLegacyObfItem
+{
+    [DataMember(Name = "A")] public string? Key { get; set; }
+    [DataMember(Name = "B")] public int Value { get; set; }
+    [DataMember(Name = "C")] public string? Module { get; set; }
+    [DataMember(Name = "D")] public bool Enabled { get; set; } = true;
+    [DataMember(Name = "a")] public int OptimizedIndex { get; set; } = 1;
+    [DataMember(Name = "b")] public string? Title { get; set; }
+    [DataMember(Name = "c")] public string? DesiredLabel { get; set; }
 }
 
 /// <summary>
@@ -123,7 +147,7 @@ internal static class UserPlanStore
                 plan.Id = Guid.NewGuid().ToString("N");
             WriteJson(PlanPath(plan.Id), plan);
 
-            var index = LoadIndexUnlocked();
+            var index = LoadIndexUnlocked(reconcile: false);
             var summary = index.Plans.FirstOrDefault(p =>
                 string.Equals(p.Id, plan.Id, StringComparison.OrdinalIgnoreCase));
             if (summary is null)
@@ -194,7 +218,7 @@ internal static class UserPlanStore
             }
             catch { /* ignore */ }
 
-            var index = LoadIndexUnlocked();
+            var index = LoadIndexUnlocked(reconcile: false);
             index.Plans.RemoveAll(p => string.Equals(p.Id, planId, StringComparison.OrdinalIgnoreCase));
             if (string.Equals(index.LastPlanId, planId, StringComparison.OrdinalIgnoreCase))
                 index.LastPlanId = index.Plans.FirstOrDefault()?.Id;
@@ -206,7 +230,7 @@ internal static class UserPlanStore
     {
         lock (Gate)
         {
-            var index = LoadIndexUnlocked();
+            var index = LoadIndexUnlocked(reconcile: false);
             if (index.Plans.Any(p => string.Equals(p.Id, planId, StringComparison.OrdinalIgnoreCase)))
             {
                 index.LastPlanId = planId;
@@ -340,31 +364,10 @@ internal static class UserPlanStore
             }
 
             var index = new UserPlanIndex { Plans = [], LastPlanId = null };
-            foreach (var f in Directory.GetFiles(RootDir, "*.json"))
-            {
-                if (string.Equals(Path.GetFileName(f), "index.json", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                try
-                {
-                    var p = ReadJson<UserPlanDetail>(f);
-                    if (p is null || string.IsNullOrWhiteSpace(p.Id)) continue;
-                    p.Items ??= [];
-                    index.Plans.Add(new UserPlanSummary
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        UpdatedUtc = DateTime.UtcNow.ToString("o"),
-                        ItemCount = p.Items.Count,
-                    });
-                }
-                catch { /* ignore */ }
-            }
-
+            ReconcileIndexWithDisk(index, forceRewrite: true);
             if (!string.IsNullOrWhiteSpace(file.LastPlanId)
                 && index.Plans.Any(p => string.Equals(p.Id, file.LastPlanId, StringComparison.OrdinalIgnoreCase)))
                 index.LastPlanId = file.LastPlanId;
-            else
-                index.LastPlanId = index.Plans.FirstOrDefault()?.Id;
             WriteJson(IndexPath, index);
             return imported;
         }
@@ -382,38 +385,184 @@ internal static class UserPlanStore
         return n;
     }
 
-    private static UserPlanIndex LoadIndexUnlocked()
+    private static UserPlanIndex LoadIndexUnlocked(bool reconcile = true)
     {
         EnsureRoot();
+        UserPlanIndex data;
         try
         {
             if (!File.Exists(IndexPath))
-                return new UserPlanIndex();
-            var data = ReadJson<UserPlanIndex>(IndexPath) ?? new UserPlanIndex();
-            data.Plans ??= [];
-            return data;
+                data = new UserPlanIndex();
+            else
+                data = ReadJson<UserPlanIndex>(IndexPath) ?? new UserPlanIndex();
         }
         catch
         {
-            return new UserPlanIndex();
+            data = new UserPlanIndex();
         }
+
+        data.Plans ??= [];
+        if (reconcile)
+            ReconcileIndexWithDisk(data, forceRewrite: false);
+        return data;
+    }
+
+    /// <summary>扫描磁盘方案文件，补回空 index / 迁移旧混淆 JSON。</summary>
+    private static void ReconcileIndexWithDisk(UserPlanIndex index, bool forceRewrite)
+    {
+        index.Plans ??= [];
+        var dirty = forceRewrite;
+        var known = new HashSet<string>(
+            index.Plans.Select(p => p.Id),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in Directory.GetFiles(RootDir, "*.json"))
+        {
+            if (string.Equals(Path.GetFileName(path), "index.json", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var plan = LoadPlanFromPath(path, migrate: true);
+            if (plan is null || string.IsNullOrWhiteSpace(plan.Id))
+                continue;
+
+            var summary = index.Plans.FirstOrDefault(p =>
+                string.Equals(p.Id, plan.Id, StringComparison.OrdinalIgnoreCase));
+            if (summary is null)
+            {
+                index.Plans.Add(new UserPlanSummary
+                {
+                    Id = plan.Id,
+                    Name = string.IsNullOrWhiteSpace(plan.Name)
+                        ? AppLang.L("我的方案", "My plan")
+                        : plan.Name,
+                    UpdatedUtc = DateTime.UtcNow.ToString("o"),
+                    ItemCount = plan.Items?.Count ?? 0,
+                });
+                dirty = true;
+            }
+            else
+            {
+                var count = plan.Items?.Count ?? 0;
+                var name = string.IsNullOrWhiteSpace(plan.Name) ? summary.Name : plan.Name;
+                if (summary.ItemCount != count || !string.Equals(summary.Name, name, StringComparison.Ordinal))
+                {
+                    summary.ItemCount = count;
+                    summary.Name = name;
+                    dirty = true;
+                }
+            }
+
+            known.Add(plan.Id);
+        }
+
+        // 去掉指向已删文件的索引项
+        var removed = index.Plans.RemoveAll(p =>
+            string.IsNullOrWhiteSpace(p.Id) || !File.Exists(PlanPath(p.Id)));
+        if (removed > 0) dirty = true;
+
+        if (string.IsNullOrWhiteSpace(index.LastPlanId)
+            || !index.Plans.Any(p => string.Equals(p.Id, index.LastPlanId, StringComparison.OrdinalIgnoreCase)))
+        {
+            index.LastPlanId = index.Plans
+                .OrderByDescending(p => p.ItemCount)
+                .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()?.Id;
+            dirty = true;
+        }
+
+        if (dirty)
+            WriteJson(IndexPath, index);
     }
 
     private static UserPlanDetail? LoadPlanUnlocked(string planId)
     {
         var path = PlanPath(planId);
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path))
+        {
+            // 兼容：文件名即 Id
+            return null;
+        }
+        return LoadPlanFromPath(path, migrate: true);
+    }
+
+    private static UserPlanDetail? LoadPlanFromPath(string path, bool migrate)
+    {
         try
         {
             var plan = ReadJson<UserPlanDetail>(path);
-            if (plan is null) return null;
-            plan.Items ??= [];
-            return plan;
+            if (IsUsablePlan(plan))
+            {
+                plan!.Items ??= [];
+                if (string.IsNullOrWhiteSpace(plan.Id))
+                    plan.Id = Path.GetFileNameWithoutExtension(path);
+                return plan;
+            }
+
+            // 旧混淆字段名 A/B/a…
+            var legacy = ReadJson<UserPlanLegacyObfDetail>(path);
+            if (legacy?.Items is { Count: > 0 } || !string.IsNullOrWhiteSpace(legacy?.Id))
+            {
+                var migrated = new UserPlanDetail
+                {
+                    Id = string.IsNullOrWhiteSpace(legacy!.Id)
+                        ? Path.GetFileNameWithoutExtension(path)
+                        : legacy.Id!.Trim(),
+                    Name = string.IsNullOrWhiteSpace(legacy.Name)
+                        ? AppLang.L("我的方案", "My plan")
+                        : legacy.Name!.Trim(),
+                    Items = (legacy.Items ?? [])
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+                        .Select(x => new UserPlanItem
+                        {
+                            Key = x.Key!.Trim(),
+                            Value = x.Value,
+                            OptimizedIndex = x.OptimizedIndex,
+                            Title = x.Title ?? x.Key!,
+                            Module = x.Module ?? "",
+                            DesiredLabel = x.DesiredLabel ?? "",
+                            Enabled = x.Enabled,
+                        })
+                        .ToList(),
+                };
+
+                if (migrate && migrated.Items.Count > 0)
+                {
+                    WriteJson(PlanPath(migrated.Id), migrated);
+                    // 若旧文件名与 Id 不一致，删掉旧路径残留
+                    if (!string.Equals(path, PlanPath(migrated.Id), StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Delete(path); }
+                        catch { /* ignore */ }
+                    }
+                }
+
+                return migrated;
+            }
+
+            if (plan is not null)
+            {
+                plan.Items ??= [];
+                if (string.IsNullOrWhiteSpace(plan.Id))
+                    plan.Id = Path.GetFileNameWithoutExtension(path);
+                return plan;
+            }
         }
         catch
         {
-            return null;
+            /* fall through */
         }
+
+        return null;
+    }
+
+    private static bool IsUsablePlan(UserPlanDetail? plan)
+    {
+        if (plan is null) return false;
+        // 稳定字段：有 Id 或已有 Items/Name，且不是「全空的反序列化失败体」
+        if (plan.Items is { Count: > 0 }) return true;
+        if (!string.IsNullOrWhiteSpace(plan.Id) && !string.IsNullOrWhiteSpace(plan.Name))
+            return true;
+        return false;
     }
 
     private static void EnsureRoot() => Directory.CreateDirectory(RootDir);

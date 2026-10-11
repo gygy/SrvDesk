@@ -132,27 +132,43 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
     private Panel BuildTopBar()
     {
         var btnH = UiFit.ControlHeight();
-        var bar = new Panel { Height = btnH + 14, BackColor = AppTheme.Surface };
+        var bar = new FlowLayoutPanel
+        {
+            Height = btnH + 14,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            BackColor = AppTheme.Surface,
+            Padding = new Padding(0, 2, 0, 2),
+        };
+        UiBuffer.ConfigureNoScrollRow(bar);
 
         var label = new Label
         {
             Text = AppLang.L("方案", "Plan"),
-            Location = new Point(0, (bar.Height - 18) / 2),
             AutoSize = true,
             ForeColor = AppTheme.TextHeader,
+            Margin = new Padding(0, (btnH - UiFit.LineHeight(UiFit.UiFont)) / 2 + 2, UiScale.S(8), 0),
+            TextAlign = ContentAlignment.MiddleLeft,
         };
 
         _plans.DropDownStyle = ComboBoxStyle.DropDownList;
         _plans.Font = UiFit.UiFont;
         UiFit.FitCombo(_plans);
-        _plans.SetBounds(40, (bar.Height - _plans.Height) / 2, 220, _plans.Height);
+        _plans.Width = UiScale.S(220);
+        _plans.Margin = new Padding(0, Math.Max(0, (btnH - _plans.Height) / 2), UiScale.S(8), 0);
         _plans.SelectedIndexChanged += (_, _) => OnPlanSelected();
 
-        _btnNew.Location = new Point(272, (bar.Height - _btnNew.Height) / 2);
-        _btnRename.Location = new Point(_btnNew.Right + 6, (bar.Height - _btnRename.Height) / 2);
-        _btnDelete.Location = new Point(_btnRename.Right + 6, (bar.Height - _btnDelete.Height) / 2);
-        _btnApply.Location = new Point(_btnDelete.Right + 16, (bar.Height - _btnApply.Height) / 2);
-        _btnRestore.Location = new Point(_btnApply.Right + 6, (bar.Height - _btnRestore.Height) / 2);
+        void PlaceBtn(Button b, int extraLeft = 0)
+        {
+            b.Margin = new Padding(extraLeft, Math.Max(0, (btnH - b.Height) / 2), UiScale.S(6), 0);
+        }
+
+        PlaceBtn(_btnNew);
+        PlaceBtn(_btnRename);
+        PlaceBtn(_btnDelete);
+        PlaceBtn(_btnApply, UiScale.S(10));
+        PlaceBtn(_btnRestore);
 
         bar.Controls.Add(label);
         bar.Controls.Add(_plans);

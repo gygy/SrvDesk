@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.175] - 2026-10-12
+
+### Fixed
+
+- My plans: persist favorites across restart (stable JSON field names + Obfuscar skip; recover orphan/legacy obfuscated plan files)
+- My plans: “方案” label no longer overlaps the plan dropdown
+
 ## [1.0.173] - 2026-10-12
 
 ### Added

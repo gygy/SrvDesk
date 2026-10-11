@@ -32,6 +32,21 @@
     <SkipType name="SrvDesk.OptProfileFile" skipProperties="true" skipFields="true" skipMethods="true" />
     <SkipType name="SrvDesk.SettingEntry" skipProperties="true" skipFields="true" skipMethods="true" />
     <SkipType name="SrvDesk.SettingScriptStore/StoreFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <!-- 我的方案：稳定 JSON 字段名（禁止属性重命名） -->
+    <SkipType name="SrvDesk.UserPlanIndex" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanSummary" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanDetail" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanItem" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanExportFile" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanLegacyObfDetail" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.UserPlanLegacyObfItem" skipProperties="true" skipFields="true" skipMethods="true" />
+    <!-- 自定义配置方案 JSON -->
+    <SkipType name="SrvDesk.CustomPackIndex" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.CustomPackSummary" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.CustomPackDetail" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.CustomPackItem" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.CustomPackExport" skipProperties="true" skipFields="true" skipMethods="true" />
+    <SkipType name="SrvDesk.CustomPackItemExport" skipProperties="true" skipFields="true" skipMethods="true" />
 
     <!-- 预设/导入导出：反射 Optimizer.State 公共字段名 -->
     <SkipType name="SrvDesk.Optimizer/State" skipProperties="true" skipFields="true" skipMethods="true" />
