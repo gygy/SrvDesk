@@ -1,7 +1,7 @@
 namespace SrvDesk;
 
 /// <summary>
-/// 「我的方案」：跨模块收藏的优化项集合；勾选 / 排序 / 一键应用 / 还原 / 漂移状态。
+/// 「我的方案」：跨模块收藏的优化项；勾选 / 排序 / 一键应用 / 还原 / 状态。
 /// </summary>
 internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
 {
@@ -37,12 +37,15 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         ForeColor = AppTheme.TextMain;
         KeyPreview = true;
 
-        _btnNew = CompactBtn(AppLang.L("新建", "New"), AppLang.L("新建空方案", "Create empty plan"), NewPlan);
+        _btnNew = CompactBtn(AppLang.L("新建", "New"), AppLang.L("新建方案", "New plan"), NewPlan);
         _btnRename = CompactBtn(AppLang.L("重命名", "Rename"), AppLang.L("重命名当前方案", "Rename current plan"), RenamePlan);
         _btnDelete = CompactBtn(AppLang.L("删除", "Delete"), AppLang.L("删除当前方案", "Delete current plan"), DeletePlan);
-        _btnApply = CompactBtn(AppLang.L("一键应用", "Apply all"), AppLang.L("按方案目标值写入系统（一次提权）", "Write plan targets to system"), () => RunApply(restore: false));
-        _btnRestore = CompactBtn(AppLang.L("一键还原", "Restore"), AppLang.L("将勾选项恢复为非优化档", "Reset checked items to off"), () => RunApply(restore: true));
-        _btnReapplyDrift = CompactBtn(AppLang.L("重新应用漂移项", "Re-apply drifted"), AppLang.L("只写入与方案不一致的项", "Write only drifted items"), ReapplyDrift);
+        _btnApply = CompactBtn(AppLang.L("一键应用", "Apply"), AppLang.L("按方案写入系统", "Write plan to system"), () => RunApply(restore: false));
+        _btnRestore = CompactBtn(AppLang.L("一键还原", "Restore"), AppLang.L("将勾选项恢复为未优化", "Reset checked items to not optimized"), () => RunApply(restore: true));
+        _btnReapplyDrift = CompactBtn(
+            AppLang.L("重新应用被改回的项", "Re-apply changed items"),
+            AppLang.L("只写入与方案不一致的项", "Write only items that differ from the plan"),
+            ReapplyDrift);
 
         var body = new Panel
         {
@@ -93,7 +96,7 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("我的方案", "My plans"),
-            AppLang.L("收藏优化项 · 一键应用 · 漂移检测", "Bookmark settings · one-click apply · drift detect"),
+            "",
             body,
             "");
 
@@ -197,8 +200,8 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         tools.Controls.Add(ToolButton(AppLang.L("上移", "Up"), AppLang.L("上移选中项", "Move up"), () => MoveSelected(-1)));
         tools.Controls.Add(ToolButton(AppLang.L("下移", "Down"), AppLang.L("下移选中项", "Move down"), () => MoveSelected(1)));
         tools.Controls.Add(ToolButton(AppLang.L("移除", "Remove"), AppLang.L("从方案中移除", "Remove from plan"), RemoveSelected));
-        tools.Controls.Add(ToolButton(AppLang.L("导出…", "Export…"), AppLang.L("导出当前方案为 JSON", "Export plan as JSON"), ExportPlan));
-        tools.Controls.Add(ToolButton(AppLang.L("导入…", "Import…"), AppLang.L("从 JSON 导入方案", "Import plans from JSON"), ImportPlans));
+        tools.Controls.Add(ToolButton(AppLang.L("导出…", "Export…"), AppLang.L("导出当前方案", "Export current plan"), ExportPlan));
+        tools.Controls.Add(ToolButton(AppLang.L("导入…", "Import…"), AppLang.L("导入方案文件", "Import plan file"), ImportPlans));
         _btnReapplyDrift.Margin = new Padding(12, 0, 0, 0);
         tools.Controls.Add(_btnReapplyDrift);
         return tools;
@@ -299,8 +302,8 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
                     currentLabel = FormatValueLabel(item, curIdx);
                     drifted = curIdx != item.Value;
                     status = drifted
-                        ? AppLang.L("已漂移", "Drifted")
-                        : AppLang.L("已生效", "Applied");
+                        ? AppLang.L("被改回", "Changed back")
+                        : AppLang.L("已生效", "In effect");
                     if (item.Enabled && drifted) drift++;
                 }
 
@@ -344,9 +347,12 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         }
 
         _driftBanner.Text = AppLang.Lf(
-            "有 {0} 项与方案不一致（系统更新常会改回）。可点「重新应用漂移项」一次写回。",
-            "{0} item(s) drifted from this plan (updates often reset them). Use “Re-apply drifted”.",
+            "有 {0} 项与方案不一致，可重新应用。",
+            "{0} item(s) differ from this plan — you can re-apply them.",
             drift);
+        _tip.SetToolTip(_driftBanner, AppLang.L(
+            "系统更新或其他软件可能改回这些设置。",
+            "Windows Update or other software may have changed these settings."));
         _driftBanner.Visible = true;
         _btnReapplyDrift.Enabled = true;
     }
@@ -427,8 +433,8 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         }
         var answer = MessageBox.Show(
             this,
-            AppLang.Lf("确定删除方案「{0}」？\r\n收藏项列表会删除（系统设置不会改动）。",
-                "Delete plan “{0}”?\r\nBookmarks will be removed (system settings unchanged).",
+            AppLang.Lf("确定删除方案「{0}」？\r\n只删方案列表，不改系统设置。",
+                "Delete plan “{0}”?\r\nOnly the plan list is removed; system settings stay unchanged.",
                 _current.Name),
             AppLang.L("删除方案", "Delete plan"),
             MessageBoxButtons.YesNo,
@@ -498,8 +504,8 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         if (_current?.Items is null || _current.Items.Count == 0)
         {
             MessageBox.Show(this,
-                AppLang.L("当前方案没有优化项。请在各模块列表点☆收藏。",
-                    "This plan is empty. Star items in setting tabs to bookmark them."),
+                AppLang.L("当前方案还没有项。请到各分类里点星标收藏。",
+                    "This plan is empty. Star items in the setting tabs to add them."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -516,10 +522,10 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         var confirm = MessageBox.Show(
             this,
             restore
-                ? AppLang.Lf("将把 {0} 项恢复为非优化档并写入系统。是否继续？",
-                    "Restore {0} item(s) to off and write to system. Continue?", enabled.Count)
-                : AppLang.Lf("将按方案目标写入 {0} 项到系统。是否继续？",
-                    "Apply {0} plan item(s) to the system. Continue?", enabled.Count),
+                ? AppLang.Lf("将把 {0} 项恢复为未优化并写入系统，是否继续？",
+                    "Restore {0} item(s) to not optimized and write to the system?", enabled.Count)
+                : AppLang.Lf("将按方案写入 {0} 项到系统，是否继续？",
+                    "Write {0} plan item(s) to the system?", enabled.Count),
             restore ? AppLang.L("一键还原", "Restore") : AppLang.L("一键应用", "Apply"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question,
