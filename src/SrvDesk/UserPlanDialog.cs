@@ -536,7 +536,7 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         RefreshFromSystem();
         if (!ok) return;
 
-        var msg = AppLang.Lf("已处理 {0} 项。", "Processed {0} item(s).", attempted);
+        var msg = AppLang.Lf("已写入 {0} 项。", "Wrote {0} item(s).", attempted);
         if (errors.Count > 0)
             msg += "\r\n\r\n" + AppLang.Lf("其中 {0} 项失败（已跳过）：\r\n", "{0} failed (skipped):\r\n", errors.Count)
                    + string.Join("\r\n", errors.Take(12));
@@ -553,16 +553,16 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         if (drifted.Count == 0)
         {
             MessageBox.Show(this,
-                AppLang.L("没有检测到漂移项。", "No drifted items."),
+                AppLang.L("没有与方案不一致的项。", "No items differ from the plan."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
         var confirm = MessageBox.Show(
             this,
-            AppLang.Lf("将重新应用 {0} 个漂移项。是否继续？",
-                "Re-apply {0} drifted item(s). Continue?", drifted.Count),
-            AppLang.L("重新应用漂移项", "Re-apply drifted"),
+            AppLang.Lf("将重新应用 {0} 个被改回的项，是否继续？",
+                "Re-apply {0} item(s) that were changed back?", drifted.Count),
+            AppLang.L("重新应用被改回的项", "Re-apply changed items"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question);
         if (confirm != DialogResult.Yes) return;
@@ -589,7 +589,7 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
         }
         using var dlg = new SaveFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = AppLang.L("方案文件 (*.json)|*.json", "Plan file (*.json)|*.json"),
             FileName = "SrvDesk-Plan-" + SanitizeFileName(_current.Name) + ".json",
             Title = AppLang.L("导出我的方案", "Export my plan"),
         };
@@ -611,15 +611,16 @@ internal sealed class UserPlanDialog : Form, IEmbeddedSettingsPage
     {
         using var dlg = new OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = AppLang.L("方案文件 (*.json)|*.json", "Plan file (*.json)|*.json"),
             Title = AppLang.L("导入我的方案", "Import my plans"),
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
         var mergeAsk = MessageBox.Show(
             this,
-            AppLang.L("是 = 合并到现有方案\r\n否 = 清空后仅保留导入内容\r\n取消 = 不导入",
-                "Yes = merge with existing\r\nNo = replace all\r\nCancel = abort"),
+            AppLang.L(
+                "合并到现有方案，还是清空后只保留导入内容？\r\n\r\n是 = 合并\r\n否 = 清空后导入\r\n取消 = 不导入",
+                "Merge with existing plans, or replace them?\r\n\r\nYes = merge\r\nNo = replace\r\nCancel = don’t import"),
             AppLang.L("导入我的方案", "Import my plans"),
             MessageBoxButtons.YesNoCancel,
             MessageBoxIcon.Question);

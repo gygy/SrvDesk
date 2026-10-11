@@ -1155,17 +1155,17 @@ internal sealed class MainForm : Form
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
-            _status.Text = AppLang.L("提示：当前进程未提升权限，部分系统级项可能写入失败（失败项会显示在状态栏）。", "Tip: not elevated — some system writes may fail (shown in status bar).");
+            _status.Text = AppLang.L("未以管理员运行，部分系统项可能写入失败。", "Not running as administrator — some system writes may fail.");
         }
         else if (!_systemFacts.IsServer)
         {
             _status.ForeColor = AppTheme.ScopeServer;
-            _status.Text = AppLang.Lf("提示：当前不是 Windows Server（{0}）。部分「Server 专属」项可能无效。", "Tip: not Windows Server ({0}). Some Server-only items may not apply.", _systemFacts.CompactSummary);
+            _status.Text = AppLang.Lf("当前不是 Windows Server（{0}），部分「Server 专属」项可能无效。", "This PC is not Windows Server ({0}); some Server-only items may not apply.", _systemFacts.CompactSummary);
         }
         else if (!_systemFacts.HasDesktopExperience)
         {
             _status.ForeColor = AppTheme.ScopeServer;
-            _status.Text = AppLang.L("提示：检测到 Server Core（无桌面体验）。已默认隐藏「需桌面体验」项，可取消勾选过滤。", "Tip: Server Core detected. Desktop-Experience items are hidden; uncheck the filter to show them.");
+            _status.Text = AppLang.L("当前为 Server Core（无桌面体验），已隐藏需桌面的项；可取消「隐藏不适用项」查看。", "Server Core (no Desktop Experience): desktop-only items are hidden; uncheck “Hide incompatible” to show them.");
             _hideIncompatible.Checked = true;
         }
         else
@@ -1337,10 +1337,10 @@ internal sealed class MainForm : Form
             Margin = new Padding(0),
         };
         _commandFlow.Controls.Add(quickGap);
-        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("我的方案", "My plans"), AppLang.L("收藏的优化项：一键应用 / 还原 / 漂移检测", "Bookmarked settings: apply / restore / drift"), NavigateToMyPlans));
-        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("配置脚本", "Config script"), AppLang.L("显示或隐藏配置脚本面板（可查看/编辑）", "Show or hide config script panel"), ToggleConfigScriptPanel));
-        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("常用软件", "Apps"), AppLang.L("打开常用软件安装与更新", "Install or update common apps"), ShowCommonSoftware));
-        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("优化顾问", "Advisor"), AppLang.L("按本机状态查看并应用强烈推荐/推荐项", "Review and apply strongly recommended items for this PC"), ShowOptimizeAdvisor));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("我的方案", "My plans"), AppLang.L("打开我收藏的优化项", "Open bookmarked settings"), NavigateToMyPlans));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("配置脚本", "Config script"), AppLang.L("显示或隐藏配置脚本面板", "Show or hide the config script panel"), ToggleConfigScriptPanel));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("常用软件", "Apps"), AppLang.L("安装或更新常用软件", "Install or update common apps"), ShowCommonSoftware));
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("优化顾问", "Advisor"), AppLang.L("查看并应用本机推荐项", "Review and apply recommended items for this PC"), ShowOptimizeAdvisor));
 
         // 即时页不再在此显示提示（统一走底部状态栏）
         _commandBar.Controls.Add(_commandFlow);
@@ -2123,8 +2123,8 @@ internal sealed class MainForm : Form
     {
         var ask = MessageBox.Show(this,
             AppLang.L(
-                "配置已导入到界面。\r\n\r\n是否立即将优化开关应用到系统？\r\n（完整跨机恢复含服务等，请用「文件 → 一键快速恢复」）\r\n\r\n是 = 写入开关\r\n否 = 稍后手动应用",
-                "Profile loaded into the UI.\r\n\r\nApply optimization toggles now?\r\n(For full restore including services, use File → One-click restore)\r\n\r\nYes = write toggles\r\nNo = Apply later"),
+                "配置已载入界面。是否立即写入系统？\r\n\r\n若还要恢复服务等，请用「文件 → 一键快速恢复」。",
+                "Profile loaded. Write toggles to the system now?\r\n\r\nTo also restore services etc., use File → One-click restore."),
             AppLang.L("应用到系统", "Apply to system"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question,
@@ -2225,8 +2225,8 @@ internal sealed class MainForm : Form
             var drift = UserPlanStore.CountDrift(plan, sys);
             if (drift <= 0) return;
             _status.Text = AppLang.Lf(
-                "「{0}」有 {1} 项已漂移 · 打开「我的方案」可一键重新应用",
-                "“{0}” has {1} drifted item(s) · open My plans to re-apply",
+                "「{0}」有 {1} 项与方案不一致，可到「我的方案」重新应用",
+                "“{0}” has {1} item(s) that differ from the plan — open My plans to re-apply",
                 plan.Name, drift);
         }
         catch { /* ignore */ }
@@ -2235,7 +2235,7 @@ internal sealed class MainForm : Form
     internal void RefreshFavoriteStars()
     {
         foreach (var row in AllRows)
-            row.RefreshFavoriteIcon(IsRowInActivePlan(row));
+            row.RefreshFavoriteIcon(IsRowInActivePlan(row), _toolTip);
     }
 
     private bool IsRowInActivePlan(SettingRow row)
@@ -2250,7 +2250,7 @@ internal sealed class MainForm : Form
         if (string.IsNullOrEmpty(key))
         {
             MessageBox.Show(this,
-                AppLang.L("该项无法加入方案（缺少内部标识）。", "This item cannot be bookmarked (missing key)."),
+                AppLang.L("该项暂不支持加入方案。", "This item can’t be added to a plan."),
                 AppLang.L("我的方案", "My plans"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -2260,8 +2260,8 @@ internal sealed class MainForm : Form
         if (plan.Items.Any(x => string.Equals(x.Key, key, StringComparison.Ordinal)))
         {
             UserPlanStore.RemoveItem(plan, key!);
-            row.RefreshFavoriteIcon(false);
-            _status.Text = AppLang.Lf("已从「{0}」移除：{1}", "Removed from “{0}”: {1}", plan.Name, row.ItemText);
+            row.RefreshFavoriteIcon(false, _toolTip);
+            _status.Text = AppLang.Lf("已移出方案：{0}", "Removed from plan: {0}", row.ItemText);
             RefreshUserPlanPageIfOpen();
             return;
         }
@@ -2290,8 +2290,8 @@ internal sealed class MainForm : Form
             Enabled = true,
         };
         UserPlanStore.UpsertItem(plan, item);
-        row.RefreshFavoriteIcon(true);
-        _status.Text = AppLang.Lf("已加入「{0}」：{1}", "Added to “{0}”: {1}", plan.Name, row.ItemText);
+        row.RefreshFavoriteIcon(true, _toolTip);
+        _status.Text = AppLang.Lf("已加入方案：{0}", "Added to plan: {0}", row.ItemText);
         RefreshUserPlanPageIfOpen();
     }
 
@@ -2367,8 +2367,8 @@ internal sealed class MainForm : Form
             RefreshFavoriteStars();
 
             _status.Text = AppLang.Lf(
-                "方案已处理：尝试 {0}，失败 {1}",
-                "Plan done: tried {0}, failed {1}",
+                "方案已写入：成功尝试 {0}，失败 {1}",
+                "Plan written: tried {0}, failed {1}",
                 Optimizer.LastApplyActionCount, errors.Count);
             return (true, Optimizer.LastApplyActionCount, errors);
         }
@@ -3007,7 +3007,7 @@ internal sealed class MainForm : Form
             }
             else if (_embeddedPage is IEmbeddedSettingsPage emb && emb.SupportsApplyToSystem)
             {
-                _toolTip.SetToolTip(_apply, AppLang.L("将本页待写入项应用到系统", "Apply this page’s pending changes"));
+                _toolTip.SetToolTip(_apply, AppLang.L("将本页改动写入系统", "Write this page’s changes to the system"));
             }
             else if (onEmbedded)
             {
@@ -3141,7 +3141,7 @@ internal sealed class MainForm : Form
         {
             var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
             rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp, ShowRecipeDialog, ToggleFavoriteForRow);
-            rows[i].RefreshFavoriteIcon(IsRowInActivePlan(rows[i]));
+            rows[i].RefreshFavoriteIcon(IsRowInActivePlan(rows[i]), _toolTip);
         }
 
         void Toggle(object? _, EventArgs __)
@@ -4427,7 +4427,9 @@ internal sealed class MainForm : Form
             return true;
 
         var ask = MessageBox.Show(this,
-            AppLang.L("建议先创建系统还原点，出问题可以回退。\r\n\r\n是 = 创建后继续写入\r\n否 = 跳过还原点直接写入\r\n取消 = 不应用", "Create a restore point first?\r\n\r\nYes = create then apply\r\nNo = skip and apply\r\nCancel = abort"),
+            AppLang.L(
+                "建议先创建系统还原点，出问题可以回退。\r\n\r\n是 = 创建后继续\r\n否 = 不创建，直接写入\r\n取消 = 不应用",
+                "Create a system restore point first?\r\n\r\nYes = create then continue\r\nNo = write without a restore point\r\nCancel = don’t apply"),
             AppLang.L("应用到系统", "Apply"),
             MessageBoxButtons.YesNoCancel,
             MessageBoxIcon.Question);
@@ -4517,7 +4519,7 @@ internal sealed class MainForm : Form
 
             if (Optimizer.LastApplyActionCount == 0 && errors.Count == 0)
             {
-                _status.Text = AppLang.L("没有需要写入的更改（相对上次同步未改动）。", "No changes to write (unchanged since last sync).");
+                _status.Text = AppLang.L("没有需要写入的更改。", "No changes to write.");
                 ok = true;
                 return true;
             }
@@ -4882,9 +4884,15 @@ internal sealed class MainForm : Form
             _wrap.Invalidate(true);
         }
 
-        public void RefreshFavoriteIcon(bool inPlan)
+        public void RefreshFavoriteIcon(bool inPlan, ToolTip? tip = null)
         {
             _favorite.Image = inPlan ? MenuIcons.FavoriteOn : MenuIcons.FavoriteOff;
+            if (tip is not null)
+            {
+                tip.SetToolTip(_favorite, inPlan
+                    ? AppLang.L("从方案中移除", "Remove from plan")
+                    : AppLang.L("加入我的方案", "Add to My plans"));
+            }
         }
 
         public void Mount(
@@ -4915,7 +4923,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, AppLang.L("查看说明与配置脚本\r\n", "View notes & config script\r\n") + tip);
-            toolTip.SetToolTip(_favorite, AppLang.L("☆ 加入我的方案（再点移除）", "☆ Add to My plans (click again to remove)"));
+            toolTip.SetToolTip(_favorite, AppLang.L("加入我的方案", "Add to My plans"));
             toolTip.SetToolTip(_script, AppLang.L("配置脚本：查看/编辑开启与关闭脚本", "Config script: view/edit on/off scripts"));
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(EffectiveRecommend));
             // 完整说明用窗内悬浮层（钳制在主窗客户区），不用系统 ToolTip（会画出窗外）

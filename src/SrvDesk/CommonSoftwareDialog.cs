@@ -155,9 +155,7 @@ internal sealed class CommonSoftwareDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             AppLang.L("常用软件", "Common software"),
-            AppLang.L(
-                "官方下载安装 · 优先 winget，否则取官网安装包",
-                "Official installers · prefer winget, else vendor download"),
+            "",
             body,
             "",
             () => ReloadStatusesAsync(),

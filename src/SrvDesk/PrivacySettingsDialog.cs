@@ -89,7 +89,7 @@ internal sealed class PrivacySettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "隐私与搜索",
-            "搜索隐私 · 广告跟踪 · 更新传递",
+            "",
             body,
             "",
             LoadValues);

@@ -150,7 +150,7 @@ internal sealed class AccountIdentityDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("账户与登录", "Account & sign-in"),
-            AppLang.L("Autologon · 本地用户 · 计算机名", "Autologon · local user · computer name"),
+            "",
             body,
             "",
             RefreshFromSystem);

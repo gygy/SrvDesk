@@ -26,7 +26,7 @@ internal sealed class OtherSettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("高级设置", "Advanced settings"),
-            AppLang.L("RDP 端口 · 预取 · Windows Search", "RDP port · Prefetch · Windows Search"),
+            "",
             body,
             "",
             RefreshFromSystem);

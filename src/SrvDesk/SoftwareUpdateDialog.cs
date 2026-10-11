@@ -106,7 +106,7 @@ internal sealed class SoftwareUpdateDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "软件更新",
-            "显示当前版本与新版本 · 可批量更新",
+            "",
             body,
             "");
         UiBuffer.BindListViewColumnFit(_list, 3, 120);

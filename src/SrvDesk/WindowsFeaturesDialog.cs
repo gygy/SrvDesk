@@ -31,7 +31,7 @@ internal sealed class WindowsFeaturesDialog : Form
 
     public WindowsFeaturesDialog()
     {
-        Text = "可选功能 / Capabilities";
+        Text = "可选功能";
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
@@ -152,8 +152,8 @@ internal sealed class WindowsFeaturesDialog : Form
 
         ThemedSettingsChrome.MountModal(
             this,
-            "可选功能 / Capabilities",
-            "DISM 可视化 · 禁用可选功能 / 卸载 Capability",
+            "可选功能",
+            "",
             body,
             "",
             () => BeginLoad());

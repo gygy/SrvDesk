@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.176] - 2026-10-12
+
+### Changed
+
+- User-facing copy: drop jargon (drift / dry-run / JSON / UAC slogans); shorten page subtitles and tips
+
 ## [1.0.175] - 2026-10-12
 
 ### Fixed

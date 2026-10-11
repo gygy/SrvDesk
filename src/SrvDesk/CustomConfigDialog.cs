@@ -73,7 +73,7 @@ internal sealed class CustomConfigDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "自定义配置",
-            "粘贴脚本/注册表 · 保存到方案 · 界面直接运行",
+            "",
             body,
             "");
 

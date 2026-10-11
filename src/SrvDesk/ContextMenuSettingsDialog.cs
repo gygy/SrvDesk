@@ -66,7 +66,7 @@ internal sealed class ContextMenuSettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("右键菜单", "Context menu"),
-            AppLang.L("增强 · 精简已安装项", "Enhance · Slim installed"),
+            "",
             shell,
             "",
             RefreshFromSystem);

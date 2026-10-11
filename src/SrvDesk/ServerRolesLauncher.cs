@@ -22,8 +22,8 @@ internal static class ServerRolesLauncher
         if (!facts.IsServer)
         {
             error = AppLang.L(
-                "「角色和功能」仅 Windows Server 提供。本机可改用「可选功能 / Capabilities」。",
-                "Roles and Features are Server-only. Use Optional features / Capabilities on this PC.");
+                "「角色和功能」仅 Windows Server 提供。本机请改用「可选功能」。",
+                "Roles and Features are Server-only. Use Optional features on this PC.");
             return false;
         }
 

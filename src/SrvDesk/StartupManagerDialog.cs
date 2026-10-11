@@ -57,7 +57,7 @@ internal sealed class StartupManagerDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "登录启动项",
-            "登录时自动运行",
+            "",
             body,
             "",
             RefreshList);

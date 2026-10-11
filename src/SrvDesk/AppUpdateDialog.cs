@@ -133,7 +133,7 @@ internal sealed class AppUpdateDialog : Form
         ThemedSettingsChrome.MountModal(
             this,
             "检查更新",
-            "从 GitHub Releases 获取最新 SrvDesk.exe，下载后自动替换并重启",
+            "",
             body,
             "");
         if (known is not null)

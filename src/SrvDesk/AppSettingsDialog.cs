@@ -56,7 +56,7 @@ internal sealed class AppSettingsDialog : Form
         _hideIncompatible.Text = AppLang.L("启动时默认「隐藏不适用项」", "Hide incompatible items by default");
         _checkUpdate.Text = AppLang.L("启动时检查程序更新", "Check for updates at startup");
         _restorePoint.Text = AppLang.L("应用到系统前询问是否创建还原点", "Ask to create a restore point before applying");
-        _changePlan.Text = AppLang.L("应用到系统前显示变更计划（干跑确认）", "Show change plan (dry-run confirm) before apply");
+        _changePlan.Text = AppLang.L("应用到系统前先确认将要改动的项", "Confirm changes before writing to the system");
         _debugLog.Text = AppLang.L("开启调试日志（debug.log）", "Enable debug log (debug.log)");
         _softSkip.Text = AppLang.L("环境不支持时记为「跳过」而非「失败」", "Treat unsupported environments as skip, not failure");
         _hint.Text = AppLang.L(

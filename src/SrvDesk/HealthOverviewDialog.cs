@@ -678,7 +678,7 @@ internal sealed class RecommendCenterDialog : Form
         }
 
         var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = UiFit.ControlHeight() + 12, Padding = new Padding(0, 8, 0, 0) };
-        var dry = ThemedSettingsChrome.CreateButton(AppLang.L("生成干跑计划…", "Dry-run plan…"), true);
+        var dry = ThemedSettingsChrome.CreateButton(AppLang.L("预览将写入的项…", "Preview changes…"), true);
         dry.Click += (_, _) =>
         {
             var p = new ChangePlan { Level = OptimizationLevel.DetectOnly, DryRunOnly = true };

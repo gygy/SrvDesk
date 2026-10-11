@@ -99,7 +99,7 @@ internal sealed class GroupPolicyDialog : Form
             _output.Text = result.Output;
             if (result.RebootRequired)
             {
-                _output.AppendText("\r\n\r\n提示：部分策略需注销或重启后生效。");
+                _output.AppendText("\r\n\r\n部分策略需注销或重启后生效。");
                 MessageBox.Show(this,
                     "组策略已更新，但需要注销或重新启动才能完全生效。\r\n\r\n" + result.Output,
                     "强制更新组策略",

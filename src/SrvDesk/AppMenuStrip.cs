@@ -62,8 +62,8 @@ internal sealed class AppMenuStrip : MenuStrip
         FileExport = Item(AppLang.L("导出配置(&S)...", "Export profile(&S)..."), MenuIcons.Export, Keys.Control | Keys.S);
         FileQuickRestore = Item(AppLang.L("一键快速恢复(&R)...", "One-click restore(&R)..."), MenuIcons.Restore, Keys.Control | Keys.R);
         FileQuickRestore.ToolTipText = AppLang.L(
-            "导入配置并立即写入：优化开关、服务启动类型、用途等级、脚本与自定义方案",
-            "Import and apply: toggles, service start types, profile level, scripts and packs");
+            "导入配置并立即写入系统",
+            "Import a profile and write it to the system now");
         FileSettings = Item(AppLang.L("程序设置(&P)...", "Settings(&P)..."), MenuIcons.Advanced);
         FileExit = Item(AppLang.L("退出(&X)", "Exit(&X)"), MenuIcons.PanelClose, Keys.Alt | Keys.F4);
         file.DropDownItems.AddRange([
@@ -88,12 +88,12 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolOptimizeAdvisor = Item(AppLang.L("优化顾问...", "Optimization advisor..."), MenuIcons.SystemInfo);
         ToolMyPlans = Item(AppLang.L("我的方案...", "My plans..."), MenuIcons.MyPlan);
         ToolMyPlans.ToolTipText = AppLang.L(
-            "打开收藏的优化方案：一键应用 / 还原 / 漂移检测",
-            "Open bookmarked optimize plans: apply / restore / drift detect");
+            "打开我收藏的优化项",
+            "Open bookmarked settings");
         ToolPortExposure = Item(AppLang.L("端口暴露...", "Port exposure..."), MenuIcons.SecurityCenter);
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
-        ToolWindowsFeatures = Item(AppLang.L("可选功能 / Capabilities...", "Optional features / Capabilities..."), MenuIcons.WindowsFeatures);
+        ToolWindowsFeatures = Item(AppLang.L("可选功能...", "Optional features..."), MenuIcons.WindowsFeatures);
         ToolAddRemoveRoles = Item(
             AppLang.L("添加 / 删除角色和功能...", "Add / Remove Roles and Features..."),
             MenuIcons.ServerRoles);
@@ -130,8 +130,8 @@ internal sealed class AppMenuStrip : MenuStrip
         ViewHelpPanel.CheckOnClick = true;
         ViewHelpPanel.Checked = false;
         ViewHelpPanel.ToolTipText = AppLang.L(
-            "显示配置脚本面板：查看/编辑开启与关闭脚本（停靠位置在面板顶部切换）",
-            "Show the config script panel to view/edit on/off scripts (dock position switches at the top of the panel)");
+            "显示或隐藏配置脚本面板",
+            "Show or hide the config script panel");
         view.DropDownItems.AddRange([
             ViewAllOn, ViewAllOff, new ToolStripSeparator(),
             ViewHideIncompatible, ViewHelpPanel,

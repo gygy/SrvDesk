@@ -207,7 +207,7 @@ internal sealed class SystemRepairDialog : Form
         await RunProcessAsync("netsh.exe", "int ip reset", token, timeoutMs: 60_000, ignoreExitCode: true)
             .ConfigureAwait(true);
         await RunProcessAsync("ipconfig.exe", "/flushdns", token, timeoutMs: 30_000).ConfigureAwait(true);
-        AppendLog(AppLang.L("提示：重置网络后建议重启计算机。", "Tip: reboot after network reset."));
+        AppendLog(AppLang.L("重置网络后建议重启计算机。", "Reboot after resetting the network."));
     }
 
     private void RenameDirSafe(string path, string backup)

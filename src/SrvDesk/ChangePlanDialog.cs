@@ -11,8 +11,8 @@ internal sealed class ChangePlanDialog : Form
     {
         _plan = plan;
         Text = plan.DryRunOnly
-            ? AppLang.L("变更计划（仅检测 / 干跑）", "Change plan (dry run)")
-            : AppLang.L("变更计划 · 确认后执行", "Change plan · confirm to apply");
+            ? AppLang.L("变更预览（仅查看，不写入）", "Change preview (view only)")
+            : AppLang.L("确认要写入的更改", "Confirm changes to write");
         AppBrand.ApplyWindowIcon(this);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;

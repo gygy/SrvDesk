@@ -88,9 +88,7 @@ internal sealed class ExplorerSettingsDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("资源管理器", "File Explorer"),
-            AppLang.L(
-                "资源管理器即时生效 · 任务栏改完后点「应用到系统」",
-                "Explorer applies instantly · use Apply for taskbar changes"),
+            "",
             body,
             "",
             LoadValues,

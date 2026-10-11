@@ -39,7 +39,7 @@ Common settings and performance tweaks:
 * Network optimization
 * Background optimization
 * Windows Update settings
-* **My plans**: bookmark settings across modules; one-click apply / restore; multi-plan; drift detect
+* **My plans**: bookmark settings across modules; one-click apply / restore; multi-plan; re-apply when settings change back
 
 ### 2. Service management
 

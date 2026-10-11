@@ -152,7 +152,7 @@ internal sealed class DnsSwitcherDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             "DNS 设置",
-            "仅修改勾选的网卡 · 虚拟网卡默认不选",
+            "",
             body,
             "",
             () => RefreshAdapters(preserveChecks: _userCheckedAdapters || _adapters.Items.Count > 0));

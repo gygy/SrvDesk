@@ -116,8 +116,7 @@ internal sealed class ServiceOptimizeDialog : Form, IEmbeddedSettingsPage
         ThemedSettingsChrome.MountEmbedded(
             this,
             AppLang.L("服务优化", "Service optimize"),
-            AppLang.Lf("当前系统：{0} · 列表来自本机实时服务", "Current OS: {0} · live local services",
-                ServiceOptimizeHelper.OsLabel(_currentOs)),
+            ServiceOptimizeHelper.OsLabel(_currentOs),
             body,
             "",
             RefreshList);
