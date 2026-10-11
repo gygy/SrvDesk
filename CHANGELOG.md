@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.177] - 2026-10-12
+
+### Fixed
+
+- Bottom status: don’t repeat My Plans mismatch tip when already on that page; shorter tip elsewhere
+- Bottom resource line: show CPU usage (not “remaining”); shorter format; reserve width so it isn’t truncated
+
 ## [1.0.176] - 2026-10-12
 
 ### Changed

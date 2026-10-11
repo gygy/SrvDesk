@@ -110,14 +110,15 @@ internal sealed class HeaderResourceMeter : Panel
         GetMemory(out var memLoad, out var usedGb, out var totalGb, out var freeGbMem);
         GetDisk(out var diskLoad, out var freeGb, out var diskTotalGb);
 
+        var cpuUse = (int)Math.Round(Math.Max(0, Math.Min(100, cpu)));
         var cpuFree = Math.Max(0, Math.Min(100, 100 - cpu));
         var memFreePct = totalGb > 0
             ? Math.Max(0, Math.Min(100, (int)Math.Round(freeGbMem * 100 / totalGb)))
             : Math.Max(0, 100 - (int)memLoad);
 
-        // IP 在 CPU/内存左侧（单行；间隔略收紧）
+        // 短行：CPU 用占用%；内存/盘用剩余。悬停看完整信息。
         var line =
-            $"IP {_ipText}  CPU 剩{cpuFree:0}%  内存 剩{freeGbMem:0.0}G({memFreePct}%)  {_systemDrive} 剩{freeGb:0.#}G";
+            $"{_ipText}  CPU {cpuUse}%  内存剩{freeGbMem:0.0}G  {_systemDrive}剩{freeGb:0.#}G";
         _text.Text = line;
         FitWidthToText(line);
 
@@ -140,9 +141,9 @@ internal sealed class HeaderResourceMeter : Panel
                 | TextFormatFlags.NoPadding
                 | TextFormatFlags.SingleLine;
             var need = TextRenderer.MeasureText(line, _text.Font, new Size(int.MaxValue, int.MaxValue), flags).Width
-                       + UiScale.S(20);
-            // 必须够宽显示整行；过窄会触发默认 Label 折行
-            var next = Math.Max(UiScale.S(320), need);
+                       + UiScale.S(16);
+            // 短文案约 260；仍按实测加宽，避免裁成省略号
+            var next = Math.Max(UiScale.S(260), need);
             if (Parent is not null)
             {
                 var rightLimit = Tag is int lim ? lim : Parent.ClientSize.Width - UiScale.S(28);

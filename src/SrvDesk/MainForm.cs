@@ -2216,6 +2216,12 @@ internal sealed class MainForm : Form
     {
         try
         {
+            // 已在「我的方案」页时顶栏会提示，底栏不再重复
+            var myPlans = AppLang.L("我的方案", "My plans");
+            if (_menu.SelectedIndex >= 0 && _menu.SelectedIndex < MenuItems.Length
+                && MenuItems[_menu.SelectedIndex] == myPlans)
+                return;
+
             if (!UserPlanStore.HasAnyItems()) return;
             var plan = UserPlanStore.GetOrCreateDefaultPlan();
             if (plan.Items.Count == 0) return;
@@ -2224,10 +2230,7 @@ internal sealed class MainForm : Form
             catch { return; }
             var drift = UserPlanStore.CountDrift(plan, sys);
             if (drift <= 0) return;
-            _status.Text = AppLang.Lf(
-                "「{0}」有 {1} 项与方案不一致，可到「我的方案」重新应用",
-                "“{0}” has {1} item(s) that differ from the plan — open My plans to re-apply",
-                plan.Name, drift);
+            _status.Text = AppLang.Lf("有 {0} 项与方案不一致", "{0} item(s) differ from the plan", drift);
         }
         catch { /* ignore */ }
     }
@@ -3273,24 +3276,18 @@ internal sealed class MainForm : Form
         _status.Height = Math.Max(UiScale.S(28), _bottomPanel.ClientSize.Height - UiScale.S(4));
         _status.Top = Math.Max(1, (_bottomPanel.ClientSize.Height - _status.Height) / 2);
 
-        // 版本/状态在左；IP·资源条紧跟其后，同左对齐
+        // 先给资源条留够宽度，状态栏用剩余空间（避免资源行被裁成 …）
+        var meterReserve = UiScale.S(300);
+        var avail = Math.Max(0, rightLimit - leftPad - gap);
         var statusW = Math.Max(
-            UiScale.S(160),
-            Math.Min(UiScale.S(340), UiFit.TextWidth(_status.Text, _status.Font) + UiScale.S(16)));
-        // 长提示时少占一点，把剩余留给资源条；过长则状态可伸到按钮前
-        if (_status.Text.Length > 36)
-            statusW = Math.Max(UiScale.S(200), Math.Min(statusW, Math.Max(UiScale.S(200), rightLimit - leftPad - UiScale.S(280))));
+            UiScale.S(100),
+            Math.Min(UiScale.S(280), UiFit.TextWidth(_status.Text, _status.Font) + UiScale.S(12)));
+        if (_resourceMeter is not null)
+            statusW = Math.Min(statusW, Math.Max(UiScale.S(100), avail - meterReserve));
 
         if (_resourceMeter is not null)
         {
             var meterLeft = leftPad + statusW + gap;
-            if (meterLeft >= rightLimit - UiScale.S(120))
-            {
-                // 空间不够：状态让路，资源条仍靠左排在状态后尽量显示
-                statusW = Math.Max(UiScale.S(140), (rightLimit - leftPad - gap) / 3);
-                meterLeft = leftPad + statusW + gap;
-            }
-
             _status.Width = statusW;
             _resourceMeter.LayoutInBottomBar(_bottomPanel, meterLeft, rightLimit);
         }
