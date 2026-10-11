@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.173] - 2026-10-12
+
+### Added
+
+- **My plans（我的方案）**: bookmark optimize items across modules into named plans; one-click apply / restore; multi-plan; JSON import/export; drift detect with re-apply
+- Row ★ favorite next to each setting; sidebar / toolbar entry; reopen jumps to My plans when bookmarks exist
+
 ## [1.0.167] - 2026-09-25
 
 ### Added

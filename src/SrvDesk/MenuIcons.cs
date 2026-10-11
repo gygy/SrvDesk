@@ -178,6 +178,21 @@ internal static class MenuIcons
         Array.Empty<Cand>(),
         DrawScriptEdit);
 
+    /// <summary>列表行内「加入我的方案」空心星。</summary>
+    public static Image FavoriteOff => Get("fav-off",
+        Array.Empty<Cand>(),
+        g => DrawFavoriteStar(g, filled: false));
+
+    /// <summary>列表行内「已在我的方案」实心星。</summary>
+    public static Image FavoriteOn => Get("fav-on",
+        Array.Empty<Cand>(),
+        g => DrawFavoriteStar(g, filled: true));
+
+    /// <summary>侧栏「我的方案」。</summary>
+    public static Image MyPlan => Get("my-plan",
+        Array.Empty<Cand>(),
+        g => DrawFavoriteStar(g, filled: true));
+
     /// <summary>列表行内说明入口（自绘，不依赖 Segoe UI Symbol）。</summary>
     public static Image RowInfo => Get("row-info",
         Array.Empty<Cand>(),
@@ -657,6 +672,34 @@ internal static class MenuIcons
         using var p = new Pen(Color.FromArgb(0, 150, 80), 2f);
         g.DrawArc(p, 2, 2, 12, 12, 35, 250);
         g.FillPolygon(brush, new[] { new Point(13, 1), new Point(16, 6), new Point(10, 6) });
+    }
+
+    private static void DrawFavoriteStar(Graphics g, bool filled)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var pts = FavoriteStarPoints(8f, 8f, 6.2f, 2.6f);
+        if (filled)
+        {
+            using var b = new SolidBrush(RecommendLevelUi.StarOn);
+            g.FillPolygon(b, pts);
+        }
+        else
+        {
+            using var p = new Pen(Color.FromArgb(150, 150, 150), 1.4f);
+            g.DrawPolygon(p, pts);
+        }
+    }
+
+    private static PointF[] FavoriteStarPoints(float cx, float cy, float outer, float inner)
+    {
+        var pts = new PointF[10];
+        for (var i = 0; i < 10; i++)
+        {
+            var ang = -Math.PI / 2 + i * Math.PI / 5;
+            var r = (i % 2 == 0) ? outer : inner;
+            pts[i] = new PointF(cx + (float)(Math.Cos(ang) * r), cy + (float)(Math.Sin(ang) * r));
+        }
+        return pts;
     }
 
     private static void DrawUndo(Graphics g)

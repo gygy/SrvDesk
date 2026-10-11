@@ -335,6 +335,7 @@ internal sealed class MainForm : Form
 
     private static readonly string[] EmbeddedPageTitles =
     [
+        AppLang.L("我的方案", "My plans"),
         AppLang.L("账户与登录", "Account & sign-in"),
         AppLang.L("登录启动项", "Startup apps"),
         AppLang.L("高级设置", "Advanced settings"),
@@ -346,6 +347,7 @@ internal sealed class MainForm : Form
 
     private static readonly string[] MenuItems =
     [
+        AppLang.L("我的方案", "My plans"),
         AppLang.L("Server专属", "Server only"),
         AppLang.L("账户策略", "Account policy"),
         AppLang.L("账户与登录", "Account & sign-in"),
@@ -600,10 +602,15 @@ internal sealed class MainForm : Form
         Controls.Add(_commandBar);
         Controls.Add(_appMenu);
 
-        _menu.SelectedIndex = 0;
+        // 已有收藏时置顶打开「我的方案」；否则进 Server 专属
+        _menu.SelectedIndex = UserPlanStore.HasAnyItems() ? 0 : 1;
         ShowHelpPlaceholder();
         Load += (_, _) => InitializeRuntime();
-        Shown += (_, _) => TryShowFirstRunNotice();
+        Shown += (_, _) =>
+        {
+            TryShowFirstRunNotice();
+            BeginInvoke(new Action(NotifyUserPlanDriftIfNeeded));
+        };
         FormClosed += (_, _) =>
         {
             ClearPageCache();
@@ -719,6 +726,7 @@ internal sealed class MainForm : Form
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolSystemRepair.Click += (_, _) => { using var d = new SystemRepairDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
+        _appMenu.ToolMyPlans.Click += (_, _) => NavigateToMyPlans();
         _appMenu.ToolOptimizeAdvisor.Click += (_, _) => ShowOptimizeAdvisor();
         _appMenu.ToolPortExposure.Click += (_, _) => { using var d = new PortExposureDialog(); d.ShowDialog(this); };
         _appMenu.ToolOptHistory.Click += (_, _) => { using var d = new OptimizationHistoryDialog(); d.ShowDialog(this); };
@@ -1329,6 +1337,7 @@ internal sealed class MainForm : Form
             Margin = new Padding(0),
         };
         _commandFlow.Controls.Add(quickGap);
+        _commandFlow.Controls.Add(BarQuickButton(AppLang.L("我的方案", "My plans"), AppLang.L("收藏的优化项：一键应用 / 还原 / 漂移检测", "Bookmarked settings: apply / restore / drift"), NavigateToMyPlans));
         _commandFlow.Controls.Add(BarQuickButton(AppLang.L("配置脚本", "Config script"), AppLang.L("显示或隐藏配置脚本面板（可查看/编辑）", "Show or hide config script panel"), ToggleConfigScriptPanel));
         _commandFlow.Controls.Add(BarQuickButton(AppLang.L("常用软件", "Apps"), AppLang.L("打开常用软件安装与更新", "Install or update common apps"), ShowCommonSoftware));
         _commandFlow.Controls.Add(BarQuickButton(AppLang.L("优化顾问", "Advisor"), AppLang.L("按本机状态查看并应用强烈推荐/推荐项", "Review and apply strongly recommended items for this PC"), ShowOptimizeAdvisor));
@@ -2189,6 +2198,186 @@ internal sealed class MainForm : Form
         d.ShowDialog(this);
     }
 
+    private void NavigateToMyPlans()
+    {
+        var title = AppLang.L("我的方案", "My plans");
+        for (var i = 0; i < MenuItems.Length; i++)
+        {
+            if (MenuItems[i] != title) continue;
+            if (_menu.SelectedIndex != i)
+                _menu.SelectedIndex = i;
+            else
+                ShowGroup(i);
+            return;
+        }
+    }
+
+    private void NotifyUserPlanDriftIfNeeded()
+    {
+        try
+        {
+            if (!UserPlanStore.HasAnyItems()) return;
+            var plan = UserPlanStore.GetOrCreateDefaultPlan();
+            if (plan.Items.Count == 0) return;
+            Optimizer.State sys;
+            try { sys = Optimizer.Read(fullScan: false); }
+            catch { return; }
+            var drift = UserPlanStore.CountDrift(plan, sys);
+            if (drift <= 0) return;
+            _status.Text = AppLang.Lf(
+                "「{0}」有 {1} 项已漂移 · 打开「我的方案」可一键重新应用",
+                "“{0}” has {1} drifted item(s) · open My plans to re-apply",
+                plan.Name, drift);
+        }
+        catch { /* ignore */ }
+    }
+
+    internal void RefreshFavoriteStars()
+    {
+        foreach (var row in AllRows)
+            row.RefreshFavoriteIcon(IsRowInActivePlan(row));
+    }
+
+    private bool IsRowInActivePlan(SettingRow row)
+    {
+        var key = CatalogFieldNameOf(row.Help);
+        return !string.IsNullOrEmpty(key) && UserPlanStore.IsInActivePlan(key!);
+    }
+
+    private void ToggleFavoriteForRow(SettingRow row)
+    {
+        var key = CatalogFieldNameOf(row.Help);
+        if (string.IsNullOrEmpty(key))
+        {
+            MessageBox.Show(this,
+                AppLang.L("该项无法加入方案（缺少内部标识）。", "This item cannot be bookmarked (missing key)."),
+                AppLang.L("我的方案", "My plans"),
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var plan = UserPlanStore.GetOrCreateDefaultPlan();
+        if (plan.Items.Any(x => string.Equals(x.Key, key, StringComparison.Ordinal)))
+        {
+            UserPlanStore.RemoveItem(plan, key!);
+            row.RefreshFavoriteIcon(false);
+            _status.Text = AppLang.Lf("已从「{0}」移除：{1}", "Removed from “{0}”: {1}", plan.Name, row.ItemText);
+            RefreshUserPlanPageIfOpen();
+            return;
+        }
+
+        var module = ModuleTitleOf(row) ?? "";
+        var desiredLabel = row.HasChoice
+            ? (row.ChoiceLabels is { Length: > 0 } labels
+                && row.ChoiceIndex >= 0 && row.ChoiceIndex < labels.Length
+                    ? labels[row.ChoiceIndex]
+                    : row.CurrentValueText)
+            : (row.Checked ? AppLang.L("开启", "On") : AppLang.L("关闭", "Off"));
+
+        // 收藏时：若当前是「开」则记下当前档；若是「关」则记下推荐档，方便一键优化
+        var value = row.Checked ? row.ChoiceIndex : row.OptimizedIndex;
+        if (!row.Checked && row.HasChoice)
+            desiredLabel = row.RecommendedValueText;
+
+        var item = new UserPlanItem
+        {
+            Key = key!,
+            Value = value,
+            OptimizedIndex = row.OptimizedIndex,
+            Title = row.ItemText,
+            Module = module,
+            DesiredLabel = desiredLabel,
+            Enabled = true,
+        };
+        UserPlanStore.UpsertItem(plan, item);
+        row.RefreshFavoriteIcon(true);
+        _status.Text = AppLang.Lf("已加入「{0}」：{1}", "Added to “{0}”: {1}", plan.Name, row.ItemText);
+        RefreshUserPlanPageIfOpen();
+    }
+
+    private void RefreshUserPlanPageIfOpen()
+    {
+        var title = AppLang.L("我的方案", "My plans");
+        if (_pageCache.TryGetValue(title, out var page) && page is IEmbeddedSettingsPage embedded)
+            embedded.RefreshFromSystem();
+    }
+
+    private string? ModuleTitleOf(SettingRow row)
+    {
+        foreach (var (nav, sections) in _groups)
+        {
+            foreach (var (_, rows) in sections)
+            {
+                foreach (var r in rows)
+                {
+                    if (ReferenceEquals(r, row))
+                        return nav;
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>按方案项差量写入系统；失败项跳过并汇总。</summary>
+    internal (bool ok, int attempted, List<string> errors) ApplyUserPlanItems(
+        IReadOnlyList<UserPlanItem> items, bool restore, bool askRestorePoint)
+    {
+        var errors = new List<string>();
+        if (items.Count == 0)
+            return (true, 0, errors);
+
+        _apply.Enabled = false;
+        _restore.Enabled = false;
+        try
+        {
+            if (askRestorePoint && !TryCreateRestorePointBeforeApply())
+            {
+                _status.Text = AppLang.L("已取消应用。", "Apply cancelled.");
+                return (false, 0, errors);
+            }
+
+            Optimizer.State baseline;
+            try { baseline = Optimizer.Read(fullScan: false); }
+            catch (Exception ex)
+            {
+                errors.Add(ex.Message);
+                return (false, 0, errors);
+            }
+
+            var target = UserPlanState.Clone(baseline);
+            UserPlanState.ApplyItems(target, items, restore);
+
+            _status.Text = restore
+                ? AppLang.L("正在按方案还原…", "Restoring from plan…")
+                : AppLang.L("正在按方案写入…", "Applying plan…");
+            Application.DoEvents();
+
+            var batchTitle = restore
+                ? AppLang.L("我的方案 · 还原", "My plan · restore")
+                : AppLang.L("我的方案 · 应用", "My plan · apply");
+            ApplyLog.BeginBatch(batchTitle);
+            errors.AddRange(Optimizer.Apply(target, baseline));
+            ApplyLog.WriteApply(batchTitle, errors);
+            OptimizationHistory.Add(
+                AppLang.L("我的方案", "My plans"),
+                AppLang.Lf("尝试 {0} 项，错误 {1}", "Attempted {0}, errors {1}",
+                    Optimizer.LastApplyActionCount, errors.Count));
+
+            BindFromSystem(fullScan: false);
+            RefreshFavoriteStars();
+
+            _status.Text = AppLang.Lf(
+                "方案已处理：尝试 {0}，失败 {1}",
+                "Plan done: tried {0}, failed {1}",
+                Optimizer.LastApplyActionCount, errors.Count);
+            return (true, Optimizer.LastApplyActionCount, errors);
+        }
+        finally
+        {
+            UpdateBottomActionEnablement();
+        }
+    }
+
     private CommonSoftwareDialog? _commonSoftwareDlg;
 
     private void ShowCommonSoftware()
@@ -2523,6 +2712,8 @@ internal sealed class MainForm : Form
         }
         if (title == AppLang.L("DNS 设置", "DNS settings"))
             return new DnsSwitcherDialog();
+        if (title == AppLang.L("我的方案", "My plans"))
+            return new UserPlanDialog(this);
         if (title == AppLang.L("自定义配置", "Custom config"))
             return new CustomConfigDialog();
         throw new InvalidOperationException(title);
@@ -2949,7 +3140,8 @@ internal sealed class MainForm : Form
         for (var i = 0; i < rows.Length; i++)
         {
             var bg = i % 2 == 0 ? AppTheme.SurfaceCard : AppTheme.RowAlt;
-            rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp, ShowRecipeDialog);
+            rows[i].Mount(body, i * rowH, rowH, bg, section.Width, _toolTip, ShowHelp, ShowRecipeDialog, ToggleFavoriteForRow);
+            rows[i].RefreshFavoriteIcon(IsRowInActivePlan(rows[i]));
         }
 
         void Toggle(object? _, EventArgs __)
@@ -3170,21 +3362,22 @@ internal sealed class MainForm : Form
 
     private static Image MenuIconFor(int index) => index switch
     {
-        0 => MenuIcons.ServerRoles,          // Server专属
-        1 => MenuIcons.Autologon,            // 账户策略
-        2 => MenuIcons.Identity,             // 账户与登录
-        3 => MenuIcons.NavExplorer,          // 资源管理器
-        4 => MenuIcons.DesktopMaintenance,   // 桌面外观
-        5 => MenuIcons.NavNetwork,           // 远程与网络
-        6 => MenuIcons.NavPrivacy,           // 隐私与体验
-        7 => MenuIcons.SecurityCenter,       // 性能及安全
-        8 => MenuIcons.TaskScheduler,        // 登录启动项
-        9 => MenuIcons.ShutdownTimer,        // 电源与后台
-        10 => MenuIcons.Advanced,            // 高级设置
-        11 => MenuIcons.ContextMenu,         // 右键菜单
-        12 => MenuIcons.ComputerMgmt,        // 服务优化
-        13 => MenuIcons.NavDns,              // DNS
-        14 => MenuIcons.Script,              // 自定义配置
+        0 => MenuIcons.MyPlan,               // 我的方案
+        1 => MenuIcons.ServerRoles,          // Server专属
+        2 => MenuIcons.Autologon,            // 账户策略
+        3 => MenuIcons.Identity,             // 账户与登录
+        4 => MenuIcons.NavExplorer,          // 资源管理器
+        5 => MenuIcons.DesktopMaintenance,   // 桌面外观
+        6 => MenuIcons.NavNetwork,           // 远程与网络
+        7 => MenuIcons.NavPrivacy,           // 隐私与体验
+        8 => MenuIcons.SecurityCenter,       // 性能及安全
+        9 => MenuIcons.TaskScheduler,        // 登录启动项
+        10 => MenuIcons.ShutdownTimer,       // 电源与后台
+        11 => MenuIcons.Advanced,            // 高级设置
+        12 => MenuIcons.ContextMenu,         // 右键菜单
+        13 => MenuIcons.ComputerMgmt,        // 服务优化
+        14 => MenuIcons.NavDns,              // DNS
+        15 => MenuIcons.Script,              // 自定义配置
         _ => MenuIcons.Quick,
     };
 
@@ -3199,6 +3392,7 @@ internal sealed class MainForm : Form
         {
             Bind(Optimizer.Read(fullScan), updateCurrentValues: true);
             _uiDirty = false;
+            RefreshFavoriteStars();
             return true;
         }
         catch (Exception ex)
@@ -4394,6 +4588,7 @@ internal sealed class MainForm : Form
         private readonly SingleLineLabel _item;
         private readonly SingleLineLabel _scope;
         private readonly PictureBox _info;
+        private readonly PictureBox _favorite;
         private readonly PictureBox _script;
         private readonly Label _level;
         private readonly SingleLineLabel _note;
@@ -4462,6 +4657,14 @@ internal sealed class MainForm : Form
                 Size = new Size(SettingListLayout.RowIconSize, SettingListLayout.RowIconSize),
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
+            };
+            _favorite = new PictureBox
+            {
+                Image = MenuIcons.FavoriteOff,
+                SizeMode = PictureBoxSizeMode.CenterImage,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Size = new Size(SettingListLayout.RowIconSize, SettingListLayout.RowIconSize),
             };
             _script = new PictureBox
             {
@@ -4679,6 +4882,11 @@ internal sealed class MainForm : Form
             _wrap.Invalidate(true);
         }
 
+        public void RefreshFavoriteIcon(bool inPlan)
+        {
+            _favorite.Image = inPlan ? MenuIcons.FavoriteOn : MenuIcons.FavoriteOff;
+        }
+
         public void Mount(
             Control parent,
             int y,
@@ -4687,7 +4895,8 @@ internal sealed class MainForm : Form
             int width,
             ToolTip toolTip,
             Action<SettingRow> onSelectHelp,
-            Action<SettingRow> onShowRecipe)
+            Action<SettingRow> onShowRecipe,
+            Action<SettingRow> onToggleFavorite)
         {
             _normalBg = bg;
             var wrap = new BufferedPanel
@@ -4706,6 +4915,7 @@ internal sealed class MainForm : Form
             if (hasScope) tip += "\r\n[" + Help.Scope.FormatBadges() + "]";
             toolTip.SetToolTip(_item, tip);
             toolTip.SetToolTip(_info, AppLang.L("查看说明与配置脚本\r\n", "View notes & config script\r\n") + tip);
+            toolTip.SetToolTip(_favorite, AppLang.L("☆ 加入我的方案（再点移除）", "☆ Add to My plans (click again to remove)"));
             toolTip.SetToolTip(_script, AppLang.L("配置脚本：查看/编辑开启与关闭脚本", "Config script: view/edit on/off scripts"));
             toolTip.SetToolTip(_level, RecommendLevelUi.Tip(EffectiveRecommend));
             // 完整说明用窗内悬浮层（钳制在主窗客户区），不用系统 ToolTip（会画出窗外）
@@ -4723,6 +4933,7 @@ internal sealed class MainForm : Form
             _level.Click += Select;
             _note.Click += Select;
             if (hasScope) _scope.Click += Select;
+            _favorite.Click += (_, _) => onToggleFavorite(this);
             _script.Click += (_, _) => onShowRecipe(this);
 
             wrap.Controls.Add(_current);
@@ -4732,6 +4943,7 @@ internal sealed class MainForm : Form
             wrap.Controls.Add(_info);
             wrap.Controls.Add(_item);
             if (hasScope) wrap.Controls.Add(_scope);
+            wrap.Controls.Add(_favorite);
             wrap.Controls.Add(_script);
             if (HasChoice)
             {
@@ -4758,8 +4970,9 @@ internal sealed class MainForm : Form
         {
             width = Math.Max(SettingListLayout.NoteX + 80, width);
             var itemX = SettingListLayout.ItemX;
+            var favX = SettingListLayout.FavoriteX;
             var scriptX = SettingListLayout.ScriptX;
-            var textW = Math.Max(120, scriptX - itemX - 4);
+            var textW = Math.Max(120, favX - itemX - 4);
             var hasScope = Help.Scope.HasBadge;
 
             _info.SetBounds(SettingListLayout.InfoX, (h - UiScale.S(18)) / 2, UiScale.S(18), UiScale.S(18));
@@ -4787,6 +5000,7 @@ internal sealed class MainForm : Form
                 _item.SetBounds(itemX, 0, textW, h);
             }
 
+            _favorite.SetBounds(favX, (h - UiScale.S(20)) / 2, SettingListLayout.FavoriteW, UiScale.S(20));
             _script.SetBounds(scriptX, (h - UiScale.S(20)) / 2, SettingListLayout.ScriptW, UiScale.S(20));
             if (HasChoice)
             {

@@ -13,10 +13,14 @@ internal static class SettingListLayout
     /// <summary>下拉选择控件（多档设置）。</summary>
     public static int ChoiceX => UiScale.S(350);
     public static int ChoiceW => UiScale.S(114);
-    /// <summary>行内说明 / 配置脚本图标统一边长。</summary>
+    /// <summary>行内说明 / 配置脚本 / 收藏图标统一边长。</summary>
     public static int RowIconSize => Math.Max(UiScale.S(18), MenuIcons.PixelSize);
     public static int ScriptW => RowIconSize;
+    public static int FavoriteW => RowIconSize;
+    /// <summary>配置脚本图标（开关左侧）。</summary>
     public static int ScriptX => ChoiceX - ScriptW - UiScale.S(4);
+    /// <summary>「☆ 加入我的方案」在脚本图标左侧。</summary>
+    public static int FavoriteX => ScriptX - FavoriteW - UiScale.S(4);
     /// <summary>系统默认值列（加宽避免「系统默认值」被裁成「系统…」）。</summary>
     public static int SystemX => UiScale.S(478);
     public static int SystemW => UiScale.S(100);

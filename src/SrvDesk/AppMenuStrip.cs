@@ -22,6 +22,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolSystemRepair { get; }
     public ToolStripMenuItem ToolShutdownTimer { get; }
     public ToolStripMenuItem ToolOptimizeAdvisor { get; }
+    public ToolStripMenuItem ToolMyPlans { get; }
     public ToolStripMenuItem ToolPortExposure { get; }
     public ToolStripMenuItem ToolOptHistory { get; }
     public ToolStripMenuItem ToolDesktopMaintenance { get; }
@@ -85,6 +86,10 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolSystemRepair = Item(AppLang.L("系统修复...", "System repair..."), MenuIcons.Advanced);
         ToolShutdownTimer = Item(AppLang.L("定时关机...", "Shutdown timer..."), MenuIcons.ShutdownTimer);
         ToolOptimizeAdvisor = Item(AppLang.L("优化顾问...", "Optimization advisor..."), MenuIcons.SystemInfo);
+        ToolMyPlans = Item(AppLang.L("我的方案...", "My plans..."), MenuIcons.MyPlan);
+        ToolMyPlans.ToolTipText = AppLang.L(
+            "打开收藏的优化方案：一键应用 / 还原 / 漂移检测",
+            "Open bookmarked optimize plans: apply / restore / drift detect");
         ToolPortExposure = Item(AppLang.L("端口暴露...", "Port exposure..."), MenuIcons.SecurityCenter);
         ToolOptHistory = Item(AppLang.L("回滚优化...", "Rollback optimization..."), MenuIcons.Restore);
         ToolDesktopMaintenance = Item(AppLang.L("桌面维护...", "Desktop maintenance..."), MenuIcons.DesktopMaintenance);
@@ -102,7 +107,7 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolRestoreDefaults = Item(AppLang.L("恢复出厂默认...", "Restore defaults..."), MenuIcons.Restore);
 
         tools.DropDownItems.AddRange([
-            ToolOptimizeAdvisor, ToolOptHistory,
+            ToolMyPlans, ToolOptimizeAdvisor, ToolOptHistory,
             ToolCommonSoftware, ToolCleanup,
             ToolAddRemoveRoles, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
             ToolHosts,
