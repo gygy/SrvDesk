@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $RepoRoot).Path
 Set-Location $Root
 
-$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { "ssh://git@192.168.80.3:8022/sheng/SrvDesk.git" }
+$RemoteUrl = if ($env:GIT_REMOTE) { $env:GIT_REMOTE } else { "ssh://git@192.168.80.3:8022/sheng/win-yijian-youhua.git" }
 $Branch = if ($env:GIT_BRANCH) { $env:GIT_BRANCH } else { "main" }
 $SshKey = if ($env:GIT_SSH_KEY) { $env:GIT_SSH_KEY } else { Join-Path $env:USERPROFILE ".ssh\id_ed25519_gitea" }
 if (-not $env:GIT_SSH_COMMAND) {
