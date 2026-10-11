@@ -405,7 +405,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = $"{AppBrand.ProductName} v{AppBrand.VersionText}";
+        ApplyWindowTitle();
         StartPosition = FormStartPosition.CenterScreen;
         // 设计尺寸；高 DPI / 小屏由 FitFormToWorkingArea 再收进工作区，避免底栏按钮出屏
         MinimumSize = new Size(UiScale.S(1024), UiScale.S(640));
@@ -1149,9 +1149,18 @@ internal sealed class MainForm : Form
         }
     }
 
+    private void ApplyWindowTitle()
+    {
+        var os = _systemFacts.CompactSummary;
+        Text = string.IsNullOrWhiteSpace(os)
+            ? $"{AppBrand.ProductName} v{AppBrand.VersionText}"
+            : $"{AppBrand.ProductName} v{AppBrand.VersionText}  ·  {os}";
+    }
+
     private void InitializeRuntime()
     {
-        _defaultStatusText = _systemFacts.CompactSummary;
+        ApplyWindowTitle();
+        _defaultStatusText = "";
         if (!AdminHelper.IsRunningAsAdministrator())
         {
             _status.ForeColor = Color.FromArgb(163, 72, 0);
@@ -1170,7 +1179,7 @@ internal sealed class MainForm : Form
         }
         else
         {
-            _status.Text = _defaultStatusText + AppLang.L(" · 正在加载…", " · Loading…");
+            _status.Text = AppLang.L("正在加载…", "Loading…");
         }
 
         // 程序设置：默认隐藏不适用项（Server Core 上面已强制勾选）
@@ -3213,8 +3222,8 @@ internal sealed class MainForm : Form
         _status.TextAlign = ContentAlignment.MiddleLeft;
         _status.ForeColor = AppTheme.TextMute;
         _status.AutoEllipsis = true;
-        _defaultStatusText = _systemFacts.CompactSummary;
-        _status.Text = _defaultStatusText;
+        _defaultStatusText = "";
+        _status.Text = "";
         _status.TextChanged += (_, _) => LayoutBottomChrome();
 
         var actions = new NoScrollFlowLayoutPanel
@@ -3708,8 +3717,9 @@ internal sealed class MainForm : Form
                                 _status.Text.IndexOf(AppLang.L("已载入预设", "Loaded preset"), StringComparison.Ordinal) < 0 &&
                                 _status.Text.IndexOf(AppLang.L("已导入", "Imported"), StringComparison.Ordinal) < 0)
                             {
-                                _status.Text = _systemFacts.CompactSummary +
-                                    AppLang.L(" · 后台扫描完成（已保留你的勾选；点「刷新」可对齐系统）。", " · Background scan done (kept your toggles; Refresh to sync).");
+                                _status.Text = AppLang.L(
+                                    "后台扫描完成（已保留你的勾选；点「刷新」可对齐系统）。",
+                                    "Background scan done (kept your toggles; Refresh to sync).");
                             }
                             return;
                         }
@@ -3726,7 +3736,7 @@ internal sealed class MainForm : Form
                         RefreshEmbeddedPageIfVisible();
                         if (fullScan && forceUi &&
                             !_status.Text.StartsWith(AppLang.L("读取当前配置失败", "Failed to read settings"), StringComparison.Ordinal))
-                            _status.Text = _systemFacts.CompactSummary + AppLang.L(" · 状态已刷新。", " · Status refreshed.");
+                            _status.Text = AppLang.L("状态已刷新。", "Status refreshed.");
                     }
                 }));
             }

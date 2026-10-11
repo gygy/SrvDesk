@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.178] - 2026-10-12
+
+### Changed
+
+- Show OS version (e.g. Windows Server 2022 · 21H2) in the window title; bottom bar no longer repeats it when idle
+
 ## [1.0.177] - 2026-10-12
 
 ### Fixed
