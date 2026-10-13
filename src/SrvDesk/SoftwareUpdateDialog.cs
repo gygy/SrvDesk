@@ -139,4 +139,4 @@ internal sealed class SoftwareUpdateDialog : Form
         Close();
     }
 }
-
+
