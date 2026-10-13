@@ -4,6 +4,18 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.180] - 2026-10-14
+
+### Added
+
+- Common software: LDPlayer (雷电模拟器 9)
+
+### Fixed
+
+- Common software install: avoid clearing status cache before each install (batch was re-scanning registry every time)
+- Common software install: don’t let background winget source update race with installs; kill hung winget on timeout
+- Common software install: prefer direct offline URLs before winget; skip winget-pkgs re-query after winget failure; shorten silent-arg retries
+
 ## [1.0.179] - 2026-10-14
 
 ### Added

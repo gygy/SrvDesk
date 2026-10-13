@@ -97,6 +97,15 @@ internal static class CommonSoftwareHelper
         _wingetVersionCache = null;
     }
 
+    /// <summary>进行中的安装/卸载计数；WarmUp 见此则跳过 source update，避免与安装抢 winget。</summary>
+    private static int _installWorkCount;
+
+    public static void BeginInstallWork() => Interlocked.Increment(ref _installWorkCount);
+
+    public static void EndInstallWork() => Interlocked.Decrement(ref _installWorkCount);
+
+    public static bool IsInstallWorkBusy => Volatile.Read(ref _installWorkCount) > 0;
+
     /// <summary>打开常用软件时后台预热：写入加速设置并更新源索引，避免首次安装卡住。
     /// 须在状态检测完成后再调用，避免与 Prefetch 抢 winget 导致界面一直「检测中」。</summary>
     public static void WarmUpInBackground()
@@ -109,8 +118,19 @@ internal static class CommonSoftwareHelper
             {
                 EnsureWingetSpeedSettings();
                 if (!IsWingetAvailable()) return;
-                // 安装时关闭自动源更新；此处后台刷一次索引（短超时，失败可忽略）
-                Run(ResolveWingetPath(), "source update --disable-interactivity", setWorkingDirForExe: true, timeoutMs: 90_000);
+                // 用户已点安装时不要抢 winget；并走互斥，避免双开 winget 卡死
+                if (IsInstallWorkBusy) return;
+                if (!WingetGate.Wait(0)) return;
+                try
+                {
+                    if (IsInstallWorkBusy) return;
+                    Run(ResolveWingetPath(), "source update --disable-interactivity",
+                        setWorkingDirForExe: true, timeoutMs: 45_000);
+                }
+                finally
+                {
+                    WingetGate.Release();
+                }
             }
             catch
             {
@@ -727,14 +747,26 @@ internal static class CommonSoftwareHelper
 
     public static string Install(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
     {
+        BeginInstallWork();
+        try
+        {
+            return InstallCore(item, onProgress);
+        }
+        finally
+        {
+            EndInstallWork();
+        }
+    }
+
+    private static string InstallCore(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress)
+    {
         ApplyLog.Write("常用软件安装：" + item.Title);
         if (item.IsWingetBootstrap)
             return InstallWinget(onProgress);
         if (item.IsScoopBootstrap)
             return InstallScoop(onProgress);
 
-        // 已安装则跳过，避免重复安装/重复桌面图标
-        InvalidateStatusCache();
+        // 已安装则跳过。勿清空整表缓存：批量并行时否则每项都全表扫注册表，极慢。
         var existing = Query(item);
         if (existing.Installed)
         {
@@ -797,10 +829,12 @@ internal static class CommonSoftwareHelper
             }
         }
 
+        var wingetTried = false;
         if (IsWingetAvailable() && !string.IsNullOrWhiteSpace(item.WingetId))
         {
             EnsureWingetSpeedSettings();
             Report(onProgress, "正在调用 winget（静默）…", 5);
+            wingetTried = true;
             // --silent：跳过安装包 UI；--source winget：避开较慢的 msstore；
             // 源自动更新已在设置中关闭，避免每次 install 先同步索引
             var code = RunWinget(BuildWingetInstallArgs(item.WingetId, preferWingetSource: true), onProgress);
@@ -840,7 +874,8 @@ internal static class CommonSoftwareHelper
             if (!preferOfficialApi)
             {
                 Report(onProgress, "正在解析官网最新安装包…", 70);
-                var officialMsg = TryInstallFromOfficialLatest(item, onProgress);
+                // winget 刚失败时跳过再查 GitHub winget-pkgs，避免二次长时间卡住
+                var officialMsg = TryInstallFromOfficialLatest(item, onProgress, skipWingetPkgs: wingetTried);
                 if (officialMsg is not null)
                     return officialMsg;
             }
@@ -907,9 +942,10 @@ internal static class CommonSoftwareHelper
     /// <summary>解析官网/GitHub 最新直链并静默安装。成功返回文案；无法解析或安装失败返回 null。</summary>
     private static string? TryInstallFromOfficialLatest(
         CommonSoftwareItem item,
-        Action<SoftwareInstallProgress>? onProgress)
+        Action<SoftwareInstallProgress>? onProgress,
+        bool skipWingetPkgs = false)
     {
-        var url = OfficialInstallerResolver.TryResolve(item);
+        var url = OfficialInstallerResolver.TryResolve(item, skipWingetPkgs);
         if (string.IsNullOrWhiteSpace(url)) return null;
 
         // 火绒等 opaque「最新」接口：解析到真正 .exe 后再装（避免与 OfflineInstallerUrl 相同而直接放弃）
@@ -951,9 +987,17 @@ internal static class CommonSoftwareHelper
         };
     }
 
-    private static bool PreferOfflineNow(CommonSoftwareItem item) =>
-        item.PreferOfflineInstall
-        || (item.PreferOfflineOnServer && Optimizer.IsWindowsServer());
+    private static bool PreferOfflineNow(CommonSoftwareItem item)
+    {
+        if (item.PreferOfflineInstall) return true;
+        if (item.PreferOfflineOnServer && Optimizer.IsWindowsServer()) return true;
+        var url = (item.OfflineInstallerUrl ?? "").Trim();
+        if (url.Length == 0) return false;
+        // 有可用直链时先离线安装，避免先卡在 winget 失败再回退（批量安装常见卡顿）
+        return OfficialInstallerResolver.IsDirectInstallerUrl(url)
+               || OfficialInstallerResolver.IsFreshLatestUrl(url)
+               || OfficialInstallerResolver.IsOpaqueInstallerDownloadUrl(url);
+    }
 
     /// <summary>有官方 JSON API（签名直链会过期）时优先现查并安装，且勿回退浏览器。</summary>
     private static bool PreferOfficialApiNow(CommonSoftwareItem item) =>
@@ -1424,7 +1468,10 @@ internal static class CommonSoftwareHelper
             ? OfficialInstallerResolver.GuessSilentArgs(url)
             : item.OfflineInstallArgs.Trim();
         var attempts = BuildSilentArgAttempts(dest, args);
-        Report(onProgress, "正在静默安装离线包…", 65);
+        if (item.Id.Equals("ldplayer", StringComparison.OrdinalIgnoreCase))
+            Report(onProgress, "正在安装（在线安装器会下载完整包，体积较大）…", 65);
+        else
+            Report(onProgress, "正在静默安装离线包…", 65);
         ApplyLog.Write("离线安装：" + dest + " " + args);
 
         // 天翼等：先结束客户端，避免安装程序弹出「请先关闭」并在后台卡死
@@ -1432,19 +1479,27 @@ internal static class CommonSoftwareHelper
             SuppressPostInstallLaunch(item);
 
         var code = -1;
-        foreach (var one in attempts)
+        for (var i = 0; i < attempts.Count; i++)
         {
-            code = RunInstaller(dest, one);
-            InvalidateStatusCache();
+            var one = attempts[i];
+            // 首参给足时间；后续参数多为容错，缩短超时以免错误静默开关卡 10 分钟×N
+            var timeoutMs = i == 0 ? 600_000 : 150_000;
+            code = RunInstaller(dest, one, timeoutMs);
+            // 只失效本项感知：清整表缓存后立刻 Query 会全表扫，批量时很慢
+            MarkItemStatusUnknown(item.Id);
             if (code == 0) break;
             var mid = Query(item);
             if (mid.Installed) break;
         }
-        InvalidateStatusCache();
+
+        MarkItemStatusUnknown(item.Id);
         if (code == 0)
         {
             SuppressPostInstallLaunch(item);
-            return FinishInstallSuccess(item, onProgress);
+            var okMsg = item.Id.Equals("ldplayer", StringComparison.OrdinalIgnoreCase)
+                ? "雷电模拟器安装完成（若桌面无图标可在开始菜单打开）。"
+                : "";
+            return FinishInstallSuccess(item, onProgress, okMsg);
         }
 
         // 部分安装程序用非 0 表示需重启等；若已能检测到则视为成功
@@ -1458,6 +1513,17 @@ internal static class CommonSoftwareHelper
 
         ApplyLog.Write("离线安装退出码：" + code);
         return null;
+    }
+
+    /// <summary>仅丢掉单项缓存，下次 Query 重扫该项；避免 InvalidateStatusCache 触发全表重扫。</summary>
+    private static void MarkItemStatusUnknown(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId)) return;
+        lock (StatusCacheLock)
+        {
+            if (_statusCache is null) return;
+            _statusCache.Remove(itemId);
+        }
     }
 
     /// <summary>部分安装包静默后仍会拉起客户端并弹浏览器（如天翼登录页），安装阶段先关掉。</summary>
@@ -1526,10 +1592,10 @@ internal static class CommonSoftwareHelper
                || a.IndexOf("/qb", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
-    private static int RunInstaller(string dest, string args)
+    private static int RunInstaller(string dest, string args, int timeoutMs = 600_000)
     {
         if (dest.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
-            return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: 600_000);
+            return Run("msiexec.exe", "/i \"" + dest + "\" " + args, timeoutMs: timeoutMs);
 
         // Claude Desktop 等：MSIX/Appx 旁加载
         if (dest.EndsWith(".msix", StringComparison.OrdinalIgnoreCase)
@@ -1542,10 +1608,10 @@ internal static class CommonSoftwareHelper
         var fileName = Path.GetFileName(dest) ?? "";
         if (fileName.StartsWith("tianyiyun", StringComparison.OrdinalIgnoreCase)
             || args.IndexOf("ui-auto", StringComparison.OrdinalIgnoreCase) >= 0)
-            return TianyiSetupUiDriver.Run(dest, timeoutMs: 600_000);
+            return TianyiSetupUiDriver.Run(dest, timeoutMs: timeoutMs);
 
         // NSIS/Inno 等：切勿重定向 stdout/stderr，否则易管道堵死
-        return RunWindowlessNoRedirect(dest, args, timeoutMs: 600_000);
+        return RunWindowlessNoRedirect(dest, args, timeoutMs: timeoutMs);
     }
 
     private static int InstallLocalMsixPackage(string packagePath)
@@ -2355,6 +2421,19 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
     }
 
     public static string Upgrade(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress = null)
+    {
+        BeginInstallWork();
+        try
+        {
+            return UpgradeCore(item, onProgress);
+        }
+        finally
+        {
+            EndInstallWork();
+        }
+    }
+
+    private static string UpgradeCore(CommonSoftwareItem item, Action<SoftwareInstallProgress>? onProgress)
     {
         if (item.IsWingetBootstrap)
             return "winget 自身请使用「修复安装」。";
@@ -4351,7 +4430,16 @@ if ($deps.Count -gt 0) {{
 
             var stdout = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardOutput, HandleText));
             var stderr = System.Threading.Tasks.Task.Run(() => DrainStream(p.StandardError, HandleText));
-            p.WaitForExit(600_000);
+            const int wingetTimeoutMs = 600_000;
+            if (!p.WaitForExit(wingetTimeoutMs))
+            {
+                ApplyLog.Write("winget 超时已终止：" + args + "（" + wingetTimeoutMs + "ms）");
+                try { if (!p.HasExited) p.Kill(); } catch { /* ignore */ }
+                try { p.WaitForExit(5_000); } catch { /* ignore */ }
+                System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 3_000);
+                return -1;
+            }
+
             System.Threading.Tasks.Task.WaitAll(new[] { stdout, stderr }, 15_000);
             lock (sync)
             {

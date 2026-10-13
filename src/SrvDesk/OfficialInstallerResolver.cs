@@ -64,7 +64,10 @@ internal static class OfficialInstallerResolver
     }
 
     /// <summary>解析失败返回空串。</summary>
-    public static string TryResolve(CommonSoftwareItem item)
+    /// <param name="skipWingetPkgs">
+    /// winget 安装刚失败时跳过 GitHub winget-pkgs 再查（常再卡 40s+ 且命中率低）。
+    /// </param>
+    public static string TryResolve(CommonSoftwareItem item, bool skipWingetPkgs = false)
     {
         if (item is null) return "";
 
@@ -87,7 +90,8 @@ internal static class OfficialInstallerResolver
         }
 
         var wingetId = (item.WingetId ?? "").Trim();
-        if (wingetId.Length > 0 && wingetId.IndexOf('.') > 0 && !LooksLikeStoreProductId(wingetId))
+        if (!skipWingetPkgs
+            && wingetId.Length > 0 && wingetId.IndexOf('.') > 0 && !LooksLikeStoreProductId(wingetId))
         {
             try
             {
@@ -148,6 +152,11 @@ internal static class OfficialInstallerResolver
         // Claude Desktop 官方 latest redirect
         if (u.IndexOf("claude.ai/api/desktop/", StringComparison.OrdinalIgnoreCase) >= 0
             && u.IndexOf("/latest/redirect", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        // 雷电模拟器：渠道直链始终指向当前安装器
+        if (u.IndexOf("ldmnq.com", StringComparison.OrdinalIgnoreCase) >= 0
+            && (u.IndexOf("ldplayer", StringComparison.OrdinalIgnoreCase) >= 0
+                || u.IndexOf("LDPlayer", StringComparison.Ordinal) >= 0))
             return true;
         return false;
     }

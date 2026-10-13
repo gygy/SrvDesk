@@ -341,6 +341,15 @@ internal static class CommonSoftwareCatalog
             offlineInstallArgs: "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
             detectExeNames: ["Bulk Rename Utility.exe"],
             installerLinkPattern: @"BRU_setup.*\.exe|BulkRenameUtility.*\.exe"),
+        // 官网为在线安装器（约 1–2MB），安装过程中会再下载完整包（数百 MB）
+        Item("ldplayer", "雷电模拟器（LDPlayer 9）", "工具", "",
+            ["雷电模拟器", "LDPlayer", "ldplayer", "雷电"],
+            "https://www.ldmnq.com/", essential: false,
+            offlineInstallerUrl: "https://lddl01.ldmnq.com/downloader/ldplayerinst9.exe",
+            offlineInstallArgs: "/S",
+            preferOfflineInstall: true,
+            detectExeNames: ["dnplayer.exe", "LDPlayer9.exe", "LDPlayer.exe"],
+            installerLinkPattern: @"ldplayerinst9\.exe|LDPlayer9\.exe|LDPlayer_9.*\.exe"),
 
         // 安全
         Item("huorong", "火绒安全软件", "安全", "",
