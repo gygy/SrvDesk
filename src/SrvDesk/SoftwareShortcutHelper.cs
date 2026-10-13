@@ -266,10 +266,21 @@ internal static class SoftwareShortcutHelper
 
     private static string? FindExeByName(CommonSoftwareItem item, string exeName)
     {
-        var tools = Path.Combine(
+        var toolsRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SrvDesk", "tools", item.Id, exeName);
+            "SrvDesk", "tools", item.Id);
+        var tools = Path.Combine(toolsRoot, exeName);
         if (File.Exists(tools)) return tools;
+        if (Directory.Exists(toolsRoot))
+        {
+            try
+            {
+                var nested = Directory.EnumerateFiles(toolsRoot, exeName, SearchOption.AllDirectories)
+                    .FirstOrDefault(File.Exists);
+                if (!string.IsNullOrWhiteSpace(nested)) return nested;
+            }
+            catch { /* ignore */ }
+        }
 
         foreach (var root in new[]
                  {
@@ -283,6 +294,7 @@ internal static class SoftwareShortcutHelper
                      {
                          Path.Combine(root, exeName),
                          Path.Combine(root, item.Id, exeName),
+                         Path.Combine(root, "HBuilderX", exeName),
                          Path.Combine(root, "Huorong", "Sysdiag", "bin", exeName),
                          Path.Combine(root, "Huorong", "SysDiag", "bin", exeName),
                          Path.Combine(root, "ecloud", "ecloud", exeName),

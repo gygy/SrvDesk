@@ -8,6 +8,7 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly Panel _listHost = new BufferedPanel(composited: true);
     private readonly Label _wingetHint = new();
     private readonly Button _installWingetBtn = ThemedSettingsChrome.CreateButton("一键安装 winget", true);
+    private readonly ComboBox _installFilter = new();
     private readonly ListBox _categoryMenu = new();
     private readonly Dictionary<string, CommonSoftwareRow> _rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Panel _progressHost = new();
@@ -16,8 +17,17 @@ internal sealed class CommonSoftwareDialog : Form
     private readonly List<Control> _actionButtons = [];
     private readonly ToolTip _toolTip = new();
     private string _selectedCategoryKey = "全部";
+    private InstallFilterKind _installFilterKind = InstallFilterKind.All;
     private int _categoryHover = -1;
     private string? _busyItemId;
+
+    private enum InstallFilterKind
+    {
+        All,
+        Installed,
+        NotInstalled,
+        Updatable,
+    }
 
     private static readonly (string Key, string En)[] CategoryDefs =
     [
@@ -184,6 +194,19 @@ internal sealed class CommonSoftwareDialog : Form
                     row.RefreshStatus();
             }
         };
+        _installFilter.SelectedIndexChanged += (_, _) =>
+        {
+            _installFilterKind = _installFilter.SelectedIndex switch
+            {
+                1 => InstallFilterKind.Installed,
+                2 => InstallFilterKind.NotInstalled,
+                3 => InstallFilterKind.Updatable,
+                _ => InstallFilterKind.All,
+            };
+            BuildList();
+            foreach (var row in _rows.Values)
+                row.RefreshStatus();
+        };
     }
 
     private Control TrackAction(Control c)
@@ -295,6 +318,24 @@ internal sealed class CommonSoftwareDialog : Form
         _askBeforeInstall.FlatStyle = FlatStyle.System;
         _toolTip.SetToolTip(_askBeforeInstall, "勾选后，安装前会弹出确认对话框");
 
+        _installFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _installFilter.Font = UiFit.UiFont;
+        _installFilter.IntegralHeight = false;
+        _installFilter.Items.Clear();
+        _installFilter.Items.AddRange([
+            AppLang.L("全部状态", "All status"),
+            AppLang.L("已安装", "Installed"),
+            AppLang.L("未安装", "Not installed"),
+            AppLang.L("可更新", "Updatable"),
+        ]);
+        _installFilter.SelectedIndex = 0;
+        UiFit.FitCombo(_installFilter);
+        _installFilter.Width = Math.Max(UiScale.S(110), UiFit.TextWidth(
+            AppLang.L("全部状态", "All status"), UiFit.UiFont) + UiScale.S(36));
+        _toolTip.SetToolTip(_installFilter, AppLang.L(
+            "按安装状态筛选列表；「可更新」需先执行「检查软件更新」",
+            "Filter by install status; “Updatable” needs Check for updates first"));
+
         var selectBtn = ThemedSettingsChrome.CreateButton("选择 ▾", false);
         selectBtn.Font = UiFit.UiFont;
         selectBtn.Padding = new Padding(0);
@@ -317,7 +358,7 @@ internal sealed class CommonSoftwareDialog : Form
         _toolTip.SetToolTip(customBtn, "添加可用 winget 安装的软件");
 
         // 不用 FlowLayout：窄宽 + 隐藏滚动条时易把按钮顶部裁掉
-        strip.Controls.AddRange([_wingetHint, _installWingetBtn, _askBeforeInstall, selectBtn, customBtn]);
+        strip.Controls.AddRange([_wingetHint, _installWingetBtn, _installFilter, _askBeforeInstall, selectBtn, customBtn]);
 
         void LayoutStrip()
         {
@@ -330,6 +371,11 @@ internal sealed class CommonSoftwareDialog : Form
 
             UiFit.FitButton(customBtn, h, minWidth: 88, padding: 24);
             UiFit.FitButton(selectBtn, h, minWidth: 72, padding: 24);
+            UiFit.FitCombo(_installFilter);
+            _installFilter.Width = Math.Max(UiScale.S(110), UiFit.TextWidth(
+                _installFilter.Text.Length > 0 ? _installFilter.Text : AppLang.L("全部状态", "All status"),
+                _installFilter.Font ?? UiFit.UiFont) + UiScale.S(36));
+            _installFilter.Height = h;
 
             customBtn.Location = new Point(right - customBtn.Width, y);
             right = customBtn.Left - gap;
@@ -348,6 +394,9 @@ internal sealed class CommonSoftwareDialog : Form
             _askBeforeInstall.Location = new Point(right - askW, y + (h - askH) / 2);
             right = _askBeforeInstall.Left - gap;
 
+            _installFilter.Location = new Point(right - _installFilter.Width, y);
+            right = _installFilter.Left - gap;
+
             if (_installWingetBtn.Visible)
             {
                 UiFit.FitButton(_installWingetBtn, h, padding: 28);
@@ -360,6 +409,7 @@ internal sealed class CommonSoftwareDialog : Form
             customBtn.BringToFront();
             selectBtn.BringToFront();
             _askBeforeInstall.BringToFront();
+            _installFilter.BringToFront();
             if (_installWingetBtn.Visible)
                 _installWingetBtn.BringToFront();
         }
@@ -403,9 +453,10 @@ internal sealed class CommonSoftwareDialog : Form
         _listHost.Controls.Clear();
         _rows.Clear();
 
-        var items = _selectedCategoryKey == "全部"
+        IEnumerable<CommonSoftwareItem> items = _selectedCategoryKey == "全部"
             ? CommonSoftwareCatalog.GetAll()
-            : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategoryKey).ToList();
+            : CommonSoftwareCatalog.GetAll().Where(x => x.Category == _selectedCategoryKey);
+        items = items.Where(MatchesInstallFilter);
 
         var rowH = CommonSoftwareRow.PreferredHeight;
         var y = 0;
@@ -435,6 +486,21 @@ internal sealed class CommonSoftwareDialog : Form
         var w = Math.Max(680, _listHost.ClientSize.Width - 4);
         foreach (Control c in _listHost.Controls)
             c.Width = w;
+    }
+
+    private bool MatchesInstallFilter(CommonSoftwareItem item)
+    {
+        if (_installFilterKind == InstallFilterKind.All)
+            return true;
+
+        var installed = CommonSoftwareHelper.Query(item).Installed;
+        return _installFilterKind switch
+        {
+            InstallFilterKind.Installed => installed,
+            InstallFilterKind.NotInstalled => !installed,
+            InstallFilterKind.Updatable => CommonSoftwareHelper.FindPendingUpdate(item.Id) is not null,
+            _ => true,
+        };
     }
 
     private void ManageCustomSoftware()
@@ -915,7 +981,17 @@ internal sealed class CommonSoftwareDialog : Form
             Ui(() =>
             {
                 SetInstallBusy(false);
-                RefreshAll();
+                if (_installFilterKind == InstallFilterKind.Updatable)
+                {
+                    BuildList();
+                    foreach (var row in _rows.Values)
+                        row.RefreshStatus();
+                }
+                else
+                {
+                    RefreshAll();
+                }
+
                 if (error is not null)
                 {
                     MessageBox.Show(this, error.Message, "检查更新失败", MessageBoxButtons.OK, MessageBoxIcon.Error);

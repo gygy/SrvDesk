@@ -196,6 +196,15 @@ internal static class CommonSoftwareCatalog
             ["Cursor"], "https://cursor.com/", essential: false,
             offlineInstallArgs: "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /mergetasks=desktopicon,addcontextmenufiles,!runcode",
             installerLinkPattern: @"Cursor(User)?Setup.*\.exe|Cursor.*Setup.*\.exe"),
+        // 官网仅提供 Windows zip（无 winget）；解析 release.json 后整包解压到 tools
+        Item("hbuilderx", "HBuilderX（DCloud）", "开发", "",
+            ["HBuilderX", "HBuilder X", "DCloud"],
+            "https://www.dcloud.io/hbuilderx.html", essential: false,
+            preferOfflineInstall: true,
+            offlinePortable: true,
+            detectExeNames: ["HBuilderX.exe"],
+            installerLinkPattern: @"HBuilderX\.[0-9].*\.zip",
+            latestApiUrl: "https://update.dcloud.net.cn/hbuilderx/release.json"),
 
         Item("codex", "OpenAI Codex CLI", "AI", "OpenAI.Codex",
             ["Codex CLI", "OpenAI Codex CLI"],

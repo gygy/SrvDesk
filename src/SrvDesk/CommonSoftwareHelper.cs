@@ -987,6 +987,19 @@ internal static class CommonSoftwareHelper
         var url = item.OfflineInstallerUrl.Trim();
         if (url.Length == 0) return null;
 
+        // 官网 zip（如 HBuilderX）：先下载再整包解压，勿把 zip 内容写成 .exe
+        if (url.IndexOf(".zip", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            Directory.CreateDirectory(DownloadDir);
+            var zipName = Path.GetFileName(new Uri(url).LocalPath);
+            if (string.IsNullOrWhiteSpace(zipName) || !zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                zipName = item.Id + ".zip";
+            var zipDest = Path.Combine(DownloadDir, zipName);
+            Report(onProgress, "下载便携压缩包…", 5);
+            DownloadInstaller(url, zipDest, minBytes: 100_000, onProgress, percentBase: 5, percentSpan: 60);
+            return InstallPortableFromZip(item, zipDest, onProgress);
+        }
+
         var exeName = ResolvePortableExeName(item);
         var toolDir = Path.Combine(ToolsDir, item.Id);
         Directory.CreateDirectory(toolDir);
@@ -1004,7 +1017,7 @@ internal static class CommonSoftwareHelper
             + Path.GetFileNameWithoutExtension(exeName) + "。");
     }
 
-    /// <summary>解压便携 zip（如 rg），把主程序放到工具目录并加入用户 PATH。</summary>
+    /// <summary>解压便携 zip：单文件直接取 exe；多文件（如 HBuilderX）整包解到工具目录。</summary>
     private static string? InstallPortableFromZip(
         CommonSoftwareItem item,
         string zipPath,
@@ -1012,28 +1025,115 @@ internal static class CommonSoftwareHelper
     {
         var exeName = ResolvePortableExeName(item);
         var toolDir = Path.Combine(ToolsDir, item.Id);
-        Directory.CreateDirectory(toolDir);
         Report(onProgress, "正在解压…", 70);
-        using (var zip = ZipFile.OpenRead(zipPath))
+
+        try
         {
-            var entry = zip.Entries.FirstOrDefault(e =>
-                e.Name.Equals(exeName, StringComparison.OrdinalIgnoreCase));
-            if (entry is null)
+            if (Directory.Exists(toolDir))
             {
-                ApplyLog.Write("压缩包内未找到 " + exeName);
-                return null;
+                try { Directory.Delete(toolDir, recursive: true); }
+                catch { /* 占用时覆盖写入 */ }
             }
 
-            var dest = Path.Combine(toolDir, exeName);
-            entry.ExtractToFile(dest, overwrite: true);
+            Directory.CreateDirectory(toolDir);
+            using (var zip = ZipFile.OpenRead(zipPath))
+            {
+                var entry = zip.Entries.FirstOrDefault(e =>
+                    e.Name.Equals(exeName, StringComparison.OrdinalIgnoreCase));
+                if (entry is null)
+                {
+                    ApplyLog.Write("压缩包内未找到 " + exeName);
+                    return null;
+                }
+
+                var fileEntries = zip.Entries.Count(e => !string.IsNullOrEmpty(e.Name) && e.Length > 0);
+                if (fileEntries <= 1 && entry.FullName.IndexOf('/') < 0 && entry.FullName.IndexOf('\\') < 0)
+                {
+                    entry.ExtractToFile(Path.Combine(toolDir, exeName), overwrite: true);
+                }
+                else
+                {
+                    ExtractPortableZipTree(zip, toolDir);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("便携解压失败：" + ex.Message);
+            return null;
         }
 
-        EnsureUserPathContains(toolDir);
-        PrependProcessPath(toolDir);
-        ApplyLog.Write("便携解压：" + Path.Combine(toolDir, exeName));
+        var exePath = FindFileUnderDir(toolDir, exeName);
+        if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+        {
+            ApplyLog.Write("解压后未找到 " + exeName + "：" + toolDir);
+            return null;
+        }
+
+        var binDir = Path.GetDirectoryName(exePath) ?? toolDir;
+        EnsureUserPathContains(binDir);
+        PrependProcessPath(binDir);
+        ApplyLog.Write("便携解压：" + exePath);
         return FinishInstallSuccess(item, onProgress,
-            "已安装到 " + Path.Combine(toolDir, exeName) + "，并已加入用户 PATH。请新开终端后使用 "
-            + Path.GetFileNameWithoutExtension(exeName) + "。");
+            "已安装到 " + exePath + "。");
+    }
+
+    /// <summary>解压 zip 到目标目录；若所有条目同属一层根文件夹则剥掉该前缀。</summary>
+    private static void ExtractPortableZipTree(ZipArchive zip, string toolDir)
+    {
+        var names = zip.Entries
+            .Select(e => (e.FullName ?? "").Replace('\\', '/'))
+            .Where(n => n.Length > 0)
+            .ToList();
+        var prefix = "";
+        if (names.Count > 0)
+        {
+            var firstSlash = names[0].IndexOf('/');
+            if (firstSlash > 0)
+            {
+                var root = names[0].Substring(0, firstSlash + 1);
+                if (names.All(n => n.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+                    prefix = root;
+            }
+        }
+
+        foreach (var entry in zip.Entries)
+        {
+            var full = (entry.FullName ?? "").Replace('\\', '/');
+            if (full.Length == 0) continue;
+            var relative = prefix.Length > 0 && full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                ? full.Substring(prefix.Length)
+                : full;
+            if (relative.Length == 0) continue;
+
+            var destPath = Path.Combine(toolDir, relative.Replace('/', Path.DirectorySeparatorChar));
+            if (full.EndsWith("/", StringComparison.Ordinal) || string.IsNullOrEmpty(entry.Name))
+            {
+                Directory.CreateDirectory(destPath);
+                continue;
+            }
+
+            var parent = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrWhiteSpace(parent))
+                Directory.CreateDirectory(parent);
+            entry.ExtractToFile(destPath, overwrite: true);
+        }
+    }
+
+    private static string? FindFileUnderDir(string root, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return null;
+        var direct = Path.Combine(root, fileName);
+        if (File.Exists(direct)) return direct;
+        try
+        {
+            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
+                .FirstOrDefault(File.Exists);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -1127,7 +1227,8 @@ internal static class CommonSoftwareHelper
             if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 name += ".exe";
 
-            var inTools = Path.Combine(ToolsDir, item.Id, name);
+            var toolsRoot = Path.Combine(ToolsDir, item.Id);
+            var inTools = FindFileUnderDir(toolsRoot, name) ?? Path.Combine(toolsRoot, name);
             if (File.Exists(inTools))
             {
                 return new CommonSoftwareStatus
@@ -1150,7 +1251,7 @@ internal static class CommonSoftwareHelper
                 };
             }
 
-            // 常见安装目录（天翼 eCloud、火绒 Sysdiag 等不在 PATH）
+            // 常见安装目录（天翼 eCloud、火绒 Sysdiag、HBuilderX 等不在 PATH）
             foreach (var root in new[]
                      {
                          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
@@ -1164,6 +1265,7 @@ internal static class CommonSoftwareHelper
                              Path.Combine(root, "ecloud", "ecloud", name),
                              Path.Combine(root, "eCloud", name),
                              Path.Combine(root, item.Id, name),
+                             Path.Combine(root, "HBuilderX", name),
                              Path.Combine(root, "Huorong", "Sysdiag", "bin", name),
                              Path.Combine(root, "Huorong", "SysDiag", "bin", name),
                              Path.Combine(root, "火绒安全软件", name),
@@ -1951,16 +2053,32 @@ Get-AppxPackage -Name '{name}*' | Remove-AppxPackage
             var path = cmd.Substring("portable:".Length);
             try
             {
-                if (File.Exists(path))
-                    File.Delete(path);
-                var dir = Path.GetDirectoryName(path);
-                if (!string.IsNullOrWhiteSpace(dir) &&
-                    dir.StartsWith(ToolsDir, StringComparison.OrdinalIgnoreCase))
+                var itemRoot = Path.Combine(ToolsDir, item.Id);
+                // 整包便携（如 HBuilderX）：删 tools\{id} 目录
+                if (!string.IsNullOrWhiteSpace(path)
+                    && path.StartsWith(itemRoot, StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(itemRoot))
                 {
-                    if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
-                        Directory.Delete(dir);
-                    RemoveUserPathEntry(dir!);
+                    var binDir = Path.GetDirectoryName(path);
+                    Directory.Delete(itemRoot, recursive: true);
+                    if (!string.IsNullOrWhiteSpace(binDir))
+                        RemoveUserPathEntry(binDir!);
+                    RemoveUserPathEntry(itemRoot);
                 }
+                else
+                {
+                    if (File.Exists(path))
+                        File.Delete(path);
+                    var dir = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrWhiteSpace(dir) &&
+                        dir.StartsWith(ToolsDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                            Directory.Delete(dir);
+                        RemoveUserPathEntry(dir!);
+                    }
+                }
+
                 Report(onProgress, "卸载完成", 100);
                 InvalidateStatusCache();
                 return "";
