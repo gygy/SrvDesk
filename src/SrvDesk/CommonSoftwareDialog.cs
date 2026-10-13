@@ -597,7 +597,9 @@ internal sealed class CommonSoftwareDialog : Form
             : "未检测到 winget：有 winget 的项走商店源，其余仍可从官网下载安装。";
 
         if (_categoryMenu.SelectedIndex < 0) _categoryMenu.SelectedIndex = 0;
-        if (_rows.Count == 0) BuildList();
+        // 状态筛选依赖缓存：检测完成后按筛选重建，避免仍停在「全部」快照
+        if (_installFilterKind != InstallFilterKind.All || _rows.Count == 0)
+            BuildList();
         foreach (var row in _rows.Values)
             row.RefreshStatus();
     }

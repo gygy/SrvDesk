@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.179] - 2026-10-14
+
+### Added
+
+- Common software: HBuilderX (official zip / portable install)
+- Common software: filter by All / Installed / Not installed / Updatable
+
 ## [1.0.178] - 2026-10-12
 
 ### Changed
