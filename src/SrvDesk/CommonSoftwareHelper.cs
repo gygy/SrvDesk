@@ -618,10 +618,18 @@ internal static class CommonSoftwareHelper
 
         foreach (var item in pending)
         {
+            if (item.Id.Equals("pwsh", StringComparison.OrdinalIgnoreCase))
+                continue; // 下方统一用 QueryPwshStatus
+
             // Prefetch 禁用 where.exe：条目多时会卡数十秒，PATH 直查足够
             var byExe = QueryByExeNames(item, allowWhere: false);
             if (byExe.Installed) map[item.Id] = byExe;
         }
+
+        // PowerShell 7 必须以 MSI 实装为准，覆盖注册表/PATH 误判
+        var pwshItem = items.FirstOrDefault(i => i.Id.Equals("pwsh", StringComparison.OrdinalIgnoreCase));
+        if (pwshItem is not null)
+            map[pwshItem.Id] = QueryPwshStatus(pwshItem);
 
         lock (StatusCacheLock)
             _statusCache = map;
@@ -654,6 +662,10 @@ internal static class CommonSoftwareHelper
 
         if (item.IsScoopBootstrap)
             return QueryScoopStatus();
+
+        // PowerShell 7：WindowsApps 执行别名/损坏 MSIX 不算已安装
+        if (item.Id.Equals("pwsh", StringComparison.OrdinalIgnoreCase))
+            return QueryPwshStatus(item);
 
         if (!string.IsNullOrWhiteSpace(item.AppxPackageName))
         {
@@ -689,6 +701,91 @@ internal static class CommonSoftwareHelper
         if (byExe.Installed) return byExe;
 
         return new CommonSoftwareStatus();
+    }
+
+    /// <summary>
+    /// 仅认 MSI/传统安装（Program Files\PowerShell\7），忽略 WindowsApps 商店壳。
+    /// </summary>
+    private static CommonSoftwareStatus QueryPwshStatus(CommonSoftwareItem item)
+    {
+        var msiPwsh = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "PowerShell", "7", "pwsh.exe");
+        if (File.Exists(msiPwsh))
+        {
+            var ver = "";
+            try
+            {
+                ver = FileVersionInfo.GetVersionInfo(msiPwsh).ProductVersion ?? "";
+            }
+            catch { /* ignore */ }
+
+            return new CommonSoftwareStatus
+            {
+                Installed = true,
+                Version = ver,
+                UninstallCommand = null,
+            };
+        }
+
+        foreach (var keyPath in UninstallKeyPaths())
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(keyPath.Hive, RegistryView.Registry64);
+            using var uninstall = baseKey.OpenSubKey(keyPath.SubKey);
+            if (uninstall is null) continue;
+            foreach (var subName in uninstall.GetSubKeyNames())
+            {
+                using var sub = uninstall.OpenSubKey(subName);
+                if (sub is null) continue;
+                var display = sub.GetValue("DisplayName") as string ?? "";
+                if (!Matches(display, item.DetectPatterns)) continue;
+                var loc = (sub.GetValue("InstallLocation") as string ?? "").Trim();
+                // 排除商店包；要求能落到真实 pwsh.exe
+                if (IsWindowsAppsPath(loc)) continue;
+                var candidate = string.IsNullOrWhiteSpace(loc)
+                    ? ""
+                    : Path.Combine(loc.TrimEnd('\\', '/'), "pwsh.exe");
+                if (candidate.Length > 0 && File.Exists(candidate) && !IsWindowsAppsPath(candidate))
+                {
+                    return new CommonSoftwareStatus
+                    {
+                        Installed = true,
+                        Version = sub.GetValue("DisplayVersion") as string ?? "",
+                        UninstallCommand = sub.GetValue("QuietUninstallString") as string
+                            ?? sub.GetValue("UninstallString") as string,
+                    };
+                }
+            }
+        }
+
+        return new CommonSoftwareStatus();
+    }
+
+    private static bool IsWindowsAppsPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        return path.IndexOf(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase) >= 0
+               || path.IndexOf(@"\Microsoft\WindowsApps\", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static void TryRemoveBrokenPwshAppx(Action<SoftwareInstallProgress>? onProgress)
+    {
+        try
+        {
+            Report(onProgress, "检查并清理不可用的 PowerShell 商店包…", 6);
+            var script = @"
+Get-AppxPackage -Name 'Microsoft.PowerShell*' -ErrorAction SilentlyContinue |
+  ForEach-Object {
+    try { Remove-AppxPackage -Package $_.PackageFullName -ErrorAction Stop }
+    catch { }
+  }
+";
+            RunPowerShell(script, timeoutMs: 60_000);
+        }
+        catch (Exception ex)
+        {
+            ApplyLog.Write("清理 PowerShell Appx 失败（可忽略）：" + ex.Message);
+        }
     }
 
     private static CommonSoftwareStatus QueryAppxStatus(string packageName, bool allowPowerShell = true)
@@ -780,6 +877,24 @@ internal static class CommonSoftwareHelper
         var preferOffline = PreferOfflineNow(item);
         var preferOfficialApi = PreferOfficialApiNow(item);
 
+        // PowerShell 7：先清掉不可用的 MSIX/商店壳，再装官方 MSI（勿走默认 MSIX）
+        if (item.Id.Equals("pwsh", StringComparison.OrdinalIgnoreCase))
+        {
+            TryRemoveBrokenPwshAppx(onProgress);
+            try
+            {
+                Report(onProgress, "优先下载官方 MSI 安装 PowerShell 7…", 10);
+                var pwshMsi = TryInstallFromOfficialLatest(item, onProgress);
+                if (pwshMsi is not null)
+                    return pwshMsi;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("PowerShell MSI 安装失败，尝试其它方式：" + ex.Message);
+                Report(onProgress, "官方 MSI 失败，尝试其它方式…", 35);
+            }
+        }
+
         // Server 无商店：优先离线自动安装（Appx/Msix + 依赖，与手工放包一致）
         if (item.PreferAppxSideload && !string.IsNullOrWhiteSpace(item.StoreProductId))
         {
@@ -809,6 +924,28 @@ internal static class CommonSoftwareHelper
             {
                 ApplyLog.Write("离线安装失败，尝试其它方式：" + ex.Message);
                 Report(onProgress, "离线安装失败，尝试其它方式…", 45);
+            }
+        }
+
+        // PreferOffline 但无固定直链（如 pwsh 走 GitHub MSI）：先解析官网，避免 winget 默认装成 MSIX
+        if (preferOffline
+            && string.IsNullOrWhiteSpace(item.OfflineInstallerUrl)
+            && !item.Id.Equals("pwsh", StringComparison.OrdinalIgnoreCase)
+            && (!string.IsNullOrWhiteSpace(item.GitHubRepo)
+                || !string.IsNullOrWhiteSpace(item.InstallerLinkPattern)
+                || !string.IsNullOrWhiteSpace(item.LatestApiUrl)))
+        {
+            try
+            {
+                Report(onProgress, "正在解析官网最新安装包…", 12);
+                var earlyOfficial = TryInstallFromOfficialLatest(item, onProgress);
+                if (earlyOfficial is not null)
+                    return earlyOfficial;
+            }
+            catch (Exception ex)
+            {
+                ApplyLog.Write("官网优先安装失败：" + ex.Message);
+                Report(onProgress, "官网自动安装失败，尝试其它方式…", 40);
             }
         }
 
@@ -1288,6 +1425,8 @@ internal static class CommonSoftwareHelper
                 if (trimmed.Length == 0) continue;
                 var candidate = Path.Combine(trimmed, name);
                 if (!File.Exists(candidate)) continue;
+                // 跳过 WindowsApps 执行别名（pwsh 等会「有文件」但无法运行）
+                if (IsWindowsAppsPath(candidate)) continue;
                 return new CommonSoftwareStatus
                 {
                     Installed = true,
@@ -1309,6 +1448,7 @@ internal static class CommonSoftwareHelper
                              Path.Combine(root, "ecloud", "ecloud", name),
                              Path.Combine(root, "eCloud", name),
                              Path.Combine(root, item.Id, name),
+                             Path.Combine(root, "PowerShell", "7", name),
                              Path.Combine(root, "HBuilderX", name),
                              Path.Combine(root, "Huorong", "Sysdiag", "bin", name),
                              Path.Combine(root, "Huorong", "SysDiag", "bin", name),
@@ -1316,6 +1456,7 @@ internal static class CommonSoftwareHelper
                          })
                 {
                     if (!File.Exists(sub)) continue;
+                    if (IsWindowsAppsPath(sub)) continue;
                     return new CommonSoftwareStatus
                     {
                         Installed = true,
@@ -1331,7 +1472,7 @@ internal static class CommonSoftwareHelper
                 var whereHit = RunCapture("where.exe", name, timeoutMs: 2_000)
                     .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(l => l.Trim().Trim('"'))
-                    .FirstOrDefault(File.Exists);
+                    .FirstOrDefault(p => File.Exists(p) && !IsWindowsAppsPath(p));
                 if (!string.IsNullOrWhiteSpace(whereHit))
                 {
                     return new CommonSoftwareStatus
@@ -4307,7 +4448,12 @@ if ($deps.Count -gt 0) {{
         // 商店 ProductId 不在 winget 社区源，强制走默认源（含 msstore）
         var useWingetSource = preferWingetSource && !LooksLikeMsStoreProductId(raw);
         var source = useWingetSource ? " --source winget" : "";
-        return $"install {target}{source} --silent " +
+        // PowerShell 7.6+ winget 默认 MSIX；强制 WiX/MSI，避免「装成功但无法运行」
+        var installerType = raw.Equals("Microsoft.PowerShell", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Microsoft.PowerShell.Preview", StringComparison.OrdinalIgnoreCase)
+            ? " --installer-type wix"
+            : "";
+        return $"install {target}{source}{installerType} --silent " +
                "--accept-package-agreements --accept-source-agreements --disable-interactivity";
     }
 

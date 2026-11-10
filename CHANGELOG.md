@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.181] - 2026-11-11
+
+### Fixed
+
+- PowerShell 7 install: prefer official MSI (not winget MSIX); ignore broken WindowsApps stub; winget fallback uses `--installer-type wix`
+
 ## [1.0.180] - 2026-10-14
 
 ### Added

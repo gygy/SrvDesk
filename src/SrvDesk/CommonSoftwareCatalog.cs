@@ -140,9 +140,14 @@ internal static class CommonSoftwareCatalog
             githubRepo: "cli/cli",
             detectExeNames: ["gh.exe"],
             installerLinkPattern: @"gh_.*_windows_amd64\.msi"),
+        // 7.6+ winget 默认装 MSIX，在 Server/缺许可证环境会「成功」但 pwsh 无法运行；强制走官方 MSI
         Item("pwsh", "PowerShell 7", "开发", "Microsoft.PowerShell",
-            ["PowerShell 7"], "https://github.com/PowerShell/PowerShell/releases", essential: false,
-            offlineInstallArgs: "/qn /norestart ADD_PATH=1",
+            ["PowerShell 7", "PowerShell 7-x64"],
+            "https://github.com/PowerShell/PowerShell/releases", essential: false,
+            offlineInstallArgs:
+                "/qn /norestart ADD_PATH=1 ADD_EXPLORER_CONTEXT_MENU_OPENPOWERSHELL=1 " +
+                "ADD_FILE_CONTEXT_MENU_RUNPOWERSHELL=1 ENABLE_PSREMOTING=1 REGISTER_MANIFEST=1 USE_MU=1 ENABLE_MU=1",
+            preferOfflineInstall: true,
             githubRepo: "PowerShell/PowerShell",
             detectExeNames: ["pwsh.exe"],
             installerLinkPattern: @"PowerShell-\d+\.\d+\.\d+-win-x64\.msi"),
