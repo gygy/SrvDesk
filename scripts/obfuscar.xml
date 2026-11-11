@@ -1,9 +1,11 @@
 <?xml version='1.0'?>
 <!--
-  轻度混淆（低误报优先）：
-  - 重命名类型/方法/字段/属性/事件
-  - 不加密字符串、不做控制流混淆（降低杀软误报）
-  - 跳过 JSON/配置反射依赖的类型，避免导入导出与偏好文件失效
+  交付混淆（对抗托管反编译 / REA）：
+  - 重命名类型/方法/字段/属性/事件（Unicode 符号名）
+  - 加密字符串常量（HideStrings）
+  - SuppressIldasm
+  - 仍跳过 JSON/配置反射依赖类型，避免导入导出与偏好文件失效
+  说明：比「轻度」更强；杀软误报若升高可临时 -SkipObfuscate 排查（勿交付）。
 -->
 <Obfuscator>
   <Var name="InPath" value="./in" />
@@ -13,9 +15,11 @@
   <Var name="RenameProperties" value="true" />
   <Var name="RenameEvents" value="true" />
   <Var name="RenameFields" value="true" />
-  <Var name="UseUnicodeNames" value="false" />
+  <!-- Unicode 符号名：降低可读伪代码与成员清单可读性 -->
+  <Var name="UseUnicodeNames" value="true" />
   <Var name="UseKoreanNames" value="false" />
-  <Var name="HideStrings" value="false" />
+  <!-- 字符串加密：避免 REA/反编译器直接抽出注册表路径、URL、文案 -->
+  <Var name="HideStrings" value="true" />
   <Var name="OptimizeMethods" value="true" />
   <Var name="SuppressIldasm" value="true" />
   <Var name="RegenerateDebugInfo" value="false" />

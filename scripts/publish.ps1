@@ -110,7 +110,7 @@ function Ensure-Obfuscar {
     if (Test-Path $exe) { return $exe }
 
     New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
-    Write-Host "Installing Obfuscar.GlobalTool (light obfuscation)..."
+    Write-Host "Installing Obfuscar.GlobalTool (anti-RE obfuscation)..."
     & $dotnet tool install Obfuscar.GlobalTool --tool-path $toolsDir --version 2.2.50 2>&1 | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) {
         & $dotnet tool update Obfuscar.GlobalTool --tool-path $toolsDir --version 2.2.50 2>&1 | ForEach-Object { Write-Host $_ }
@@ -176,8 +176,13 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
     if (-not (Test-Path $outExe)) {
         throw "Obfuscar output missing: $outExe"
     }
+    # 绝不随交付留下 Mapping / PDB，避免给 REA 等工具对照还原
+    Get-ChildItem -LiteralPath $obfOut -Include @("Mapping.txt", "*.xml", "*.pdb", "*.mdb") -Recurse -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -LiteralPath $obfIn -Include @("Mapping.txt", "*.pdb") -Recurse -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath $outExe -Destination $DestExe -Force
-    Write-Host ("Obfuscated (light): {0}" -f $DestExe)
+    Write-Host ("Obfuscated (anti-RE: rename+HideStrings+Unicode): {0}" -f $DestExe)
 }
 
 function Get-InnoCompiler {
@@ -340,7 +345,7 @@ if ($SkipInstaller) {
     Write-Host "SkipInstaller: not building SrvDesk-Setup.exe"
 }
 elseif ($SkipObfuscate -or -not $obfuscatedPayload) {
-    Write-Warning "Installer requires light-obfuscated payload; skipped (do not ship plain build as Setup)."
+    Write-Warning "Installer requires obfuscated payload; skipped (do not ship plain build as Setup)."
 }
 else {
     try {
@@ -358,9 +363,11 @@ Remove-Item -LiteralPath $obfIn -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $obfOut -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\obfuscar.generated.xml") -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\innosetup-install.exe") -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $dist -Filter "Mapping.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $dist -Filter "*.pdb" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
 $exe = Get-Item -LiteralPath $destExe
-Write-Host ("Published: {0} ({1} bytes) v{2} [light obfuscation]" -f $exe.FullName, $exe.Length, $ver)
+Write-Host ("Published: {0} ({1} bytes) v{2} [anti-RE obfuscation]" -f $exe.FullName, $exe.Length, $ver)
 if ($setupBuilt) {
     $setupItem = Get-Item -LiteralPath $setupBuilt
     Write-Host ("Published: {0} ({1} bytes) v{2} [setup + desktop shortcut]" -f $setupItem.FullName, $setupItem.Length, $ver)

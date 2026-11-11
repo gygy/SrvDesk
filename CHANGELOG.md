@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.182] - 2026-11-12
+
+### Changed
+
+- Stronger delivery obfuscation against managed decompilers (Unicode names, string encryption, no PDB/mapping)
+
 ## [1.0.181] - 2026-11-11
 
 ### Fixed
