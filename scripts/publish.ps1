@@ -177,10 +177,21 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
         throw "Obfuscar output missing: $outExe"
     }
     # 绝不随交付留下 Mapping / PDB，避免给 REA 等工具对照还原
-    Get-ChildItem -LiteralPath $obfOut -Include @("Mapping.txt", "*.xml", "*.pdb", "*.mdb") -Recurse -ErrorAction SilentlyContinue |
+    # 注意：Get-ChildItem -Include 在目录路径上可能匹配全部文件，勿用来删 Mapping
+    foreach ($junk in @(
+            (Join-Path $obfOut "Mapping.txt"),
+            (Join-Path $obfOut "Mapping.xml"),
+            (Join-Path $obfIn "Mapping.txt")
+        )) {
+        if (Test-Path -LiteralPath $junk) {
+            Remove-Item -LiteralPath $junk -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Get-ChildItem -LiteralPath $obfOut -Filter "*.pdb" -ErrorAction SilentlyContinue |
         Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -LiteralPath $obfIn -Include @("Mapping.txt", "*.pdb") -Recurse -ErrorAction SilentlyContinue |
-        Remove-Item -Force -ErrorAction SilentlyContinue
+    if (-not (Test-Path -LiteralPath $outExe)) {
+        throw "Obfuscar output missing after cleanup: $outExe"
+    }
     Copy-Item -LiteralPath $outExe -Destination $DestExe -Force
     Write-Host ("Obfuscated (anti-RE: rename+HideStrings+Unicode): {0}" -f $DestExe)
 }
