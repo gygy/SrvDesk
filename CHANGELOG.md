@@ -4,6 +4,13 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.186] - 2026-11-15
+
+### Changed
+
+- Delivery hardening: light Obfuscar (rename + SuppressIldasm) + [BLA](https://github.com/qybaihe/bla) Counter-REA PE shield (`stealth`)
+- GitHub Releases cleaned; only the latest hardened build is published
+
 ## [1.0.185] - 2026-11-15
 
 ### Added

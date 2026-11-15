@@ -1,8 +1,12 @@
 ﻿param(
     [string]$Configuration = "Release",
     [switch]$SkipObfuscate,
+    [switch]$SkipBla,
     [switch]$NoBumpVersion,
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+    # BLA Counter-REA：stealth | balanced | maximum | bankrupt（默认轻度 stealth）
+    [ValidateSet("stealth", "balanced", "maximum", "bankrupt")]
+    [string]$BlaIntensity = "stealth"
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,11 +18,14 @@ $dist = Join-Path $repo "dist"
 $obfuscarXml = Join-Path $PSScriptRoot "obfuscar.xml"
 $issScript = Join-Path $PSScriptRoot "SrvDesk.iss"
 $toolsDir = Join-Path $repo "tools\obfuscar"
+$blaToolsDir = Join-Path $repo "tools\bla"
 $innoToolsDir = Join-Path $repo "tools\innosetup"
 $publishRaw = Join-Path $repo "artifacts\publish-raw"
 $obfIn = Join-Path $repo "artifacts\obfuscar-in"
 $obfOut = Join-Path $repo "artifacts\obfuscar-out"
+$blaOut = Join-Path $repo "artifacts\bla-out"
 $appIcon = Join-Path $repo "src\SrvDesk\app.ico"
+$BlaPackageVersion = "3.3.2"
 
 function Get-ProjectVersion([string]$CsprojPath) {
     $raw = Get-Content -LiteralPath $CsprojPath -Raw -Encoding UTF8
@@ -193,7 +200,45 @@ function Invoke-LightObfuscate([string]$SourceExe, [string]$DestExe) {
         throw "Obfuscar output missing after cleanup: $outExe"
     }
     Copy-Item -LiteralPath $outExe -Destination $DestExe -Force
-    Write-Host ("Obfuscated (anti-RE: rename+HideStrings+Unicode): {0}" -f $DestExe)
+    Write-Host ("Obfuscated (light: rename+SuppressIldasm): {0}" -f $DestExe)
+}
+
+function Ensure-BlaAgents {
+    $cli = Join-Path $blaToolsDir "node_modules\.bin\bla-agents.cmd"
+    if (Test-Path -LiteralPath $cli) { return $cli }
+
+    $npm = Get-Command npm -ErrorAction SilentlyContinue
+    if (-not $npm) {
+        throw "npm/node not found; required for bla-agents (https://github.com/qybaihe/bla)"
+    }
+
+    New-Item -ItemType Directory -Force -Path $blaToolsDir | Out-Null
+    Write-Host ("Installing bla-agents@{0} (Counter-REA harden)..." -f $BlaPackageVersion)
+    & npm install ("bla-agents@" + $BlaPackageVersion) --prefix $blaToolsDir 2>&1 | ForEach-Object { Write-Host $_ }
+    if (-not (Test-Path -LiteralPath $cli)) {
+        throw "bla-agents CLI missing after npm install: $cli"
+    }
+    return $cli
+}
+
+function Invoke-BlaHarden([string]$SourceExe, [string]$DestExe) {
+    $cli = Ensure-BlaAgents
+    if (Test-Path -LiteralPath $blaOut) {
+        Remove-Item -LiteralPath $blaOut -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Force -Path $blaOut | Out-Null
+    $tmpOut = Join-Path $blaOut "SrvDesk.exe"
+
+    Write-Host ("BLA harden (intensity={0}): {1}" -f $BlaIntensity, $SourceExe)
+    & $cli protect $SourceExe -o $tmpOut --intensity $BlaIntensity --json 2>&1 | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) {
+        throw "bla-agents protect failed with exit code $LASTEXITCODE"
+    }
+    if (-not (Test-Path -LiteralPath $tmpOut)) {
+        throw "BLA output missing: $tmpOut"
+    }
+    Copy-Item -LiteralPath $tmpOut -Destination $DestExe -Force
+    Write-Host ("BLA protected (Counter-REA / {0}): {1}" -f $BlaIntensity, $DestExe)
 }
 
 function Get-InnoCompiler {
@@ -315,6 +360,12 @@ try {
     }
     else {
         Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $destExe
+        if (-not $SkipBla) {
+            Invoke-BlaHarden -SourceExe $destExe -DestExe $destExe
+        }
+        else {
+            Write-Host "SkipBla: delivered Obfuscar-only payload (not recommended for release)"
+        }
         $obfuscatedPayload = $destExe
     }
 }
@@ -329,11 +380,14 @@ catch {
     else {
         try {
             Invoke-LightObfuscate -SourceExe $built.FullName -DestExe $fallback
+            if (-not $SkipBla) {
+                Invoke-BlaHarden -SourceExe $fallback -DestExe $fallback
+            }
             $obfuscatedPayload = $fallback
         }
         catch {
             Copy-Item -LiteralPath $built.FullName -Destination $fallback -Force
-            Write-Warning "Obfuscation failed; wrote plain build as fallback"
+            Write-Warning "Obfuscation/BLA failed; wrote plain build as fallback"
         }
     }
     Write-Host ("Wrote: {0} ({1} bytes)" -f $fallback, (Get-Item $fallback).Length)
@@ -368,17 +422,19 @@ else {
     }
 }
 
-# Clean temp artifacts (keep tools\obfuscar / tools\innosetup cache)
+# Clean temp artifacts (keep tools\obfuscar / tools\bla / tools\innosetup cache)
 Remove-Item -LiteralPath $publishRaw -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $obfIn -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $obfOut -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $blaOut -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\obfuscar.generated.xml") -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $repo "artifacts\innosetup-install.exe") -Force -ErrorAction SilentlyContinue
 Get-ChildItem -LiteralPath $dist -Filter "Mapping.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 Get-ChildItem -LiteralPath $dist -Filter "*.pdb" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
 $exe = Get-Item -LiteralPath $destExe
-Write-Host ("Published: {0} ({1} bytes) v{2} [anti-RE obfuscation]" -f $exe.FullName, $exe.Length, $ver)
+$shield = if ($SkipObfuscate) { "plain" } elseif ($SkipBla) { "light Obfuscar" } else { "light Obfuscar + BLA/$BlaIntensity" }
+Write-Host ("Published: {0} ({1} bytes) v{2} [{3}]" -f $exe.FullName, $exe.Length, $ver, $shield)
 if ($setupBuilt) {
     $setupItem = Get-Item -LiteralPath $setupBuilt
     Write-Host ("Published: {0} ({1} bytes) v{2} [setup + desktop shortcut]" -f $setupItem.FullName, $setupItem.Length, $ver)

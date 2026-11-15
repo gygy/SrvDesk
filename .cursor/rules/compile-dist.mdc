@@ -1,27 +1,29 @@
 ---
-description: 编译输出到 dist：每次必须抗反编译混淆，并递增版本号
+description: 编译输出到 dist：轻度 Obfuscar + BLA 抗 REA 加固，并递增版本号
 alwaysApply: true
 ---
 
-# 编译输出到 dist + Obfuscar + 升版本 + 安装包
+# 编译输出到 dist + 轻度 Obfuscar + BLA + 升版本 + 安装包
 
 ## 交付物（默认，强制）
 
 凡编译给用户验证或交付，**必须同时满足**：
 
-1. **抗反编译混淆**（Obfuscar：Unicode 符号名 + HideStrings 字符串加密 + SuppressIldasm；无 PDB/Mapping）后的 `dist\SrvDesk.exe`
-2. **安装包** `dist\SrvDesk-Setup.exe`（包装上述已混淆 exe；安装后默认创建桌面快捷方式）
+1. **轻度混淆 + Counter-REA 加固**后的 `dist\SrvDesk.exe`  
+   - Obfuscar：ASCII 重命名 + SuppressIldasm（无 Unicode / 无 HideStrings；无 PDB/Mapping）  
+   - [BLA](https://github.com/qybaihe/bla)（`bla-agents`）：默认 `--intensity stealth` 加固 PE，对抗 REA
+2. **安装包** `dist\SrvDesk-Setup.exe`（包装上述已加固 exe；安装后默认创建桌面快捷方式）
 3. **补丁版本号 +1**（改 `SrvDesk.csproj` 的 Version / FileVersion / InformationalVersion）
 
 ```powershell
 .\scripts\publish.ps1
 ```
 
-- 脚本默认：`dotnet publish` → **Obfuscar（anti-RE）** → `dist\SrvDesk.exe` → **Inno Setup** → `dist\SrvDesk-Setup.exe`，并 **自动 bump 补丁版本**
-- 安装包**禁止**包装未混淆 exe（`-SkipObfuscate` 时不生成 Setup）
+- 脚本默认：`dotnet publish` → **轻度 Obfuscar** → **BLA harden (stealth)** → `dist\SrvDesk.exe` → **Inno Setup** → `dist\SrvDesk-Setup.exe`，并 **自动 bump 补丁版本**
+- 安装包**禁止**包装未混淆/未加固 exe（`-SkipObfuscate` 时不生成 Setup）
 - **禁止**默认加 `-NoBumpVersion`（仅用户明确说「不升版本」时才可加）
-- **禁止**默认加 `-SkipObfuscate`（仅调试排查混淆问题时才可临时使用，且勿当交付包）
-- **禁止**把 `Mapping.txt` / PDB 随交付物留下或提交
+- **禁止**默认加 `-SkipObfuscate` / `-SkipBla`（仅调试排查时临时使用，且勿当交付包）
+- **禁止**把 `Mapping.txt` / PDB / BLA 中间产物随交付物留下或提交
 - **禁止**用 `WgHost.exe` 或其它临时程序名冒充交付包
 - **禁止**只跑 `dotnet build` 就把 `bin\` 里的未混淆 exe 当交付物
 
