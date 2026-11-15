@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.184] - 2026-11-15
+
+### Added
+
+- Explorer: restore Documents / Pictures / Downloads / Music / Videos to default `%USERPROFILE%` locations (User Shell Folders)
+
 ## [1.0.183] - 2026-11-12
 
 ### Changed

@@ -17,9 +17,9 @@
     <Authors>SrvDesk</Authors>
     <Copyright>Copyright (c) 2026 gygy</Copyright>
     <Description>Windows Server 与桌面系统设置优化工具</Description>
-    <Version>1.0.183</Version>
-    <FileVersion>1.0.183.0</FileVersion>
-    <InformationalVersion>1.0.183</InformationalVersion>
+    <Version>1.0.184</Version>
+    <FileVersion>1.0.184.0</FileVersion>
+    <InformationalVersion>1.0.184</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <NeutralLanguage>zh-CN</NeutralLanguage>
     <!-- Release 不产出 PDB，降低 REA/反编译器对齐符号的价值 -->
