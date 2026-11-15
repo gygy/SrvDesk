@@ -778,6 +778,18 @@ internal static class SettingCatalog
         L("资源管理器使用复选框选择文件。", "Use checkboxes to select files in Explorer."), L("AutoCheckSelect=1。", "AutoCheckSelect=1."), L("批量选择更方便。", "Easier multi-select."), L("桌面/File Explorer 推荐。", "Recommended for desktop / File Explorer."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
     public static readonly SettingHelpInfo ShowCommonFolders = H(
         L("导航窗格显示所有文件夹。", "Show all folders in the navigation pane."), L("NavPaneShowAllFolders=1。", "NavPaneShowAllFolders=1."), L("快速访问常用目录。", "Faster access to common folders."), L("个人桌面推荐。", "Recommended for personal desktops."), L("重启资源管理器后生效。", "Takes effect after Explorer restart."), W10De);
+    public static readonly SettingHelpInfo RestoreDefaultUserFolders = H(
+        L("把「文档 / 图片 / 下载 / 音乐 / 视频」恢复到用户目录下的默认位置。", "Restore Documents / Pictures / Downloads / Music / Videos to default profile locations."),
+        L("HKCU\\…\\Explorer\\User Shell Folders：Personal、My Pictures、My Video、My Music 及对应 GUID → %USERPROFILE%\\Documents|Pictures|Videos|Music|Downloads（REG_EXPAND_SZ）。",
+            "HKCU\\…\\Explorer\\User Shell Folders: Personal, My Pictures, My Video, My Music and matching GUIDs → %USERPROFILE%\\Documents|Pictures|Videos|Music|Downloads (REG_EXPAND_SZ)."),
+        L("纠正 OneDrive 或其它软件把库文件夹改到非用户目录的情况，快捷方式与「另存为」回到本地默认路径。", "Fixes OneDrive or other apps redirecting libraries away from the profile; Save As and shortcuts return to local defaults."),
+        L("文件夹被重定向到云盘/其它盘后建议开启；已是默认位置则保持开启即可。", "Turn on if folders were redirected to cloud/other drives; leave on when already at defaults."),
+        L("写入后通知外壳；必要时重启资源管理器。关闭本开关不会写回旧的重定向路径，请在文件夹属性→位置中自行改。",
+            "Notifies the shell after write; restart Explorer if needed. Turning off does not invent old redirects—change Location in folder Properties."),
+        W10De,
+        recommend: RecommendLevel.Strong,
+        uiPlace: L("此电脑→文档等→右键属性→位置", "This PC → Documents etc. → Properties → Location"),
+        whenHint: L("被 OneDrive/其它软件改走过就开", "Enable if OneDrive/other apps redirected them"));
     public static readonly SettingHelpInfo RemoveAdminShield = H(
         L("快捷方式不显示管理员盾牌图标。", "Hide the admin shield overlay on shortcuts."),
         L("Shell Icons 77 = %systemroot%\\system32\\imageres.dll,197。", "Shell Icons 77 = %systemroot%\\system32\\imageres.dll,197."),

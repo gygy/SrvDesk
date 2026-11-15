@@ -145,6 +145,8 @@ internal static class Optimizer
 
         public bool ShowItemCheckboxes;
         public bool ShowCommonFolders;
+        /// <summary>User Shell Folders：文档/图片/下载/音乐/视频恢复为 %USERPROFILE%\… 默认位置。</summary>
+        public bool RestoreDefaultUserFolders;
         public bool RemoveAdminShield;
         public bool NoShortcutSuffix;
         public bool Win11ExplorerStyle;
@@ -422,6 +424,7 @@ internal static class Optimizer
 
             ShowItemCheckboxes = Win11DesktopTweaks.IsShowItemCheckboxesOn(),
             ShowCommonFolders = Win11DesktopTweaks.IsShowCommonFoldersOn(),
+            RestoreDefaultUserFolders = Win11DesktopTweaks.IsRestoreDefaultUserFoldersOn(),
             RemoveAdminShield = Win11DesktopTweaks.IsRemoveAdminShieldOn(),
             NoShortcutSuffix = Win11DesktopTweaks.IsNoShortcutSuffixOn(),
             Win11ExplorerStyle = Win11DesktopTweaks.IsWin11ExplorerStyleOn(),
@@ -711,6 +714,7 @@ internal static class Optimizer
         if (b is null) return true;
         return b.ShowItemCheckboxes != s.ShowItemCheckboxes
             || b.ShowCommonFolders != s.ShowCommonFolders
+            || b.RestoreDefaultUserFolders != s.RestoreDefaultUserFolders
             || b.RemoveAdminShield != s.RemoveAdminShield
             || b.NoShortcutSuffix != s.NoShortcutSuffix
             || b.Win11ExplorerStyle != s.Win11ExplorerStyle

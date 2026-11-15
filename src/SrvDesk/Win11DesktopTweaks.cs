@@ -7,7 +7,23 @@ namespace SrvDesk;
 internal static class Win11DesktopTweaks
 {
     private const string ExplorerAdvanced = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
+    private const string UserShellFolders = @"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders";
     private const string ShellIcons = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons";
+
+    /// <summary>与「恢复我的文档-图片-下载位置.reg」一致的 User Shell Folders 默认值。</summary>
+    private static readonly (string Name, string Relative)[] DefaultUserFolderEntries =
+    [
+        ("Personal", "Documents"),
+        ("My Pictures", "Pictures"),
+        ("My Video", "Videos"),
+        ("My Music", "Music"),
+        ("{374DE290-123F-4565-9164-39C4925E467B}", "Downloads"),
+        ("{35286A68-3C57-41A1-BBB1-0EAE73D76C95}", "Videos"),
+        ("{0DDD015D-B06C-45D5-8C4C-F59713854639}", "Pictures"),
+        ("{F42EE2D3-909F-4907-8871-4C22FC0BF756}", "Documents"),
+        ("{7D83EE9B-2244-4E70-B1F5-5393042AF1E4}", "Downloads"),
+        ("{A0C69A99-21C8-4671-8703-7934162FCF1D}", "Music"),
+    ];
     /// <summary>透明空图标（与常见「删除快捷方式箭头.reg」一致），避免自建 blank.ico 失效。</summary>
     private const string BlankOverlayIcon = @"%systemroot%\system32\imageres.dll,197";
     private const string ClassicMenuClsid = @"Software\Classes\CLSID\{86ca1aa0-3389-4ff8-b098-4136676466e2}\InprocServer32";
@@ -64,6 +80,13 @@ internal static class Win11DesktopTweaks
         {
             Field("ShowCommonFolders", x => x.ShowCommonFolders);
             SetDword(Hive.HkCu, ExplorerAdvanced, "NavPaneShowAllFolders", s.ShowCommonFolders ? 1 : 0);
+        }
+        if (D(x => x.RestoreDefaultUserFolders))
+        {
+            Field("RestoreDefaultUserFolders", x => x.RestoreDefaultUserFolders);
+            // 开启：写入 %USERPROFILE%\… 默认位置；关闭：不臆造原重定向路径，留给用户在文件夹属性中改。
+            if (s.RestoreDefaultUserFolders)
+                WriteDefaultUserShellFolders();
         }
         if (D(x => x.RemoveAdminShield))
         {
@@ -169,6 +192,7 @@ internal static class Win11DesktopTweaks
         if (b is null) return true;
         return b.ShowItemCheckboxes != s.ShowItemCheckboxes
             || b.ShowCommonFolders != s.ShowCommonFolders
+            || b.RestoreDefaultUserFolders != s.RestoreDefaultUserFolders
             || b.RemoveAdminShield != s.RemoveAdminShield
             || b.NoShortcutSuffix != s.NoShortcutSuffix
             || b.Win11ExplorerStyle != s.Win11ExplorerStyle
@@ -191,6 +215,42 @@ internal static class Win11DesktopTweaks
 
     public static bool IsShowCommonFoldersOn() =>
         DwordEquals(Hive.HkCu, ExplorerAdvanced, "NavPaneShowAllFolders", 1);
+
+    public static bool IsRestoreDefaultUserFoldersOn()
+    {
+        foreach (var (name, relative) in DefaultUserFolderEntries)
+        {
+            if (!UserShellFolderMatchesDefault(name, relative))
+                return false;
+        }
+        return true;
+    }
+
+    private static void WriteDefaultUserShellFolders()
+    {
+        foreach (var (name, relative) in DefaultUserFolderEntries)
+            SetExpandString(Hive.HkCu, UserShellFolders, name, @"%USERPROFILE%\" + relative);
+        DesktopQuickActions.NotifyShellChanged();
+    }
+
+    private static bool UserShellFolderMatchesDefault(string name, string relative)
+    {
+        var raw = GetExpandStringRaw(Hive.HkCu, UserShellFolders, name);
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        var expectedUnexpanded = @"%USERPROFILE%\" + relative;
+        if (string.Equals(raw.Trim(), expectedUnexpanded, StringComparison.OrdinalIgnoreCase))
+            return true;
+        var expected = Environment.ExpandEnvironmentVariables(expectedUnexpanded);
+        var actual = Environment.ExpandEnvironmentVariables(raw.Trim());
+        return PathsEqual(actual, expected);
+    }
+
+    private static bool PathsEqual(string a, string b)
+    {
+        a = a.TrimEnd('\\', '/');
+        b = b.TrimEnd('\\', '/');
+        return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool IsRemoveAdminShieldOn() => IsShellIconBlank(77);
 
@@ -636,6 +696,27 @@ internal static class Win11DesktopTweaks
         using var k = baseKey.CreateSubKey(key, true)
             ?? throw new InvalidOperationException("无法写入注册表：" + key);
         k.SetValue(name, value, RegistryValueKind.String);
+    }
+
+    private static string? GetExpandStringRaw(Hive hive, string key, string name)
+    {
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
+        using var k = baseKey.OpenSubKey(key);
+        return k?.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+    }
+
+    private static void SetExpandString(Hive hive, string key, string name, string value)
+    {
+        var old = GetExpandStringRaw(hive, key, name) ?? GetValue(hive, key, name);
+        ApplyLog.RegistryString(hive == Hive.HkLm ? "HKLM" : "HKCU", key, name, old, value);
+        using var baseKey = RegistryKey.OpenBaseKey(
+            hive == Hive.HkLm ? RegistryHive.LocalMachine : RegistryHive.CurrentUser,
+            hive == Hive.HkLm ? RegistryView.Registry64 : RegistryView.Default);
+        using var k = baseKey.CreateSubKey(key, true)
+            ?? throw new InvalidOperationException("无法写入注册表：" + key);
+        k.SetValue(name, value, RegistryValueKind.ExpandString);
     }
 
     private static void DeleteValue(Hive hive, string key, string name)

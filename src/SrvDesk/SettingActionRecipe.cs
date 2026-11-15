@@ -104,6 +104,16 @@ internal static class ActionScript
     public static string Sz(string name, string value) =>
         "\"" + EscapeRegName(name) + "\"=\"" + EscapeRegSz(value) + "\"";
 
+    /// <summary>REG_EXPAND_SZ，导出为 hex(2) UTF-16LE（含结尾 \\0）。</summary>
+    public static string ExpandSz(string name, string value)
+    {
+        var bytes = Encoding.Unicode.GetBytes(value + "\0");
+        var parts = new string[bytes.Length];
+        for (var i = 0; i < bytes.Length; i++)
+            parts[i] = bytes[i].ToString("x2");
+        return "\"" + EscapeRegName(name) + "\"=hex(2):" + string.Join(",", parts);
+    }
+
     public static string DeleteValue(string name) =>
         "\"" + EscapeRegName(name) + "\"=-";
 

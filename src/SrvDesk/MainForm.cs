@@ -190,6 +190,10 @@ internal sealed class MainForm : Form
 
     private readonly SettingRow _itemCheckboxes = Row(AppLang.L("显示项目复选框", "Show item checkboxes"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowItemCheckboxes);
     private readonly SettingRow _commonFolders = Row(AppLang.L("显示常用文件夹", "Show common folders"), AppLang.L("不显示", "Hidden"), SettingCatalog.ShowCommonFolders);
+    private readonly SettingRow _restoreUserFolders = Row(
+        AppLang.L("文档/图片/下载等恢复默认位置", "Restore Docs/Pictures/Downloads defaults"),
+        AppLang.L("用户目录", "User profile"),
+        SettingCatalog.RestoreDefaultUserFolders);
     private readonly SettingRow _noShield = Row(AppLang.L("去除快捷方式管理员盾牌", "Remove admin shield on shortcuts"), AppLang.L("显示", "Shown"), SettingCatalog.RemoveAdminShield);
     private readonly SettingRow _noSuffix = Row(AppLang.L("快捷方式不加「快捷方式」后缀", "No 'Shortcut' suffix"), AppLang.L("添加", "Add"), SettingCatalog.NoShortcutSuffix);
     private readonly SettingRow _win11Explorer = Row(AppLang.L("Win11 资源管理器布局", "Win11 Explorer layout"), AppLang.L("紧凑", "Compact"), SettingCatalog.Win11ExplorerStyle);
@@ -377,7 +381,7 @@ internal sealed class MainForm : Form
         _thisPc, _launchThisPc, _taskbar, _confirmDel, _audio, _fileExt, _themes, _search,
         _webSearch, _feedback, _noLockScreen, _hiddenFiles, _noArrow, _fullPath, _allTrayIcons,
         _taskbarClock, _desktopIcons, _smartScreen, _classicSearch, _searchEngine,
-        _itemCheckboxes, _commonFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
+        _itemCheckboxes, _commonFolders, _restoreUserFolders, _noShield, _noSuffix, _win11Explorer, _classicMenu,
         _tbSearch, _tbLeft, _tbCombine, _tbAutohide, _taskView, _tbEndTask, _widgets,
         _hideOs, _iconsOnly, _emptyDrives, _recentFiles, _frequent, _officeCloud, _onedrive, _tbChat, _tbCopilot, _tbInk,
         _notepadWrap, _notepadStatus, _takeOwn, _openCmd, _copyMoveTo, _quickOps, _news,
@@ -500,7 +504,7 @@ internal sealed class MainForm : Form
             ]),
             (AppLang.L("快捷方式与布局", "Shortcuts & layout"), [
                 _noArrow, _noSuffix, _noShield, _noBrokenLnk, _sepProcess,
-                _autoRestartShell, _win11Explorer, _classicMenu, _onedrive,
+                _autoRestartShell, _win11Explorer, _classicMenu, _onedrive, _restoreUserFolders,
             ]),
             (AppLang.L("任务栏", "Taskbar"), [
                 _tbSearch, _tbLeft, _tbCombine, _widgets, _tbChat, _tbInk,
@@ -3833,6 +3837,7 @@ internal sealed class MainForm : Form
         _searchEngine.Checked = s.DisableSearchEngineFeature;
         _itemCheckboxes.Checked = s.ShowItemCheckboxes;
         _commonFolders.Checked = s.ShowCommonFolders;
+        _restoreUserFolders.Checked = s.RestoreDefaultUserFolders;
         _noShield.Checked = s.RemoveAdminShield;
         _noSuffix.Checked = s.NoShortcutSuffix;
         _win11Explorer.Checked = s.Win11ExplorerStyle;
@@ -4210,6 +4215,7 @@ internal sealed class MainForm : Form
         DisableSearchEngineFeature = _searchEngine.Checked,
         ShowItemCheckboxes = _itemCheckboxes.Checked,
         ShowCommonFolders = _commonFolders.Checked,
+        RestoreDefaultUserFolders = _restoreUserFolders.Checked,
         RemoveAdminShield = _noShield.Checked,
         NoShortcutSuffix = _noSuffix.Checked,
         Win11ExplorerStyle = _win11Explorer.Checked,
@@ -4337,6 +4343,7 @@ internal sealed class MainForm : Form
         Sync(_launchThisPc, s.LaunchExplorerThisPc);
         Sync(_itemCheckboxes, s.ShowItemCheckboxes);
         Sync(_commonFolders, s.ShowCommonFolders);
+        Sync(_restoreUserFolders, s.RestoreDefaultUserFolders);
         Sync(_noShield, s.RemoveAdminShield);
         Sync(_noSuffix, s.NoShortcutSuffix);
         Sync(_win11Explorer, s.Win11ExplorerStyle);

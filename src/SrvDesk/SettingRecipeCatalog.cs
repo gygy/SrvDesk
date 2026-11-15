@@ -556,6 +556,21 @@ internal static class SettingRecipeCatalog
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "AutoCheckSelect", 1, 0));
         Add(SettingCatalog.ShowCommonFolders, ActionScript.DwordToggle(true,
             @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "NavPaneShowAllFolders", 1, 0));
+        Add(SettingCatalog.RestoreDefaultUserFolders, ActionScript.Reg(
+            ActionScript.Block(
+                ActionScript.HkCu(@"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"),
+                ActionScript.ExpandSz("Personal", @"%USERPROFILE%\Documents"),
+                ActionScript.ExpandSz("My Pictures", @"%USERPROFILE%\Pictures"),
+                ActionScript.ExpandSz("My Video", @"%USERPROFILE%\Videos"),
+                ActionScript.ExpandSz("My Music", @"%USERPROFILE%\Music"),
+                ActionScript.ExpandSz("{374DE290-123F-4565-9164-39C4925E467B}", @"%USERPROFILE%\Downloads"),
+                ActionScript.ExpandSz("{35286A68-3C57-41A1-BBB1-0EAE73D76C95}", @"%USERPROFILE%\Videos"),
+                ActionScript.ExpandSz("{0DDD015D-B06C-45D5-8C4C-F59713854639}", @"%USERPROFILE%\Pictures"),
+                ActionScript.ExpandSz("{F42EE2D3-909F-4907-8871-4C22FC0BF756}", @"%USERPROFILE%\Documents"),
+                ActionScript.ExpandSz("{7D83EE9B-2244-4E70-B1F5-5393042AF1E4}", @"%USERPROFILE%\Downloads"),
+                ActionScript.ExpandSz("{A0C69A99-21C8-4671-8703-7934162FCF1D}", @"%USERPROFILE%\Music")),
+            "; 关闭：本软件不改写自定义重定向路径。\r\n; 请在「文档」等文件夹 → 属性 → 位置 中手动修改。\r\n",
+            "开启＝恢复 %USERPROFILE% 下默认位置；关闭＝不臆造旧路径。导入后可注销或重启资源管理器。"));
         Add(SettingCatalog.RemoveAdminShield, ActionScript.Reg(
             ActionScript.Block(ActionScript.HkLm(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"),
                 ActionScript.Sz("77", @"%systemroot%\system32\imageres.dll,197")),
