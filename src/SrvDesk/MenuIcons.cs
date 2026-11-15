@@ -75,6 +75,10 @@ internal static class MenuIcons
         [FileCand(Sys("appwiz.cpl")), FileCand(Sys("msiexec.exe"))],
         DrawBox);
 
+    public static Image DefaultInstallPath => Get("installpath",
+        [FileCand(Sys("appwiz.cpl")), FileCand(Sys("msiexec.exe"))],
+        DrawBox);
+
     public static Image Cleanup => Get("cleanup",
         [FileCand(Sys("cleanmgr.exe"))],
         DrawTrash);

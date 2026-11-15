@@ -4,6 +4,12 @@ All notable changes to SrvDesk are documented here.
 
 ## [Unreleased]
 
+## [1.0.185] - 2026-11-15
+
+### Added
+
+- Tools: default install path — move Program Files defaults off the system drive, or restore system defaults
+
 ## [1.0.184] - 2026-11-15
 
 ### Added

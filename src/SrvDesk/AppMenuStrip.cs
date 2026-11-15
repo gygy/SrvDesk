@@ -18,6 +18,7 @@ internal sealed class AppMenuStrip : MenuStrip
     public ToolStripMenuItem ToolComputerMgmt { get; }
     public ToolStripMenuItem ToolFlushDns { get; }
     public ToolStripMenuItem ToolCommonSoftware { get; }
+    public ToolStripMenuItem ToolDefaultInstallPath { get; }
     public ToolStripMenuItem ToolCleanup { get; }
     public ToolStripMenuItem ToolSystemRepair { get; }
     public ToolStripMenuItem ToolShutdownTimer { get; }
@@ -82,6 +83,9 @@ internal sealed class AppMenuStrip : MenuStrip
         ToolScheduledTaskOptimize = Item(AppLang.L("计划任务优化...", "Scheduled tasks optimize..."), MenuIcons.TaskScheduler);
         ToolComputerMgmt = Item(AppLang.L("计算机管理", "Computer Management"), MenuIcons.ComputerMgmt);
         ToolCommonSoftware = Item(AppLang.L("常用软件...", "Common software..."), MenuIcons.CommonSoftware);
+        ToolDefaultInstallPath = Item(
+            AppLang.L("默认安装路径...", "Default install path..."),
+            MenuIcons.DefaultInstallPath);
         ToolCleanup = Item(AppLang.L("垃圾清理...", "Junk cleanup..."), MenuIcons.Cleanup);
         ToolSystemRepair = Item(AppLang.L("系统修复...", "System repair..."), MenuIcons.Advanced);
         ToolShutdownTimer = Item(AppLang.L("定时关机...", "Shutdown timer..."), MenuIcons.ShutdownTimer);
@@ -108,7 +112,7 @@ internal sealed class AppMenuStrip : MenuStrip
 
         tools.DropDownItems.AddRange([
             ToolMyPlans, ToolOptimizeAdvisor, ToolOptHistory,
-            ToolCommonSoftware, ToolCleanup,
+            ToolCommonSoftware, ToolDefaultInstallPath, ToolCleanup,
             ToolAddRemoveRoles, ToolWindowsFeatures, ToolSecurityCenter, ToolEdgeManage,
             ToolHosts,
             new ToolStripSeparator(),

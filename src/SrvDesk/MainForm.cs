@@ -727,6 +727,11 @@ internal sealed class MainForm : Form
         _appMenu.ToolComputerMgmt.Click += (_, _) => SystemToolLauncher.OpenComputerManagement(this);
         _appMenu.ToolFlushDns.Click += (_, _) => FlushDnsCache();
         _appMenu.ToolCommonSoftware.Click += (_, _) => ShowCommonSoftware();
+        _appMenu.ToolDefaultInstallPath.Click += (_, _) =>
+        {
+            using var d = new DefaultInstallPathDialog();
+            d.ShowDialog(this);
+        };
         _appMenu.ToolCleanup.Click += (_, _) => { using var d = new CleanupDialog(); d.ShowDialog(this); };
         _appMenu.ToolSystemRepair.Click += (_, _) => { using var d = new SystemRepairDialog(); d.ShowDialog(this); };
         _appMenu.ToolShutdownTimer.Click += (_, _) => ShutdownTimerDialog.ShowOrActivate(this);
